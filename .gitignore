@@ -1,0 +1,96 @@
+# OS / filesystem
+.DS_Store
+Thumbs.db
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+
+# IDE / editor
+.idea/
+.vscode/
+*.iml
+.project
+.classpath
+.settings/
+.factorypath
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+hs_err_pid*
+replay_pid*
+
+# Environment variables
+.env
+.env.*
+!.env.example
+!.env.example.local
+
+# Secrets / credentials
+*.pem
+*.key
+*.crt
+*.cert
+*.p12
+*.jks
+*.keystore
+*.asc
+*secret*
+*credential*
+
+# YAML config files
+*.yml
+*.yaml
+!*.example.yml
+!*.example.yaml
+!*.sample.yml
+!*.sample.yaml
+
+# Gradle / Java build outputs
+.gradle/
+**/.gradle/
+build/
+**/build/
+out/
+**/out/
+target/
+**/target/
+*.class
+*.jar
+*.war
+*.ear
+!**/gradle/wrapper/gradle-wrapper.jar
+
+# Node / Vite build outputs
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+dist-ssr/
+**/dist-ssr/
+.vite/
+**/.vite/
+.npm/
+.pnpm-store/
+
+# Coverage / reports
+coverage/
+**/coverage/
+.nyc_output/
+reports/
+**/reports/
+
+# Runtime uploads
+uploads/
+**/uploads/
+backend/build/uploads/
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*.bak
