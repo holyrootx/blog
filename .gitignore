@@ -94,3 +94,10 @@ backend/build/uploads/
 *.swp
 *.swo
 *.bak
+
+
+# GitHub Actions workflows
+!.github/
+!.github/workflows/
+!.github/workflows/*.yml
+!.github/workflows/*.yaml
