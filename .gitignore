@@ -48,6 +48,7 @@ replay_pid*
 !*.example.yaml
 !*.sample.yml
 !*.sample.yaml
+!backend/src/main/resources/application.yaml
 
 # Gradle / Java build outputs
 .gradle/
