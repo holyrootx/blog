@@ -1,0 +1,35 @@
+package com.jsj.blog.home.controller;
+
+import com.jsj.blog.common.response.ApiResponse;
+import com.jsj.blog.home.dto.BlogProfileResponse;
+import com.jsj.blog.home.dto.UpdateBlogProfileRequest;
+import com.jsj.blog.home.service.BlogProfileService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequiredArgsConstructor
+@Slf4j
+@RequestMapping("/api/v1")
+public class BlogProfileController {
+
+    private final BlogProfileService blogProfileService;
+
+    @GetMapping("/blog/profile")
+    public ApiResponse<BlogProfileResponse> getBlogProfile(@RequestParam(defaultValue = "1") Long profileId){
+
+        BlogProfileResponse blogProfile = blogProfileService.getBlogProfile(profileId);
+
+        return ApiResponse.ok(blogProfile);
+    }
+
+
+    @PutMapping("/admin/profile")
+    public ApiResponse<?> updateBlogProfile(@RequestBody UpdateBlogProfileRequest updateBlogProfileRequest){
+
+        blogProfileService.updateBlogProfile(updateBlogProfileRequest);
+
+        return ApiResponse.ok();
+    }
+}
