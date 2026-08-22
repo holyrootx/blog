@@ -1,9 +1,5 @@
 <script setup>
 defineProps({
-  title: {
-    type: String,
-    required: true,
-  },
   posts: {
     type: Array,
     required: true,
@@ -12,17 +8,17 @@ defineProps({
 </script>
 
 <template>
-  <section class="home-section" :aria-labelledby="`${title}-title`">
-    <div class="home-section__header">
-      <h2 :id="`${title}-title`" class="home-section__title">{{ title }}</h2>
-      <a class="home-section__more" href="/posts">전체 보기</a>
+  <section v-if="posts.length > 0" class="post-related" aria-labelledby="post-related-title">
+    <div class="post-related__header">
+      <h2 id="post-related-title" class="post-related__title">함께 읽으면 좋은 글</h2>
+      <a class="post-related__more" href="/posts">전체 보기 →</a>
     </div>
 
-    <div class="post-grid">
+    <div class="post-related__grid">
       <RouterLink
         v-for="post in posts"
         :key="post.id"
-        class="post-card"
+        class="post-related__card post-card"
         :to="{ name: 'post-detail', params: { id: post.id } }"
       >
         <img class="post-card__image" :src="post.imageUrl" :alt="post.title" />
