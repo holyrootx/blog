@@ -19,7 +19,12 @@ defineProps({
     </div>
 
     <div class="post-grid">
-      <article v-for="post in posts" :key="post.id" class="post-card">
+      <RouterLink
+        v-for="post in posts"
+        :key="post.id"
+        class="post-card"
+        :to="{ name: 'post-detail', params: { id: post.id } }"
+      >
         <img class="post-card__image" :src="post.imageUrl" :alt="post.title" />
         <div class="post-card__body">
           <span class="post-card__category">{{ post.category }}</span>
@@ -29,7 +34,7 @@ defineProps({
             <span>조회 {{ post.views }}</span>
           </div>
         </div>
-      </article>
+      </RouterLink>
     </div>
   </section>
 </template>
