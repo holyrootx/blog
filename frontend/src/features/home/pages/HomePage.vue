@@ -5,7 +5,7 @@ import BlogHeader from '../components/BlogHeader.vue';
 import HomeHero from '../components/HomeHero.vue';
 import StatGrid from '../components/StatGrid.vue';
 import PostSection from '../components/PostSection.vue';
-import { getBlogProfile, getHomePageHero } from '../api/homeApi';
+import { getBlogProfile, getHomePageHero, getHomePosts } from '../api/homeApi';
 import { homeMock } from '../data/homeMock';
 
 const home = reactive({
@@ -13,16 +13,18 @@ const home = reactive({
   hero: { ...homeMock.hero },
   profile: { ...homeMock.profile },
   stats: homeMock.stats,
-  featuredPosts: homeMock.featuredPosts,
-  recentPosts: homeMock.recentPosts,
+  featuredPosts: [],
+  recentPosts: [],
 });
 
 const headerTitle = computed(() => home.profile.name || home.header.title);
 
 onMounted(async () => {
-  const [profileResult, heroResult] = await Promise.allSettled([
+  const [profileResult, heroResult, popularPostsResult, latestPostsResult] = await Promise.allSettled([
     getBlogProfile(),
     getHomePageHero(),
+    getHomePosts('popular'),
+    getHomePosts('latest'),
   ]);
 
   if (profileResult.status === 'fulfilled') {
@@ -35,6 +37,18 @@ onMounted(async () => {
     home.hero = mergeDefined(home.hero, heroResult.value);
   } else {
     console.error(heroResult.reason);
+  }
+
+  if (popularPostsResult.status === 'fulfilled') {
+    home.featuredPosts = popularPostsResult.value;
+  } else {
+    console.error(popularPostsResult.reason);
+  }
+
+  if (latestPostsResult.status === 'fulfilled') {
+    home.recentPosts = latestPostsResult.value;
+  } else {
+    console.error(latestPostsResult.reason);
   }
 });
 

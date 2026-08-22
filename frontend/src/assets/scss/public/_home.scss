@@ -220,7 +220,14 @@
 }
 
 .post-card {
+  display: block;
   min-width: 0;
+  color: inherit;
+}
+
+.post-card:hover .post-card__title,
+.post-card:focus-visible .post-card__title {
+  color: var(--accent-dark);
 }
 
 .post-card__image {

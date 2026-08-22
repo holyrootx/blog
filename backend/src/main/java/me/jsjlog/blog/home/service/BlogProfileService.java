@@ -44,12 +44,12 @@ public class BlogProfileService {
         }
 
         BlogProfile blogProfile = byId.get();
-        blogProfile.update(blogProfile.getName(),
-                blogProfile.getIntro(),
-                blogProfile.getJob(),
-                blogProfile.getAvatarImageUrl(),
-                blogProfile.getGithubUrl(),
-                blogProfile.getEmail()
+        blogProfile.update(updateBlogProfile.name(),
+                updateBlogProfile.intro(),
+                updateBlogProfile.job(),
+                updateBlogProfile.avatarImageUrl(),
+                updateBlogProfile.githubUrl(),
+                updateBlogProfile.email()
                 );
 
         return BlogProfileResponse.from(blogProfile);
