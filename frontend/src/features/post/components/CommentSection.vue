@@ -1,19 +1,23 @@
 <script setup>
-import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+
+import { getPostComments } from '../api/postApi';
 
 const props = defineProps({
+  postId: {
+    type: [Number, String],
+    required: true,
+  },
   comments: {
     type: Object,
     required: true,
   },
-  nextPage: {
-    type: Object,
-    default: null,
-  },
 });
 
-const items = ref([...props.comments.items]);
-const hasNext = ref(props.comments.hasNext);
+const total = ref(0);
+const items = ref([]);
+const nextCursor = ref(null);
+const hasNext = ref(false);
 const loading = ref(false);
 const nickname = ref('');
 const draft = ref('');
@@ -26,25 +30,59 @@ const showBottomAd = false;
 const sentinel = ref(null);
 let observer = null;
 
+const commentPlaceholder = computed(() => props.comments.placeholder ?? '');
+const commentMaxLength = computed(() => props.comments.maxLength ?? 1000);
+
 function toggleReply(commentId) {
   replyTargetId.value = replyTargetId.value === commentId ? null : commentId;
   replyNickname.value = '';
   replyDraft.value = '';
 }
 
-// 커서 기반 무한 스크롤. 실제로는 nextCursor를 API에 넘겨 다음 묶음을 받아온다.
-function loadMore() {
-  if (loading.value || !hasNext.value || !props.nextPage) {
+async function loadMore() {
+  if (loading.value || !hasNext.value || nextCursor.value === null) {
     return;
   }
 
   loading.value = true;
+  const requestedPostId = String(props.postId);
+  const requestedCursor = nextCursor.value;
 
-  window.setTimeout(() => {
-    items.value = [...items.value, ...props.nextPage.items];
-    hasNext.value = props.nextPage.hasNext;
+  try {
+    const nextPage = await getPostComments(props.postId, {
+      cursor: requestedCursor,
+    });
+
+    if (String(props.postId) !== requestedPostId || nextCursor.value !== requestedCursor) {
+      return;
+    }
+
+    items.value = [...items.value, ...nextPage.items];
+    total.value = nextPage.total;
+    nextCursor.value = nextPage.nextCursor;
+    hasNext.value = nextPage.hasNext;
+  } catch (error) {
+    console.error(error);
+  } finally {
     loading.value = false;
-  }, 400);
+  }
+}
+
+function resetComments(comments) {
+  total.value = comments.total ?? 0;
+  items.value = [...(comments.items ?? [])];
+  nextCursor.value = comments.nextCursor ?? null;
+  hasNext.value = Boolean(comments.hasNext);
+  loading.value = false;
+  replyTargetId.value = null;
+}
+
+function observeSentinel() {
+  observer?.disconnect();
+
+  if (sentinel.value) {
+    observer?.observe(sentinel.value);
+  }
 }
 
 onMounted(() => {
@@ -54,21 +92,28 @@ onMounted(() => {
     }
   });
 
-  if (sentinel.value) {
-    observer.observe(sentinel.value);
-  }
+  observeSentinel();
 });
 
 onBeforeUnmount(() => {
   observer?.disconnect();
 });
+
+watch(
+  () => props.comments,
+  (comments) => {
+    resetComments(comments);
+    window.requestAnimationFrame(observeSentinel);
+  },
+  { immediate: true },
+);
 </script>
 
 <template>
   <section class="comments" aria-labelledby="comments-title">
     <div class="comments__header">
       <h2 id="comments-title" class="comments__title">댓글</h2>
-      <span class="comments__count">{{ comments.total }}</span>
+      <span class="comments__count">{{ total }}</span>
       <span class="comments__note">이 글에 남겨진 이야기</span>
     </div>
 
@@ -87,8 +132,8 @@ onBeforeUnmount(() => {
           <textarea
             v-model="draft"
             class="comment-form__input"
-            :placeholder="comments.placeholder"
-            :maxlength="comments.maxLength"
+            :placeholder="commentPlaceholder"
+            :maxlength="commentMaxLength"
             rows="2"
           ></textarea>
         </div>
@@ -96,7 +141,7 @@ onBeforeUnmount(() => {
       <div class="comment-form__footer">
         <span class="comment-form__note">닉네임만 입력하면 댓글을 남길 수 있습니다.</span>
         <div class="comment-form__actions">
-          <span class="comment-form__counter">{{ draft.length }} / {{ comments.maxLength }}</span>
+          <span class="comment-form__counter">{{ draft.length }} / {{ commentMaxLength }}</span>
           <button class="post-button post-button--accent" type="submit">등록</button>
         </div>
       </div>
@@ -173,12 +218,12 @@ onBeforeUnmount(() => {
             <textarea
               v-model="replyDraft"
               class="reply-form__input"
-              :maxlength="comments.maxLength"
+              :maxlength="commentMaxLength"
               rows="2"
             ></textarea>
             <div class="reply-form__footer">
               <span class="comment-form__counter">
-                {{ replyDraft.length }} / {{ comments.maxLength }}
+                {{ replyDraft.length }} / {{ commentMaxLength }}
               </span>
               <div class="comment-form__actions">
                 <button class="post-button" type="button" @click="toggleReply(comment.id)">
@@ -198,7 +243,7 @@ onBeforeUnmount(() => {
       <button v-else-if="hasNext" class="comments__more" type="button" @click="loadMore">
         댓글 더 보기
       </button>
-      <span v-else>마지막 댓글입니다</span>
+      <span v-else>{{ items.length === 0 ? '아직 댓글이 없습니다' : '마지막 댓글입니다' }}</span>
     </div>
 
     <div v-if="showBottomAd" class="post-ad">

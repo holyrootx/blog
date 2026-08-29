@@ -6,9 +6,8 @@ import me.jsjlog.blog.common.exception.BlogException;
 import me.jsjlog.blog.common.exception.ErrorCode;
 import me.jsjlog.blog.post.domain.Post;
 import me.jsjlog.blog.post.domain.PostStatus;
-import me.jsjlog.blog.post.dto.AdjacentPostResponse;
-import me.jsjlog.blog.post.dto.PostDetailResponse;
-import me.jsjlog.blog.post.dto.PostSummaryResponse;
+import me.jsjlog.blog.post.dto.*;
+import me.jsjlog.blog.post.repository.CommentRepository;
 import me.jsjlog.blog.post.repository.PostRepository;
 import org.springframework.stereotype.Service;
 
@@ -20,7 +19,11 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class PostService {
 
+    private static final long DEFAULT_COMMENT_PAGE_SIZE = 20L;
+    private static final long MAX_COMMENT_PAGE_SIZE = 50L;
+
     private final PostRepository postRepository;
+    private final CommentRepository commentRepository;
 
     public List<PostSummaryResponse> getLatestPostsForHomePage(){
         return postRepository.getLatestPostsForHomePage();
@@ -97,4 +100,30 @@ public class PostService {
         return postRepository.getRelatedPosts(postId, categoryId);
     }
 
+    public CommentListResponse getCommentInPostDetail(Long postId, Long cursor, Long size){
+
+        Optional<Post> byId = postRepository.findById(postId);
+        if (byId.isEmpty()) {
+            throw new BlogException(ErrorCode.POST_NOT_FOUND);
+        }
+
+        Post post = byId.get();
+        if (post.getStatus() != PostStatus.PUBLISHED) {
+            throw new BlogException(ErrorCode.POST_NOT_PUBLISHED);
+        }
+
+        if (size == null || size <= 0L) {
+            size = DEFAULT_COMMENT_PAGE_SIZE;
+            log.info("[getCommentInPostDetail] Size is Null or Zero => size = {}, " +
+                    "so we change to default Value : {} " +
+                    ", you have to check it ", size, DEFAULT_COMMENT_PAGE_SIZE);
+        }
+
+        if (size > MAX_COMMENT_PAGE_SIZE) {
+            log.warn("[getCommentInPostDetail] Size exceeds max size. size = {}, maxSize = {}", size, MAX_COMMENT_PAGE_SIZE);
+            throw new BlogException(ErrorCode.COMMENT_SIZE_LIMIT_EXCEEDED);
+        }
+
+        return commentRepository.getCommentPageByPostId(postId, cursor, size);
+    }
 }

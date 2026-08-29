@@ -13,6 +13,10 @@ export function getHomePageHero(homePageHeroId = DEFAULT_HOME_PAGE_HERO_ID) {
   return getApiData(`/api/v1/blog/home/hero?homePageHeroId=${homePageHeroId}`);
 }
 
+export function getHomeTopics() {
+  return getApiData('/api/v1/blog/home/topics');
+}
+
 export async function getHomePosts(sort = 'latest', size = DEFAULT_HOME_POST_SIZE) {
   const searchParams = new URLSearchParams({
     sort,

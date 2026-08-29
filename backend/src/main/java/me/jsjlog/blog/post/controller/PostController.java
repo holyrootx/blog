@@ -3,9 +3,7 @@ package me.jsjlog.blog.post.controller;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import me.jsjlog.blog.common.response.ApiResponse;
-import me.jsjlog.blog.post.dto.AdjacentPostResponse;
-import me.jsjlog.blog.post.dto.PostDetailResponse;
-import me.jsjlog.blog.post.dto.PostSummaryResponse;
+import me.jsjlog.blog.post.dto.*;
 import me.jsjlog.blog.post.service.PostService;
 import org.springframework.web.bind.annotation.*;
 
@@ -48,11 +46,14 @@ public class PostController {
     }
 
     @GetMapping("/blog/posts/{postId}/comments")
-    public ApiResponse<PostDetailResponse> getCommantsOfPostDetail(@PathVariable Long postId) {
-        // todo: 답글, 댓글 가져오기 api 완성
-        return ApiResponse.ok(null);
+    public ApiResponse<CommentListResponse> getCommentsOfPostDetail(
+            @PathVariable Long postId,
+            @RequestParam(required = false) Long cursor,
+            @RequestParam(defaultValue = "20") Long size
+    ) {
+        CommentListResponse comments = postService.getCommentInPostDetail(postId, cursor, size);
+        return ApiResponse.ok(comments);
     }
 
 
 }
-

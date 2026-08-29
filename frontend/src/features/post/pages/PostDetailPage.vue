@@ -8,11 +8,29 @@ import PostAside from '../components/PostAside.vue';
 import CommentSection from '../components/CommentSection.vue';
 import PostRelated from '../components/PostRelated.vue';
 import { getBlogProfile } from '../../home/api/homeApi';
-import { getAdjacentPosts, getCategories, getPostDetail, getRelatedPosts } from '../api/postApi';
+import {
+  getAdjacentPosts,
+  getCategories,
+  getPostComments,
+  getPostDetail,
+  getRelatedPosts,
+} from '../api/postApi';
 import { postMock } from '../data/postMock';
 
+const EMPTY_COMMENTS = {
+  total: 0,
+  placeholder: '따뜻한 댓글 하나가 다음 글을 쓰게 만듭니다.',
+  maxLength: 1000,
+  items: [],
+  nextCursor: null,
+  hasNext: false,
+};
+
 const route = useRoute();
-const detail = reactive({ ...postMock });
+const detail = reactive({
+  ...postMock,
+  comments: { ...EMPTY_COMMENTS },
+});
 const showAds = false;
 
 watch(
@@ -24,19 +42,29 @@ watch(
 );
 
 async function loadPostPage(postId) {
+  const requestedPostId = String(postId);
+
+  detail.comments = { ...EMPTY_COMMENTS };
+
   const [
     profileResult,
     categoriesResult,
     postDetailResult,
     adjacentPostsResult,
     relatedPostsResult,
+    commentsResult,
   ] = await Promise.allSettled([
     getBlogProfile(),
     getCategories(),
     getPostDetail(postId),
     getAdjacentPosts(postId),
     getRelatedPosts(postId),
+    getPostComments(postId),
   ]);
+
+  if (String(route.params.id) !== requestedPostId) {
+    return;
+  }
 
   if (profileResult.status === 'fulfilled') {
     detail.author = mergeDefined(detail.author, profileResult.value);
@@ -72,6 +100,16 @@ async function loadPostPage(postId) {
   } else if (relatedPostsResult.status === 'rejected') {
     console.error(relatedPostsResult.reason);
   }
+
+  if (commentsResult.status === 'fulfilled') {
+    detail.comments = commentsResult.value;
+    detail.post = {
+      ...detail.post,
+      commentCount: commentsResult.value.total,
+    };
+  } else {
+    console.error(commentsResult.reason);
+  }
 }
 
 function mergeDefined(base, next) {
@@ -103,7 +141,7 @@ function mergeDefined(base, next) {
             :adjacent-posts="detail.adjacentPosts"
           />
 
-          <CommentSection :comments="detail.comments" :next-page="detail.nextCommentPage" />
+          <CommentSection :post-id="route.params.id" :comments="detail.comments" />
 
           <PostRelated :posts="detail.relatedPosts" />
         </div>
