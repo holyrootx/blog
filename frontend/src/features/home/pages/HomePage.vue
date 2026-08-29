@@ -3,16 +3,16 @@ import { computed, onMounted, reactive } from 'vue';
 
 import BlogHeader from '../components/BlogHeader.vue';
 import HomeHero from '../components/HomeHero.vue';
-import StatGrid from '../components/StatGrid.vue';
 import PostSection from '../components/PostSection.vue';
-import { getBlogProfile, getHomePageHero, getHomePosts } from '../api/homeApi';
+import HomeTopicSection from '../components/HomeTopicSection.vue';
+import { getBlogProfile, getHomePageHero, getHomePosts, getHomeTopics } from '../api/homeApi';
 import { homeMock } from '../data/homeMock';
 
 const home = reactive({
   header: { ...homeMock.header },
   hero: { ...homeMock.hero },
   profile: { ...homeMock.profile },
-  stats: homeMock.stats,
+  topics: [],
   featuredPosts: [],
   recentPosts: [],
 });
@@ -20,9 +20,10 @@ const home = reactive({
 const headerTitle = computed(() => home.profile.name || home.header.title);
 
 onMounted(async () => {
-  const [profileResult, heroResult, popularPostsResult, latestPostsResult] = await Promise.allSettled([
+  const [profileResult, heroResult, topicsResult, popularPostsResult, latestPostsResult] = await Promise.allSettled([
     getBlogProfile(),
     getHomePageHero(),
+    getHomeTopics(),
     getHomePosts('popular'),
     getHomePosts('latest'),
   ]);
@@ -37,6 +38,12 @@ onMounted(async () => {
     home.hero = mergeDefined(home.hero, heroResult.value);
   } else {
     console.error(heroResult.reason);
+  }
+
+  if (topicsResult.status === 'fulfilled') {
+    home.topics = Array.isArray(topicsResult.value) ? topicsResult.value : [];
+  } else {
+    console.error(topicsResult.reason);
   }
 
   if (popularPostsResult.status === 'fulfilled') {
@@ -71,7 +78,7 @@ function mergeDefined(base, next) {
     <BlogHeader :title="headerTitle" />
     <main class="public-shell__main">
       <HomeHero :hero="home.hero" :profile="home.profile" />
-      <StatGrid :stats="home.stats" />
+      <HomeTopicSection :topics="home.topics" />
       <PostSection title="인기글" :posts="home.featuredPosts" />
       <PostSection title="최근 글" :posts="home.recentPosts" />
     </main>
