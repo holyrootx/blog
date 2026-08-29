@@ -156,6 +156,7 @@ public class PostRepositoryCustomImpl implements PostRepositoryCustom{
                                 post.id,
                                 post.title
                         ))
+                .from(post)
                 .where(
                         post.publishedAt.lt(publishedAt)
                                 .or(
@@ -177,6 +178,7 @@ public class PostRepositoryCustomImpl implements PostRepositoryCustom{
                                 post.id,
                                 post.title
                         ))
+                .from(post)
                 .where(
                         post.publishedAt.gt(publishedAt)
                                 .or(
@@ -223,16 +225,4 @@ public class PostRepositoryCustomImpl implements PostRepositoryCustom{
         return postSummaryResponseList;
     }
 
-    @Override
-    public List<CommentResponse> getCommentInPost(Long postId) {
-        QPost post = QPost.post;
-        QComment comment = QComment.comment;
-        QComment parent = new QComment("parent");
-
-        BooleanBuilder builder = new BooleanBuilder();
-        builder.and(post.status.eq(PostStatus.PUBLISHED));
-        builder.and(post.publishedAt.loe(LocalDateTime.now()));
-
-        return List.of();
-    }
 }

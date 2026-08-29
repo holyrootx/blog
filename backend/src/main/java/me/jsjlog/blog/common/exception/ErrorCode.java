@@ -32,6 +32,7 @@ public enum ErrorCode {
     POST_NOT_PUBLISHED(HttpStatus.NOT_FOUND, "POST_NOT_PUBLISHED", "공개된 게시글을 찾을 수 없습니다."),
     POST_SORT_INVALID(HttpStatus.BAD_REQUEST, "POST_SORT_INVALID", "지원하지 않는 게시글 정렬 방식입니다."),
     POST_SIZE_LIMIT_EXCEEDED(HttpStatus.BAD_REQUEST, "POST_SIZE_LIMIT_EXCEEDED", "게시글 조회 개수는 최대 50개까지 가능합니다."),
+    COMMENT_SIZE_LIMIT_EXCEEDED(HttpStatus.BAD_REQUEST, "COMMENT_SIZE_LIMIT_EXCEEDED", "댓글 조회 개수는 최대 50개까지 가능합니다."),
 	FILE_TOO_LARGE(HttpStatus.BAD_REQUEST, "FILE_TOO_LARGE", "파일 크기가 너무 큽니다."),
 	UNSUPPORTED_FILE_TYPE(HttpStatus.BAD_REQUEST, "UNSUPPORTED_FILE_TYPE", "지원하지 않는 파일 형식입니다."),
 	FILE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "FILE_UPLOAD_FAILED", "파일 업로드에 실패했습니다.");

@@ -17,12 +17,6 @@ export const homeMock = {
     githubUrl: 'https://github.com/holyrootx',
     email: 'jsj@example.com',
   },
-  stats: [
-    { label: '기록한 날', value: 'D+128' },
-    { label: '누적 조회', value: '12,480' },
-    { label: '쓴 글', value: '36개' },
-    { label: '가장 많이 본 이야기', value: '생활' },
-  ],
   featuredPosts: [
     {
       id: 1,
