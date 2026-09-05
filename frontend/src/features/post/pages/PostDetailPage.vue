@@ -15,7 +15,6 @@ import {
   getPostDetail,
   getRelatedPosts,
 } from '../api/postApi';
-import { postMock } from '../data/postMock';
 
 const EMPTY_COMMENTS = {
   total: 0,
@@ -26,9 +25,38 @@ const EMPTY_COMMENTS = {
   hasNext: false,
 };
 
+// API 응답이 오기 전까지의 빈 상태. 화면이 참조하는 필드는 모두 존재해야 하므로
+// 값만 비우고 형태는 유지한다.
+const EMPTY_DETAIL = {
+  categories: [],
+  post: {
+    id: null,
+    category: '',
+    title: '',
+    excerpt: '',
+    publishedAt: '',
+    views: '',
+    coverImageUrl: '',
+    coverImageAlt: '',
+    tags: [],
+    commentCount: 0,
+  },
+  author: {
+    name: '',
+    job: '',
+    avatarImageUrl: '',
+  },
+  body: [],
+  toc: [],
+  adjacentPosts: { prev: null, next: null },
+  relatedPosts: [],
+  asideAds: [],
+  anchorAd: { label: '' },
+};
+
 const route = useRoute();
 const detail = reactive({
-  ...postMock,
+  ...structuredClone(EMPTY_DETAIL),
   comments: { ...EMPTY_COMMENTS },
 });
 const showAds = false;

@@ -44,7 +44,12 @@ defineProps({
       <p class="post-article__excerpt">{{ post.excerpt }}</p>
 
       <div class="post-author">
-        <img class="post-author__avatar" :src="author.avatarImageUrl" :alt="author.name" />
+        <img
+          v-if="author.avatarImageUrl"
+          class="post-author__avatar"
+          :src="author.avatarImageUrl"
+          :alt="author.name"
+        />
         <div class="post-author__info">
           <div class="post-author__name">{{ author.name }}</div>
           <div class="post-author__desc">{{ author.job }}</div>
@@ -53,7 +58,7 @@ defineProps({
       </div>
     </header>
 
-    <figure class="post-article__cover">
+    <figure v-if="post.coverImageUrl" class="post-article__cover">
       <img :src="post.coverImageUrl" :alt="post.coverImageAlt" />
     </figure>
 

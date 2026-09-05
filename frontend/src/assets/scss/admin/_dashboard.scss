@@ -160,15 +160,6 @@
   color: var(--admin-sidebar-active-text);
 }
 
-.admin-sidebar__item--active::before {
-  flex: 0 0 auto;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--admin-sidebar-active-text);
-  content: '';
-}
-
 .admin-sidebar__item--pending {
   cursor: not-allowed;
 }
