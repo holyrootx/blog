@@ -19,7 +19,12 @@ defineProps({
       <p class="home-hero__description">{{ hero.intro }}</p>
 
       <div class="home-hero__profile">
-        <img class="home-hero__avatar" :src="profile.avatarImageUrl" :alt="`${profile.name} 프로필`" />
+        <img
+          v-if="profile.avatarImageUrl"
+          class="home-hero__avatar"
+          :src="profile.avatarImageUrl"
+          :alt="`${profile.name} 프로필`"
+        />
         <div>
           <strong class="home-hero__profile-name">{{ profile.name }}</strong>
           <span class="home-hero__profile-label">{{ profile.job }}</span>
@@ -28,6 +33,11 @@ defineProps({
       </div>
     </div>
 
-    <img class="home-hero__image" :src="hero.heroImageUrl" alt="노트북과 책상 위 장비가 놓인 작업 공간" />
+    <img
+      v-if="hero.heroImageUrl"
+      class="home-hero__image"
+      :src="hero.heroImageUrl"
+      alt="노트북과 책상 위 장비가 놓인 작업 공간"
+    />
   </section>
 </template>
