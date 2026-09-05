@@ -21,7 +21,7 @@ public class HomePageHeroController {
         return ApiResponse.ok(homePageHeroResponse);
     }
 
-    @PutMapping("/admin/home/hero")
+    @PutMapping("/admin/blog/home/hero")
     public ApiResponse<?> updateHomePageHero(){
 
         return ApiResponse.ok();
