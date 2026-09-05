@@ -6,12 +6,31 @@ import HomeHero from '../components/HomeHero.vue';
 import PostSection from '../components/PostSection.vue';
 import HomeTopicSection from '../components/HomeTopicSection.vue';
 import { getBlogProfile, getHomePageHero, getHomePosts, getHomeTopics } from '../api/homeApi';
-import { homeMock } from '../data/homeMock';
+
+// API 응답이 오기 전까지의 초기 상태. mergeDefined가 빈 값을 덮어쓰지 않으므로
+// 여기 남은 값은 API가 해당 필드를 내려주지 않았을 때 그대로 노출된다.
+const SITE_TITLE = 'JSJ.log';
+
+const EMPTY_HERO = {
+  subTitle: '',
+  title: '',
+  intro: '',
+  heroImageUrl: '',
+};
+
+const EMPTY_PROFILE = {
+  name: '',
+  intro: '',
+  job: '',
+  avatarImageUrl: '',
+  githubUrl: '',
+  email: '',
+};
 
 const home = reactive({
-  header: { ...homeMock.header },
-  hero: { ...homeMock.hero },
-  profile: { ...homeMock.profile },
+  header: { title: SITE_TITLE },
+  hero: { ...EMPTY_HERO },
+  profile: { ...EMPTY_PROFILE },
   topics: [],
   featuredPosts: [],
   recentPosts: [],

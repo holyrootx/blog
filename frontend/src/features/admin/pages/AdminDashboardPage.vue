@@ -1,7 +1,6 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue';
 
-import AdminSideBar from '../components/AdminSideBar.vue';
 import { getAdminDashboard } from '../api/adminApi';
 
 const dashboard = reactive(createEmptyDashboard());
@@ -169,11 +168,7 @@ function getCategoryPercent(category) {
 </script>
 
 <template>
-  <div class="admin-page">
-    <div class="admin-shell">
-      <AdminSideBar />
-
-      <main class="admin-main">
+  <div class="admin-dashboard">
         <header class="admin-dashboard__header">
           <div>
             <h1 class="admin-dashboard__title">대시보드</h1>
@@ -298,7 +293,5 @@ function getCategoryPercent(category) {
           </div>
           </article>
         </section>
-      </main>
-    </div>
   </div>
 </template>

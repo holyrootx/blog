@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import HomePage from '../../features/home/pages/HomePage.vue';
 import PostDetailPage from '../../features/post/pages/PostDetailPage.vue';
+import AdminLayout from '../../features/admin/components/AdminLayout.vue';
 import AdminDashboardPage from '../../features/admin/pages/AdminDashboardPage.vue';
 import AdminMenuPage from '../../features/admin/pages/AdminMenuPage.vue';
 
@@ -25,23 +26,26 @@ const router = createRouter({
     },
     {
       path: '/admin',
-      redirect: { name: 'admin-dashboard' },
-    },
-    {
-      path: '/admin/dashboard',
-      name: 'admin-dashboard',
-      component: AdminDashboardPage,
+      component: AdminLayout,
       meta: {
         layout: 'admin',
       },
-    },
-    {
-      path: '/admin/menus',
-      name: 'admin-menus',
-      component: AdminMenuPage,
-      meta: {
-        layout: 'admin',
-      },
+      children: [
+        {
+          path: '',
+          redirect: { name: 'admin-dashboard' },
+        },
+        {
+          path: 'dashboard',
+          name: 'admin-dashboard',
+          component: AdminDashboardPage,
+        },
+        {
+          path: 'menus',
+          name: 'admin-menus',
+          component: AdminMenuPage,
+        },
+      ],
     },
   ],
 });
