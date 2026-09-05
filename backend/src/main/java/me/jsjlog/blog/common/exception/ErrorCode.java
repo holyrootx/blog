@@ -26,7 +26,7 @@ public enum ErrorCode {
 
 	PROFILE_NOT_FOUND(HttpStatus.NOT_FOUND, "PROFILE_NOT_FOUND", "프로필을 찾을 수 없습니다."),
     MAIN_HERO_NOT_FOUND(HttpStatus.NOT_FOUND, "MAIN_HERO_NOT_FOUND", "메인 소개글을 찾을 수 없습니다."),
-
+    MENU_NOT_FOUND(HttpStatus.NOT_FOUND, "MENU_NOT_FOUND", "메뉴를 찾을 수 없습니다."),
     POST_NOT_FOUND(HttpStatus.NOT_FOUND, "POST_NOT_FOUND", "게시글을 찾을 수 없습니다."),
     POST_SLUG_DUPLICATED(HttpStatus.CONFLICT, "POST_SLUG_DUPLICATED", "이미 사용 중인 게시글 주소입니다."),
     POST_NOT_PUBLISHED(HttpStatus.NOT_FOUND, "POST_NOT_PUBLISHED", "공개된 게시글을 찾을 수 없습니다."),

@@ -25,7 +25,7 @@ public class BlogProfileController {
     }
 
 
-    @PutMapping("/admin/profile")
+    @PutMapping("/admin/blog/profile")
     public ApiResponse<?> updateBlogProfile(@RequestBody UpdateBlogProfileRequest updateBlogProfileRequest){
 
         blogProfileService.updateBlogProfile(updateBlogProfileRequest);
