@@ -1,7 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue';
 
-import AdminSideBar from '../components/AdminSideBar.vue';
 import {
   flattenAdminMenus,
   getVisibleAdminMenus,
@@ -18,11 +17,7 @@ const sortedMenus = computed(() => flattenAdminMenus(menus.value));
 </script>
 
 <template>
-  <div class="admin-page">
-    <div class="admin-shell">
-      <AdminSideBar />
-
-      <main class="admin-main">
+  <div class="admin-menu-page">
       <header class="admin-dashboard__header">
         <div>
           <h1 class="admin-dashboard__title">메뉴 관리</h1>
@@ -100,7 +95,5 @@ const sortedMenus = computed(() => flattenAdminMenus(menus.value));
           </article>
         </div>
       </section>
-      </main>
-    </div>
   </div>
 </template>
