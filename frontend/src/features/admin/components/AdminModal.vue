@@ -7,6 +7,16 @@
 //    ESC·바깥클릭이라는 내용 유실 경로가 새로 생긴다.
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
+// 확인창이 폼 모달 위에 겹쳐 뜨는 경우가 있어서 열린 모달을 스택으로 센다.
+// 이게 없으면 (1) Esc 가 겹친 모달을 한꺼번에 닫고
+// (2) 위 모달만 닫아도 아래가 열려 있는데 배경 스크롤 잠금이 풀린다
+import {
+  hasNoOpenModal,
+  isTopModal,
+  popModal,
+  pushModal,
+} from './adminModalStack';
+
 const props = defineProps({
   open: {
     type: Boolean,
@@ -34,6 +44,8 @@ const props = defineProps({
 const emit = defineEmits(['close']);
 
 const panelRef = ref(null);
+// 이 인스턴스를 스택에서 식별할 표식
+const modalId = Symbol('admin-modal');
 
 function close() {
   emit('close');
@@ -46,28 +58,50 @@ function onBackdrop() {
 }
 
 function onKeydown(event) {
-  if (event.key === 'Escape' && props.open) {
-    close();
+  if (event.key !== 'Escape' || !props.open) {
+    return;
+  }
+
+  // 겹쳐 있으면 맨 위 것만 닫는다
+  if (!isTopModal(modalId)) {
+    return;
+  }
+
+  close();
+}
+
+function leaveStack() {
+  popModal(modalId);
+
+  // 아직 열려 있는 모달이 남았으면 잠금을 유지한다
+  if (hasNoOpenModal()) {
+    document.body.style.overflow = '';
   }
 }
 
 watch(
   () => props.open,
   (isOpen) => {
-    // 모달 뒤 본문이 스크롤되지 않게
-    document.body.style.overflow = isOpen ? 'hidden' : '';
-
     if (isOpen) {
+      pushModal(modalId);
+
+      // 모달 뒤 본문이 스크롤되지 않게
+      document.body.style.overflow = 'hidden';
       requestAnimationFrame(() => panelRef.value?.focus());
+      return;
     }
+
+    leaveStack();
   },
+  // 열린 채로 마운트되는 경우에도 잠가야 한다
+  { immediate: true },
 );
 
 onMounted(() => document.addEventListener('keydown', onKeydown));
 
 onBeforeUnmount(() => {
   document.removeEventListener('keydown', onKeydown);
-  document.body.style.overflow = '';
+  leaveStack();
 });
 </script>
 
