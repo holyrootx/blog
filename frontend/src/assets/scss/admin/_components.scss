@@ -902,8 +902,10 @@
   line-height: 1.6;
 }
 
-/* 팝업 안에서 저장이 실패한 이유 */
+/* 팝업 안에서 저장이 실패한 이유.
+   일괄 처리 결과는 여러 줄이라 줄바꿈을 살린다 */
 .admin-form-error {
+  white-space: pre-line;
   margin: 14px 0 0;
   padding: 10px 12px;
   border: 1px solid var(--admin-danger-line);
@@ -912,4 +914,518 @@
   color: var(--admin-danger);
   font-size: 12.5px;
   line-height: 1.6;
+}
+
+/* ── 글 관리 ───────────────────────────────── */
+
+/* 날짜 한 칸에 값과 기준(발행·작성)을 같이 둔다.
+   임시저장 글은 발행일이 없어서 열을 나누면 절반이 빈다 */
+.admin-post__date {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.admin-post__date em {
+  color: var(--admin-meta);
+  font-size: 11px;
+  font-style: normal;
+}
+
+/* 표 안에 들어가는 작은 버튼 */
+.admin-button--small {
+  min-height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.admin-post__actions {
+  display: inline-flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.admin-post__confirm {
+  margin: 0;
+  color: var(--admin-text-strong);
+  font-size: 13px;
+  line-height: 1.6;
+  word-break: keep-all;
+}
+
+/* ── 글 편집 ───────────────────────────────── */
+
+/* 작업 바. 상태와 발행일은 읽기 전용이고, 상태는 액션의 결과다 */
+.admin-editor__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+  padding: 12px 16px;
+  border: 1px solid var(--admin-card-line);
+  border-radius: 12px;
+  background: var(--admin-surface-subtle);
+}
+
+.admin-editor__meta,
+.admin-editor__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-editor__published,
+.admin-editor__saved {
+  font-size: 12.5px;
+  color: var(--admin-meta);
+}
+
+.admin-editor__saved {
+  color: var(--admin-accent-dark);
+  font-weight: 700;
+}
+
+/* 버튼이 왜 비활성인지 적는 줄. title 속성만으로는 보이지 않는다 */
+.admin-editor__hint {
+  margin: 0 0 12px;
+  font-size: 12.5px;
+  color: var(--admin-meta);
+}
+
+.admin-editor__form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 22px;
+  border: 1px solid var(--admin-card-line);
+  border-radius: 12px;
+  background: var(--admin-card);
+}
+
+/* 입력칸과 글자 수 카운터를 한 묶음으로 */
+.admin-editor__row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.admin-editor__counter {
+  align-self: flex-end;
+  font-size: 11.5px;
+  color: var(--admin-meta);
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-editor__counter--over {
+  color: var(--admin-danger);
+  font-weight: 700;
+}
+
+.admin-editor__textarea,
+.admin-editor__content {
+  height: auto;
+  padding: 10px 11px;
+  line-height: 1.7;
+  resize: vertical;
+}
+
+/* 본문은 마크다운 원문이라 고정폭이 읽기 편하다 */
+.admin-editor__content {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 13px;
+}
+
+@media (max-width: 720px) {
+  .admin-editor__bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+/* 발행된 글을 고칠 때 상시 표시. 손은 같은데 결과가 다르다는 사실을 알린다 */
+.admin-editor__hint--live {
+  color: var(--admin-accent-dark);
+  font-weight: 700;
+}
+
+/* ── 슬래시 메뉴 ───────────────────────────── */
+
+.admin-markdown {
+  position: relative;
+}
+
+/* 커서 자리에 붙는다. textarea 위에 겹치므로 z-index 가 필요하다 */
+.admin-slash {
+  position: absolute;
+  z-index: 20;
+  width: 280px;
+  max-height: 280px;
+  padding: 6px;
+  border: 1px solid var(--admin-card-line);
+  border-radius: 10px;
+  background: var(--admin-card);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.14);
+  list-style: none;
+  overflow-y: auto;
+}
+
+.admin-slash__item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.admin-slash__main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+/* 무엇을 쳐야 이 항목이 나오는지. 메뉴를 보며 손이 외우게 둔다 */
+.admin-slash__key {
+  flex: none;
+  padding: 1px 6px;
+  border: 1px solid var(--admin-card-line);
+  border-radius: 4px;
+  background: var(--admin-surface-subtle);
+  color: var(--admin-accent-dark);
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 11px;
+}
+
+.admin-slash__item--active {
+  background: var(--admin-surface-selected);
+}
+
+.admin-slash__label {
+  color: var(--admin-text-strong);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.admin-slash__hint {
+  color: var(--admin-meta);
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+/* 입력칸 라벨 옆 안내 */
+.admin-editor__tip {
+  margin-left: 8px;
+  color: var(--admin-meta);
+  font-size: 11.5px;
+  font-style: normal;
+  font-weight: 400;
+}
+
+/* ── 블록 에디터 ───────────────────────────── */
+/* 쓰는 자리가 곧 결과다. 공개 화면(post-body__*)과 같은 크기·간격을 쓴다 */
+
+.block-editor {
+  padding: 20px 22px 8px;
+  border: 1px solid var(--admin-card-line);
+  border-radius: var(--radius);
+  background: var(--admin-card);
+}
+
+.block-editor__row {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.block-editor__field {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 입력칸은 테두리 없이 글자만 보이게. 타이핑하는 자리가 결과처럼 보여야 한다 */
+.block-editor__input,
+.block-editor__text {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--admin-title);
+  font-family: inherit;
+  font-size: 16px;
+  line-height: 1.9;
+  resize: none;
+  overflow: hidden;
+}
+
+.block-editor__input:focus,
+.block-editor__text:focus {
+  outline: none;
+}
+
+.block-editor__input::placeholder {
+  color: var(--text-subtle);
+}
+
+/* contenteditable 은 placeholder 속성이 없다 */
+.block-editor__text:empty::before {
+  content: attr(data-placeholder);
+  color: var(--text-subtle);
+}
+
+/* 인라인 서식이 쓰는 중에 그대로 보인다 */
+.block-editor__text strong { font-weight: 800; }
+.block-editor__text em { font-style: italic; }
+
+.block-editor__text code {
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: var(--admin-surface-hover);
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 0.9em;
+}
+
+.block-editor__text a {
+  color: var(--admin-accent-dark);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* 블록별 모습 — 공개 화면과 같은 비율 */
+.block-editor__row--paragraph { margin-top: 14px; }
+
+.block-editor__row--heading { margin-top: 26px; }
+
+.block-editor__text--heading {
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.4;
+}
+
+.block-editor__text--h1 { font-size: 26px; }
+.block-editor__text--h2 { font-size: 22px; }
+.block-editor__text--h3 { font-size: 18.5px; }
+.block-editor__text--h4,
+.block-editor__text--h5,
+.block-editor__text--h6 { font-size: 16.5px; }
+
+.block-editor__row--quote {
+  margin-top: 18px;
+  padding: 10px 0 10px 16px;
+  border-left: 3px solid var(--admin-accent);
+}
+
+.block-editor__text--quote {
+  font-weight: 600;
+  color: var(--admin-text);
+}
+
+.block-editor__row--bullet,
+.block-editor__row--ordered {
+  margin-top: 6px;
+  padding-left: 6px;
+}
+
+.block-editor__marker {
+  flex: none;
+  min-width: 18px;
+  color: var(--admin-meta);
+  font-size: 15px;
+  line-height: 1.9;
+}
+
+/* 코드 블록 — 검은 박스 안에서 바로 친다.
+   세로 배치라 교차축이 가로가 된다. stretch 를 주지 않으면
+   입력칸이 글자 길이만큼만 좁아져서 몇 글자 만에 줄이 바뀐다 */
+.block-editor__row--code {
+  flex-direction: column;
+  align-items: stretch;
+  margin-top: 18px;
+  padding: 12px 16px;
+  border-radius: 9px;
+  background: #241f1b;
+}
+
+/* 언어 선택. 코드 박스 안이라 어두운 배경에 맞춘다 */
+.block-editor__language {
+  align-self: flex-start;
+  margin-bottom: 6px;
+  padding: 2px 6px;
+  border: 1px solid #3b332c;
+  border-radius: 5px;
+  background: #1b1714;
+  color: #a79b8d;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 11px;
+}
+
+.block-editor__language:focus {
+  outline: none;
+}
+
+.block-editor__input--code {
+  color: #efe7dc;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 13px;
+  line-height: 1.85;
+}
+
+/* 콜아웃 — 배경 상자 안에서 바로 친다 */
+.block-editor__row--callout {
+  align-items: flex-start;
+  margin-top: 18px;
+  padding: 14px 18px;
+  border-radius: 10px;
+  background: #fbf3e8;
+}
+
+.block-editor__row--callout .post-callout__label {
+  background: var(--admin-accent-soft);
+  color: var(--admin-accent-dark);
+}
+
+.block-editor__text--callout {
+  font-size: 15px;
+  color: #332f2b;
+}
+
+.block-editor__row--divider {
+  margin-top: 22px;
+}
+
+.block-editor__row--divider .post-body__divider {
+  width: 100%;
+  margin: 0;
+}
+
+/* 슬래시 메뉴는 그 줄 바로 아래에 */
+.block-editor__menu {
+  top: 100%;
+  left: 0;
+}
+
+.block-editor__tail {
+  display: block;
+  width: 100%;
+  margin-top: 16px;
+  padding: 10px 0;
+  border: 0;
+  background: none;
+  color: var(--text-subtle);
+  font-family: inherit;
+  font-size: 12.5px;
+  text-align: left;
+  cursor: text;
+}
+
+/* 코드 블록 색칠 — 색칠 층을 뒤에 깔고 입력칸을 투명하게 겹친다.
+   겹치는 것은 이 둘뿐이다. 언어 드롭다운까지 포함하면 첫 줄과 포개진다 */
+.block-editor__code-area {
+  position: relative;
+}
+
+.block-editor__highlight,
+.block-editor__input--code {
+  margin: 0;
+  padding: 0;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 13px;
+  line-height: 1.85;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.block-editor__highlight {
+  position: absolute;
+  inset: 0;
+  color: #efe7dc;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* 글자는 안 보이고 커서만 보이게. 뒤에 깔린 색칠이 그 자리를 채운다 */
+.block-editor__input--code {
+  position: relative;
+  color: transparent;
+  caret-color: #efe7dc;
+  background: transparent;
+}
+
+.block-editor__input--code::selection {
+  background: rgba(210, 150, 100, 0.35);
+}
+
+/* ── 블록 핸들·선택·드래그 ─────────────────── */
+
+.block-editor__row {
+  padding-left: 26px;
+}
+
+/* 평소에는 숨어 있다가 줄에 마우스를 올리면 나온다 */
+.block-editor__handle {
+  position: absolute;
+  left: 0;
+  top: 2px;
+  width: 20px;
+  height: 22px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--admin-card-line);
+  font-size: 13px;
+  line-height: 1;
+  cursor: grab;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.block-editor__row:hover .block-editor__handle,
+.block-editor__handle:focus-visible {
+  opacity: 1;
+}
+
+.block-editor__handle:hover {
+  background: var(--admin-surface-hover);
+  color: var(--admin-meta);
+}
+
+.block-editor__handle:active {
+  cursor: grabbing;
+}
+
+/* 고른 블록. 여러 개를 한꺼번에 옮길 수 있다.
+   낱개 테두리를 두르면 블록이 따로 보여서 "어디부터 어디까지"가 안 읽힌다.
+   반투명 파랑을 줄 전체에 덮어 이어진 한 덩어리로 보이게 한다 */
+.block-editor__row--selected {
+  background: rgba(45, 126, 205, 0.16);
+}
+
+/* 위아래로 이어진 선택은 모서리를 깎지 않아 한 덩어리로 보인다 */
+.block-editor__row--selected:not(.block-editor__row--selected + .block-editor__row--selected) {
+  border-radius: 4px 4px 0 0;
+}
+
+.block-editor__row--selected:has(+ :not(.block-editor__row--selected)),
+.block-editor__row--selected:last-child {
+  border-radius: 0 0 4px 4px;
+}
+
+/* 하나만 골랐으면 네 모서리 모두 */
+.block-editor__row--selected:not(.block-editor__row--selected + .block-editor__row--selected):has(+ :not(.block-editor__row--selected)) {
+  border-radius: 4px;
+}
+
+.block-editor__row--selected .block-editor__handle {
+  opacity: 1;
+  color: #2d7ecd;
+}
+
+/* 놓을 자리 */
+.block-editor__row--dropping {
+  box-shadow: 0 2px 0 0 var(--admin-accent);
 }
