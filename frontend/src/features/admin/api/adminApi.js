@@ -1,4 +1,4 @@
-import { getApiData } from '../../../shared/api/blogApiClient';
+import { getApiData, sendApiData } from '../../../shared/api/blogApiClient';
 
 const ADMIN_BLOG_API_BASE = '/api/v1/admin/blog';
 
@@ -11,6 +11,87 @@ export async function getAdminSidebarMenus() {
   const menus = await getApiData(`${ADMIN_BLOG_API_BASE}/sidebar/menus`);
 
   return toAdminMenus(menus);
+}
+
+// 메뉴 관리 화면용. 숨긴 메뉴까지 전부 내려온다
+export async function getAdminMenus(condition = {}) {
+  const menus = await getApiData(withQuery(`${ADMIN_BLOG_API_BASE}/menus`, condition));
+
+  return toAdminMenus(menus);
+}
+
+// 빈 값은 보내지 않는다. 서버에서 빈 문자열도 조건으로 잡힐 수 있기 때문
+function withQuery(path, condition) {
+  const searchParams = new URLSearchParams();
+
+  Object.entries(condition).forEach(([key, value]) => {
+    if (value !== null && value !== undefined && value !== '') {
+      searchParams.set(key, String(value));
+    }
+  });
+
+  const query = searchParams.toString();
+
+  return query ? `${path}?${query}` : path;
+}
+
+// 메뉴 수정. menuType 은 바꿀 수 없어서 보내지 않는다
+export function updateAdminMenu(menuId, request) {
+  return sendApiData(`${ADMIN_BLOG_API_BASE}/menus/${menuId}`, {
+    method: 'PUT',
+    body: request,
+  });
+}
+
+// 메뉴 등록. 수정과 달리 menuType 을 보낸다 (만들 때만 정할 수 있다)
+export function createAdminMenu(request) {
+  return sendApiData(`${ADMIN_BLOG_API_BASE}/menus`, {
+    method: 'POST',
+    body: request,
+  });
+}
+
+export function deleteAdminMenu(menuId) {
+  return sendApiData(`${ADMIN_BLOG_API_BASE}/menus/${menuId}`, {
+    method: 'DELETE',
+  });
+}
+
+// 카테고리 관리 화면용. 공개 목록과 달리 글 수가 함께 내려온다
+export async function getAdminCategories(condition = {}) {
+  const categories = await getApiData(withQuery(`${ADMIN_BLOG_API_BASE}/categories`, condition));
+
+  return Array.isArray(categories) ? categories.map(toAdminCategory) : [];
+}
+
+export function createAdminCategory(request) {
+  return sendApiData(`${ADMIN_BLOG_API_BASE}/categories`, {
+    method: 'POST',
+    body: request,
+  });
+}
+
+export function updateAdminCategory(categoryId, request) {
+  return sendApiData(`${ADMIN_BLOG_API_BASE}/categories/${categoryId}`, {
+    method: 'PUT',
+    body: request,
+  });
+}
+
+export function deleteAdminCategory(categoryId) {
+  return sendApiData(`${ADMIN_BLOG_API_BASE}/categories/${categoryId}`, {
+    method: 'DELETE',
+  });
+}
+
+function toAdminCategory(category) {
+  return {
+    id: category.id,
+    name: category.name ?? '이름 없는 카테고리',
+    sortOrder: toNumber(category.sortOrder),
+    // 전용 API 에서 내려줄 값. 없으면 화면에 "연결 전"으로 표시한다
+    postCount: toNumberOrNull(category.postCount),
+  };
 }
 
 function toAdminDashboard(dashboard) {

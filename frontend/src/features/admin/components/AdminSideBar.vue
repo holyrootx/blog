@@ -1,23 +1,10 @@
 <script setup>
-import { ref } from 'vue';
 import { useRoute } from 'vue-router';
 
-import { getAdminSidebarMenus } from '../api/adminApi';
-import { getVisibleAdminMenus } from '../data/adminMenus';
+import { useAdminSidebarMenus } from '../data/adminSidebarMenuStore';
 
 const route = useRoute();
-const menus = ref([]);
-
-loadSidebarMenus();
-
-async function loadSidebarMenus() {
-  try {
-    menus.value = getVisibleAdminMenus(await getAdminSidebarMenus());
-  } catch (error) {
-    menus.value = [];
-    console.warn(error);
-  }
-}
+const { menus } = useAdminSidebarMenus();
 
 function isActive(menu) {
   return menu.routePath === route.path || menu.routeName === route.name;
