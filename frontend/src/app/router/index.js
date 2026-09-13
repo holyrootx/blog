@@ -5,6 +5,8 @@ import AdminLayout from '../../features/admin/components/AdminLayout.vue';
 import AdminDashboardPage from '../../features/admin/pages/AdminDashboardPage.vue';
 import AdminMenuPage from '../../features/admin/pages/AdminMenuPage.vue';
 import AdminCategoryPage from '../../features/admin/pages/AdminCategoryPage.vue';
+import AdminPostPage from '../../features/admin/pages/AdminPostPage.vue';
+import AdminPostEditPage from '../../features/admin/pages/AdminPostEditPage.vue';
 
 // 샌드박스(src/sandbox)는 gitignore 대상이라 없을 수 있다.
 // import.meta.glob은 매칭되는 파일이 없으면 빈 객체를 주므로 빌드가 깨지지 않는다.
@@ -61,6 +63,33 @@ const router = createRouter({
           meta: {
             title: '메뉴 관리',
             group: '블로그',
+          },
+        },
+        {
+          path: 'posts',
+          name: 'admin-posts',
+          component: AdminPostPage,
+          meta: {
+            title: '글 관리',
+            group: '콘텐츠',
+          },
+        },
+        {
+          path: 'posts/new',
+          name: 'admin-post-new',
+          component: AdminPostEditPage,
+          meta: {
+            title: '새 글 쓰기',
+            group: '콘텐츠',
+          },
+        },
+        {
+          path: 'posts/:postId',
+          name: 'admin-post-edit',
+          component: AdminPostEditPage,
+          meta: {
+            title: '글 편집',
+            group: '콘텐츠',
           },
         },
         {

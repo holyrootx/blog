@@ -1,0 +1,599 @@
+<script setup>
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router';
+
+import {
+  createAdminPost,
+  deleteAdminPost,
+  getAdminCategories,
+  getAdminPost,
+  publishAdminPost,
+  unpublishAdminPost,
+  updateAdminPost,
+} from '../api/adminApi';
+import {
+  clearPostDraft,
+  loadPostDraft,
+  savePostDraft,
+} from '../data/adminPostDraftStore';
+import AdminPageHeader from '../components/AdminPageHeader.vue';
+import AdminTextInput from '../components/AdminTextInput.vue';
+import AdminSelect from '../components/AdminSelect.vue';
+import AdminModal from '../components/AdminModal.vue';
+import AdminBlockEditor from '../components/AdminBlockEditor.vue';
+
+const TITLE_MAX = 255;
+const EXCERPT_MAX = 500;
+const THUMBNAIL_MAX = 500;
+
+const STATUS_LABELS = {
+  PUBLISHED: '발행',
+  PRIVATE: '비공개',
+  DRAFT: '임시저장',
+};
+
+const route = useRoute();
+const router = useRouter();
+
+// 신규와 수정은 같은 화면, 같은 폼이다. 진입점만 다르다
+const postId = computed(() => (route.params.postId ? Number(route.params.postId) : null));
+const isNew = computed(() => postId.value === null);
+
+const EMPTY_FORM = {
+  title: '',
+  categoryId: '',
+  excerpt: '',
+  content: '',
+  thumbnailImageUrl: '',
+};
+
+const form = reactive({ ...EMPTY_FORM });
+const status = ref('DRAFT');
+const publishedAt = ref(null);
+// 스냅샷이 어느 서버 값을 기준으로 만들어졌는지 비교하는 데 쓴다
+const serverUpdatedAt = ref(null);
+// 마지막으로 서버에 저장한 내용. 이것과 같으면 스냅샷을 남길 이유가 없다
+const lastSavedForm = ref(null);
+
+const categories = ref([]);
+const loading = ref(false);
+const loadError = ref('');
+const saving = ref(false);
+const formError = ref('');
+const savedMessage = ref('');
+
+const confirmAction = ref('');
+const draftFound = ref(null);
+
+// 스냅샷을 만든 뒤 서버에서 글이 따로 바뀌었는지
+const draftConflict = ref(false);
+
+const isPublished = computed(() => !isNew.value && status.value === 'PUBLISHED');
+
+// 발행된 글에 "임시저장"이라 써 있으면 "저장하면 임시저장으로 내려가나?"로 읽힌다.
+// 실제로는 PUT 이 status 를 건드리지 않아 발행 상태 그대로 내용만 바뀐다
+const saveLabel = computed(() => (isPublished.value ? '저장' : '임시저장'));
+
+const categoryOptions = computed(() => categories.value.map((category) => ({
+  value: String(category.id),
+  label: category.name,
+})));
+
+// 임시저장의 최소 조건은 타협이 아니라 DB 제약이다.
+// title 과 category_id 가 NOT NULL 이라 이 둘 없이는 INSERT 자체가 안 된다
+const canSaveDraft = computed(() => form.title.trim().length > 0 && form.categoryId !== '');
+
+const draftBlockReason = computed(() => {
+  if (canSaveDraft.value) {
+    return '';
+  }
+
+  return `제목과 카테고리를 채우면 ${saveLabel.value}할 수 있습니다.`;
+});
+
+// 발행은 되돌리기 비용이 비싸서 검증도 엄격하다
+const canPublish = computed(() => canSaveDraft.value
+  && form.content.trim().length > 0
+  && form.excerpt.trim().length > 0);
+
+const publishBlockReason = computed(() => {
+  if (canPublish.value) {
+    return '';
+  }
+
+  if (!canSaveDraft.value) {
+    return draftBlockReason.value;
+  }
+
+  if (form.content.trim().length === 0) {
+    return '본문을 채우면 발행할 수 있습니다.';
+  }
+
+  return '요약을 채우면 발행할 수 있습니다.';
+});
+
+// 발행된 글은 발행 조건을 계속 만족해야 한다.
+// 공개된 글에서 요약을 지우면 공개 화면 카드가 빈다
+const canSave = computed(() => (isPublished.value ? canPublish.value : canSaveDraft.value));
+
+const saveBlockReason = computed(() => (isPublished.value ? publishBlockReason.value : draftBlockReason.value));
+
+const lengthError = computed(() => {
+  if (form.title.trim().length > TITLE_MAX) return `제목은 ${TITLE_MAX}자까지 입력할 수 있습니다.`;
+  if (form.excerpt.length > EXCERPT_MAX) return `요약은 ${EXCERPT_MAX}자까지 입력할 수 있습니다.`;
+  if (form.thumbnailImageUrl.length > THUMBNAIL_MAX) return '썸네일 주소는 500자까지 입력할 수 있습니다.';
+  return '';
+});
+
+const draftKey = computed(() => (isNew.value ? 'new' : String(postId.value)));
+
+/* ── 불러오기 ─────────────────────────────── */
+
+async function loadPost() {
+  if (isNew.value) {
+    Object.assign(form, EMPTY_FORM);
+    status.value = 'DRAFT';
+    publishedAt.value = null;
+    return;
+  }
+
+  loading.value = true;
+  loadError.value = '';
+
+  try {
+    const post = await getAdminPost(postId.value);
+
+    Object.assign(form, {
+      title: post.title,
+      categoryId: post.categoryId ? String(post.categoryId) : '',
+      excerpt: post.excerpt,
+      content: post.content,
+      thumbnailImageUrl: post.thumbnailImageUrl,
+    });
+
+    status.value = post.status;
+    publishedAt.value = post.publishedAt;
+    serverUpdatedAt.value = post.updatedAt;
+  } catch (error) {
+    console.error(error);
+    loadError.value = '글을 불러오지 못했습니다.';
+  } finally {
+    loading.value = false;
+  }
+}
+
+/* ── 로컬 임시 보관 ───────────────────────── */
+// 서버 자동저장이 아니다. 브라우저에만 남긴다.
+// 대상별로 키를 나누는 이유: 한 키에 덮어쓰면 글 A를 두고 B를 열었다 돌아왔을 때
+// A의 스냅샷이 B로 덮여 사라진다
+
+let draftTimer = null;
+
+function scheduleDraftSave() {
+  clearTimeout(draftTimer);
+  // 매 글자마다 쓰면 긴 본문에서 직렬화 비용이 눈에 띄고,
+  // 10초로 두면 방금 쓴 문단이 보호 범위 밖에 남는다
+  draftTimer = setTimeout(saveDraftNow, 2000);
+}
+
+// 한 글자라도 들어있는지. 빈 폼까지 남기면 /posts/new 를 열기만 해도 쓰레기가 쌓인다
+const hasAnyInput = computed(() => Object.values(form).some((value) => String(value).trim() !== ''));
+
+function saveDraftNow() {
+  clearTimeout(draftTimer);
+
+  // 임시저장 버튼이 비활성인 동안에도 로컬 보관은 계속 돌아간다.
+  // 제목을 안 붙였다는 이유로 본문 30분치를 버리면 보관의 존재 이유가 없다
+  if (!hasAnyInput.value) {
+    return;
+  }
+
+  // 서버에 저장한 내용 그대로면 남기지 않고 기존 스냅샷도 지운다.
+  // 저장 직후 라우트가 바뀌면 이탈 훅이 한 번 더 불려서, 막지 않으면 스냅샷이 되살아난다
+  if (lastSavedForm.value && JSON.stringify({ ...form }) === lastSavedForm.value) {
+    clearPostDraft(draftKey.value);
+    return;
+  }
+
+  savePostDraft(draftKey.value, { ...form }, serverUpdatedAt.value);
+}
+
+function restoreDraft() {
+  Object.assign(form, draftFound.value.form);
+  draftFound.value = null;
+  draftConflict.value = false;
+}
+
+function discardDraft() {
+  clearPostDraft(draftKey.value);
+  draftFound.value = null;
+  draftConflict.value = false;
+}
+
+/* ── 저장 ─────────────────────────────────── */
+
+async function save() {
+  if (saving.value || !canSave.value) {
+    return;
+  }
+
+  if (lengthError.value) {
+    formError.value = lengthError.value;
+    return;
+  }
+
+  saving.value = true;
+  formError.value = '';
+  savedMessage.value = '';
+
+  const request = {
+    // 등록에는 비교할 이전 값이 없다
+    updatedAt: isNew.value ? null : serverUpdatedAt.value,
+    title: form.title.trim(),
+    categoryId: Number(form.categoryId),
+    excerpt: form.excerpt,
+    content: form.content,
+    thumbnailImageUrl: form.thumbnailImageUrl,
+  };
+
+  try {
+    // 저장 성공 뒤에 디바운스 타이머가 돌아 옛 내용을 다시 남기는 것을 막는다
+    clearTimeout(draftTimer);
+    lastSavedForm.value = JSON.stringify({ ...form });
+
+    if (isNew.value) {
+      const newId = await createAdminPost(request);
+      clearPostDraft('new');
+      // 저장했으니 이제 수정 화면이다. 주소도 그 글을 가리켜야 한다
+      await router.replace({ name: 'admin-post-edit', params: { postId: newId } });
+    } else {
+      await updateAdminPost(postId.value, request);
+      clearPostDraft(draftKey.value);
+
+      // 서버가 저장하면서 updatedAt 을 바꾼다.
+      // 안 받아오면 두 번째 저장이 옛 값을 보내 충돌로 막힌다
+      await refreshServerState();
+
+      savedMessage.value = '저장했습니다.';
+    }
+  } catch (error) {
+    // 저장에 실패했으면 스냅샷은 계속 남겨야 한다
+    lastSavedForm.value = null;
+    formError.value = error.message;
+  } finally {
+    saving.value = false;
+  }
+}
+
+/** 본문은 그대로 두고 서버 상태(수정 시각·발행 상태)만 다시 읽는다 */
+async function refreshServerState() {
+  try {
+    const post = await getAdminPost(postId.value);
+
+    serverUpdatedAt.value = post.updatedAt;
+    status.value = post.status;
+    publishedAt.value = post.publishedAt;
+  } catch (error) {
+    // 상태를 못 읽어도 저장 자체는 끝났다. 다음 저장에서 충돌이 뜨면 그때 알린다
+    console.warn(error);
+  }
+}
+
+async function runConfirmedAction() {
+  if (saving.value) {
+    return;
+  }
+
+  saving.value = true;
+  formError.value = '';
+
+  try {
+    if (confirmAction.value === 'publish') {
+      await publishAdminPost(postId.value);
+      confirmAction.value = '';
+      await loadPost();
+    } else if (confirmAction.value === 'unpublish') {
+      await unpublishAdminPost(postId.value);
+      confirmAction.value = '';
+      await loadPost();
+    } else {
+      await deleteAdminPost(postId.value);
+      clearPostDraft(draftKey.value);
+      confirmAction.value = '';
+      await router.push({ name: 'admin-posts' });
+    }
+  } catch (error) {
+    confirmAction.value = '';
+    formError.value = error.message;
+  } finally {
+    saving.value = false;
+  }
+}
+
+const CONFIRM_TEXTS = {
+  publish: {
+    title: '이 글을 발행할까요?',
+    description: '공개 화면과 검색엔진이 이 글을 보게 됩니다.',
+  },
+  unpublish: {
+    title: '이 글을 내릴까요?',
+    description: '공개 화면에서 사라집니다. 발행일은 그대로 남습니다.',
+  },
+  delete: {
+    title: '이 글을 삭제할까요?',
+    description: '글과 달린 댓글이 함께 지워집니다. 되돌릴 수 없습니다.',
+  },
+};
+
+const confirmText = computed(() => CONFIRM_TEXTS[confirmAction.value] ?? { title: '', description: '' });
+
+function formatDateTime(value) {
+  if (!value) {
+    return '';
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+
+  const pad = (number) => String(number).padStart(2, '0');
+
+  return `${date.getFullYear()}.${pad(date.getMonth() + 1)}.${pad(date.getDate())} `
+    + `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+/* ── 생명주기 ─────────────────────────────── */
+
+async function enter() {
+  draftFound.value = null;
+  draftConflict.value = false;
+
+  await loadPost();
+
+  // 불러온 그대로면 스냅샷을 남길 이유가 없다.
+  // 손대기 전까지는 브라우저에 아무것도 쓰지 않는다
+  lastSavedForm.value = JSON.stringify({ ...form });
+
+  const draft = loadPostDraft(draftKey.value);
+
+  if (!draft) {
+    return;
+  }
+
+  // 내용이 같으면 물어볼 이유가 없다
+  if (JSON.stringify(draft.form) === JSON.stringify({ ...form })) {
+    clearPostDraft(draftKey.value);
+    return;
+  }
+
+  // 스냅샷이 기준으로 삼은 서버 값과 지금 서버 값이 다르면, 그 사이 다른 곳에서 글이 바뀐 것이다.
+  // 그래도 말없이 버리지 않는다 — 사용자가 쓰던 내용을 묻지도 않고 지우는 것이
+  // 이 기능이 막으려는 사고 그 자체다. 어느 쪽이 최신인지 알려주고 고르게 한다
+  draftConflict.value = Boolean(draft.baseUpdatedAt)
+    && Boolean(serverUpdatedAt.value)
+    && draft.baseUpdatedAt !== serverUpdatedAt.value;
+
+  draftFound.value = draft;
+}
+
+// 폼이 바뀌면 2초 뒤에 스냅샷을 남긴다
+watch(form, scheduleDraftSave, { deep: true });
+
+// 새로고침·창 닫기 직전에는 동기적으로 남긴다
+function onBeforeUnload() {
+  saveDraftNow();
+}
+
+onMounted(async () => {
+  try {
+    categories.value = await getAdminCategories();
+  } catch (error) {
+    console.warn(error);
+    categories.value = [];
+  }
+
+  await enter();
+  window.addEventListener('beforeunload', onBeforeUnload);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('beforeunload', onBeforeUnload);
+  clearTimeout(draftTimer);
+});
+
+// 사이드바로 다른 화면에 가기 직전에도 남긴다
+onBeforeRouteLeave(() => {
+  saveDraftNow();
+});
+
+// 같은 화면에서 대상이 바뀌는 경우 (새 글 저장 후 수정 화면이 되는 등)
+watch(postId, enter);
+</script>
+
+<template>
+  <div class="admin-post-edit">
+    <AdminPageHeader :title="isNew ? '새 글 쓰기' : '글 편집'">
+      <template #actions>
+        <RouterLink class="admin-button admin-button--ghost" :to="{ name: 'admin-posts' }">
+          목록
+        </RouterLink>
+      </template>
+    </AdminPageHeader>
+
+    <div v-if="loadError" class="admin-tree__state">
+      <div class="admin-grid__error">
+        <span class="admin-grid__error-icon" aria-hidden="true">!</span>
+        <span>{{ loadError }}</span>
+        <button class="admin-grid__retry" type="button" @click="enter">다시 시도</button>
+      </div>
+    </div>
+
+    <template v-else>
+      <!-- 작업 바. 상태와 발행일은 읽기 전용이고, 상태는 액션의 결과다 -->
+      <div class="admin-editor__bar">
+        <div class="admin-editor__meta">
+          <span class="admin-badge" :class="status === 'PUBLISHED' ? 'admin-badge--on' : 'admin-badge--off'">
+            {{ STATUS_LABELS[status] }}
+          </span>
+          <span v-if="publishedAt" class="admin-editor__published">
+            {{ formatDateTime(publishedAt) }} 발행
+          </span>
+          <span v-if="savedMessage" class="admin-editor__saved">{{ savedMessage }}</span>
+        </div>
+
+        <div class="admin-editor__actions">
+          <button
+            v-if="!isNew"
+            class="admin-button admin-button--danger"
+            type="button"
+            :disabled="saving"
+            @click="confirmAction = 'delete'"
+          >
+            삭제
+          </button>
+
+          <button
+            class="admin-button admin-button--ghost"
+            type="button"
+            :disabled="saving || !canSave"
+            :title="saveBlockReason"
+            @click="save"
+          >
+            {{ saving ? '저장 중…' : saveLabel }}
+          </button>
+
+          <button
+            v-if="!isNew && status === 'PUBLISHED'"
+            class="admin-button admin-button--solid"
+            type="button"
+            :disabled="saving"
+            @click="confirmAction = 'unpublish'"
+          >
+            내리기
+          </button>
+          <button
+            v-else
+            class="admin-button admin-button--solid"
+            type="button"
+            :disabled="saving || isNew || !canPublish"
+            :title="isNew ? '먼저 임시저장해 주세요.' : publishBlockReason"
+            @click="confirmAction = 'publish'"
+          >
+            발행
+          </button>
+        </div>
+      </div>
+
+      <!-- 발행된 글의 저장은 즉시 공개 반영이다. 확인 다이얼로그 대신 상시 문구를 둔다 —
+           오타 하나마다 다이얼로그가 뜨면 반사적으로 확인을 누르게 되어 아무것도 막지 못한다 -->
+      <p v-if="isPublished" class="admin-editor__hint admin-editor__hint--live">
+        저장하면 공개 글에 바로 반영됩니다.
+      </p>
+
+      <!-- 비활성인 이유를 버튼 옆이 아니라 줄로 적는다. title 속성만으로는 보이지 않는다 -->
+      <p v-if="saveBlockReason || (!isNew && publishBlockReason)" class="admin-editor__hint">
+        {{ saveBlockReason || publishBlockReason }}
+      </p>
+
+      <div class="admin-editor__form">
+        <div class="admin-editor__row">
+          <AdminTextInput v-model="form.title" label="제목" placeholder="글 제목" />
+          <span class="admin-editor__counter" :class="{ 'admin-editor__counter--over': form.title.length > TITLE_MAX }">
+            {{ form.title.length }} / {{ TITLE_MAX }}
+          </span>
+        </div>
+
+        <AdminSelect v-model="form.categoryId" label="카테고리" :options="categoryOptions" />
+
+        <div class="admin-editor__row">
+          <label class="admin-field">
+            <span class="admin-field__label">요약</span>
+            <textarea
+              v-model="form.excerpt"
+              class="admin-field__input admin-editor__textarea"
+              rows="3"
+              placeholder="목록 카드와 검색 결과에 쓰입니다."
+            ></textarea>
+          </label>
+          <span class="admin-editor__counter" :class="{ 'admin-editor__counter--over': form.excerpt.length > EXCERPT_MAX }">
+            {{ form.excerpt.length }} / {{ EXCERPT_MAX }}
+          </span>
+        </div>
+
+        <AdminTextInput
+          v-model="form.thumbnailImageUrl"
+          label="썸네일 주소"
+          placeholder="https://..."
+        />
+
+        <div class="admin-field">
+          <span class="admin-field__label">
+            본문
+            <em class="admin-editor__tip">/ 를 눌러 블록을 고르거나 마크다운을 그대로 쳐도 됩니다</em>
+          </span>
+
+          <!-- 쓰는 자리가 곧 결과다. 미리보기를 따로 두지 않는다 -->
+          <AdminBlockEditor v-model="form.content" />
+        </div>
+      </div>
+
+      <p v-if="formError" class="admin-form-error">{{ formError }}</p>
+    </template>
+
+    <!-- 로컬 스냅샷 복구 -->
+    <AdminModal
+      :open="draftFound !== null"
+      title="작성 중이던 내용이 있습니다"
+      description="브라우저에 남아 있던 내용입니다. 불러올까요?"
+      size="small"
+      :close-on-backdrop="false"
+      @close="draftFound = null"
+    >
+      <p class="admin-post__confirm">
+        {{ formatDateTime(draftFound?.savedAt) }}에 보관됨
+      </p>
+
+      <p v-if="draftConflict" class="admin-category__confirm-note">
+        보관한 뒤 서버에서 이 글이 따로 바뀌었습니다.
+        불러오면 화면의 내용이 보관본으로 덮이고, 저장할 때 서버 내용을 덮어씁니다.
+      </p>
+
+      <template #footer>
+        <button class="admin-button admin-button--ghost" type="button" @click="discardDraft">
+          버리기
+        </button>
+        <button class="admin-button admin-button--solid" type="button" @click="restoreDraft">
+          불러오기
+        </button>
+      </template>
+    </AdminModal>
+
+    <!-- 발행·내리기·삭제 확인 -->
+    <AdminModal
+      :open="confirmAction !== ''"
+      :title="confirmText.title"
+      :description="confirmText.description"
+      size="small"
+      @close="confirmAction = ''"
+    >
+      <p class="admin-post__confirm">{{ form.title }}</p>
+
+      <template #footer>
+        <button class="admin-button admin-button--ghost" type="button" @click="confirmAction = ''">
+          취소
+        </button>
+        <button
+          class="admin-button"
+          :class="confirmAction === 'delete' ? 'admin-button--danger' : 'admin-button--solid'"
+          type="button"
+          :disabled="saving"
+          @click="runConfirmedAction"
+        >
+          {{ saving ? '처리 중…' : confirmAction === 'delete' ? '삭제' : '확인' }}
+        </button>
+      </template>
+    </AdminModal>
+  </div>
+</template>

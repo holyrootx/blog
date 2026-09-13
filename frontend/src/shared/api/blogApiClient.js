@@ -18,17 +18,20 @@ export async function getApiData(path) {
     },
   });
 
-  if (!response.ok) {
-    throw new Error(`API request failed. status=${response.status}, path=${path}`);
+  // 실패 응답에도 본문이 있으므로 먼저 읽는다. 없을 수도 있어 실패는 삼킨다
+  const body = await response.json().catch(() => null);
+
+  // 서버가 준 code·message 를 버리지 않는다.
+  // 버리면 화면은 "불러오지 못했습니다"만 알고 왜 실패했는지 알 수 없다
+  if (!response.ok || body?.success === false) {
+    throw new ApiError(
+      body?.message ?? `요청에 실패했습니다. (status=${response.status})`,
+      body?.code,
+      response.status,
+    );
   }
 
-  const body = await response.json();
-
-  if (!body.success) {
-    throw new Error(`API response failed. code=${body.code}, path=${path}`);
-  }
-
-  return body.data;
+  return body?.data ?? null;
 }
 
 /**

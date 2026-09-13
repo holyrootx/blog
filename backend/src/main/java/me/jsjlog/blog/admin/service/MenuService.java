@@ -11,6 +11,7 @@ import me.jsjlog.blog.admin.dto.MenuSearchCondition;
 import me.jsjlog.blog.admin.dto.MenuSidebarResponse;
 import me.jsjlog.blog.admin.repository.MenuRepository;
 import me.jsjlog.blog.common.exception.BlogException;
+import me.jsjlog.blog.common.exception.ConcurrencyGuard;
 import me.jsjlog.blog.common.exception.ErrorCode;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -153,6 +154,9 @@ public class MenuService {
     public void updateMenu(Long menuId, MenuRequest request) {
         Menu menu = menuRepository.findById(menuId)
                 .orElseThrow(() -> new BlogException(ErrorCode.MENU_NOT_FOUND));
+
+        // 화면이 불러온 뒤 다른 곳에서 바뀌었으면 덮어쓰지 않는다
+        ConcurrencyGuard.check(request.updatedAt(), menu.getUpdatedAt());
 
         if (!StringUtils.hasText(request.menuName())) {
             // menu_name 이 nullable = false 라 그냥 두면 500 이 나간다
