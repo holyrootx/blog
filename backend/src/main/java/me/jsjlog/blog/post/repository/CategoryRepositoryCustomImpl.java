@@ -33,7 +33,8 @@ public class CategoryRepositoryCustomImpl implements CategoryRepositoryCustom {
                         qCategory.id,
                         qCategory.name,
                         qCategory.sortOrder,
-                        qPost.count()
+                        qPost.count(),
+                        qCategory.updatedAt
                 ))
                 .from(qCategory)
                 .leftJoin(qPost)

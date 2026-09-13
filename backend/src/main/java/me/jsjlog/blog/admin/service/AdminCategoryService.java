@@ -6,6 +6,7 @@ import me.jsjlog.blog.admin.dto.AdminCategoryRequest;
 import me.jsjlog.blog.admin.dto.AdminCategoryResponse;
 import me.jsjlog.blog.admin.dto.AdminCategorySearchCondition;
 import me.jsjlog.blog.common.exception.BlogException;
+import me.jsjlog.blog.common.exception.ConcurrencyGuard;
 import me.jsjlog.blog.common.exception.ErrorCode;
 import me.jsjlog.blog.post.domain.Category;
 import me.jsjlog.blog.post.repository.CategoryRepository;
@@ -64,6 +65,9 @@ public class AdminCategoryService {
     public void updateCategory(Long categoryId, AdminCategoryRequest request) {
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new BlogException(ErrorCode.CATEGORY_NOT_FOUND));
+
+        // 화면이 불러온 뒤 다른 곳에서 바뀌었으면 덮어쓰지 않는다
+        ConcurrencyGuard.check(request.updatedAt(), category.getUpdatedAt());
 
         String name = requireName(request.name());
 

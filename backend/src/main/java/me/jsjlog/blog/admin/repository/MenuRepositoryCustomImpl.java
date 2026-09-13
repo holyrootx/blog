@@ -126,7 +126,8 @@ public class MenuRepositoryCustomImpl implements MenuRepositoryCustom{
                 menu.menuType,
                 menu.routePath,
                 menu.sortOrder,
-                menu.visible
+                menu.visible,
+                menu.updatedAt
         );
 
         return jpaQueryFactory.select(menuConstructionExp)
@@ -165,7 +166,8 @@ public class MenuRepositoryCustomImpl implements MenuRepositoryCustom{
                 menu.menuType,
                 menu.routePath,
                 menu.sortOrder,
-                menu.visible
+                menu.visible,
+                menu.updatedAt
         );
 
         return jpaQueryFactory.select(menuConstructionExp)
