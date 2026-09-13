@@ -39,6 +39,8 @@ const modalOpen = ref(false);
 const selectedMenu = ref(null);
 
 const EMPTY_FORM = {
+  // 팝업을 연 시점의 서버 값. 저장 때 함께 보내 충돌을 판단한다
+  updatedAt: null,
   menuType: 'ITEM',
   parentId: '',
   menuName: '',
@@ -163,6 +165,7 @@ function openMenu(menu) {
   deleteConfirmOpen.value = false;
 
   Object.assign(form, {
+    updatedAt: menu.updatedAt,
     menuType: menu.menuType,
     parentId: menu.parentId ? String(menu.parentId) : '',
     menuName: menu.menuName,
@@ -185,6 +188,7 @@ async function saveMenu() {
 
   // 그룹은 소속과 경로를 가질 수 없다 (서버에서도 무시하지만 보내지도 않는다)
   const request = {
+    updatedAt: form.updatedAt,
     parentId: isGroupForm.value || form.parentId === '' ? null : Number(form.parentId),
     menuName: form.menuName.trim(),
     menuDescription: form.menuDescription.trim(),
@@ -196,7 +200,8 @@ async function saveMenu() {
 
   try {
     if (formMode.value === 'create') {
-      await createAdminMenu({ ...request, menuType: form.menuType });
+      // 등록에는 비교할 이전 값이 없다
+      await createAdminMenu({ ...request, updatedAt: null, menuType: form.menuType });
     } else {
       await updateAdminMenu(selectedMenu.value.id, request);
     }
