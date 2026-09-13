@@ -97,6 +97,9 @@ backend/build/uploads/
 *.bak
 
 
+# 로컬 전용 컴포넌트 확인 화면 (커밋하지 않음)
+frontend/src/sandbox/
+
 # GitHub Actions workflows
 !.github/
 !.github/workflows/

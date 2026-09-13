@@ -1,4 +1,5 @@
-.admin-shell {
+:root {
+  /* 관리자 색상 토큰. 모달이 Teleport 로 body 아래 렌더되므로 :root 에 둔다 */
   --admin-sidebar-bg: #221f1c;
   --admin-sidebar-line: #37322d;
   --admin-sidebar-avatar: #4a433d;
@@ -21,6 +22,10 @@
   --admin-chart-4: #efe0cb;
   --admin-chart-5: #f0e3d3;
   --admin-chart-track: #f4f0e9;
+  /* 표·입력처럼 넓은 면에 쓰는 중립 톤. accent 계열은 강조에만 쓴다 */
+  --admin-surface-subtle: #faf9f7;
+  --admin-surface-hover: #f5f3f0;
+  --admin-surface-selected: #fdf4ea;
   --admin-title: #1e1b18;
   --admin-text-strong: #4a433d;
   --admin-text: #6f6862;
@@ -33,7 +38,15 @@
   --admin-button-secondary-line: #ddd4c6;
   --admin-button-secondary-text: #57504a;
   --admin-shadow: 0 14px 34px rgba(30, 27, 24, 0.07);
+  /* 오류는 브랜드 주황과 분리한다. 주황이 강조·오류 둘 다 맡으면 구분이 안 된다 */
+  --admin-danger: #c0392b;
+  --admin-danger-soft: #fdecea;
+  --admin-danger-line: #f3c9c3;
+  /* 체크박스·포커스 등 폼 컨트롤 강조색 */
+  --admin-control-accent: #d2762f;
+}
 
+.admin-shell {
   display: grid;
   grid-template-columns: 276px minmax(0, 1fr);
   width: 100%;
@@ -256,6 +269,19 @@
   border-color: var(--admin-button-primary);
   background: var(--admin-button-primary);
   color: var(--admin-button-primary-text);
+}
+
+/* 삭제처럼 되돌릴 수 없는 동작에만 쓴다 */
+.admin-button--danger {
+  border-color: var(--admin-danger-line);
+  background: var(--admin-danger-soft);
+  color: var(--admin-danger);
+}
+
+.admin-button--danger:not(:disabled):hover {
+  border-color: var(--admin-danger);
+  background: var(--admin-danger);
+  color: #fff;
 }
 
 .admin-button:disabled {
@@ -569,6 +595,15 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+/* 로딩 · 실패 · 빈 목록 공통 자리 */
+.admin-menu-list__empty {
+  margin: 0;
+  padding: 32px 0;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-subtle);
 }
 
 .admin-menu-item {
