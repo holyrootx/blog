@@ -65,6 +65,31 @@ public class Menu extends BaseEntity {
         this.visible = visible;
     }
 
+    /**
+     * 수정.
+     * menuType 은 바꾸지 않는다. 하위 항목이 딸린 그룹을 항목으로 바꾸면
+     * 그 항목들이 갈 곳을 잃기 때문에, 유형 변경은 화면에서도 막아둔다.
+     */
+    public void update(
+            Menu parent,
+            String menuName,
+            String menuDescription,
+            String routePath,
+            Long sortOrder,
+            Boolean visible
+    ) {
+        this.parent = parent;
+        this.menuName = menuName;
+        this.menuDescription = menuDescription;
+        this.routePath = routePath;
+        this.sortOrder = sortOrder;
+        this.visible = visible;
+    }
+
+    public boolean isGroup() {
+        return this.menuType == MenuType.GROUP;
+    }
+
     public Long getParentId() {
         if (this.parent == null) {
             return null;

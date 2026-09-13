@@ -1,0 +1,915 @@
+/* 관리자 공통 컴포넌트 — 조회조건 · 표 · 페이징 */
+
+/* 폼 컨트롤 강조색 통일. 체크박스만 브라우저 기본 파란색이 되는 것을 막는다 */
+.admin-search,
+.admin-grid,
+.admin-modal,
+.admin-toolbar {
+  accent-color: var(--admin-control-accent);
+}
+
+/* ── 조회조건 필드 ─────────────────────────── */
+
+.admin-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.admin-field__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--admin-sidebar-label);
+}
+
+.admin-field__input,
+.admin-field__select {
+  width: 100%;
+  height: 36px;
+  padding: 0 11px;
+  border: 1px solid var(--admin-card-line);
+  border-radius: var(--radius);
+  background: var(--admin-card);
+  color: var(--admin-text);
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.admin-field__input:focus,
+.admin-field__select:focus {
+  border-color: var(--admin-accent);
+  outline: none;
+}
+
+.admin-field__input::placeholder {
+  color: var(--text-subtle);
+}
+
+.admin-field__checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  font-size: 13px;
+  color: var(--admin-text);
+  cursor: pointer;
+}
+
+/* ── 커스텀 셀렉트 ─────────────────────────── */
+
+.admin-combo {
+  position: relative;
+}
+
+.admin-combo__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  height: 36px;
+  padding: 0 11px;
+  border: 1px solid var(--admin-card-line);
+  border-radius: var(--radius);
+  background: var(--admin-card);
+  color: var(--admin-text);
+  font-family: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.admin-combo__trigger:focus-visible,
+.admin-combo__trigger--open {
+  border-color: var(--admin-accent);
+  outline: none;
+}
+
+.admin-combo__value {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.admin-combo__value--placeholder {
+  color: var(--text-subtle);
+}
+
+.admin-combo__arrow {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin-top: -3px;
+  border-right: 1.5px solid var(--admin-meta);
+  border-bottom: 1.5px solid var(--admin-meta);
+  transform: rotate(45deg);
+}
+
+.admin-combo__trigger--open .admin-combo__arrow {
+  margin-top: 3px;
+  transform: rotate(-135deg);
+}
+
+/* 목록은 기본으로 트리거 바로 아래 */
+.admin-combo__list {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  left: 0;
+  z-index: 30;
+  max-height: 240px;
+  padding: 4px;
+  border: 1px solid var(--admin-card-line);
+  border-radius: var(--radius);
+  background: var(--admin-card);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  list-style: none;
+  overflow-y: auto;
+}
+
+/* 아래 공간이 부족하면 위로 */
+.admin-combo__list--up {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+
+.admin-combo__option {
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--admin-text);
+  cursor: pointer;
+}
+
+.admin-combo__option--active {
+  background: var(--admin-surface-hover);
+}
+
+.admin-combo__option--selected {
+  color: var(--admin-accent-dark);
+  font-weight: 700;
+}
+
+/* ── 이지선다 버튼 ─────────────────────────── */
+
+.admin-segmented {
+  display: flex;
+  height: 36px;
+  border: 1px solid var(--admin-card-line);
+  border-radius: var(--radius);
+  background: var(--admin-card);
+  overflow: hidden;
+}
+
+.admin-segmented__button {
+  flex: 1;
+  min-width: 0;
+  padding: 0 10px;
+  border: 0;
+  border-left: 1px solid var(--admin-card-line);
+  background: transparent;
+  color: var(--admin-meta);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.admin-segmented__button:first-child {
+  border-left: 0;
+}
+
+.admin-segmented__button--active {
+  background: var(--admin-accent-soft);
+  color: var(--admin-accent-dark);
+  font-weight: 700;
+}
+
+/* ── 조회조건 틀 ───────────────────────────── */
+
+.admin-search {
+  padding: 20px 22px 16px;
+  border: 1px solid var(--admin-card-line);
+  border-radius: 12px;
+  background: var(--admin-card);
+}
+
+.admin-search__fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px 20px;
+}
+
+/* 접힌 상태에서는 첫 줄만 남긴다.
+   한 줄에 몇 개인지는 열 수에 따라 다르므로 data-visible 로 받는다.
+   (AdminSearchPanel 이 grid-template-columns 계산값에서 읽어 넣어준다) */
+.admin-search--collapsed .admin-search__fields[data-visible='1'] > *:nth-child(n + 2),
+.admin-search--collapsed .admin-search__fields[data-visible='2'] > *:nth-child(n + 3),
+.admin-search--collapsed .admin-search__fields[data-visible='3'] > *:nth-child(n + 4) {
+  display: none;
+}
+
+/* 접기·펼치기만 남는 줄 */
+.admin-search__footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--admin-card-line);
+}
+
+.admin-search__toggle {
+  padding: 6px 10px;
+  border: 0;
+  background: none;
+  color: var(--admin-accent-dark);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.admin-search__submit {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ── 조회조건과 그리드 사이 툴바 ───────────── */
+
+.admin-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 20px 0 12px;
+}
+
+.admin-toolbar__left,
+.admin-toolbar__right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-toolbar__total {
+  font-size: 13px;
+  color: var(--admin-text);
+}
+
+.admin-toolbar__total strong {
+  color: var(--admin-title);
+}
+
+/* 체크박스로 고른 건수. 0건일 때는 화면에서 감춘다 */
+.admin-toolbar__selected {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--admin-surface-selected);
+  color: var(--admin-accent-dark);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+/* ── 표 ────────────────────────────────────── */
+
+.admin-grid {
+  border: 1px solid var(--admin-card-line);
+  border-radius: 12px;
+  background: var(--admin-card);
+  overflow-x: auto;
+}
+
+.admin-grid__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.admin-grid__table th {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--admin-card-line);
+  background: var(--admin-surface-subtle);
+  color: var(--admin-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.admin-grid__table td {
+  padding: 13px 14px;
+  border-bottom: 1px solid var(--admin-list-line);
+  color: var(--admin-text-strong);
+  vertical-align: middle;
+}
+
+.admin-grid__table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+/* hover 배경은 어느 표에나 준다 (지금 어느 행을 보고 있는지 알려주는 역할) */
+.admin-grid__table tbody tr:hover td {
+  background: var(--admin-surface-hover);
+}
+
+/* 커서는 눌러서 팝업이 열리는 표에만. 커서 모양이 "눌러도 되는지"를 알려준다 */
+.admin-grid__table--clickable tbody tr {
+  cursor: pointer;
+}
+
+/* 로딩·빈 목록·실패 줄(칸을 합친 한 줄)은 hover 대상이 아니다 */
+.admin-grid__table tbody tr:hover td[colspan] {
+  background: var(--admin-card);
+}
+
+.admin-grid__message,
+.admin-tree__message {
+  padding: 36px 0 !important;
+  text-align: center;
+  color: var(--admin-meta);
+}
+
+/* 로딩 — 문구 대신 뼈대를 보여준다 */
+.admin-grid__skeleton,
+.admin-tree__skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 6px 0;
+}
+
+.admin-grid__skeleton span,
+.admin-tree__skeleton span {
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    var(--admin-surface-subtle) 25%,
+    var(--admin-surface-hover) 37%,
+    var(--admin-surface-subtle) 63%
+  );
+  background-size: 400% 100%;
+  animation: admin-skeleton 1.2s ease-in-out infinite;
+}
+
+.admin-grid__skeleton span:nth-child(2),
+.admin-tree__skeleton span:nth-child(2) { width: 82%; }
+
+.admin-grid__skeleton span:nth-child(3),
+.admin-tree__skeleton span:nth-child(3) { width: 64%; }
+
+@keyframes admin-skeleton {
+  from { background-position: 100% 50%; }
+  to { background-position: 0 50%; }
+}
+
+/* 실패 — 아이콘 + 오류색 + 재시도 */
+.admin-grid__error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 22px 0;
+  color: var(--admin-danger);
+}
+
+.admin-grid__error-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--admin-danger-line);
+  border-radius: 50%;
+  background: var(--admin-danger-soft);
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.admin-grid__retry {
+  padding: 6px 14px;
+  border: 1px solid var(--admin-danger-line);
+  border-radius: var(--radius);
+  background: var(--admin-card);
+  color: var(--admin-danger);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-grid__retry:hover {
+  background: var(--admin-danger-soft);
+}
+
+/* 체크박스 열 */
+.admin-grid__check-cell {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.admin-grid__check-cell input {
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+
+.admin-grid__row--checked td {
+  background: var(--admin-surface-selected);
+}
+
+/* ── 개수 선택 ─────────────────────────────── */
+
+.admin-page-size__select {
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--admin-card-line);
+  border-radius: var(--radius);
+  background: var(--admin-card);
+  color: var(--admin-text-strong);
+  font-family: inherit;
+  font-size: 12.5px;
+}
+
+/* ── 페이징 ────────────────────────────────── */
+
+.admin-pagination {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 16px;
+}
+
+.admin-pagination__button {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--admin-card-line);
+  border-radius: var(--radius);
+  background: var(--admin-card);
+  color: var(--admin-meta);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.admin-pagination__button:hover:not(:disabled) {
+  border-color: var(--admin-accent);
+  color: var(--admin-accent-dark);
+}
+
+.admin-pagination__button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.admin-pagination__button--active {
+  border-color: var(--admin-accent);
+  background: var(--admin-accent);
+  color: var(--admin-button-primary-text);
+  font-weight: 700;
+}
+
+/* ── 좁은 화면 ─────────────────────────────── */
+
+@media (max-width: 1100px) {
+  .admin-search__fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .admin-search__fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ── 모달 ──────────────────────────────────── */
+
+.admin-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(30, 27, 24, 0.45);
+}
+
+.admin-modal__panel {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-height: calc(100vh - 48px);
+  border-radius: 14px;
+  background: var(--admin-card);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.22);
+  outline: none;
+  overflow: hidden;
+}
+
+.admin-modal__panel--small {
+  max-width: 420px;
+}
+
+.admin-modal__panel--medium {
+  max-width: 640px;
+}
+
+.admin-modal__panel--large {
+  max-width: 900px;
+}
+
+.admin-modal__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 22px 16px;
+  border-bottom: 1px solid var(--admin-card-line);
+}
+
+.admin-modal__title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--admin-title);
+}
+
+.admin-modal__description {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--admin-text);
+}
+
+.admin-modal__close {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--admin-meta);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.admin-modal__close:hover {
+  background: var(--admin-surface-hover);
+  color: var(--admin-title);
+}
+
+.admin-modal__body {
+  padding: 20px 22px;
+  overflow-y: auto;
+}
+
+.admin-modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 14px 22px 18px;
+  border-top: 1px solid var(--admin-card-line);
+}
+
+/* 모달 안의 폼 */
+.admin-modal__form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 20px;
+}
+
+.admin-modal__form--full {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* ── 상태 배지 ─────────────────────────────── */
+/* 주황은 "활성·공개" 강조, 회색은 "비활성·중립". 색을 늘리지 않고 역할만 나눈다 */
+
+.admin-badge {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.admin-badge--on {
+  background: var(--admin-accent-soft);
+  color: var(--admin-accent-dark);
+}
+
+.admin-badge--off {
+  background: var(--admin-surface-hover);
+  color: var(--admin-text-muted);
+}
+
+.admin-badge--danger {
+  background: var(--admin-danger-soft);
+  color: var(--admin-danger);
+}
+
+/* ── 그룹·항목 트리 ────────────────────────── */
+/* 메뉴는 "그룹 한 줄 + 그 그룹에 속한 항목들"로 조립돼 나가므로,
+   표에 한 줄씩 늘어놓는 대신 속한 관계가 그대로 보이도록 묶어서 보여준다 */
+
+.admin-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.admin-tree__group {
+  border: 1px solid var(--admin-card-line);
+  border-radius: 12px;
+  background: var(--admin-card);
+  overflow: hidden;
+}
+
+.admin-tree__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: var(--admin-surface-subtle);
+}
+
+.admin-tree__toggle {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--admin-card-line);
+  border-radius: var(--radius);
+  background: var(--admin-card);
+  color: var(--admin-meta);
+  cursor: pointer;
+}
+
+.admin-tree__toggle:hover:not(:disabled) {
+  border-color: var(--admin-accent);
+  color: var(--admin-accent-dark);
+}
+
+.admin-tree__toggle:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* 화살표는 아래(펼침)를 보고, 접히면 오른쪽을 본다 */
+.admin-tree__chevron {
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  border-right: 1.5px solid currentcolor;
+  border-bottom: 1.5px solid currentcolor;
+  transform: rotate(45deg);
+}
+
+.admin-tree__toggle--collapsed .admin-tree__chevron {
+  margin: 0 0 0 -2px;
+  transform: rotate(-45deg);
+}
+
+/* 그룹 이름 칸 전체가 수정 팝업을 여는 버튼 */
+.admin-tree__head-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  min-width: 0;
+  padding: 2px 6px;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.admin-tree__head-main:hover,
+.admin-tree__item:hover {
+  background: var(--admin-surface-hover);
+}
+
+/* 키보드로 이동할 때 어디에 있는지 보이게 */
+.admin-tree__head-main:focus-visible,
+.admin-tree__item:focus-visible {
+  outline: 2px solid var(--admin-accent);
+  outline-offset: -2px;
+}
+
+.admin-tree__title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.admin-tree__name {
+  color: var(--admin-title);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.admin-tree__desc {
+  color: var(--admin-meta);
+  font-size: 12.5px;
+}
+
+/* 정렬 순서. 그룹끼리, 그리고 한 그룹 안의 항목끼리 이 숫자로 줄을 세운다 */
+.admin-tree__order {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 5px;
+  border-radius: 6px;
+  background: var(--admin-surface-hover);
+  color: var(--admin-text-muted);
+  font-size: 11.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-tree__meta {
+  flex: none;
+  color: var(--admin-meta);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* ── 그룹 안의 항목 ────────────────────────── */
+
+.admin-tree__items {
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-tree__item {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) minmax(0, 200px) 52px;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 16px 11px 52px;
+  border: 0;
+  border-top: 1px solid var(--admin-list-line);
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.admin-tree__item-name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.admin-tree__item-name > span:first-child {
+  color: var(--admin-text-strong);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* 경로는 값을 그대로 읽어야 하므로 고정폭 글꼴 */
+.admin-tree__path {
+  overflow: hidden;
+  color: var(--admin-meta);
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 11.5px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.admin-tree__path--none {
+  font-family: inherit;
+  color: var(--text-subtle);
+}
+
+.admin-tree__item-badge {
+  justify-self: end;
+}
+
+/* 로딩·빈 목록·실패를 담는 칸 */
+.admin-tree__state {
+  padding: 16px;
+  border: 1px solid var(--admin-card-line);
+  border-radius: 12px;
+  background: var(--admin-card);
+}
+
+@media (max-width: 900px) {
+  .admin-tree__item {
+    grid-template-columns: 22px minmax(0, 1fr) 52px;
+    padding-left: 28px;
+  }
+
+  /* 경로는 이름 아래로 내린다 */
+  .admin-tree__path {
+    grid-column: 2 / 4;
+    grid-row: 2;
+  }
+
+  .admin-tree__meta {
+    display: none;
+  }
+}
+
+/* ── 화면 제목 줄 ──────────────────────────── */
+/* 목록 화면은 제목과 위치만 둔다.
+   설명 문장을 본문에 깔면 매번 읽히지도 않으면서 내용 시작을 밀어낸다 */
+
+.admin-page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--admin-card-line);
+}
+
+/* 어느 메뉴 아래인지. 링크가 아니다 */
+.admin-page-header__location {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--admin-sidebar-label);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.admin-page-header__title {
+  color: var(--admin-title);
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.admin-page-header__meta {
+  margin-top: 5px;
+  color: var(--admin-meta);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.admin-page-header__actions {
+  flex: none;
+  display: flex;
+  gap: 8px;
+}
+
+@media (max-width: 720px) {
+  .admin-page-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+/* ── 카테고리 관리 ─────────────────────────── */
+
+/* 전용 API 연결 전이라 값이 없는 칸 */
+.admin-category__pending {
+  color: var(--text-subtle);
+  font-size: 12px;
+}
+
+.admin-category__confirm {
+  margin: 0;
+  color: var(--admin-text-strong);
+  font-size: 13px;
+  line-height: 1.6;
+  word-break: keep-all;
+}
+
+.admin-category__confirm-note {
+  margin: 10px 0 0;
+  color: var(--admin-danger);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+/* 팝업 안에서 저장이 실패한 이유 */
+.admin-form-error {
+  margin: 14px 0 0;
+  padding: 10px 12px;
+  border: 1px solid var(--admin-danger-line);
+  border-radius: var(--radius);
+  background: var(--admin-danger-soft);
+  color: var(--admin-danger);
+  font-size: 12.5px;
+  line-height: 1.6;
+}

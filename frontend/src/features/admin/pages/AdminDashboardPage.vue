@@ -2,6 +2,7 @@
 import { computed, onMounted, reactive, ref } from 'vue';
 
 import { getAdminDashboard } from '../api/adminApi';
+import AdminPageHeader from '../components/AdminPageHeader.vue';
 
 const dashboard = reactive(createEmptyDashboard());
 const loading = ref(true);
@@ -169,23 +170,20 @@ function getCategoryPercent(category) {
 
 <template>
   <div class="admin-dashboard">
-        <header class="admin-dashboard__header">
-          <div>
-            <h1 class="admin-dashboard__title">대시보드</h1>
-            <p class="admin-dashboard__intro">
-              {{ loading ? '기록 상태를 불러오는 중입니다.' : formatDashboardIntro() }}
-            </p>
-          </div>
+        <AdminPageHeader>
+          <template #meta>
+            {{ loading ? '기록 상태를 불러오는 중입니다.' : formatDashboardIntro() }}
+          </template>
 
-          <div class="admin-dashboard__actions">
+          <template #actions>
             <RouterLink class="admin-button admin-button--ghost" :to="{ name: 'home' }">
               블로그 보기
             </RouterLink>
             <button class="admin-button admin-button--solid" type="button">
               새 글 쓰기
             </button>
-          </div>
-        </header>
+          </template>
+        </AdminPageHeader>
 
         <section v-if="loadFailed" class="admin-notice" aria-live="polite">
           <strong>관리자 대시보드 API 연결 전입니다.</strong>
