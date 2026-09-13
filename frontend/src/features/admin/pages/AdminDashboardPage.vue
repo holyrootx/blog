@@ -65,8 +65,12 @@ const operationItems = computed(() => [
   {
     id: 'history',
     title: '블로그 운영 기간',
-    value: formatCount(dashboard.daysSinceStart, '일'),
-    detail: '프로필의 시작일 기준으로 계산합니다.',
+    value: dashboard.daysSinceStart === null || dashboard.daysSinceStart === undefined
+      ? '시작일 미설정'
+      : formatCount(dashboard.daysSinceStart, '일'),
+    detail: dashboard.daysSinceStart === null || dashboard.daysSinceStart === undefined
+      ? '프로필에 블로그 시작일을 넣으면 계산합니다.'
+      : '프로필의 시작일 기준으로 계산합니다.',
   },
 ]);
 
@@ -106,8 +110,10 @@ function formatCount(value, unit) {
 }
 
 function formatDashboardIntro() {
+  // daysSinceStart 가 없는 이유는 API 미연결이 아니라 블로그 시작일이 없어서다.
+  // 틀린 이유를 말하면 사용자가 엉뚱한 곳을 고치러 간다
   if (dashboard.daysSinceStart === null || dashboard.daysSinceStart === undefined) {
-    return '관리자 API를 연결하면 오늘 볼 일을 바로 확인할 수 있습니다.';
+    return '오늘도 한 줄 남겨볼까요?';
   }
 
   return `기록 ${dashboard.daysSinceStart}일째. 오늘도 한 줄 남겨볼까요?`;
@@ -179,9 +185,9 @@ function getCategoryPercent(category) {
             <RouterLink class="admin-button admin-button--ghost" :to="{ name: 'home' }">
               블로그 보기
             </RouterLink>
-            <button class="admin-button admin-button--solid" type="button">
+            <RouterLink class="admin-button admin-button--solid" :to="{ name: 'admin-post-new' }">
               새 글 쓰기
-            </button>
+            </RouterLink>
           </template>
         </AdminPageHeader>
 

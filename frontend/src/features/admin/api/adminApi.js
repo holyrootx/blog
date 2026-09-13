@@ -43,6 +43,80 @@ export function updateAdminMenu(menuId, request) {
   });
 }
 
+// 글 관리 화면용. 목록 + 상태별 건수 + 페이징 정보가 함께 온다
+export async function getAdminPosts(condition = {}) {
+  const result = await getApiData(withQuery(`${ADMIN_BLOG_API_BASE}/posts`, condition));
+
+  return {
+    items: Array.isArray(result?.items) ? result.items.map(toAdminPost) : [],
+    statusCounts: {
+      all: toNumber(result?.statusCounts?.all),
+      published: toNumber(result?.statusCounts?.published),
+      private: toNumber(result?.statusCounts?.private),
+      draft: toNumber(result?.statusCounts?.draft),
+    },
+    page: toNumber(result?.page),
+    size: toNumber(result?.size),
+    totalElements: toNumber(result?.totalElements),
+    totalPages: toNumber(result?.totalPages),
+  };
+}
+
+function toAdminPost(post) {
+  return {
+    id: post.id,
+    title: post.title ?? '제목 없는 글',
+    categoryId: post.categoryId ?? null,
+    categoryName: post.categoryName ?? '미분류',
+    status: post.status ?? 'DRAFT',
+    publishedAt: post.publishedAt ?? null,
+    createdAt: post.createdAt ?? null,
+    views: toNumber(post.views),
+  };
+}
+
+export async function getAdminPost(postId) {
+  const post = await getApiData(`${ADMIN_BLOG_API_BASE}/posts/${postId}`);
+
+  return {
+    id: post?.id ?? null,
+    title: post?.title ?? '',
+    categoryId: post?.categoryId ?? null,
+    categoryName: post?.categoryName ?? '',
+    // null 을 그대로 두면 textarea 에 "null" 이 찍힌다
+    excerpt: post?.excerpt ?? '',
+    content: post?.content ?? '',
+    thumbnailImageUrl: post?.thumbnailImageUrl ?? '',
+    status: post?.status ?? 'DRAFT',
+    publishedAt: post?.publishedAt ?? null,
+    // 로컬 스냅샷이 어느 서버 값을 기준으로 만들어졌는지 비교하는 데 쓴다.
+    // 여기서 빠뜨리면 충돌 감지가 조용히 죽는다
+    updatedAt: post?.updatedAt ?? null,
+  };
+}
+
+export function createAdminPost(request) {
+  return sendApiData(`${ADMIN_BLOG_API_BASE}/posts`, { method: 'POST', body: request });
+}
+
+export function updateAdminPost(postId, request) {
+  return sendApiData(`${ADMIN_BLOG_API_BASE}/posts/${postId}`, { method: 'PUT', body: request });
+}
+
+// 발행·내리기는 수정(PUT)과 나눠져 있다.
+// 발행이 publishedAt 을 건드리는 부수효과를 갖기 때문이다
+export function publishAdminPost(postId) {
+  return sendApiData(`${ADMIN_BLOG_API_BASE}/posts/${postId}/publish`, { method: 'POST' });
+}
+
+export function unpublishAdminPost(postId) {
+  return sendApiData(`${ADMIN_BLOG_API_BASE}/posts/${postId}/unpublish`, { method: 'POST' });
+}
+
+export function deleteAdminPost(postId) {
+  return sendApiData(`${ADMIN_BLOG_API_BASE}/posts/${postId}`, { method: 'DELETE' });
+}
+
 // 메뉴 등록. 수정과 달리 menuType 을 보낸다 (만들 때만 정할 수 있다)
 export function createAdminMenu(request) {
   return sendApiData(`${ADMIN_BLOG_API_BASE}/menus`, {
@@ -91,6 +165,7 @@ function toAdminCategory(category) {
     sortOrder: toNumber(category.sortOrder),
     // 전용 API 에서 내려줄 값. 없으면 화면에 "연결 전"으로 표시한다
     postCount: toNumberOrNull(category.postCount),
+    updatedAt: category.updatedAt ?? null,
   };
 }
 
@@ -136,6 +211,8 @@ function toAdminMenu(menu) {
     routeName: menu.routeName ?? '',
     sortOrder: toNumber(menu.sortOrder),
     visible: toVisible(menu),
+    // 수정 충돌 감지용. 저장 때 그대로 돌려보낸다
+    updatedAt: menu.updatedAt ?? null,
     system: Boolean(menu.system),
     items: Array.isArray(menu.items) ? menu.items.map(toAdminMenu) : [],
   };

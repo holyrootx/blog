@@ -240,6 +240,24 @@
   margin-top: 12px;
 }
 
+/* 헤딩 단계를 크기로 구분한다. 매퍼가 단계를 살려서 내려준다 */
+.post-body__heading--h1 {
+  margin-top: 46px;
+  font-size: 26px;
+}
+
+.post-body__heading--h3 {
+  margin-top: 30px;
+  font-size: 18.5px;
+}
+
+.post-body__heading--h4,
+.post-body__heading--h5,
+.post-body__heading--h6 {
+  margin-top: 26px;
+  font-size: 16.5px;
+}
+
 .post-body__quote {
   margin: 26px 0 0;
   padding: 18px 22px;
@@ -305,26 +323,83 @@
 }
 
 .post-body__code {
-  display: flex;
-  flex-direction: column;
+  position: relative;
   margin: 26px 0 0;
-  padding: 18px 22px;
   border-radius: 9px;
   background: var(--code-bg);
   color: var(--code-text);
+}
+
+/* 색칠. 편집 화면도 같은 값을 쓴다 */
+.post-code__comment { color: #7e7368; font-style: italic; }
+.post-code__string { color: #b7c39a; }
+.post-code__number { color: #d9a05e; }
+.post-code__keyword { color: #e08a68; font-weight: 600; }
+.post-code__type { color: #cfa9d8; }
+.post-code__tag { color: #7fb0c9; }
+
+/* 긴 줄은 코드 블록 안에서만 옆으로 넘긴다. 본문이 통째로 밀리면 안 된다 */
+.post-body__code pre {
+  margin: 0;
+  padding: 18px 22px;
   font-family: ui-monospace, Menlo, monospace;
   font-size: 13px;
   line-height: 1.85;
   overflow-x: auto;
 }
 
-.post-body__code-caption,
-.post-body__code-note {
-  color: var(--code-muted);
+.post-body__code code {
+  font: inherit;
 }
 
-.post-body__code-accent {
-  color: #d29a6a;
+.post-body__code-language {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  color: var(--code-muted);
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 11px;
+  text-transform: lowercase;
+}
+
+/* 인라인 코드 — 문단 안에 섞이므로 배경만 옅게 */
+.post-body__inline-code {
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--surface-muted);
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 0.9em;
+}
+
+.post-body__link {
+  color: var(--accent-dark);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.post-body__list {
+  margin: 20px 0 0;
+  padding-left: 22px;
+  font-size: 16.5px;
+  line-height: 1.95;
+}
+
+.post-body__list--bullet {
+  list-style: disc;
+}
+
+.post-body__list--ordered {
+  list-style: decimal;
+}
+
+.post-body__list li + li {
+  margin-top: 6px;
+}
+
+.post-body__divider {
+  margin: 34px 0 0;
+  border: 0;
+  border-top: 1px solid var(--line);
 }
 
 .post-ad {

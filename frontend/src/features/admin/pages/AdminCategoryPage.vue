@@ -30,6 +30,8 @@ const EMPTY_CONDITION = {
 const EMPTY_FORM = {
   name: '',
   sortOrder: '',
+  // 팝업을 연 시점의 서버 값. 저장 때 함께 보내 충돌을 판단한다
+  updatedAt: null,
 };
 
 // condition — 입력창의 값. applied — 조회로 적용된 값.
@@ -122,6 +124,7 @@ function openEditForm(category) {
   Object.assign(form, {
     name: category.name,
     sortOrder: String(category.sortOrder),
+    updatedAt: category.updatedAt,
   });
   formOpen.value = true;
 }
@@ -138,6 +141,8 @@ async function saveCategory() {
   const request = {
     name: form.name.trim(),
     sortOrder: form.sortOrder === '' ? null : Number(form.sortOrder),
+    // 등록에는 비교할 이전 값이 없다
+    updatedAt: formMode.value === 'create' ? null : form.updatedAt,
   };
 
   try {
@@ -165,22 +170,34 @@ async function deleteSelected() {
   saving.value = true;
   deleteError.value = '';
 
-  try {
-    // 삭제 API 가 한 건씩만 받으므로 순서대로 보낸다.
-    // 중간에 실패하면 거기서 멈추고, 이미 지운 것은 그대로 둔다
-    for (const categoryId of selectedIds.value) {
-      await deleteAdminCategory(categoryId);
-    }
+  // 삭제 API 가 한 건씩만 받으므로 순서대로 보낸다.
+  // 하나가 실패해도 멈추지 않는다 — 글이 달린 카테고리 하나 때문에
+  // 나머지를 못 지우면 사용자가 이유도 모른 채 다시 골라야 한다
+  const targets = [...selectedIds.value];
+  const failures = [];
+  let deleted = 0;
 
-    deleteConfirmOpen.value = false;
-    await loadCategories({ ...applied.value });
-  } catch (error) {
-    deleteError.value = error.message;
-    // 어디까지 지워졌는지 알아야 하므로 목록은 다시 읽는다
-    await loadCategories({ ...applied.value });
-  } finally {
-    saving.value = false;
+  for (const categoryId of targets) {
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      await deleteAdminCategory(categoryId);
+      deleted += 1;
+    } catch (error) {
+      const name = categories.value.find((category) => category.id === categoryId)?.name ?? categoryId;
+      failures.push(`${name} — ${error.message}`);
+    }
   }
+
+  // 몇 건이 지워졌는지 모르면 사용자는 같은 동작을 다시 시도하게 된다
+  if (failures.length > 0) {
+    deleteError.value = `${targets.length}건 중 ${deleted}건을 삭제했습니다.\n`
+      + `실패: ${failures.join(' / ')}`;
+  } else {
+    deleteConfirmOpen.value = false;
+  }
+
+  await loadCategories({ ...applied.value });
+  saving.value = false;
 }
 
 async function deleteEditing() {
