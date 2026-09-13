@@ -26,7 +26,7 @@ public class Category extends BaseEntity {
     @Column(name = "name", nullable = false, unique = true, length = 50)
     private String name;
 
-    @Column(name = "sort_order", nullable = false, unique = true)
+    @Column(name = "sort_order", nullable = false)
     private Long sortOrder;
 
     public Category(String name, Long sortOrder) {
