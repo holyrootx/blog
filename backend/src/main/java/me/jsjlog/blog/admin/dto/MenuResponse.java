@@ -1,6 +1,8 @@
 package me.jsjlog.blog.admin.dto;
 
 import me.jsjlog.blog.admin.domain.MenuType;
+
+import java.util.ArrayList;
 import java.util.List;
 
 public record MenuResponse(
@@ -24,7 +26,7 @@ public record MenuResponse(
             Long sortOrder,
             Boolean visible
     ) {
-        this(parentId, id, menuName, menuDescription, menuType, routePath, sortOrder, visible, List.of());
+        this(parentId, id, menuName, menuDescription, menuType, routePath, sortOrder, visible, new ArrayList<MenuResponse>());
     }
 
     public MenuResponse withItems(List<MenuResponse> items) {
@@ -40,4 +42,10 @@ public record MenuResponse(
                 items
         );
     }
+
+    public void addItem(MenuResponse itemMenu){
+        this.items.add(itemMenu);
+    }
+
+
 }
