@@ -8,12 +8,15 @@ import me.jsjlog.blog.common.response.FieldErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -117,6 +120,69 @@ public class GlobalExceptionHandler {
 	) {
 		ErrorCode errorCode = ErrorCode.METHOD_NOT_ALLOWED;
 		log.warn("Method not allowed. method={}, path={}", exception.getMethod(), request.getRequestURI());
+
+		return ResponseEntity
+			.status(errorCode.getHttpStatus())
+			.body(ErrorResponse.of(errorCode, errorCode.getMessage(), request.getRequestURI()));
+	}
+
+	/**
+	 * 매핑이 없는 URL 요청을 처리합니다.
+	 *
+	 * <p>이 핸들러가 없으면 맨 아래 {@code Exception} 핸들러가 잡아서
+	 * 오타난 주소가 전부 500으로 나갑니다. 클라이언트는 서버가 고장난 줄 알게 됩니다.</p>
+	 */
+	@ExceptionHandler(NoResourceFoundException.class)
+	public ResponseEntity<ErrorResponse> handleNoResourceFound(
+		NoResourceFoundException exception,
+		HttpServletRequest request
+	) {
+		ErrorCode errorCode = ErrorCode.NOT_FOUND;
+		log.warn("No handler found. path={}", request.getRequestURI());
+
+		return ResponseEntity
+			.status(errorCode.getHttpStatus())
+			.body(ErrorResponse.of(errorCode, errorCode.getMessage(), request.getRequestURI()));
+	}
+
+	/**
+	 * path 변수나 쿼리 파라미터의 타입이 맞지 않을 때 처리합니다.
+	 *
+	 * <p>{@code /menus/abc} 처럼 숫자 자리에 글자가 오거나, enum 이름을 잘못 적은 경우입니다.
+	 * 보낸 쪽 잘못이므로 400 이어야 합니다.</p>
+	 */
+	@ExceptionHandler(MethodArgumentTypeMismatchException.class)
+	public ResponseEntity<ErrorResponse> handleTypeMismatch(
+		MethodArgumentTypeMismatchException exception,
+		HttpServletRequest request
+	) {
+		ErrorCode errorCode = ErrorCode.INVALID_INPUT;
+		log.warn("Argument type mismatch. name={}, value={}, path={}",
+			exception.getName(),
+			exception.getValue(),
+			request.getRequestURI()
+		);
+
+		return ResponseEntity
+			.status(errorCode.getHttpStatus())
+			.body(ErrorResponse.of(errorCode, errorCode.getMessage(), request.getRequestURI()));
+	}
+
+	/**
+	 * DB 제약을 위반했을 때 처리합니다. (unique 중복, 참조 중인 행 삭제 등)
+	 *
+	 * <p>서비스에서 미리 검사해 구체적인 에러 코드를 주는 것이 원칙이고,
+	 * 이 핸들러는 그 검사를 빠뜨렸을 때를 위한 그물입니다. 500 대신 409 를 주어
+	 * "서버 고장"이 아니라 "데이터 규칙 위반"임을 알립니다.</p>
+	 */
+	@ExceptionHandler(DataIntegrityViolationException.class)
+	public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(
+		DataIntegrityViolationException exception,
+		HttpServletRequest request
+	) {
+		ErrorCode errorCode = ErrorCode.DATA_CONSTRAINT_VIOLATED;
+		// 원인을 알아야 서비스에 검사를 추가할 수 있으므로 stack trace 를 남긴다
+		log.error("Data constraint violated. path={}", request.getRequestURI(), exception);
 
 		return ResponseEntity
 			.status(errorCode.getHttpStatus())
