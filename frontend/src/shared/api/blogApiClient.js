@@ -11,6 +11,27 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * 세션이 끊겼을 때 부를 함수. 로그인 화면으로 보내는 일은 관리자 쪽 코드가 정한다.
+ *
+ * 화면마다 401 을 처리하면 빠뜨리는 곳이 반드시 생긴다. 한 곳에서 받는다.
+ */
+let unauthorizedHandler = null;
+
+export function onUnauthorized(handler) {
+  unauthorizedHandler = handler;
+}
+
+/**
+ * 로그인 실패(ADMIN_LOGIN_FAILED)는 같은 401 이지만 세션이 끊긴 것이 아니다.
+ * 이걸 구분하지 않으면 비밀번호를 틀릴 때마다 로그인 화면으로 다시 튕긴다.
+ */
+function notifyIfSessionExpired(code) {
+  if (code === 'UNAUTHORIZED') {
+    unauthorizedHandler?.();
+  }
+}
+
 export async function getApiData(path) {
   const response = await fetch(path, {
     headers: {
@@ -24,6 +45,8 @@ export async function getApiData(path) {
   // 서버가 준 code·message 를 버리지 않는다.
   // 버리면 화면은 "불러오지 못했습니다"만 알고 왜 실패했는지 알 수 없다
   if (!response.ok || body?.success === false) {
+    notifyIfSessionExpired(body?.code);
+
     throw new ApiError(
       body?.message ?? `요청에 실패했습니다. (status=${response.status})`,
       body?.code,
@@ -32,6 +55,22 @@ export async function getApiData(path) {
   }
 
   return body?.data ?? null;
+}
+
+/**
+ * 상태를 바꾸는 요청에 붙일 CSRF 토큰.
+ *
+ * 값을 여기 두는 이유는 화면마다 들고 다니면 로그인 뒤 갱신을 빠뜨리는 곳이 생기기 때문이다.
+ * 서버가 로그인·로그아웃 때 토큰을 새로 발급하므로 그 시점에 다시 받아야 한다.
+ */
+let csrf = null;
+
+export function setCsrfToken(next) {
+  csrf = next;
+}
+
+function csrfHeader() {
+  return csrf?.headerName ? { [csrf.headerName]: csrf.token } : {};
 }
 
 /**
@@ -44,6 +83,7 @@ export async function sendApiData(path, { method, body } = {}) {
     headers: {
       Accept: 'application/json',
       'Content-Type': 'application/json',
+      ...csrfHeader(),
     },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
@@ -52,6 +92,8 @@ export async function sendApiData(path, { method, body } = {}) {
   const payload = await response.json().catch(() => null);
 
   if (!response.ok || payload?.success === false) {
+    notifyIfSessionExpired(payload?.code);
+
     throw new ApiError(
       payload?.message ?? `요청에 실패했습니다. (status=${response.status})`,
       payload?.code,
