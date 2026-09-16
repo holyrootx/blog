@@ -20,6 +20,9 @@ public enum ErrorCode {
 	VALIDATION_ERROR(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "요청 값 검증에 실패했습니다."),
 	METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "METHOD_NOT_ALLOWED", "지원하지 않는 HTTP 메서드입니다."),
 	UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "로그인이 필요합니다."),
+	// UNAUTHORIZED 와 나누는 이유는 화면이 할 일이 달라서다.
+	// UNAUTHORIZED 는 로그인 화면으로 보내야 하고, 이건 지금 보고 있는 로그인 폼에 사유를 적어야 한다
+	ADMIN_LOGIN_FAILED(HttpStatus.UNAUTHORIZED, "ADMIN_LOGIN_FAILED", "아이디 또는 비밀번호가 올바르지 않습니다."),
 	FORBIDDEN(HttpStatus.FORBIDDEN, "FORBIDDEN", "접근 권한이 없습니다."),
 	NOT_FOUND(HttpStatus.NOT_FOUND, "NOT_FOUND", "요청한 리소스를 찾을 수 없습니다."),
 	DATA_CONSTRAINT_VIOLATED(HttpStatus.CONFLICT, "DATA_CONSTRAINT_VIOLATED", "데이터 규칙에 맞지 않아 처리하지 못했습니다."),

@@ -21,12 +21,16 @@ dependencies {
 	implementation platform('software.amazon.awssdk:bom:2.29.52')
 	implementation 'com.querydsl:querydsl-jpa:5.1.0:jakarta'
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
 	implementation 'org.springframework:spring-aop'
 	implementation 'org.aspectj:aspectjweaver'
 	implementation 'software.amazon.awssdk:s3'
 	implementation 'software.amazon.awssdk:url-connection-client'
+	// 쿼리 로그용. implementation 으로 두면 운영 jar 에 실려 DataSource 를 감싸고
+	// 모든 SQL 이 운영 로그에 찍힌다. developmentOnly 는 bootJar 에서 빠진다
+	developmentOnly 'com.github.gavlyukovskiy:p6spy-spring-boot-starter:1.9.1'
 	compileOnly 'org.projectlombok:lombok'
 	runtimeOnly 'com.mysql:mysql-connector-j'
 	annotationProcessor 'org.projectlombok:lombok'
@@ -34,6 +38,7 @@ dependencies {
 	annotationProcessor 'jakarta.persistence:jakarta.persistence-api'
 	annotationProcessor 'jakarta.annotation:jakarta.annotation-api'
 	testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
+	testImplementation 'org.springframework.boot:spring-boot-starter-security-test'
 	testImplementation 'org.springframework.boot:spring-boot-starter-validation-test'
 	testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
 	testCompileOnly 'org.projectlombok:lombok'

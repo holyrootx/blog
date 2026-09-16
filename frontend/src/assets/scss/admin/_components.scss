@@ -916,6 +916,12 @@
   line-height: 1.6;
 }
 
+/* 실패한 단계만 다시 시도하는 버튼. 문구 끝에 붙는다 */
+.admin-form-error .admin-button {
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
 /* ── 글 관리 ───────────────────────────────── */
 
 /* 날짜 한 칸에 값과 기준(발행·작성)을 같이 둔다.

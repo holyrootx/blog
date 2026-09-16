@@ -188,10 +188,11 @@ function saveDraftNow() {
     return;
   }
 
-  // 서버에 저장한 내용 그대로면 남기지 않고 기존 스냅샷도 지운다.
-  // 저장 직후 라우트가 바뀌면 이탈 훅이 한 번 더 불려서, 막지 않으면 스냅샷이 되살아난다
+  // 서버에 저장한 내용 그대로면 새로 남길 이유가 없다.
+  // 여기서 지우지는 않는다 — 글을 열면 loadPost 가 폼을 바꾸고, 그 watcher 가 건 2초 타이머가
+  // 복구 창이 떠 있는 동안 여기에 도달한다. 지우면 사용자가 고르기도 전에 보관본이 사라진다.
+  // 지우는 일은 명시적인 경로(버리기·저장 성공·글 삭제)만 한다
   if (lastSavedForm.value && JSON.stringify({ ...form }) === lastSavedForm.value) {
-    clearPostDraft(draftKey.value);
     return;
   }
 
@@ -226,29 +227,17 @@ async function save() {
   formError.value = '';
   savedMessage.value = '';
 
-  const request = {
-    // 등록에는 비교할 이전 값이 없다
-    updatedAt: isNew.value ? null : serverUpdatedAt.value,
-    title: form.title.trim(),
-    categoryId: Number(form.categoryId),
-    excerpt: form.excerpt,
-    content: form.content,
-    thumbnailImageUrl: form.thumbnailImageUrl,
-  };
-
   try {
-    // 저장 성공 뒤에 디바운스 타이머가 돌아 옛 내용을 다시 남기는 것을 막는다
-    clearTimeout(draftTimer);
-    lastSavedForm.value = JSON.stringify({ ...form });
-
     if (isNew.value) {
-      const newId = await createAdminPost(request);
+      clearTimeout(draftTimer);
+      lastSavedForm.value = JSON.stringify({ ...form });
+
+      const newId = await createAdminPost(buildRequest());
       clearPostDraft('new');
       // 저장했으니 이제 수정 화면이다. 주소도 그 글을 가리켜야 한다
       await router.replace({ name: 'admin-post-edit', params: { postId: newId } });
     } else {
-      await updateAdminPost(postId.value, request);
-      clearPostDraft(draftKey.value);
+      await persistForm();
 
       // 서버가 저장하면서 updatedAt 을 바꾼다.
       // 안 받아오면 두 번째 저장이 옛 값을 보내 충돌로 막힌다
@@ -257,11 +246,42 @@ async function save() {
       savedMessage.value = '저장했습니다.';
     }
   } catch (error) {
-    // 저장에 실패했으면 스냅샷은 계속 남겨야 한다
-    lastSavedForm.value = null;
     formError.value = error.message;
   } finally {
     saving.value = false;
+  }
+}
+
+function buildRequest() {
+  return {
+    // 등록에는 비교할 이전 값이 없다
+    updatedAt: isNew.value ? null : serverUpdatedAt.value,
+    title: form.title.trim(),
+    categoryId: Number(form.categoryId),
+    excerpt: form.excerpt,
+    content: form.content,
+    thumbnailImageUrl: form.thumbnailImageUrl,
+  };
+}
+
+/**
+ * 지금 화면에 있는 내용을 서버에 저장한다 (수정 전용).
+ *
+ * 저장 버튼과 발행·내리기가 같이 쓴다. 발행이 이걸 먼저 부르지 않으면
+ * 서버에 있던 예전 본문이 공개된다.
+ */
+async function persistForm() {
+  // 저장 성공 뒤에 디바운스 타이머가 돌아 옛 내용을 다시 남기는 것을 막는다
+  clearTimeout(draftTimer);
+  lastSavedForm.value = JSON.stringify({ ...form });
+
+  try {
+    await updateAdminPost(postId.value, buildRequest());
+    clearPostDraft(draftKey.value);
+  } catch (error) {
+    // 저장에 실패했으면 스냅샷은 계속 남겨야 한다
+    lastSavedForm.value = null;
+    throw error;
   }
 }
 
@@ -279,8 +299,75 @@ async function refreshServerState() {
   }
 }
 
+const ACTION_LABELS = { publish: '발행', unpublish: '내리기' };
+
+/**
+ * 저장은 됐는데 상태 변경만 실패한 경우 남는다.
+ * 내용은 이미 서버에 있으므로 다시 시도할 때는 상태 변경만 한다 —
+ * 저장을 또 보내면 updatedAt 이 어긋나 충돌로 막힌다.
+ */
+const retryAction = ref('');
+
 async function runConfirmedAction() {
   if (saving.value) {
+    return;
+  }
+
+  const action = confirmAction.value;
+
+  if (action === 'delete') {
+    await runDelete();
+    return;
+  }
+
+  // 발행·내리기는 저장 → 상태 변경 두 단계다. 저장을 건너뛰면 지금 쓴 내용이 아니라
+  // 서버에 있던 예전 내용이 공개되고, 이어지는 loadPost 가 화면의 내용까지 덮는다
+  const blockReason = action === 'publish' ? publishBlockReason.value : saveBlockReason.value;
+
+  if (lengthError.value || blockReason) {
+    confirmAction.value = '';
+    formError.value = lengthError.value || blockReason;
+    return;
+  }
+
+  saving.value = true;
+  formError.value = '';
+  savedMessage.value = '';
+  retryAction.value = '';
+
+  let saved = false;
+
+  try {
+    await persistForm();
+    saved = true;
+
+    await changeStatus(action);
+
+    confirmAction.value = '';
+    await loadPost();
+    lastSavedForm.value = JSON.stringify({ ...form });
+  } catch (error) {
+    confirmAction.value = '';
+
+    // 어디까지 됐는지가 사용자의 다음 행동을 정한다.
+    // "발행 실패"라고만 하면 방금 쓴 내용도 날아갔다고 생각하고 다시 쓰게 된다
+    if (saved) {
+      retryAction.value = action;
+      formError.value = `내용은 저장되었지만 ${ACTION_LABELS[action]}하지 못했습니다. ${error.message}`;
+    } else {
+      formError.value = error.message;
+    }
+  } finally {
+    saving.value = false;
+  }
+}
+
+function changeStatus(action) {
+  return action === 'publish' ? publishAdminPost(postId.value) : unpublishAdminPost(postId.value);
+}
+
+async function retryStatusChange() {
+  if (saving.value || !retryAction.value) {
     return;
   }
 
@@ -288,20 +375,27 @@ async function runConfirmedAction() {
   formError.value = '';
 
   try {
-    if (confirmAction.value === 'publish') {
-      await publishAdminPost(postId.value);
-      confirmAction.value = '';
-      await loadPost();
-    } else if (confirmAction.value === 'unpublish') {
-      await unpublishAdminPost(postId.value);
-      confirmAction.value = '';
-      await loadPost();
-    } else {
-      await deleteAdminPost(postId.value);
-      clearPostDraft(draftKey.value);
-      confirmAction.value = '';
-      await router.push({ name: 'admin-posts' });
-    }
+    await changeStatus(retryAction.value);
+    retryAction.value = '';
+
+    await loadPost();
+    lastSavedForm.value = JSON.stringify({ ...form });
+  } catch (error) {
+    formError.value = `${ACTION_LABELS[retryAction.value]}하지 못했습니다. ${error.message}`;
+  } finally {
+    saving.value = false;
+  }
+}
+
+async function runDelete() {
+  saving.value = true;
+  formError.value = '';
+
+  try {
+    await deleteAdminPost(postId.value);
+    clearPostDraft(draftKey.value);
+    confirmAction.value = '';
+    await router.push({ name: 'admin-posts' });
   } catch (error) {
     confirmAction.value = '';
     formError.value = error.message;
@@ -349,6 +443,11 @@ function formatDateTime(value) {
 async function enter() {
   draftFound.value = null;
   draftConflict.value = false;
+
+  // 앞 글에서 남은 안내와 다시 시도 버튼을 들고 오면 엉뚱한 글을 발행하게 된다
+  formError.value = '';
+  savedMessage.value = '';
+  retryAction.value = '';
 
   await loadPost();
 
@@ -539,7 +638,19 @@ watch(postId, enter);
         </div>
       </div>
 
-      <p v-if="formError" class="admin-form-error">{{ formError }}</p>
+      <!-- 저장까지는 됐는데 발행만 실패한 경우, 저장을 다시 보내지 않고 발행만 다시 시도한다 -->
+      <p v-if="formError" class="admin-form-error">
+        {{ formError }}
+        <button
+          v-if="retryAction"
+          class="admin-button admin-button--ghost admin-button--small"
+          type="button"
+          :disabled="saving"
+          @click="retryStatusChange"
+        >
+          {{ ACTION_LABELS[retryAction] }} 다시 시도
+        </button>
+      </p>
     </template>
 
     <!-- 로컬 스냅샷 복구 -->

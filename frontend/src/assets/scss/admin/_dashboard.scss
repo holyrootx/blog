@@ -177,14 +177,29 @@
   cursor: not-allowed;
 }
 
+/* 실제 로그아웃 버튼이다. 눌리는 것이라 버튼 기본 모양을 지우고 줄 맞춤을 되돌린다 */
 .admin-sidebar__footer {
   display: grid;
   grid-template-columns: 32px minmax(0, 1fr);
   gap: 10px;
   align-items: center;
+  width: 100%;
   margin-top: auto;
   padding: 20px 18px 0;
+  border: none;
   border-top: 1px solid var(--admin-sidebar-line);
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.admin-sidebar__footer:hover:not(:disabled) strong {
+  color: var(--admin-sidebar-active-text);
+}
+
+.admin-sidebar__footer:disabled {
+  cursor: default;
 }
 
 .admin-sidebar__avatar {
