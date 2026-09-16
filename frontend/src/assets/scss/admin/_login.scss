@@ -1,0 +1,73 @@
+/* 관리자 로그인 — 사이드바 없는 단일 화면 */
+
+.admin-login {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+  background: var(--admin-sidebar-bg);
+}
+
+.admin-login__card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: 360px;
+  padding: 32px;
+  border-radius: var(--radius);
+  background: var(--admin-card);
+  box-shadow: var(--shadow);
+}
+
+.admin-login__head {
+  margin-bottom: 4px;
+}
+
+.admin-login__brand {
+  display: block;
+  color: var(--admin-meta);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+}
+
+.admin-login__title {
+  margin: 6px 0 0;
+  color: var(--admin-title);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+/* 아이디·비밀번호 칸은 조회조건보다 조금 크게. 여기만 있는 화면이라 답답할 이유가 없다 */
+.admin-login .admin-field__input {
+  height: 40px;
+  font-size: 14px;
+}
+
+.admin-login__error {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--admin-accent-line);
+  border-radius: var(--radius);
+  background: var(--admin-accent-soft);
+  color: var(--admin-accent-dark);
+  font-size: 13px;
+}
+
+.admin-login__submit {
+  height: 40px;
+  margin-top: 4px;
+}
+
+.admin-login__back {
+  color: var(--admin-text-muted);
+  font-size: 12px;
+  text-align: center;
+  text-decoration: none;
+}
+
+.admin-login__back:hover {
+  color: var(--admin-text);
+  text-decoration: underline;
+}

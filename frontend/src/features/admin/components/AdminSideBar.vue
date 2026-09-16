@@ -1,10 +1,31 @@
 <script setup>
-import { useRoute } from 'vue-router';
+import { ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 
 import { useAdminSidebarMenus } from '../data/adminSidebarMenuStore';
+import { signOutAdmin, useAdminAuth } from '../data/adminAuthStore';
 
 const route = useRoute();
+const router = useRouter();
 const { menus } = useAdminSidebarMenus();
+const { admin } = useAdminAuth();
+
+const signingOut = ref(false);
+
+async function signOut() {
+  if (signingOut.value) {
+    return;
+  }
+
+  signingOut.value = true;
+
+  try {
+    await signOutAdmin();
+    await router.replace({ name: 'admin-login' });
+  } finally {
+    signingOut.value = false;
+  }
+}
 
 function isActive(menu) {
   return menu.routePath === route.path || menu.routeName === route.name;
@@ -80,12 +101,17 @@ function isGroup(menu) {
       </template>
     </nav>
 
-    <div class="admin-sidebar__footer">
+    <button
+      class="admin-sidebar__footer"
+      type="button"
+      :disabled="signingOut"
+      @click="signOut"
+    >
       <span class="admin-sidebar__avatar" aria-hidden="true"></span>
       <span>
-        <strong>관리자</strong>
-        <small>로그아웃</small>
+        <strong>{{ admin?.username || '관리자' }}</strong>
+        <small>{{ signingOut ? '로그아웃 중…' : '로그아웃' }}</small>
       </span>
-    </div>
+    </button>
   </aside>
 </template>
