@@ -22,6 +22,16 @@ import me.jsjlog.blog.common.exception.ErrorCode;
 @RequiredArgsConstructor
 public class R2ImageStorage implements ImageStorage {
 
+    /**
+     * 올릴 때 못 넣으면 나중에 못 넣는다. 이미 올라간 객체에는 소급 적용되지 않아
+     * 전부 다시 올려야 한다.
+     *
+     * 저장 키가 UUID 라 같은 주소의 내용이 바뀌는 일이 없어 immutable 이 안전하다.
+     * 이게 없으면 Cloudflare 가 DYNAMIC 으로 보고 캐시하지 않아, 같은 그림을
+     * 다시 열어도 매번 R2 까지 다녀온다. (실측: 2MB 이미지 재요청도 1.15초)
+     */
+    private static final String CACHE_CONTROL = "public, max-age=31536000, immutable";
+
     private final S3Client s3Client;
     private final UploadProperties properties;
 
@@ -32,6 +42,7 @@ public class R2ImageStorage implements ImageStorage {
                 .key(storageKey)
                 .contentType(contentType)
                 .contentLength(size)
+                .cacheControl(CACHE_CONTROL)
                 .build();
 
         try {

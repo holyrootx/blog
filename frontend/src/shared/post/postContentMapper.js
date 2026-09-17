@@ -10,6 +10,7 @@
  */
 
 import { safeHref } from '../../features/admin/data/inlineMarkdown';
+import { IMAGE_LINE_PATTERN, parseImageTitle } from './postImageMarkdown';
 
 const CALLOUT_VARIANTS = ['tip', 'warning', 'note'];
 
@@ -123,11 +124,14 @@ export function toPostBody(content) {
 
     // # ~ ###### — 단계를 버리지 않는다.
     // 전부 h2 로 뭉개면 #을 쓰든 ###을 쓰든 화면이 같아진다
-    const heading = line.match(/^(#{1,6})\s+(.+)$/);
+    // 내용이 없어도 제목이다. 편집기는 빈 제목을 "## " 로 저장하는데,
+    // 여기서 안 받아 주면 문단으로 흘러가 "##" 이 글자 그대로 화면에 찍힌다.
+    // 뒤쪽을 통째로 없는 셈 치는 건 저장할 때 공백이 잘려 "##" 만 남는 경우까지 받기 위해서다
+    const heading = line.match(/^(#{1,6})(?:\s+(.*))?$/);
     if (heading) {
       flushAll();
 
-      const text = heading[2].trim();
+      const text = (heading[2] ?? '').trim();
 
       blocks.push({
         type: 'heading',
@@ -143,7 +147,7 @@ export function toPostBody(content) {
     }
 
     // 줄 전체가 이미지면 블록으로 뽑는다. 문장에 섞인 것은 문단 안 인라인으로 남는다
-    const image = line.match(/^!\[([^\]]*)\]\(([^)\s]+)\)$/);
+    const image = line.match(IMAGE_LINE_PATTERN);
     if (image) {
       flushAll();
 
@@ -152,7 +156,7 @@ export function toPostBody(content) {
       // 허용하지 않는 주소면 아무것도 그리지 않는다.
       // 깨진 이미지 아이콘보다 없는 편이 낫다
       if (src) {
-        blocks.push({ type: 'image', src, alt: image[1] });
+        blocks.push({ type: 'image', src, alt: image[1], ...parseImageTitle(image[3]) });
       }
 
       continue;

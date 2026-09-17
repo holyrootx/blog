@@ -12,6 +12,12 @@ import { createEditorHistory } from '../data/postEditorHistory';
 import { filterSlashCommands } from '../data/postSlashCommands';
 import { uploadAdminImage } from '../api/adminApi';
 import { CODE_LANGUAGES, toCodeTokens } from '../../../shared/post/codeHighlight';
+import {
+  DEFAULT_IMAGE_ALIGN,
+  MAX_IMAGE_WIDTH,
+  MIN_IMAGE_WIDTH,
+  clampImageWidth,
+} from '../../../shared/post/postImageMarkdown';
 import AdminBlockText from './AdminBlockText.vue';
 
 /**
@@ -35,6 +41,7 @@ const emit = defineEmits(['update:modelValue']);
 const blocks = ref(toEditorBlocks(props.modelValue));
 const textRefs = new Map();
 const codeRefs = new Map();
+const captionRefs = new Map();
 
 const menuOpenId = ref('');
 const menuQuery = ref('');
@@ -45,6 +52,11 @@ const draggingId = ref('');
 const dropIndex = ref(-1);
 // 여러 블록 선택 (핸들 클릭, Shift+클릭)
 const selectedIds = ref([]);
+
+// 폭을 끌고 있는 이미지 블록. 끄는 동안 글자가 선택되지 않게 하는 데 쓴다
+const resizingId = ref('');
+// 끌던 중에 화면을 벗어나면 창에 걸어 둔 이벤트를 걷어내야 한다
+let stopResize = null;
 
 const CALLOUT_LABELS = { tip: '팁', warning: '주의', note: '참고' };
 
@@ -183,6 +195,14 @@ function setCodeRef(id, element) {
     autoGrow(element);
   } else {
     codeRefs.delete(id);
+  }
+}
+
+function setCaptionRef(id, element) {
+  if (element) {
+    captionRefs.set(id, element);
+  } else {
+    captionRefs.delete(id);
   }
 }
 
@@ -554,6 +574,7 @@ const objectUrls = [];
 
 onBeforeUnmount(() => {
   objectUrls.forEach((url) => URL.revokeObjectURL(url));
+  stopResize?.();
 });
 
 function isUploading(block) {
@@ -587,6 +608,10 @@ async function uploadInto(block, file) {
   block.previewUrl = URL.createObjectURL(file);
   objectUrls.push(block.previewUrl);
 
+  // 원본 크기는 파일에만 달린 값이라 업로드 응답을 기다릴 이유가 없다.
+  // 서버는 이 값을 모른다 — 알아내게 하려면 이미지를 통째로 메모리에 펼쳐야 한다
+  readNaturalSize(block, block.previewUrl);
+
   uploadingIds.value = [...uploadingIds.value, block.id];
   delete uploadErrors.value[block.id];
 
@@ -607,6 +632,26 @@ async function uploadInto(block, file) {
   } finally {
     uploadingIds.value = uploadingIds.value.filter((id) => id !== block.id);
   }
+}
+
+/**
+ * 원본 픽셀 크기를 읽어 블록에 적어 둔다.
+ *
+ * 저장 형식에 실려 공개 화면이 비율을 미리 알게 되고, 그래야 이미지가 도착할 때
+ * 아래 글이 밀리지 않는다. 못 읽으면 값을 비워 둔다 — 크기 정보가 없던
+ * 예전 글과 같은 상태이고, 글이 밀릴 뿐 깨지지는 않는다.
+ */
+function readNaturalSize(block, source) {
+  const probe = new Image();
+
+  probe.addEventListener('load', () => {
+    block.naturalWidth = probe.naturalWidth;
+    block.naturalHeight = probe.naturalHeight;
+
+    sync();
+  });
+
+  probe.src = source;
 }
 
 /** 이미지 파일 하나를 새 블록으로 만들어 올린다 */
@@ -651,6 +696,145 @@ function onDropFiles(index, event) {
   event.preventDefault();
   files.forEach((file, offset) => insertImage(file, index + offset));
   resetDrag();
+}
+
+/* ── 이미지 폭 ────────────────────────────── */
+
+// 이 자리들에는 손이 정확히 멈추지 않아도 붙는다. 눈으로 맞추기 어려운 값들이다
+const SNAP_WIDTHS = [25, 50, 75, MAX_IMAGE_WIDTH];
+const SNAP_RANGE = 3;
+const KEY_STEP = 5;
+
+// 사진 오른쪽 위에 뜨는 정렬 버튼
+const ALIGN_OPTIONS = [
+  { value: 'left', label: '왼쪽 정렬' },
+  { value: 'center', label: '가운데 정렬' },
+  { value: 'right', label: '오른쪽 정렬' },
+];
+
+/** 0(지정 없음)은 100% 로 그린다 */
+function imageWidthOf(block) {
+  return block.width || MAX_IMAGE_WIDTH;
+}
+
+function imageAlignOf(block) {
+  return block.align || DEFAULT_IMAGE_ALIGN;
+}
+
+/**
+ * 사진 오른쪽 위 캡션 단추.
+ *
+ * 캡션 칸은 평소에 보이지 않아서, 어디를 눌러야 쓸 수 있는지 알려면
+ * 사진 아래로 마우스를 정확히 가져가 봐야 했다. 정렬 단추 옆에 두면
+ * 손이 이미 가 있는 자리에서 바로 쓰기 시작할 수 있다.
+ */
+function focusCaption(block) {
+  captionRefs.get(block.id)?.focus();
+}
+
+function setImageAlign(block, align) {
+  if (imageAlignOf(block) === align) {
+    return;
+  }
+
+  block.align = align;
+  sync();
+}
+
+function setImageWidth(block, value) {
+  const snapped = SNAP_WIDTHS.find((target) => Math.abs(target - value) <= SNAP_RANGE) ?? value;
+  const next = clampImageWidth(snapped);
+
+  if (next === block.width) {
+    return;
+  }
+
+  block.width = next;
+
+  // 끄는 동안 수십 번 불리지만 같은 키라 되돌리기 한 칸으로 묶인다
+  sync(`width:${block.id}`);
+}
+
+/**
+ * 손잡이를 잡고 끄는 동안 폭을 바꾼다.
+ *
+ * 가운데 정렬이라 한쪽을 당기면 반대쪽도 같이 좁아진다. 그래서 폭 변화는
+ * 커서가 움직인 거리의 두 배다.
+ *
+ * pointer 이벤트로 처리하고 전파를 끊는다. 블록 순서 바꾸기가 같은 몸짓(누르고 끌기)을
+ * 쓰기 때문에, 안 끊으면 손잡이를 당길 때 블록이 통째로 옮겨진다.
+ */
+function onResizeStart(block, side, event) {
+  event.preventDefault();
+  event.stopPropagation();
+
+  const track = event.currentTarget.closest('.block-editor__image');
+
+  if (!track) {
+    return;
+  }
+
+  const trackWidth = track.getBoundingClientRect().width;
+
+  if (trackWidth <= 0) {
+    return;
+  }
+
+  const startX = event.clientX;
+  const startWidth = imageWidthOf(block);
+  const direction = side === 'left' ? -1 : 1;
+
+  resizingId.value = block.id;
+
+  const onMove = (moveEvent) => {
+    const moved = (moveEvent.clientX - startX) * direction;
+
+    setImageWidth(block, startWidth + (moved / trackWidth) * 200);
+  };
+
+  const onEnd = () => {
+    resizingId.value = '';
+    stopResize = null;
+
+    window.removeEventListener('pointermove', onMove);
+    window.removeEventListener('pointerup', onEnd);
+    window.removeEventListener('pointercancel', onEnd);
+  };
+
+  // 화면을 떠나는 중에 끌고 있었으면 붙은 채로 남는다
+  stopResize = onEnd;
+
+  window.addEventListener('pointermove', onMove);
+  window.addEventListener('pointerup', onEnd);
+  window.addEventListener('pointercancel', onEnd);
+}
+
+/**
+ * 마우스 없이도 폭을 바꿀 수 있어야 한다. 손잡이는 버튼이라 키가 바로 들어온다.
+ *
+ * 어느 쪽 손잡이를 잡았든 → 가 크게, ← 가 작게다. 왼쪽 손잡이에서 방향을
+ * 뒤집으면 "물리적으로는" 맞지만 누르는 사람은 매번 헷갈린다.
+ */
+function onResizeKeydown(block, event) {
+  if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+    event.preventDefault();
+
+    const step = event.key === 'ArrowRight' ? KEY_STEP : -KEY_STEP;
+
+    setImageWidth(block, imageWidthOf(block) + step);
+    return;
+  }
+
+  if (event.key === 'Home') {
+    event.preventDefault();
+    setImageWidth(block, MIN_IMAGE_WIDTH);
+    return;
+  }
+
+  if (event.key === 'End') {
+    event.preventDefault();
+    setImageWidth(block, MAX_IMAGE_WIDTH);
+  }
 }
 
 function addBlockAtEnd() {
@@ -738,6 +922,7 @@ function resetDrag() {
 <template>
   <div
     class="block-editor"
+    :class="{ 'block-editor--resizing': resizingId !== '' }"
     @dragend="resetDrag"
     @focusin="onFocusIn"
     @keydown="onEditorKeydown"
@@ -771,25 +956,90 @@ function resetDrag() {
            대체 텍스트만 고칠 수 있게 하고, 주소는 업로드가 채운다 -->
       <div v-else-if="block.type === 'image'" class="block-editor__image">
         <template v-if="block.previewUrl || block.url">
-          <img
-            class="block-editor__image-preview"
-            :class="{ 'block-editor__image-preview--uploading': isUploading(block) }"
-            :src="block.previewUrl || block.url"
-            :alt="block.alt"
-          />
+          <!-- 폭을 가진 틀. 공개 화면의 figure 와 같은 자리를 차지해서
+               여기서 보이는 크기가 곧 발행 결과다 -->
+          <div
+            class="block-editor__image-frame"
+            :class="[
+              `block-editor__image-frame--${imageAlignOf(block)}`,
+              { 'block-editor__image-frame--resizing': resizingId === block.id },
+            ]"
+            :style="{ width: `${imageWidthOf(block)}%` }"
+          >
+            <!-- 손잡이를 이미지에만 맞춰 놓기 위한 칸. 캡션까지 묶으면
+                 손잡이가 캡션 높이만큼 아래로 내려간다 -->
+            <div class="block-editor__image-canvas">
+              <img
+                class="block-editor__image-preview"
+                :class="{ 'block-editor__image-preview--uploading': isUploading(block) }"
+                :src="block.previewUrl || block.url"
+                :alt="block.alt"
+                draggable="false"
+              />
 
-          <!-- 캡션은 평소에 숨어 있다가 이미지에 마우스를 올리면 나타난다.
-               항상 떠 있으면 사진마다 빈 입력칸이 한 줄씩 따라다닌다.
-               여기 적은 값이 공개 화면의 캡션이자 대체 텍스트가 된다 -->
-          <input
-            class="block-editor__image-caption"
-            :class="{ 'block-editor__image-caption--filled': block.alt }"
-            type="text"
-            :value="block.alt"
-            placeholder="캡션 추가"
-            aria-label="이미지 캡션"
-            @input="block.alt = $event.target.value; sync(`alt:${block.id}`)"
-          />
+              <!-- 좌우 손잡이. draggable=false 가 없으면 블록 순서 바꾸기가 먼저 물린다 -->
+              <button
+                v-for="side in ['left', 'right']"
+                :key="side"
+                class="block-editor__image-grip"
+                :class="`block-editor__image-grip--${side}`"
+                type="button"
+                draggable="false"
+                :aria-label="`이미지 폭 조절, 현재 ${imageWidthOf(block)}%`"
+                @pointerdown="onResizeStart(block, side, $event)"
+                @keydown="onResizeKeydown(block, $event)"
+              ></button>
+
+              <!-- 사진 오른쪽 위 단추들. 정렬 셋과 캡션 하나 -->
+              <div class="block-editor__image-tools">
+                <div class="block-editor__image-toolgroup" role="group" aria-label="이미지 정렬">
+                  <button
+                    v-for="option in ALIGN_OPTIONS"
+                    :key="option.value"
+                    class="block-editor__image-align"
+                    :class="`block-editor__image-align--${option.value}`"
+                    type="button"
+                    draggable="false"
+                    :title="option.label"
+                    :aria-label="option.label"
+                    :aria-pressed="imageAlignOf(block) === option.value"
+                    @click="setImageAlign(block, option.value)"
+                  ></button>
+                </div>
+
+                <span class="block-editor__image-tooldivider" aria-hidden="true"></span>
+
+                <button
+                  class="block-editor__image-captionbutton"
+                  type="button"
+                  draggable="false"
+                  :title="block.alt ? '캡션 고치기' : '캡션 쓰기'"
+                  :aria-label="block.alt ? '캡션 고치기' : '캡션 쓰기'"
+                  @click="focusCaption(block)"
+                ></button>
+              </div>
+
+              <!-- 끄는 동안에만 숫자를 띄운다. 항상 떠 있으면 사진을 가린다.
+                   정렬 버튼이 오른쪽 위에 있어서 왼쪽으로 비켜 둔다 -->
+              <span v-if="resizingId === block.id" class="block-editor__image-size">
+                {{ imageWidthOf(block) }}%
+              </span>
+            </div>
+
+            <!-- 캡션은 평소에 숨어 있다가 이미지에 마우스를 올리면 나타난다.
+                 항상 떠 있으면 사진마다 빈 입력칸이 한 줄씩 따라다닌다.
+                 여기 적은 값이 공개 화면의 캡션이자 대체 텍스트가 된다 -->
+            <input
+              :ref="(element) => setCaptionRef(block.id, element)"
+              class="block-editor__image-caption"
+              :class="{ 'block-editor__image-caption--filled': block.alt }"
+              type="text"
+              :value="block.alt"
+              placeholder="캡션 추가"
+              aria-label="이미지 캡션"
+              @input="block.alt = $event.target.value; sync(`alt:${block.id}`)"
+            />
+          </div>
         </template>
 
         <p v-if="isUploading(block)" class="block-editor__image-status">올리는 중…</p>

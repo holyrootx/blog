@@ -71,10 +71,23 @@ const calloutLabels = {
 
       <hr v-else-if="block.type === 'divider'" class="post-body__divider" />
 
-      <!-- 크기를 모르는 채로 그리면 이미지가 도착할 때 아래 글이 밀린다.
-           비율을 지정할 수 없으니 최소한 lazy 로 첫 화면 부담만 덜어 둔다 -->
-      <figure v-else-if="block.type === 'image'" class="post-body__figure">
-        <img class="post-body__image" :src="block.src" :alt="block.alt" loading="lazy" />
+      <!-- width/height 를 적어 두면 파일이 도착하기 전에 브라우저가 비율을 알아
+           자리를 미리 잡는다. 없으면 이미지가 뜨는 순간 아래 글이 밀린다.
+           폭 정보가 없는 예전 글은 둘 다 비어 100% 로 나온다 -->
+      <figure
+        v-else-if="block.type === 'image'"
+        class="post-body__figure"
+        :class="`post-body__figure--${block.align || 'left'}`"
+        :style="block.width ? { width: `${block.width}%` } : null"
+      >
+        <img
+          class="post-body__image"
+          :src="block.src"
+          :alt="block.alt"
+          :width="block.naturalWidth || null"
+          :height="block.naturalHeight || null"
+          loading="lazy"
+        />
         <figcaption v-if="block.alt" class="post-body__caption">{{ block.alt }}</figcaption>
       </figure>
 
