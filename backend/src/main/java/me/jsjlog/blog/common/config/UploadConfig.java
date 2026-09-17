@@ -3,35 +3,30 @@ package me.jsjlog.blog.common.config;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
-import java.nio.file.Path;
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.util.StringUtils;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 
 import me.jsjlog.blog.common.upload.ImageStorage;
-import me.jsjlog.blog.common.upload.LocalImageStorage;
 import me.jsjlog.blog.common.upload.R2ImageStorage;
 
 /**
  * 업로드 저장소 구성.
  *
- * 설정값 하나로 갈아끼운다. 두 구현이 동시에 뜨지 않도록 조건을 서로 배타적으로 둔다.
+ * 설정이 비어 있으면 애플리케이션이 뜨지 않는다. 대안 저장소를 두면 설정을 빠뜨렸을 때
+ * 조용히 다른 곳에 쓰게 되는데, 그 파일들은 다음 배포에 사라진다.
  */
 @Configuration
 @EnableConfigurationProperties(UploadProperties.class)
 public class UploadConfig {
 
     @Bean
-    @ConditionalOnProperty(name = "blog.upload.storage", havingValue = "r2")
     public S3Client r2Client(UploadProperties properties) {
         UploadProperties.R2 r2 = properties.r2();
         requireConfigured(r2);
@@ -47,7 +42,6 @@ public class UploadConfig {
     }
 
     @Bean
-    @ConditionalOnProperty(name = "blog.upload.storage", havingValue = "r2")
     public ImageStorage r2ImageStorage(S3Client r2Client, UploadProperties properties) {
         return new R2ImageStorage(r2Client, properties);
     }
@@ -81,31 +75,5 @@ public class UploadConfig {
             throw new IllegalStateException(
                     "R2 업로드 설정이 비어 있습니다. 다음 값을 확인해 주세요: " + String.join(", ", missing));
         }
-    }
-
-    @Bean
-    @ConditionalOnProperty(name = "blog.upload.storage", havingValue = "local", matchIfMissing = true)
-    public ImageStorage localImageStorage(UploadProperties properties) {
-        return new LocalImageStorage(properties);
-    }
-
-    /**
-     * 로컬에 저장한 이미지를 브라우저가 받아갈 수 있게 연다.
-     *
-     * 이 경로는 {@code /api/**} 밖이라 보안 필터를 타지 않는다. 이미지는 공개 글에 실리므로
-     * 로그인 없이 열려 있어야 맞다.
-     */
-    @Bean
-    @ConditionalOnProperty(name = "blog.upload.storage", havingValue = "local", matchIfMissing = true)
-    public WebMvcConfigurer localUploadResourceConfigurer(UploadProperties properties) {
-        return new WebMvcConfigurer() {
-            @Override
-            public void addResourceHandlers(ResourceHandlerRegistry registry) {
-                Path root = Path.of(properties.localDirectory()).toAbsolutePath().normalize();
-
-                registry.addResourceHandler(properties.publicPath() + "/**")
-                        .addResourceLocations(root.toUri().toString());
-            }
-        };
     }
 }
