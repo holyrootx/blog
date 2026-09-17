@@ -16,6 +16,7 @@ import {
   loadPostDraft,
   savePostDraft,
 } from '../data/adminPostDraftStore';
+import { notifySuccess } from '../data/adminToastStore';
 import AdminPageHeader from '../components/AdminPageHeader.vue';
 import AdminTextInput from '../components/AdminTextInput.vue';
 import AdminSelect from '../components/AdminSelect.vue';
@@ -28,6 +29,7 @@ const THUMBNAIL_MAX = 500;
 
 const STATUS_LABELS = {
   PUBLISHED: '발행',
+  SCHEDULED: '예약',
   PRIVATE: '비공개',
   DRAFT: '임시저장',
 };
@@ -63,6 +65,15 @@ const formError = ref('');
 const savedMessage = ref('');
 
 const confirmAction = ref('');
+
+// 발행 확인 창에서 고르는 시각. 비우면 지금 발행이다
+const scheduledAt = ref('');
+
+/** 예약 발행된 글. 상태가 알려주므로 시각을 따로 비교하지 않는다 */
+const isScheduled = computed(() => status.value === 'SCHEDULED');
+
+// datetime-local 이 과거를 못 고르게 막는 하한. 초 단위는 버린다
+const earliestPublishAt = computed(() => toLocalInputValue(new Date()));
 const draftFound = ref(null);
 
 // 스냅샷을 만든 뒤 서버에서 글이 따로 바뀌었는지
@@ -117,6 +128,19 @@ const publishBlockReason = computed(() => {
 const canSave = computed(() => (isPublished.value ? canPublish.value : canSaveDraft.value));
 
 const saveBlockReason = computed(() => (isPublished.value ? publishBlockReason.value : draftBlockReason.value));
+
+/**
+ * 지금 막혀 있는 이유 한 줄.
+ *
+ * 비활성 이유를 tooltip 으로만 두면 회색 버튼만 보고 왜 못 누르는지 알 수 없다.
+ */
+const editorHint = computed(() => {
+  if (saveBlockReason.value) {
+    return saveBlockReason.value;
+  }
+
+  return publishBlockReason.value;
+});
 
 const lengthError = computed(() => {
   if (form.title.trim().length > TITLE_MAX) return `제목은 ${TITLE_MAX}자까지 입력할 수 있습니다.`;
@@ -236,6 +260,8 @@ async function save() {
       clearPostDraft('new');
       // 저장했으니 이제 수정 화면이다. 주소도 그 글을 가리켜야 한다
       await router.replace({ name: 'admin-post-edit', params: { postId: newId } });
+
+      notifySuccess(`${saveLabel.value}했습니다.`);
     } else {
       await persistForm();
 
@@ -278,6 +304,8 @@ async function persistForm() {
   try {
     await updateAdminPost(postId.value, buildRequest());
     clearPostDraft(draftKey.value);
+
+    return postId.value;
   } catch (error) {
     // 저장에 실패했으면 스냅샷은 계속 남겨야 한다
     lastSavedForm.value = null;
@@ -307,6 +335,12 @@ const ACTION_LABELS = { publish: '발행', unpublish: '내리기' };
  * 저장을 또 보내면 updatedAt 이 어긋나 충돌로 막힌다.
  */
 const retryAction = ref('');
+
+function openPublishConfirm() {
+  // 기본은 지금 발행. 예약하려면 사용자가 미래 시각으로 바꾼다
+  scheduledAt.value = '';
+  confirmAction.value = 'publish';
+}
 
 async function runConfirmedAction() {
   if (saving.value) {
@@ -338,14 +372,18 @@ async function runConfirmedAction() {
   let saved = false;
 
   try {
-    await persistForm();
+    // 새 글은 서버에 아직 없다. 만들어야 발행할 대상이 생긴다 —
+    // 사용자에게는 발행 한 번이고, 저장을 먼저 시키지 않는다
+    const targetId = isNew.value ? await createFromForm() : await persistForm();
     saved = true;
 
-    await changeStatus(action);
+    await changeStatus(action, targetId);
 
     confirmAction.value = '';
     await loadPost();
     lastSavedForm.value = JSON.stringify({ ...form });
+
+    notifySuccess(publishedMessage(action));
   } catch (error) {
     confirmAction.value = '';
 
@@ -362,8 +400,47 @@ async function runConfirmedAction() {
   }
 }
 
-function changeStatus(action) {
-  return action === 'publish' ? publishAdminPost(postId.value) : unpublishAdminPost(postId.value);
+/**
+ * 결과 문구.
+ *
+ * 앞 문장은 언제나 같고 뒤 문장만 바뀐다 — "발행했습니다"와 "예약했습니다"로 갈라 두면
+ * 발행이 된 건지 안 된 건지부터 헷갈린다. 된 건 하나뿐이고, 다른 건 언제 공개되느냐다.
+ */
+function publishedMessage(action) {
+  if (action === 'unpublish') {
+    return '글을 내렸습니다.';
+  }
+
+  return isScheduled.value
+    ? `발행했습니다. ${formatDateTime(publishedAt.value)}에 공개됩니다.`
+    : '발행했습니다. 지금 공개됩니다.';
+}
+
+function changeStatus(action, targetId = postId.value) {
+  if (action === 'unpublish') {
+    return unpublishAdminPost(targetId);
+  }
+
+  // 빈 값이면 서버가 지금으로 잡는다
+  return publishAdminPost(targetId, scheduledAt.value || null);
+}
+
+/** 새 글을 만들고 그 id 를 돌려준다. 주소도 그 글을 가리키게 바꾼다 */
+async function createFromForm() {
+  clearTimeout(draftTimer);
+  lastSavedForm.value = JSON.stringify({ ...form });
+
+  try {
+    const newId = await createAdminPost(buildRequest());
+    clearPostDraft('new');
+
+    await router.replace({ name: 'admin-post-edit', params: { postId: newId } });
+
+    return newId;
+  } catch (error) {
+    lastSavedForm.value = null;
+    throw error;
+  }
 }
 
 async function retryStatusChange() {
@@ -375,11 +452,15 @@ async function retryStatusChange() {
   formError.value = '';
 
   try {
-    await changeStatus(retryAction.value);
+    const action = retryAction.value;
+
+    await changeStatus(action);
     retryAction.value = '';
 
     await loadPost();
     lastSavedForm.value = JSON.stringify({ ...form });
+
+    notifySuccess(publishedMessage(action));
   } catch (error) {
     formError.value = `${ACTION_LABELS[retryAction.value]}하지 못했습니다. ${error.message}`;
   } finally {
@@ -395,6 +476,9 @@ async function runDelete() {
     await deleteAdminPost(postId.value);
     clearPostDraft(draftKey.value);
     confirmAction.value = '';
+
+    // 목록으로 옮겨 가므로 알림이 그 화면에서 보인다
+    notifySuccess('글을 삭제했습니다.');
     await router.push({ name: 'admin-posts' });
   } catch (error) {
     confirmAction.value = '';
@@ -420,6 +504,14 @@ const CONFIRM_TEXTS = {
 };
 
 const confirmText = computed(() => CONFIRM_TEXTS[confirmAction.value] ?? { title: '', description: '' });
+
+/** datetime-local 입력이 쓰는 형식(YYYY-MM-DDTHH:mm)으로. UTC 로 바꾸면 시간이 밀린다 */
+function toLocalInputValue(date) {
+  const pad = (number) => String(number).padStart(2, '0');
+
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+    + `T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
 
 function formatDateTime(value) {
   if (!value) {
@@ -537,7 +629,7 @@ watch(postId, enter);
             {{ STATUS_LABELS[status] }}
           </span>
           <span v-if="publishedAt" class="admin-editor__published">
-            {{ formatDateTime(publishedAt) }} 발행
+            {{ formatDateTime(publishedAt) }} {{ isScheduled ? '공개 예정' : '발행' }}
           </span>
           <span v-if="savedMessage" class="admin-editor__saved">{{ savedMessage }}</span>
         </div>
@@ -576,9 +668,9 @@ watch(postId, enter);
             v-else
             class="admin-button admin-button--solid"
             type="button"
-            :disabled="saving || isNew || !canPublish"
-            :title="isNew ? '먼저 임시저장해 주세요.' : publishBlockReason"
-            @click="confirmAction = 'publish'"
+            :disabled="saving || !canPublish"
+            :title="publishBlockReason"
+            @click="openPublishConfirm"
           >
             발행
           </button>
@@ -592,9 +684,7 @@ watch(postId, enter);
       </p>
 
       <!-- 비활성인 이유를 버튼 옆이 아니라 줄로 적는다. title 속성만으로는 보이지 않는다 -->
-      <p v-if="saveBlockReason || (!isNew && publishBlockReason)" class="admin-editor__hint">
-        {{ saveBlockReason || publishBlockReason }}
-      </p>
+      <p v-if="editorHint" class="admin-editor__hint">{{ editorHint }}</p>
 
       <div class="admin-editor__form">
         <div class="admin-editor__row">
@@ -690,6 +780,21 @@ watch(postId, enter);
       @close="confirmAction = ''"
     >
       <p class="admin-post__confirm">{{ form.title }}</p>
+
+      <!-- 발행 시각은 여기서만 정한다. 글의 내용이 아니라 발행이라는 행동에 딸린 값이다.
+           과거는 고를 수 없다 — 지나간 시각에 발행할 일이 없다 -->
+      <label v-if="confirmAction === 'publish'" class="admin-field admin-post__schedule">
+        <span class="admin-field__label">발행 시각</span>
+        <input
+          v-model="scheduledAt"
+          class="admin-field__input"
+          type="datetime-local"
+          :min="earliestPublishAt"
+        />
+        <small class="admin-post__schedule-hint">
+          {{ scheduledAt ? '그때까지 공개 화면에 나오지 않습니다.' : '비워 두면 지금 발행합니다.' }}
+        </small>
+      </label>
 
       <template #footer>
         <button class="admin-button admin-button--ghost" type="button" @click="confirmAction = ''">
