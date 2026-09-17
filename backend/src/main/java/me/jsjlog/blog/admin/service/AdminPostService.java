@@ -194,7 +194,7 @@ public class AdminPostService {
      * 독자가 보는 발행일이 계속 움직인다.
      */
     @Transactional
-    public void publishPost(Long postId) {
+    public void publishPost(Long postId, LocalDateTime requestedAt) {
         Post post = findPost(postId);
 
         if (post.isPublished()) {
@@ -203,12 +203,34 @@ public class AdminPostService {
 
         checkPublishable(post.getContent(), post.getExcerpt());
 
-        // 시각은 서비스가 정한다. 엔티티가 시간 소스에 직접 의존하지 않게 한다
-        LocalDateTime publishedAt = post.getPublishedAt() == null
-                ? LocalDateTime.now()
-                : post.getPublishedAt();
+        LocalDateTime publishedAt = publishAt(requestedAt, post);
+
+        // 아직 오지 않은 시각이면 예약이다. 상태를 나눠 두면 공개 조회가 시각을 따지지 않아도 된다
+        if (publishedAt.isAfter(LocalDateTime.now())) {
+            post.schedule(publishedAt);
+            return;
+        }
 
         post.publish(publishedAt);
+    }
+
+    /**
+     * 언제 발행된 것으로 볼지 정한다.
+     *
+     * 값을 안 주면 지금이다. 과거 시각은 지금으로 당긴다 — 화면은 미래만 고르게 하지만
+     * 브라우저 시계가 서버보다 조금 느리면 "지금"이 과거로 도착한다. 그걸 오류로 막으면
+     * 아무 잘못 없는 사람이 발행을 못 한다.
+     *
+     * 되돌렸다 다시 발행하는 경우에는 처음 발행일을 지킨다 — 독자가 보는 날짜가 바뀌면 안 된다.
+     */
+    private LocalDateTime publishAt(LocalDateTime requestedAt, Post post) {
+        if (requestedAt != null) {
+            LocalDateTime now = LocalDateTime.now();
+
+            return requestedAt.isBefore(now) ? now : requestedAt;
+        }
+
+        return post.getPublishedAt() == null ? LocalDateTime.now() : post.getPublishedAt();
     }
 
     /** 내리기. PRIVATE 이 되고 publishedAt 은 지우지 않는다 */

@@ -3,6 +3,7 @@ package me.jsjlog.blog;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * 블로그 백엔드 애플리케이션의 시작점입니다.
@@ -11,6 +12,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
  * 컨트롤러, 서비스, 리포지토리 같은 Spring Bean은 이 패키지 아래에 배치합니다.</p>
  */
 @EnableJpaAuditing
+@EnableScheduling
 @SpringBootApplication
 public class BlogApplication {
 

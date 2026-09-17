@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import me.jsjlog.blog.admin.dto.AdminPostDetailResponse;
 import me.jsjlog.blog.admin.dto.AdminPostListResponse;
+import me.jsjlog.blog.admin.dto.AdminPostPublishRequest;
 import me.jsjlog.blog.admin.dto.AdminPostRequest;
 import me.jsjlog.blog.admin.dto.AdminPostSearchCondition;
 import me.jsjlog.blog.admin.service.AdminPostService;
@@ -56,8 +57,11 @@ public class AdminPostController {
     // 수정(PUT)에 status 를 섞지 않고 나눈 이유는 발행이 publishedAt 을 건드리는
     // 부수효과를 갖기 때문이다. 저장할 때마다 값이 바뀌면 사고가 난다
     @PostMapping("/posts/{postId}/publish")
-    public ApiResponse<Void> publishPost(@PathVariable Long postId) {
-        adminPostService.publishPost(postId);
+    public ApiResponse<Void> publishPost(
+            @PathVariable Long postId,
+            @RequestBody(required = false) AdminPostPublishRequest request
+    ) {
+        adminPostService.publishPost(postId, request == null ? null : request.publishedAt());
         return ApiResponse.ok();
     }
 
