@@ -7,6 +7,7 @@ import {
   getAdminCategories,
   updateAdminCategory,
 } from '../api/adminApi';
+import { notifySuccess } from '../data/adminToastStore';
 import AdminPageHeader from '../components/AdminPageHeader.vue';
 import AdminSearchPanel from '../components/AdminSearchPanel.vue';
 import AdminGridToolbar from '../components/AdminGridToolbar.vue';
@@ -152,8 +153,13 @@ async function saveCategory() {
       await updateAdminCategory(editingId.value, request);
     }
 
+    const done = formMode.value === 'create' ? '카테고리를 등록했습니다.' : '카테고리를 수정했습니다.';
+
     formOpen.value = false;
     await loadCategories({ ...applied.value });
+
+    // 팝업이 닫히는 것은 성공 신호가 아니다 — 취소해도 닫힌다
+    notifySuccess(done);
   } catch (error) {
     // 서버가 준 메시지를 그대로 보여준다 (이름 중복·필수값 누락 등)
     formError.value = error.message;
@@ -193,6 +199,7 @@ async function deleteSelected() {
     deleteError.value = `${targets.length}건 중 ${deleted}건을 삭제했습니다.\n`
       + `실패: ${failures.join(' / ')}`;
   } else {
+    notifySuccess(`카테고리 ${deleted}건을 삭제했습니다.`);
     deleteConfirmOpen.value = false;
   }
 
@@ -213,6 +220,8 @@ async function deleteEditing() {
     editDeleteConfirmOpen.value = false;
     formOpen.value = false;
     await loadCategories({ ...applied.value });
+
+    notifySuccess('카테고리를 삭제했습니다.');
   } catch (error) {
     // 확인창을 닫아 수정 팝업의 오류 자리에서 이유를 보여준다
     editDeleteConfirmOpen.value = false;

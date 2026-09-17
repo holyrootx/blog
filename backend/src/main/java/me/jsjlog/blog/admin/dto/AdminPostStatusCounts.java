@@ -12,6 +12,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public record AdminPostStatusCounts(
         long all,
         long published,
+        long scheduled,
         @JsonProperty("private") long privateCount,
         long draft
 ) {

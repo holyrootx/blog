@@ -9,6 +9,7 @@ import {
   publishAdminPost,
   unpublishAdminPost,
 } from '../api/adminApi';
+import { notifySuccess } from '../data/adminToastStore';
 import AdminPageHeader from '../components/AdminPageHeader.vue';
 import AdminSearchPanel from '../components/AdminSearchPanel.vue';
 import AdminGridToolbar from '../components/AdminGridToolbar.vue';
@@ -43,7 +44,7 @@ const condition = reactive({ ...EMPTY_CONDITION });
 const applied = ref({ ...EMPTY_CONDITION });
 
 const posts = ref([]);
-const statusCounts = ref({ all: 0, published: 0, private: 0, draft: 0 });
+const statusCounts = ref({ all: 0, published: 0, scheduled: 0, private: 0, draft: 0 });
 const totalElements = ref(0);
 const totalPages = ref(0);
 const loading = ref(false);
@@ -74,6 +75,7 @@ const categoryOptions = computed(() => [
 const statusOptions = computed(() => [
   { value: '', label: `전체 ${formatCount(statusCounts.value.all)}` },
   { value: 'PUBLISHED', label: `발행 ${formatCount(statusCounts.value.published)}` },
+  { value: 'SCHEDULED', label: `예약 ${formatCount(statusCounts.value.scheduled)}` },
   { value: 'PRIVATE', label: `비공개 ${formatCount(statusCounts.value.private)}` },
   { value: 'DRAFT', label: `임시저장 ${formatCount(statusCounts.value.draft)}` },
 ]);
@@ -208,16 +210,24 @@ async function runAction() {
   const postId = confirmTarget.value.id;
 
   try {
+    let done = '';
+
     if (confirmAction.value === 'publish') {
       await publishAdminPost(postId);
+      done = '발행했습니다.';
     } else if (confirmAction.value === 'unpublish') {
       await unpublishAdminPost(postId);
+      done = '글을 내렸습니다.';
     } else {
       await deleteAdminPost(postId);
+      done = '글을 삭제했습니다.';
     }
 
     confirmTarget.value = null;
     await reload();
+
+    // 목록이 새로 그려지는 것만으로는 무엇이 바뀌었는지 알기 어렵다
+    notifySuccess(done);
   } catch (error) {
     // 서버가 준 메시지를 그대로 보여준다 (요약 없음·본문 없음 등)
     actionError.value = error.message;
