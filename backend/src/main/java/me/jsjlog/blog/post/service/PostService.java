@@ -12,6 +12,7 @@ import me.jsjlog.blog.post.repository.PostRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Service
@@ -56,31 +57,35 @@ public class PostService {
         return postRepository.getPostsForHomePage(sort,size);
     }
 
+    /**
+     * 지금 독자에게 보여도 되는 글인지.
+     *
+     * 상태 하나만 본다. 예약한 글은 시각이 될 때까지 SCHEDULED 로 남아 있고,
+     * DRAFT·PRIVATE 와 마찬가지로 여기서 걸린다.
+     *
+     * 없는 글과 공개되지 않은 글에 같은 응답을 주는 이유는, 응답이 갈리면
+     * 아직 공개하지 않은 글의 존재를 알려주는 꼴이 되기 때문이다.
+     */
+    private Post findReadablePost(Long postId) {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new BlogException(ErrorCode.POST_NOT_FOUND));
+
+        if (post.getStatus() != PostStatus.PUBLISHED) {
+            throw new BlogException(ErrorCode.POST_NOT_FOUND);
+        }
+
+        return post;
+    }
+
     public PostDetailResponse getPostDetail(Long postId) {
 
-        Optional<Post> byId = postRepository.findById(postId);
-        if (byId.isEmpty()) {
-            throw new BlogException(ErrorCode.POST_NOT_FOUND);
-        }
-
-        Post post = byId.get();
-        if (post.getStatus() == PostStatus.PRIVATE || post.getStatus() == PostStatus.DRAFT){
-            throw new BlogException(ErrorCode.POST_NOT_FOUND);
-        }
+        findReadablePost(postId);
 
         return postRepository.getPostDetail(postId);
     }
 
     public AdjacentPostResponse getAdjacentPost(Long postId) {
-        Optional<Post> byId = postRepository.findById(postId);
-        if (byId.isEmpty()) {
-            throw new BlogException(ErrorCode.POST_NOT_FOUND);
-        }
-
-        Post post = byId.get();
-        if (post.getStatus() == PostStatus.PRIVATE || post.getStatus() == PostStatus.DRAFT){
-            throw new BlogException(ErrorCode.POST_NOT_FOUND);
-        }
+        findReadablePost(postId);
 
         return postRepository.getAdjacentPost(postId);
     }
@@ -102,15 +107,7 @@ public class PostService {
 
     public CommentListResponse getCommentInPostDetail(Long postId, Long cursor, Long size){
 
-        Optional<Post> byId = postRepository.findById(postId);
-        if (byId.isEmpty()) {
-            throw new BlogException(ErrorCode.POST_NOT_FOUND);
-        }
-
-        Post post = byId.get();
-        if (post.getStatus() != PostStatus.PUBLISHED) {
-            throw new BlogException(ErrorCode.POST_NOT_PUBLISHED);
-        }
+        findReadablePost(postId);
 
         if (size == null || size <= 0L) {
             size = DEFAULT_COMMENT_PAGE_SIZE;

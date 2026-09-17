@@ -1,5 +1,5 @@
 <script setup>
-import { nextTick, ref, watch } from 'vue';
+import { nextTick, onBeforeUnmount, ref, watch } from 'vue';
 
 import {
   createBlock,
@@ -10,6 +10,7 @@ import {
 } from '../data/postEditorBlocks';
 import { createEditorHistory } from '../data/postEditorHistory';
 import { filterSlashCommands } from '../data/postSlashCommands';
+import { uploadAdminImage } from '../api/adminApi';
 import { CODE_LANGUAGES, toCodeTokens } from '../../../shared/post/codeHighlight';
 import AdminBlockText from './AdminBlockText.vue';
 
@@ -510,6 +511,17 @@ function runCommand(block, command) {
 
   block.text = block.text.replace(/(?:^|\s)\/\S*$/, '');
 
+  // 이미지는 블록만 만들어 두고 파일 고르기를 띄운다.
+  // 주소를 손으로 적게 하면 올리는 일이 화면 밖으로 새어 나간다
+  if (command.id === 'image') {
+    block.type = 'image';
+    block.text = '';
+    closeMenu();
+    sync();
+    pickImageFor(block);
+    return;
+  }
+
   if (command.kind === 'inline') {
     block.text += command.template.replace('{}', command.placeholder);
   } else if (/^h[1-6]$/.test(command.id)) {
@@ -531,10 +543,123 @@ function runCommand(block, command) {
   focusBlock(block.id);
 }
 
+/* ── 이미지 ───────────────────────────────── */
+
+// 올리는 중인 블록 id 와 실패 메시지. 블록마다 따로 둔다 — 여러 장을 한꺼번에 놓을 수 있다
+const uploadingIds = ref([]);
+const uploadErrors = ref({});
+
+// 만들어 둔 임시 주소. 화면을 떠날 때 돌려주지 않으면 그림이 메모리에 계속 남는다
+const objectUrls = [];
+
+onBeforeUnmount(() => {
+  objectUrls.forEach((url) => URL.revokeObjectURL(url));
+});
+
+function isUploading(block) {
+  return uploadingIds.value.includes(block.id);
+}
+
+/** 파일 고르기 창을 띄우고, 고른 파일을 그 블록에 올린다 */
+function pickImageFor(block) {
+  const picker = document.createElement('input');
+  picker.type = 'file';
+  picker.accept = 'image/*';
+
+  picker.addEventListener('change', () => {
+    const [file] = picker.files ?? [];
+
+    if (file) {
+      uploadInto(block, file);
+    }
+  });
+
+  picker.click();
+}
+
+async function uploadInto(block, file) {
+  if (isUploading(block)) {
+    return;
+  }
+
+  // 고른 파일을 먼저 보여준다. 올리는 데 걸리는 시간만큼 빈 자리를 보고 있을 이유가 없다 —
+  // 같은 그림이 이미 이 컴퓨터에 있는데 올렸다가 다시 받아오면 그만큼 더 기다린다
+  block.previewUrl = URL.createObjectURL(file);
+  objectUrls.push(block.previewUrl);
+
+  uploadingIds.value = [...uploadingIds.value, block.id];
+  delete uploadErrors.value[block.id];
+
+  try {
+    const image = await uploadAdminImage(file);
+
+    block.url = image.url;
+    // 대체 텍스트 기본값을 파일 이름으로 둔다. 비워 두면 화면 낭독기가 읽을 것이 없다
+    block.alt = block.alt || image.originalName.replace(/\.[^.]+$/, '');
+
+    sync();
+  } catch (error) {
+    // 올라가지 않은 그림을 올라간 것처럼 보여주면 안 된다
+    block.previewUrl = '';
+
+    // 실패한 블록은 지우지 않는다. 지우면 어디에 무엇을 넣으려 했는지 사라진다
+    uploadErrors.value = { ...uploadErrors.value, [block.id]: error.message };
+  } finally {
+    uploadingIds.value = uploadingIds.value.filter((id) => id !== block.id);
+  }
+}
+
+/** 이미지 파일 하나를 새 블록으로 만들어 올린다 */
+function insertImage(file, afterIndex) {
+  const block = createBlock('image');
+
+  blocks.value.splice(afterIndex + 1, 0, block);
+  sync();
+  uploadInto(block, file);
+}
+
+function imageFilesOf(dataTransfer) {
+  return [...(dataTransfer?.files ?? [])].filter((file) => file.type.startsWith('image/'));
+}
+
+/**
+ * 붙여넣기로 들어온 이미지.
+ *
+ * 스크린샷은 대부분 이 경로로 들어온다. 글자 붙여넣기는 건드리지 않는다 —
+ * 이미지가 들어 있을 때만 가로챈다.
+ */
+function onPaste(block, index, event) {
+  const files = imageFilesOf(event.clipboardData);
+
+  if (files.length === 0) {
+    return;
+  }
+
+  event.preventDefault();
+  files.forEach((file, offset) => insertImage(file, index + offset));
+}
+
+function onDropFiles(index, event) {
+  const files = imageFilesOf(event.dataTransfer);
+
+  if (files.length === 0) {
+    // 파일이 아니면 블록 순서 바꾸기다
+    onDrop();
+    return;
+  }
+
+  event.preventDefault();
+  files.forEach((file, offset) => insertImage(file, index + offset));
+  resetDrag();
+}
+
 function addBlockAtEnd() {
   const last = blocks.value[blocks.value.length - 1];
 
-  if (last && isEmptyBlock(last)) {
+  // 비어 있는 블록이 이미 끝에 있으면 거기로 커서만 옮긴다.
+  // 단 이미지는 글자를 칠 수 없어서 재사용하면 안 된다 — 끝이 빈 이미지일 때
+  // 여기로 보내면 커서가 갈 곳이 없어 아무 일도 일어나지 않는다
+  if (last && isEmptyBlock(last) && last.type !== 'image') {
     focusBlock(last.id);
     return;
   }
@@ -628,7 +753,7 @@ function resetDrag() {
         { 'block-editor__row--dropping': dropIndex === index && draggingId !== '' },
       ]"
       @dragover="onDragOver(index, $event)"
-      @drop="onDrop"
+      @drop="onDropFiles(index, $event)"
     >
       <!-- 잡아서 순서를 바꾸고, 눌러서 블록을 고른다 -->
       <button
@@ -641,6 +766,51 @@ function resetDrag() {
       >⠿</button>
 
       <hr v-if="block.type === 'divider'" class="post-body__divider" />
+
+      <!-- 이미지는 글자를 치는 블록이 아니라서 입력칸을 두지 않는다.
+           대체 텍스트만 고칠 수 있게 하고, 주소는 업로드가 채운다 -->
+      <div v-else-if="block.type === 'image'" class="block-editor__image">
+        <template v-if="block.previewUrl || block.url">
+          <img
+            class="block-editor__image-preview"
+            :class="{ 'block-editor__image-preview--uploading': isUploading(block) }"
+            :src="block.previewUrl || block.url"
+            :alt="block.alt"
+          />
+
+          <!-- 캡션은 평소에 숨어 있다가 이미지에 마우스를 올리면 나타난다.
+               항상 떠 있으면 사진마다 빈 입력칸이 한 줄씩 따라다닌다.
+               여기 적은 값이 공개 화면의 캡션이자 대체 텍스트가 된다 -->
+          <input
+            class="block-editor__image-caption"
+            :class="{ 'block-editor__image-caption--filled': block.alt }"
+            type="text"
+            :value="block.alt"
+            placeholder="캡션 추가"
+            aria-label="이미지 캡션"
+            @input="block.alt = $event.target.value; sync(`alt:${block.id}`)"
+          />
+        </template>
+
+        <p v-if="isUploading(block)" class="block-editor__image-status">올리는 중…</p>
+
+        <button
+          v-if="!block.previewUrl && !block.url && !isUploading(block)"
+          class="block-editor__image-placeholder block-editor__image-placeholder--button"
+          type="button"
+          @click="pickImageFor(block)"
+        >
+          <span class="block-editor__image-icon" aria-hidden="true"></span>
+          이미지 추가
+        </button>
+
+        <p v-if="uploadErrors[block.id]" class="block-editor__image-error" role="alert">
+          {{ uploadErrors[block.id] }}
+          <button class="block-editor__image-retry" type="button" @click="pickImageFor(block)">
+            다시 고르기
+          </button>
+        </p>
+      </div>
 
       <template v-else>
         <span v-if="block.type === 'bullet'" class="block-editor__marker">•</span>
@@ -696,6 +866,7 @@ function resetDrag() {
               : ''"
             @input="onTextInput(block)"
             @keydown="onKeydown(block, index, $event)"
+            @paste="onPaste(block, index, $event)"
           />
         </div>
       </template>

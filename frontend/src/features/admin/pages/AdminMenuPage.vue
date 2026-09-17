@@ -9,6 +9,7 @@ import {
 } from '../api/adminApi';
 import { sortAdminMenus } from '../data/adminMenus';
 import { reloadAdminSidebarMenus } from '../data/adminSidebarMenuStore';
+import { notifySuccess } from '../data/adminToastStore';
 import AdminPageHeader from '../components/AdminPageHeader.vue';
 import AdminSearchPanel from '../components/AdminSearchPanel.vue';
 import AdminGridToolbar from '../components/AdminGridToolbar.vue';
@@ -206,8 +207,12 @@ async function saveMenu() {
       await updateAdminMenu(selectedMenu.value.id, request);
     }
 
+    const done = formMode.value === 'create' ? '메뉴를 등록했습니다.' : '메뉴를 수정했습니다.';
+
     modalOpen.value = false;
     await afterChange();
+
+    notifySuccess(done);
   } catch (error) {
     // 서버가 준 메시지를 그대로 보여준다
     formError.value = error.message;
@@ -229,6 +234,8 @@ async function removeMenu() {
     deleteConfirmOpen.value = false;
     modalOpen.value = false;
     await afterChange();
+
+    notifySuccess('메뉴를 삭제했습니다.');
   } catch (error) {
     // 확인창을 닫아 팝업의 오류 자리에서 이유를 보여준다
     deleteConfirmOpen.value = false;

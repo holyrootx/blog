@@ -1,4 +1,4 @@
-import { getApiData, sendApiData } from '../../../shared/api/blogApiClient';
+import { getApiData, sendApiData, sendApiFile } from '../../../shared/api/blogApiClient';
 
 const ADMIN_BLOG_API_BASE = '/api/v1/admin/blog';
 
@@ -52,6 +52,7 @@ export async function getAdminPosts(condition = {}) {
     statusCounts: {
       all: toNumber(result?.statusCounts?.all),
       published: toNumber(result?.statusCounts?.published),
+      scheduled: toNumber(result?.statusCounts?.scheduled),
       private: toNumber(result?.statusCounts?.private),
       draft: toNumber(result?.statusCounts?.draft),
     },
@@ -105,8 +106,17 @@ export function updateAdminPost(postId, request) {
 
 // 발행·내리기는 수정(PUT)과 나눠져 있다.
 // 발행이 publishedAt 을 건드리는 부수효과를 갖기 때문이다
-export function publishAdminPost(postId) {
-  return sendApiData(`${ADMIN_BLOG_API_BASE}/posts/${postId}/publish`, { method: 'POST' });
+/**
+ * 글을 발행한다.
+ *
+ * publishedAt 을 주면 그 시각에 공개된다. 미래 시각이면 그때까지 공개 목록에 나오지 않는다.
+ * 비우면 지금 발행이다.
+ */
+export function publishAdminPost(postId, publishedAt = null) {
+  return sendApiData(`${ADMIN_BLOG_API_BASE}/posts/${postId}/publish`, {
+    method: 'POST',
+    body: { publishedAt },
+  });
 }
 
 export function unpublishAdminPost(postId) {
@@ -257,4 +267,22 @@ function toVisible(menu) {
   }
 
   return true;
+}
+
+/**
+ * 본문에 넣을 이미지를 올린다.
+ *
+ * 응답의 url 을 그대로 마크다운에 박는다. 파일은 R2 에 있고 DB 에는 기록만 남는다.
+ */
+export async function uploadAdminImage(file) {
+  const form = new FormData();
+  form.append('file', file);
+
+  const image = await sendApiFile(`${ADMIN_BLOG_API_BASE}/images`, form);
+
+  return {
+    id: image?.id ?? null,
+    url: image?.url ?? '',
+    originalName: image?.originalName ?? '',
+  };
 }

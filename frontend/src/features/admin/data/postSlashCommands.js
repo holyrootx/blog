@@ -78,6 +78,14 @@ export const POST_SLASH_COMMANDS = [
     template: '```\n{}\n```',
   },
   {
+    id: 'image',
+    label: '이미지',
+    hint: '파일을 골라 올린다',
+    shortcut: 'img',
+    keywords: ['img', 'image', 'photo', 'picture', '이미지', '사진', '그림', '스크린샷'],
+    kind: 'block',
+  },
+  {
     id: 'divider',
     label: '구분선',
     hint: '---',

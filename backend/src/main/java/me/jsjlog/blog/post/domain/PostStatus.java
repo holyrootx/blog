@@ -16,6 +16,17 @@ public enum PostStatus {
     PUBLISHED,
 
     /**
+     * 발행하기로 했지만 아직 그 시각이 오지 않은 글입니다.
+     *
+     * <p>{@code PUBLISHED}에 미래 {@code publishedAt}을 두는 방법도 있지만, 그러면 공개 조회가
+     * 모두 상태와 시각을 함께 따져야 하고 한 군데라도 빠뜨리면 예약한 글이 새어 나갑니다.
+     * 상태로 나눠 두면 {@code status = PUBLISHED} 조건 하나로 충분합니다.</p>
+     *
+     * <p>시각이 되면 {@code ScheduledPublisher}가 {@code PUBLISHED}로 바꿉니다.</p>
+     */
+    SCHEDULED,
+
+    /**
      * 발행했다가 다시 내린 글입니다. {@code publishedAt}은 그대로 유지합니다.
      *
      * <p>{@code DRAFT}와 상태를 나누는 이유는 관리자 화면이 "임시저장"과 "비공개"를

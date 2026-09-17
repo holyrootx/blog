@@ -102,6 +102,16 @@ public class Post extends BaseEntity {
     }
 
     /**
+     * 미래 시각으로 발행을 예약합니다. 그 시각이 오기 전까지 공개 조회에 잡히지 않습니다.
+     *
+     * <p>시각 비교는 서비스가 합니다. 엔티티가 현재 시각을 직접 읽으면 테스트에서 시간을 다룰 수 없습니다.</p>
+     */
+    public void schedule(LocalDateTime publishedAt) {
+        this.status = PostStatus.SCHEDULED;
+        this.publishedAt = publishedAt;
+    }
+
+    /**
      * 발행한 글을 비공개로 되돌립니다.
      *
      * <p>{@code DRAFT}가 아니라 {@code PRIVATE}가 되는 이유는, 한 번도 발행하지 않은 글과

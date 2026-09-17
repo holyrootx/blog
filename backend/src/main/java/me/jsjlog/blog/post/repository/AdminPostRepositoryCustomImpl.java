@@ -70,12 +70,14 @@ public class AdminPostRepositoryCustomImpl implements AdminPostRepositoryCustom 
         BooleanBuilder builder = toPredicate(condition, false);
 
         long published = countWithStatus(builder, PostStatus.PUBLISHED);
+        long scheduled = countWithStatus(builder, PostStatus.SCHEDULED);
         long privateCount = countWithStatus(builder, PostStatus.PRIVATE);
         long draft = countWithStatus(builder, PostStatus.DRAFT);
 
         return new AdminPostStatusCounts(
-                published + privateCount + draft,
+                published + scheduled + privateCount + draft,
                 published,
+                scheduled,
                 privateCount,
                 draft
         );
