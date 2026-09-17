@@ -1205,3 +1205,24 @@
     margin-left: 20px;
   }
 }
+
+/* ── 본문 이미지 ───────────────────────────── */
+
+.post-body__figure {
+  margin: 28px 0;
+}
+
+.post-body__image {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius);
+}
+
+/* 대체 텍스트를 캡션으로도 쓴다. 따로 입력받으면 둘 중 하나는 늘 비어 있다.
+   편집기의 캡션 칸과 같은 자리·같은 크기로 둔다 — 쓰는 모습과 결과가 어긋나면 안 된다 */
+.post-body__caption {
+  margin-top: 8px;
+  color: var(--text-muted);
+  font-size: 13px;
+}

@@ -1435,3 +1435,210 @@
 .block-editor__row--dropping {
   box-shadow: 0 2px 0 0 var(--admin-accent);
 }
+
+/* ── 본문 이미지 블록 ──────────────────────── */
+
+.block-editor__image {
+  /* 행이 flex 라 늘어나라고 말해 줘야 폭을 채운다.
+     min-width:0 이 없으면 긴 이미지가 행을 밀어낸다 */
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 4px 0;
+}
+
+/* 파일이 없을 때. 큰 점선 상자 대신 한 줄짜리 바로 둔다 —
+   글을 쓰는 중에 빈 칸이 화면을 크게 차지하면 흐름이 끊긴다 */
+.block-editor__image-placeholder {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: 0;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--admin-surface-subtle);
+  color: var(--admin-text-muted);
+  font-family: inherit;
+  font-size: 13px;
+  text-align: left;
+}
+
+.block-editor__image-placeholder--button {
+  cursor: pointer;
+}
+
+.block-editor__image-placeholder--button:hover {
+  background: var(--admin-surface-hover);
+  color: var(--admin-text);
+}
+
+/* 사진 아이콘 — 모서리 둥근 틀 안에 해와 능선 */
+.block-editor__image-icon {
+  position: relative;
+  flex: none;
+  width: 16px;
+  height: 14px;
+  border: 1.5px solid currentColor;
+  border-radius: 3px;
+  opacity: 0.7;
+}
+
+.block-editor__image-icon::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2.5px;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.block-editor__image-icon::after {
+  content: '';
+  position: absolute;
+  right: 1px;
+  bottom: 1px;
+  left: 1px;
+  height: 5px;
+  background: currentColor;
+  clip-path: polygon(0 100%, 35% 30%, 60% 70%, 78% 45%, 100% 100%);
+}
+
+.block-editor__image-preview {
+  display: block;
+  max-width: 100%;
+  border-radius: var(--radius);
+}
+
+/* 아직 올라가는 중이라는 표시. 그림은 이미 보이되 확정이 아니라는 것만 알린다 */
+.block-editor__image-preview--uploading {
+  opacity: 0.55;
+}
+
+.block-editor__image-status {
+  margin: 0;
+  color: var(--admin-text-muted);
+  font-size: 12px;
+}
+
+/* 캡션은 이미지에 마우스를 올려야 나타난다.
+   값이 있거나 입력 중이면 계속 보인다 */
+.block-editor__image-caption {
+  width: 100%;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--admin-text-muted);
+  font-family: inherit;
+  font-size: 13px;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.block-editor__image:hover .block-editor__image-caption,
+.block-editor__image-caption:focus,
+.block-editor__image-caption--filled {
+  opacity: 1;
+}
+
+.block-editor__image-caption:focus {
+  color: var(--admin-text);
+  outline: none;
+}
+
+.block-editor__image-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--admin-danger);
+  font-size: 12px;
+}
+
+.block-editor__image-retry {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--admin-accent-dark);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* 발행 확인 창의 시각 선택 */
+.admin-post__schedule {
+  margin-top: 14px;
+}
+
+.admin-post__schedule-hint {
+  margin-top: 6px;
+  color: var(--admin-text-muted);
+  font-size: 12px;
+}
+
+/* ── 결과 알림 ─────────────────────────────── */
+
+.admin-toast {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: min(360px, calc(100vw - 48px));
+  /* 알림이 없을 때 그 자리의 클릭을 먹지 않도록 */
+  pointer-events: none;
+}
+
+.admin-toast__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
+  font-size: 13px;
+  line-height: 1.5;
+  pointer-events: auto;
+  animation: admin-toast-in 0.16s ease-out;
+}
+
+.admin-toast__item--success {
+  background: var(--admin-button-primary);
+  color: var(--admin-button-primary-text);
+}
+
+.admin-toast__item--error {
+  border: 1px solid var(--admin-danger-line);
+  background: var(--admin-danger-soft);
+  color: var(--admin-danger);
+}
+
+.admin-toast__message {
+  flex: 1;
+  white-space: pre-line;
+}
+
+.admin-toast__close {
+  flex: none;
+  padding: 0 2px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+@keyframes admin-toast-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}

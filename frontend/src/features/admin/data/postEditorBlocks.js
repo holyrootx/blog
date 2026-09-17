@@ -20,6 +20,10 @@ export function createBlock(type = 'paragraph', patch = {}) {
     level: 2,
     language: '',
     variant: 'tip',
+    url: '',
+    alt: '',
+    // 고른 파일을 그 자리에서 보여주는 임시 주소. 저장 형식에는 들어가지 않는다
+    previewUrl: '',
     ...patch,
   };
 }
@@ -30,7 +34,16 @@ export function isMultiline(block) {
 }
 
 export function isEmptyBlock(block) {
-  return block.type !== 'divider' && block.text.trim() === '';
+  if (block.type === 'divider') {
+    return false;
+  }
+
+  // 이미지는 글자가 비어 있어도 주소가 있으면 내용이 있는 것이다
+  if (block.type === 'image') {
+    return block.url.trim() === '';
+  }
+
+  return block.text.trim() === '';
 }
 
 /* ── 마크다운 → 블록 ──────────────────────── */
@@ -126,6 +139,15 @@ export function toEditorBlocks(markdown) {
       continue;
     }
 
+    // 줄 전체가 이미지일 때만 블록으로 만든다. 문장 안에 섞인 이미지는
+    // 문단의 인라인 표기로 남겨 둔다 — 블록으로 끌어내면 문장이 끊긴다
+    const image = lead.match(/^!\[([^\]]*)\]\(([^)\s]+)\)$/);
+    if (image) {
+      flushParagraph();
+      blocks.push(createBlock('image', { alt: image[1], url: image[2] }));
+      continue;
+    }
+
     const bullet = lead.match(/^[-*+]\s(.*)$/);
     if (bullet) {
       flushParagraph();
@@ -200,6 +222,8 @@ function serialize(block, orderedCount) {
       return `\`\`\`${block.language ?? ''}\n${text}\n\`\`\``;
     case 'callout':
       return `:::${block.variant}\n${text}\n:::`;
+    case 'image':
+      return `![${block.alt ?? ''}](${block.url ?? ''})`;
     case 'divider':
       return '---';
     default:

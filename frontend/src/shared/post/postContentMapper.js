@@ -5,7 +5,7 @@
  * 렌더 경로에 HTML 주입 구멍을 만들어 두면 나중에 다른 출처(댓글·외부 임포트)가
  * 붙는 순간 그대로 사고가 된다. 토큰 배열로 넘겨 Vue 가 이스케이프하게 둔다.
  *
- * 블록: heading · paragraph · quote · code · list · divider · callout
+ * 블록: heading · paragraph · quote · code · list · divider · callout · image
  * 인라인: text · bold · italic · code · link
  */
 
@@ -139,6 +139,22 @@ export function toPostBody(content) {
       });
 
       headingIndex += 1;
+      continue;
+    }
+
+    // 줄 전체가 이미지면 블록으로 뽑는다. 문장에 섞인 것은 문단 안 인라인으로 남는다
+    const image = line.match(/^!\[([^\]]*)\]\(([^)\s]+)\)$/);
+    if (image) {
+      flushAll();
+
+      const src = safeHref(image[2]);
+
+      // 허용하지 않는 주소면 아무것도 그리지 않는다.
+      // 깨진 이미지 아이콘보다 없는 편이 낫다
+      if (src) {
+        blocks.push({ type: 'image', src, alt: image[1] });
+      }
+
       continue;
     }
 

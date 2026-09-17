@@ -74,6 +74,37 @@ function csrfHeader() {
 }
 
 /**
+ * 파일을 올리는 요청.
+ *
+ * Content-Type 을 직접 넣지 않는다. FormData 를 보낼 때는 브라우저가 경계 문자열까지 붙여
+ * 헤더를 만드는데, 우리가 먼저 적으면 그 경계가 빠져 서버가 본문을 못 읽는다.
+ */
+export async function sendApiFile(path, formData) {
+  const response = await fetch(path, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      ...csrfHeader(),
+    },
+    body: formData,
+  });
+
+  const payload = await response.json().catch(() => null);
+
+  if (!response.ok || payload?.success === false) {
+    notifyIfSessionExpired(payload?.code);
+
+    throw new ApiError(
+      payload?.message ?? `업로드에 실패했습니다. (status=${response.status})`,
+      payload?.code,
+      response.status,
+    );
+  }
+
+  return payload?.data ?? null;
+}
+
+/**
  * 값을 바꾸는 요청(POST·PUT·DELETE).
  * 실패하면 서버가 준 메시지를 그대로 던진다 — 화면에서 왜 실패했는지 보여줘야 하기 때문.
  */
