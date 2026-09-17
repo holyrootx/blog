@@ -1509,10 +1509,231 @@
   clip-path: polygon(0 100%, 35% 30%, 60% 70%, 78% 45%, 100% 100%);
 }
 
+/* 폭을 가진 틀. 공개 화면의 figure 와 같은 몫을 한다 —
+   여기서 보이는 크기가 곧 발행 결과여야 한다 */
+.block-editor__image-frame {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* 폭이 100% 면 세 정렬이 모두 같아 보인다. 좁혔을 때만 차이가 난다.
+   공개 화면(.post-body__figure)과 같은 규칙이어야 쓰는 모습과 결과가 맞는다 */
+.block-editor__image-frame--center {
+  margin-inline: auto;
+}
+
+.block-editor__image-frame--right {
+  margin-inline: auto 0;
+}
+
+.block-editor__image-canvas {
+  position: relative;
+  line-height: 0;
+}
+
 .block-editor__image-preview {
   display: block;
-  max-width: 100%;
+  width: 100%;
   border-radius: var(--radius);
+}
+
+/* 폭 손잡이. 평소엔 숨어 있다가 사진에 마우스를 올리면 나타난다 */
+.block-editor__image-grip {
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 40%;
+  min-height: 24px;
+  max-height: 56px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  transform: translateY(-50%);
+  transition: opacity 0.12s ease;
+  cursor: ew-resize;
+}
+
+.block-editor__image-grip--left {
+  left: 8px;
+}
+
+.block-editor__image-grip--right {
+  right: 8px;
+}
+
+.block-editor__image-canvas:hover .block-editor__image-grip,
+.block-editor__image-frame--resizing .block-editor__image-grip {
+  opacity: 1;
+}
+
+/* 키보드로 왔을 때 어디에 있는지 보여야 한다. 마우스로만 쓸 수 있으면 안 된다 */
+.block-editor__image-grip:focus-visible {
+  opacity: 1;
+  outline: 2px solid var(--admin-accent-dark);
+  outline-offset: 2px;
+}
+
+/* 단추 묶음. 사진 오른쪽 위 */
+.block-editor__image-tools {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.55);
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.block-editor__image-toolgroup {
+  display: flex;
+  gap: 2px;
+}
+
+/* 정렬 셋과 캡션을 갈라 놓는다. 붙여 두면 캡션도 정렬의 하나로 읽힌다 */
+.block-editor__image-tooldivider {
+  width: 1px;
+  height: 14px;
+  margin: 0 3px;
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.block-editor__image-canvas:hover .block-editor__image-tools,
+.block-editor__image-tools:focus-within {
+  opacity: 1;
+}
+
+/* 버튼 하나. 글줄 세 개를 그려서 어느 쪽으로 붙는지 보여준다 */
+.block-editor__image-align {
+  position: relative;
+  width: 24px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: none;
+  cursor: pointer;
+}
+
+.block-editor__image-align:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.block-editor__image-align[aria-pressed='true'] {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.block-editor__image-align:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: -2px;
+}
+
+/* 긴 줄 두 개(위·아래)와 짧은 줄 하나(가운데). 짧은 줄이 붙는 쪽이 정렬 방향이다 */
+.block-editor__image-align::before,
+.block-editor__image-align::after {
+  content: '';
+  position: absolute;
+  right: 5px;
+  left: 5px;
+  height: 2px;
+  border-radius: 1px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.block-editor__image-align::before {
+  top: 6px;
+  box-shadow: 0 8px 0 rgba(255, 255, 255, 0.9);
+}
+
+.block-editor__image-align::after {
+  top: 10px;
+  width: 8px;
+}
+
+.block-editor__image-align--left::after {
+  right: auto;
+  left: 5px;
+}
+
+.block-editor__image-align--center::after {
+  right: 0;
+  left: 0;
+  margin-inline: auto;
+}
+
+.block-editor__image-align--right::after {
+  right: 5px;
+  left: auto;
+}
+
+/* 캡션 단추. 사진 틀 아래에 글줄이 하나 붙은 모양으로 그린다 */
+.block-editor__image-captionbutton {
+  position: relative;
+  width: 24px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: none;
+  cursor: pointer;
+}
+
+.block-editor__image-captionbutton:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.block-editor__image-captionbutton:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: -2px;
+}
+
+/* 위: 사진을 뜻하는 네모 */
+.block-editor__image-captionbutton::before {
+  content: '';
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  left: 5px;
+  height: 8px;
+  border: 1.5px solid rgba(255, 255, 255, 0.9);
+  border-radius: 2px;
+}
+
+/* 아래: 설명 한 줄 */
+.block-editor__image-captionbutton::after {
+  content: '';
+  position: absolute;
+  top: 16px;
+  right: 6px;
+  left: 6px;
+  height: 2px;
+  border-radius: 1px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+/* 끄는 동안에만 뜨는 현재 폭. 단추들이 오른쪽 위를 쓰고 있어 왼쪽에 둔다 */
+.block-editor__image-size {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.6;
+}
+
+/* 끄는 동안 글자가 딸려 선택되면 화면이 파랗게 뒤집힌다 */
+.block-editor--resizing {
+  user-select: none;
 }
 
 /* 아직 올라가는 중이라는 표시. 그림은 이미 보이되 확정이 아니라는 것만 알린다 */
@@ -1530,25 +1751,49 @@
    값이 있거나 입력 중이면 계속 보인다 */
 .block-editor__image-caption {
   width: 100%;
-  padding: 2px 0;
+  padding: 4px 8px;
   border: 0;
+  border-radius: 6px;
   background: none;
   color: var(--admin-text-muted);
   font-family: inherit;
   font-size: 13px;
   opacity: 0;
-  transition: opacity 0.12s ease;
+  transition: opacity 0.12s ease, background-color 0.12s ease, box-shadow 0.12s ease;
 }
 
-.block-editor__image:hover .block-editor__image-caption,
-.block-editor__image-caption:focus,
-.block-editor__image-caption--filled {
+/* 사진에 마우스를 올리면 "여기에 쓸 수 있다"는 것만 옅게 알린다 */
+.block-editor__image:hover .block-editor__image-caption {
+  opacity: 0.7;
+}
+
+/**
+ * 값이 있거나 쓰는 중이면 또렷하게.
+ *
+ * 위 hover 규칙과 같은 무게(클래스 둘 + 가상클래스 하나)로 맞춰 둔다.
+ * `.block-editor__image-caption:focus` 만 쓰면 hover 가 이겨서,
+ * 사진 위에 마우스를 둔 채로 캡션을 눌렀을 때 흐린 상태로 남는다.
+ */
+.block-editor__image .block-editor__image-caption--filled,
+.block-editor__image .block-editor__image-caption:focus {
   opacity: 1;
 }
 
+/**
+ * 눌러서 쓰기 시작하면 칸의 경계를 보여준다.
+ *
+ * 테두리도 바탕도 없으면 커서만 깜빡여서 어디까지가 입력칸인지 알 수 없다.
+ * 빈 칸일 때 특히 그렇다 — 글자가 없으니 짐작할 단서가 아무것도 없다.
+ */
 .block-editor__image-caption:focus {
+  background: var(--admin-surface-subtle);
+  box-shadow: inset 0 0 0 1px var(--admin-card-line);
   color: var(--admin-text);
   outline: none;
+}
+
+.block-editor__image-caption::placeholder {
+  color: var(--admin-meta);
 }
 
 .block-editor__image-error {

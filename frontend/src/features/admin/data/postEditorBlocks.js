@@ -8,6 +8,13 @@
  * 블록 하나 = 목록 항목 하나다. 노션도 그렇게 다룬다.
  */
 
+import {
+  DEFAULT_IMAGE_ALIGN,
+  IMAGE_LINE_PATTERN,
+  formatImageTitle,
+  parseImageTitle,
+} from '../../../shared/post/postImageMarkdown';
+
 let sequence = 0;
 
 export function createBlock(type = 'paragraph', patch = {}) {
@@ -22,6 +29,15 @@ export function createBlock(type = 'paragraph', patch = {}) {
     variant: 'tip',
     url: '',
     alt: '',
+    // 이미지 폭(%). 0 은 지정 없음이고 100% 로 그려진다.
+    // 기본값을 100 으로 두면 안 된다 — 예전 글을 열었다 저장만 해도
+    // 모든 이미지에 "100%" 가 붙어 원문이 달라진다
+    width: 0,
+    // 줄 안에서 사진이 놓이는 자리. 기본은 왼쪽이다
+    align: DEFAULT_IMAGE_ALIGN,
+    // 원본 픽셀 크기. 비율을 미리 알려 이미지 도착 때 글이 밀리지 않게 한다
+    naturalWidth: 0,
+    naturalHeight: 0,
     // 고른 파일을 그 자리에서 보여주는 임시 주소. 저장 형식에는 들어가지 않는다
     previewUrl: '',
     ...patch,
@@ -141,10 +157,14 @@ export function toEditorBlocks(markdown) {
 
     // 줄 전체가 이미지일 때만 블록으로 만든다. 문장 안에 섞인 이미지는
     // 문단의 인라인 표기로 남겨 둔다 — 블록으로 끌어내면 문장이 끊긴다
-    const image = lead.match(/^!\[([^\]]*)\]\(([^)\s]+)\)$/);
+    const image = lead.match(IMAGE_LINE_PATTERN);
     if (image) {
       flushParagraph();
-      blocks.push(createBlock('image', { alt: image[1], url: image[2] }));
+      blocks.push(createBlock('image', {
+        alt: image[1],
+        url: image[2],
+        ...parseImageTitle(image[3]),
+      }));
       continue;
     }
 
@@ -222,8 +242,13 @@ function serialize(block, orderedCount) {
       return `\`\`\`${block.language ?? ''}\n${text}\n\`\`\``;
     case 'callout':
       return `:::${block.variant}\n${text}\n:::`;
-    case 'image':
-      return `![${block.alt ?? ''}](${block.url ?? ''})`;
+    case 'image': {
+      // 적을 것이 없으면 title 칸을 통째로 뺀다. 폭을 건드린 적 없는 글은
+      // 열었다 저장해도 원문 그대로여야 한다
+      const title = formatImageTitle(block);
+
+      return `![${block.alt ?? ''}](${block.url ?? ''}${title ? ` "${title}"` : ''})`;
+    }
     case 'divider':
       return '---';
     default:
