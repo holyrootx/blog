@@ -14,8 +14,29 @@ spring:
         jdbc:
           time_zone: Asia/Seoul
 
+  servlet:
+    multipart:
+      # 기본값이 1MB 라 스크린샷 한 장에 막힌다. 실제 제한은 blog.upload.max-size-bytes 가 건다
+      max-file-size: ${UPLOAD_MAX_FILE_SIZE:10MB}
+      max-request-size: ${UPLOAD_MAX_REQUEST_SIZE:10MB}
+
 server:
   port: 8080
+
+blog:
+  upload:
+    max-size-bytes: ${UPLOAD_MAX_SIZE_BYTES:5242880}
+    allowed-content-types:
+      - image/jpeg
+      - image/png
+      - image/webp
+    r2:
+      endpoint: ${R2_ENDPOINT:}
+      bucket: ${R2_BUCKET:}
+      region: ${R2_REGION:auto}
+      access-key-id: ${R2_ACCESS_KEY_ID:}
+      secret-access-key: ${R2_SECRET_ACCESS_KEY:}
+      public-base-url: ${R2_PUBLIC_BASE_URL:}
 
 ---
 spring:
