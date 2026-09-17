@@ -10,6 +10,7 @@
  */
 
 import { safeHref } from '../../features/admin/data/inlineMarkdown';
+import { IMAGE_LINE_PATTERN, parseImageTitle } from './postImageMarkdown';
 
 const CALLOUT_VARIANTS = ['tip', 'warning', 'note'];
 
@@ -143,7 +144,7 @@ export function toPostBody(content) {
     }
 
     // 줄 전체가 이미지면 블록으로 뽑는다. 문장에 섞인 것은 문단 안 인라인으로 남는다
-    const image = line.match(/^!\[([^\]]*)\]\(([^)\s]+)\)$/);
+    const image = line.match(IMAGE_LINE_PATTERN);
     if (image) {
       flushAll();
 
@@ -152,7 +153,7 @@ export function toPostBody(content) {
       // 허용하지 않는 주소면 아무것도 그리지 않는다.
       // 깨진 이미지 아이콘보다 없는 편이 낫다
       if (src) {
-        blocks.push({ type: 'image', src, alt: image[1] });
+        blocks.push({ type: 'image', src, alt: image[1], ...parseImageTitle(image[3]) });
       }
 
       continue;
