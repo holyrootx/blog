@@ -10,6 +10,8 @@ import AdminPostEditPage from '../../features/admin/pages/AdminPostEditPage.vue'
 import AdminLoginPage from '../../features/admin/pages/AdminLoginPage.vue';
 import MemberLoginPage from '../../features/member/pages/MemberLoginPage.vue';
 import OAuthCallbackPage from '../../features/member/pages/OAuthCallbackPage.vue';
+import PrivacyPolicyPage from '../../features/legal/pages/PrivacyPolicyPage.vue';
+import TermsPage from '../../features/legal/pages/TermsPage.vue';
 import { clearAdminSession, ensureAdminSession } from '../../features/admin/data/adminAuthStore';
 import { onUnauthorized } from '../../shared/api/blogApiClient';
 
@@ -55,6 +57,22 @@ const router = createRouter({
       path: '/oauth/callback',
       name: 'oauth-callback',
       component: OAuthCallbackPage,
+      meta: {
+        layout: 'public',
+      },
+    },
+    {
+      path: '/privacy',
+      name: 'privacy-policy',
+      component: PrivacyPolicyPage,
+      meta: {
+        layout: 'public',
+      },
+    },
+    {
+      path: '/terms',
+      name: 'terms',
+      component: TermsPage,
       meta: {
         layout: 'public',
       },
