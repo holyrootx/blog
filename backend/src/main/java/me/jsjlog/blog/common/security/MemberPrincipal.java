@@ -22,8 +22,8 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
  *
  * <p><b>{@link #getName()} 이 회원 번호를 돌려주는 것이 이 클래스의 핵심이다.</b>
  * 소셜 로그인을 Spring Security 기본 구현에 맡기면 이 값이 제공자가 준 식별자(구글의
- * {@code sub}) 가 된다. 그 값은 {@code created_by} · {@code updated_by} 로 흘러가서
- * 댓글 한 줄마다 구글 식별자가 DB 에 박힌다. 그래서 principal 을 직접 만든다.</p>
+ * {@code sub}) 가 된다. 제공자 식별자가 애플리케이션 내부 인증 이름이 되지 않도록
+ * principal 을 직접 만들고, 감사 컬럼도 {@code AuditingConfig} 가 이 회원 번호를 사용한다.</p>
  *
  * <p>비밀번호 해시를 들고 있으므로 이 객체를 그대로 응답에 담지 않는다.</p>
  */
@@ -123,7 +123,7 @@ public class MemberPrincipal implements UserDetails, OAuth2User {
     }
 
     /**
-     * 인증 주체의 이름. {@code created_by} · {@code updated_by} 에 이 값이 들어간다.
+     * 인증 주체의 내부 이름. 감사 컬럼도 이 회원 번호를 사용한다.
      *
      * 회원 번호를 쓴다. 닉네임은 unique 가 아니고 바뀔 수 있어서 과거 기록이 가리키는
      * 대상이 사라지고, 제공자 식별자는 남기면 안 되는 값이다.
@@ -157,8 +157,8 @@ public class MemberPrincipal implements UserDetails, OAuth2User {
      *
      * <p>그래서 여기가 비면 소셜 로그인이 인증 직후 500 으로 끝난다 —
      * {@code OAuth2AuthorizedClient} 가 principalName 이 비었다며 거부한다.
-     * 아이디가 없을 때 회원 번호를 쓰면 인증 이름이 채워지고, 감사 컬럼에도
-     * {@link #getName()} 과 같은 값이 들어간다.</p>
+     * 아이디가 없을 때 회원 번호를 쓰면 인증 이름이 채워진다. 로컬 관리자는 로그인
+     * 아이디를 반환하지만, 감사 컬럼은 {@code AuditingConfig} 가 회원 번호를 직접 읽는다.</p>
      */
     @Override
     public String getUsername() {
