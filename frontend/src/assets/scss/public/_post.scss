@@ -758,22 +758,27 @@
   gap: 12px;
 }
 
+/* 프로필 이미지가 없어서 닉네임 첫 글자를 넣는다. 빈 원만 있으면 누구 자리인지 안 읽힌다 */
 .comment-avatar {
+  display: flex;
   flex: none;
+  align-items: center;
+  justify-content: center;
   width: 34px;
   height: 34px;
   border: 1px solid var(--line);
   border-radius: 50%;
   background: var(--surface-muted);
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  user-select: none;
 }
 
 .comment-avatar--author {
   background: #f0d9be;
   border-color: #e5c9a6;
-}
-
-.comment-avatar--secret {
-  background: var(--page-bg);
 }
 
 .comment-avatar--deleted {
@@ -789,24 +794,45 @@
   gap: 8px;
 }
 
-.comment-form__nickname {
-  width: min(220px, 100%);
-  padding: 7px 10px;
-  border: 1px solid var(--line);
-  border-radius: 7px;
+/* 프사가 있을 때. 원 밖으로 삐져나오지 않게 잘라 넣는다 */
+.comment-avatar--photo {
+  object-fit: cover;
   background: var(--surface-muted);
-  color: var(--text);
-  font-family: inherit;
-  font-size: 13px;
 }
 
-.comment-form__nickname::placeholder {
+.comment-form__signout {
+  margin-left: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
   color: var(--text-subtle);
+  font-size: inherit;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
-.comment-form__nickname:focus {
-  border-color: var(--accent);
-  outline: none;
+.comment-form__signout:hover {
+  color: var(--accent);
+}
+
+/* 로그인하지 않은 사람에게 쓰는 칸 대신 보여 주는 자리 */
+.comment-signin {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 28px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-muted);
+}
+
+.comment-signin__text {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 14px;
 }
 
 .comment-form__input,
@@ -919,10 +945,6 @@
   margin: 8px 0 0;
   font-size: 15px;
   line-height: 1.75;
-}
-
-.comment__text--secret {
-  color: var(--text-subtle);
 }
 
 .comment__text--deleted {
