@@ -29,6 +29,13 @@ public enum ErrorCode {
 	MODIFIED_BY_OTHERS(HttpStatus.CONFLICT, "MODIFIED_BY_OTHERS", "다른 곳에서 먼저 수정되었습니다. 최신 내용을 다시 불러온 뒤 저장해 주세요."),
 	INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_SERVER_ERROR", "서버 오류가 발생했습니다."),
 
+	// 소셜 로그인 도중의 실패다. 사용자가 고칠 수 있는 게 없어서 메시지는 다시 시도하라는 쪽으로 둔다
+	OAUTH_PROVIDER_NOT_SUPPORTED(HttpStatus.BAD_REQUEST, "OAUTH_PROVIDER_NOT_SUPPORTED", "지원하지 않는 로그인 방법입니다."),
+	OAUTH_ACCOUNT_ID_MISSING(HttpStatus.INTERNAL_SERVER_ERROR, "OAUTH_ACCOUNT_ID_MISSING", "로그인 정보를 가져오지 못했습니다. 다시 시도해 주세요."),
+	OAUTH_SESSION_EXPIRED(HttpStatus.UNAUTHORIZED, "OAUTH_SESSION_EXPIRED", "로그인 정보가 만료되었습니다. 소셜 로그인을 다시 진행해 주세요."),
+	OAUTH_SIGNUP_NOT_ALLOWED(HttpStatus.CONFLICT, "OAUTH_SIGNUP_NOT_ALLOWED", "현재 로그인 정보로는 신규 가입을 진행할 수 없습니다."),
+	OAUTH_REACTIVATION_NOT_ALLOWED(HttpStatus.CONFLICT, "OAUTH_REACTIVATION_NOT_ALLOWED", "현재 로그인 정보로는 계정 복구를 진행할 수 없습니다."),
+
 	IMAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "IMAGE_NOT_FOUND", "이미지를 찾을 수 없습니다."),
 	IMAGE_EMPTY(HttpStatus.BAD_REQUEST, "IMAGE_EMPTY", "이미지 파일이 없습니다."),
 	IMAGE_TOO_LARGE(HttpStatus.BAD_REQUEST, "IMAGE_TOO_LARGE", "이미지 용량이 너무 큽니다."),
