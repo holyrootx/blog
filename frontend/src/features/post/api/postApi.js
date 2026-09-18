@@ -96,7 +96,9 @@ function toCommentItem(comment) {
     author: deleted ? '' : getCommentNickname(comment),
     createdAt: formatDateTime(comment.createdAt),
     content: deleted ? '' : (comment.content ?? ''),
-    isSecret: Boolean(comment.secret),
+    // 서버는 최상위 댓글에도 authorComment 를 내려주는데 여기서 읽지 않아
+    // 블로그 주인이 최상위 댓글을 달면 답글과 달리 작성자 뱃지가 안 붙었다
+    isAuthor: Boolean(comment.authorComment),
     deleted,
     hiddenReplyCount: 0,
     replies: Array.isArray(comment.replies) ? comment.replies.map(toCommentReply) : [],

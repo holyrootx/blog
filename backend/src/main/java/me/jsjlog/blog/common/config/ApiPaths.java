@@ -18,9 +18,18 @@ public final class ApiPaths {
 
     public static final class Auth {
 
-        public static final String CSRF = "/api/v1/admin/auth/csrf";
+        public static final String CSRF = "/api/v1/auth/csrf";
         public static final String LOGIN = "/api/v1/admin/auth/login";
         public static final String LOGOUT = "/api/v1/admin/auth/logout";
+        /** 회원 세션 조회. 로그인하지 않은 사람도 부르는 자리라 인증 없이 열어 둔다 */
+        public static final String MEMBER_ME = "/api/v1/auth/me";
+        public static final String MEMBER_LOGOUT = "/api/v1/auth/logout";
+        public static final String OAUTH_PENDING = "/api/v1/auth/oauth/pending";
+        public static final String OAUTH_SIGNUP = "/api/v1/auth/oauth/signup";
+        public static final String OAUTH_REACTIVATE = "/api/v1/auth/oauth/reactivate";
+        public static final String OAUTH_REJOIN = "/api/v1/auth/oauth/rejoin";
+        public static final String OAUTH2_AUTHORIZATION_ALL = "/oauth2/**";
+        public static final String OAUTH2_CALLBACK_ALL = "/login/oauth2/**";
 
         private Auth() {
         }

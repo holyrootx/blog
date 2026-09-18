@@ -8,6 +8,8 @@ import AdminCategoryPage from '../../features/admin/pages/AdminCategoryPage.vue'
 import AdminPostPage from '../../features/admin/pages/AdminPostPage.vue';
 import AdminPostEditPage from '../../features/admin/pages/AdminPostEditPage.vue';
 import AdminLoginPage from '../../features/admin/pages/AdminLoginPage.vue';
+import MemberLoginPage from '../../features/member/pages/MemberLoginPage.vue';
+import OAuthCallbackPage from '../../features/member/pages/OAuthCallbackPage.vue';
 import { clearAdminSession, ensureAdminSession } from '../../features/admin/data/adminAuthStore';
 import { onUnauthorized } from '../../shared/api/blogApiClient';
 
@@ -33,6 +35,26 @@ const router = createRouter({
       path: '/posts/:id',
       name: 'post-detail',
       component: PostDetailPage,
+      meta: {
+        layout: 'public',
+      },
+    },
+    // 회원 로그인. 관리자 로그인과 다른 화면이다 — 아이디·비밀번호 칸이 없고
+    // 공개 화면을 보던 사람이 댓글을 쓰려고 들어오는 자리다
+    {
+      path: '/login',
+      name: 'member-login',
+      component: MemberLoginPage,
+      meta: {
+        layout: 'public',
+      },
+    },
+    // 소셜 인증을 마친 브라우저가 돌아오는 자리.
+    // 서버가 결과를 ?result= 로만 알려 주고, 제공자 식별자는 서버 세션에만 둔다
+    {
+      path: '/oauth/callback',
+      name: 'oauth-callback',
+      component: OAuthCallbackPage,
       meta: {
         layout: 'public',
       },
