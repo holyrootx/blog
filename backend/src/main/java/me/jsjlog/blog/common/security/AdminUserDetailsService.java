@@ -1,14 +1,15 @@
 package me.jsjlog.blog.common.security;
 
 import lombok.RequiredArgsConstructor;
-import me.jsjlog.blog.admin.repository.AdminAccountRepository;
+import me.jsjlog.blog.member.domain.MemberRole;
+import me.jsjlog.blog.member.repository.MemberRepository;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * admin_account 테이블에서 관리자를 찾는다.
+ * member 테이블에서 ADMIN 권한을 가진 로컬 관리자를 찾는다.
  *
  * 여기서 던지는 예외는 화면까지 그대로 가지 않는다. Spring Security 가
  * "아이디가 없다"와 "비밀번호가 틀리다"를 같은 응답으로 덮는다 —
@@ -21,13 +22,13 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class AdminUserDetailsService implements UserDetailsService {
 
-    private final AdminAccountRepository adminAccountRepository;
+    private final MemberRepository memberRepository;
 
     @Override
     @Transactional(readOnly = true)
-    public AdminPrincipal loadUserByUsername(String username) {
-        return adminAccountRepository.findByUsername(username)
-                .map(AdminPrincipal::from)
+    public MemberPrincipal loadUserByUsername(String username) {
+        return memberRepository.findByUsernameAndRole(username, MemberRole.ADMIN)
+                .map(MemberPrincipal::ofLocal)
                 .orElseThrow(() -> new UsernameNotFoundException("관리자를 찾을 수 없습니다."));
     }
 }
