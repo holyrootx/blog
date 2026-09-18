@@ -2,7 +2,7 @@ package me.jsjlog.blog.admin.controller;
 
 import me.jsjlog.blog.admin.dto.AdminSessionResponse;
 import me.jsjlog.blog.common.response.ApiResponse;
-import me.jsjlog.blog.common.security.AdminPrincipal;
+import me.jsjlog.blog.common.security.MemberPrincipal;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -26,7 +26,7 @@ public class AdminAuthController {
      * 세션이 없으면 여기까지 오지 않는다 — 인가 규칙에 걸려 401 이 먼저 나간다.
      */
     @GetMapping("/me")
-    public ApiResponse<AdminSessionResponse> me(@AuthenticationPrincipal AdminPrincipal principal) {
+    public ApiResponse<AdminSessionResponse> me(@AuthenticationPrincipal MemberPrincipal principal) {
         return ApiResponse.ok(AdminSessionResponse.from(principal));
     }
 

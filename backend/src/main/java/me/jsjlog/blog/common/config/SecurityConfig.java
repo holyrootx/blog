@@ -1,6 +1,5 @@
 package me.jsjlog.blog.common.config;
 
-import me.jsjlog.blog.admin.domain.AdminRole;
 import me.jsjlog.blog.common.security.AdminLoginConfigurer;
 import me.jsjlog.blog.common.security.AdminLoginFailureHandler;
 import me.jsjlog.blog.common.security.AdminLoginSuccessHandler;
@@ -11,6 +10,7 @@ import me.jsjlog.blog.common.security.JsonAuthenticationEntryPoint;
 import me.jsjlog.blog.common.security.oauth.CustomOAuth2UserService;
 import me.jsjlog.blog.common.security.oauth.OAuth2LoginFailureHandler;
 import me.jsjlog.blog.common.security.oauth.OAuth2LoginSuccessHandler;
+import me.jsjlog.blog.member.domain.MemberRole;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -79,7 +79,7 @@ public class SecurityConfig {
                                 ApiPaths.Auth.OAUTH_REACTIVATE,
                                 ApiPaths.Auth.OAUTH_REJOIN
                         ).permitAll()
-                        .requestMatchers(ApiPaths.Admin.ALL).hasRole(AdminRole.ADMIN.name())
+                        .requestMatchers(ApiPaths.Admin.ALL).hasRole(MemberRole.ADMIN.name())
                         .anyRequest().denyAll()
                 )
                 .formLogin(AbstractHttpConfigurer::disable)

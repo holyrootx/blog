@@ -28,6 +28,6 @@ public class AdminLoginSuccessHandler implements AuthenticationSuccessHandler {
             HttpServletResponse response,
             Authentication authentication
     ) throws IOException {
-        responseWriter.writeOk(response, AdminSessionResponse.from((AdminPrincipal) authentication.getPrincipal()));
+        responseWriter.writeOk(response, AdminSessionResponse.from((MemberPrincipal) authentication.getPrincipal()));
     }
 }
