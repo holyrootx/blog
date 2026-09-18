@@ -1,12 +1,9 @@
 package me.jsjlog.blog.admin.controller;
 
-import jakarta.servlet.http.HttpServletRequest;
 import me.jsjlog.blog.admin.dto.AdminSessionResponse;
-import me.jsjlog.blog.admin.dto.CsrfTokenResponse;
 import me.jsjlog.blog.common.response.ApiResponse;
 import me.jsjlog.blog.common.security.AdminPrincipal;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -33,19 +30,4 @@ public class AdminAuthController {
         return ApiResponse.ok(AdminSessionResponse.from(principal));
     }
 
-    /**
-     * CSRF 토큰을 내준다. 로그인 전에도 불러야 하므로 인증 없이 열려 있다.
-     *
-     * 토큰은 요청 속성에 지연 생성 상태로 들어 있다. 여기서 getToken() 을 부르는 순간
-     * 실제로 만들어지고 세션에 저장된다 — 아무도 읽지 않으면 만들지 않는 구조다.
-     *
-     * 로그인에 성공하면 토큰이 새로 발급되므로 화면은 그때 다시 받아야 한다.
-     * 옛 토큰을 계속 쓰면 첫 저장이 403 으로 막힌다.
-     */
-    @GetMapping("/csrf")
-    public ApiResponse<CsrfTokenResponse> csrf(HttpServletRequest request) {
-        CsrfToken token = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
-
-        return ApiResponse.ok(CsrfTokenResponse.from(token));
-    }
 }

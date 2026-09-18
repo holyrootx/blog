@@ -1,0 +1,230 @@
+/* 회원 로그인·가입 — 공개 화면 쪽이라 블로그 톤을 그대로 쓴다 */
+
+.member-auth {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+  background: var(--page-bg);
+}
+
+.member-auth__panel {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 420px;
+  padding: 32px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.member-auth__loading {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.member-auth__title {
+  margin: 0;
+  color: var(--text);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.member-auth__description {
+  margin: 10px 0 0;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.member-auth__label {
+  margin-top: 24px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.member-auth__input {
+  margin-top: 8px;
+  height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 15px;
+}
+
+.member-auth__input:focus {
+  border-color: var(--accent);
+  outline: 2px solid var(--accent-soft);
+  outline-offset: 1px;
+}
+
+.member-auth__counter {
+  margin: 6px 0 0;
+  color: var(--text-subtle);
+  font-size: 12px;
+  text-align: right;
+}
+
+.member-auth__error {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--accent-soft);
+  color: var(--accent-dark);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.member-auth__actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+
+.member-auth__button {
+  height: 42px;
+  padding: 0 20px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.member-auth__button--primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+.member-auth__button--primary:hover:not(:disabled) {
+  background: var(--accent-dark);
+}
+
+.member-auth__button--ghost {
+  border-color: var(--line);
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.member-auth__button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 두 선택지는 무게가 같다. 한쪽을 강조하면 되돌릴 수 없는 쪽을 눌러 버린다 */
+.member-auth__choices {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.member-auth__choice {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-muted);
+  text-align: left;
+  cursor: pointer;
+}
+
+.member-auth__choice:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.member-auth__choice:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.member-auth__choice-title {
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.member-auth__choice-detail {
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.member-auth__providers {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 24px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.member-auth__provider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 46px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.member-auth__provider:hover {
+  border-color: var(--accent);
+}
+
+/* 제공자 색은 각 브랜드 가이드 값이다. 토큰으로 빼지 않는다 — 우리 디자인이 아니다 */
+.member-auth__provider--kakao {
+  border-color: #fee500;
+  background: #fee500;
+  color: #191600;
+}
+
+.member-auth__provider--naver {
+  border-color: #03c75a;
+  background: #03c75a;
+  color: #fff;
+}
+
+.member-auth__back {
+  margin-top: 20px;
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
+  text-decoration: none;
+}
+
+.member-auth__back:hover {
+  color: var(--accent);
+}
+
+@media (max-width: 480px) {
+  .member-auth {
+    padding: 16px;
+  }
+
+  .member-auth__panel {
+    padding: 24px 20px;
+  }
+
+  .member-auth__actions {
+    flex-direction: column-reverse;
+  }
+
+  .member-auth__button {
+    width: 100%;
+  }
+}

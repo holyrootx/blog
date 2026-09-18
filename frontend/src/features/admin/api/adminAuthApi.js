@@ -1,20 +1,10 @@
-import { getApiData, sendApiData, setCsrfToken } from '../../../shared/api/blogApiClient';
+import { getApiData, sendApiData } from '../../../shared/api/blogApiClient';
 
 const ADMIN_AUTH_API_BASE = '/api/v1/admin/auth';
 
-/**
- * CSRF 토큰을 받아 클라이언트에 심는다.
- *
- * 로그인 전에 한 번, 로그인·로그아웃 직후에 다시 불러야 한다.
- * 서버가 그때마다 토큰을 새로 발급하기 때문이다 — 옛 토큰을 계속 쓰면 첫 저장이 403 이 된다.
- */
-export async function refreshCsrfToken() {
-  const token = await getApiData(`${ADMIN_AUTH_API_BASE}/csrf`);
-
-  setCsrfToken(token);
-
-  return token;
-}
+// 회원 가입 화면도 같은 토큰이 필요해져서 shared 로 옮겼다.
+// 관리자 코드가 부르던 이름은 그대로 두려고 여기서 다시 내보낸다
+export { refreshCsrfToken } from '../../../shared/api/csrfApi';
 
 /**
  * 로그인.

@@ -8,6 +8,10 @@ import me.jsjlog.blog.common.security.AdminLogoutSuccessHandler;
 import me.jsjlog.blog.common.security.AdminUserDetailsService;
 import me.jsjlog.blog.common.security.JsonAccessDeniedHandler;
 import me.jsjlog.blog.common.security.JsonAuthenticationEntryPoint;
+import me.jsjlog.blog.common.security.oauth.CustomOAuth2UserService;
+import me.jsjlog.blog.common.security.oauth.OAuth2LoginFailureHandler;
+import me.jsjlog.blog.common.security.oauth.OAuth2LoginSuccessHandler;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -19,10 +23,12 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configurers.RequestCacheConfigurer;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import tools.jackson.databind.ObjectMapper;
 
 @Configuration
@@ -38,11 +44,19 @@ public class SecurityConfig {
             AdminLoginSuccessHandler loginSuccessHandler,
             AdminLoginFailureHandler loginFailureHandler,
             AdminLogoutSuccessHandler logoutSuccessHandler,
+            OAuth2LoginSuccessHandler oauth2LoginSuccessHandler,
+            OAuth2LoginFailureHandler oauth2LoginFailureHandler,
+            CustomOAuth2UserService customOAuth2UserService,
+            ObjectProvider<ClientRegistrationRepository> clientRegistrationRepositoryProvider,
             AuthenticationManager authenticationManager,
             ObjectMapper objectMapper
     ) throws Exception {
-        return httpSecurity
-                .securityMatcher(ApiPaths.API_ALL)
+        httpSecurity
+                .securityMatcher(
+                        ApiPaths.API_ALL,
+                        ApiPaths.Auth.OAUTH2_AUTHORIZATION_ALL,
+                        ApiPaths.Auth.OAUTH2_CALLBACK_ALL
+                )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 HttpMethod.GET,
@@ -50,7 +64,21 @@ public class SecurityConfig {
                                 ApiPaths.Public.BLOG_ALL,
                                 ApiPaths.Auth.CSRF
                         ).permitAll()
+                        .requestMatchers(
+                                ApiPaths.Auth.OAUTH2_AUTHORIZATION_ALL,
+                                ApiPaths.Auth.OAUTH2_CALLBACK_ALL
+                        ).permitAll()
                         .requestMatchers(HttpMethod.POST, ApiPaths.Auth.LOGIN).permitAll()
+                        // 로그인하지 않은 방문자가 공개 화면을 볼 때마다 부르는 자리다.
+                        // 인증을 걸면 "아무도 아님" 이 401 로 나가서 글 한 번 읽을 때마다 오류가 쌓인다
+                        .requestMatchers(HttpMethod.GET, ApiPaths.Auth.MEMBER_ME).permitAll()
+                        .requestMatchers(HttpMethod.GET, ApiPaths.Auth.OAUTH_PENDING).permitAll()
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                ApiPaths.Auth.OAUTH_SIGNUP,
+                                ApiPaths.Auth.OAUTH_REACTIVATE,
+                                ApiPaths.Auth.OAUTH_REJOIN
+                        ).permitAll()
                         .requestMatchers(ApiPaths.Admin.ALL).hasRole(AdminRole.ADMIN.name())
                         .anyRequest().denyAll()
                 )
@@ -70,18 +98,41 @@ public class SecurityConfig {
                         .authenticationEntryPoint(authenticationEntryPoint)
                         .accessDeniedHandler(accessDeniedHandler)
                 )
-                // 세션 무효화와 컨텍스트 비우기는 LogoutFilter 가 한다. 응답 형식만 맞춘다
+                // 세션 무효화와 컨텍스트 비우기는 LogoutFilter 가 한다. 응답 형식만 맞춘다.
+                //
+                // 관리자와 회원이 같은 필터를 쓴다. 로그아웃은 세션을 버리는 일이라 둘이 같고,
+                // 컨트롤러로 따로 만들면 프레임워크가 하는 일(세션 무효화·컨텍스트 정리·쿠키 삭제)을
+                // 반쪽만 따라 하게 된다. 경로만 둘 다 받는다
                 .logout(logout -> logout
-                        .logoutRequestMatcher(PathPatternRequestMatcher.pathPattern(
-                                HttpMethod.POST, ApiPaths.Auth.LOGOUT))
+                        .logoutRequestMatcher(new OrRequestMatcher(
+                                PathPatternRequestMatcher.pathPattern(
+                                        HttpMethod.POST, ApiPaths.Auth.LOGOUT),
+                                PathPatternRequestMatcher.pathPattern(
+                                        HttpMethod.POST, ApiPaths.Auth.MEMBER_LOGOUT)))
                         .logoutSuccessHandler(logoutSuccessHandler)
                         .invalidateHttpSession(true)
                         .deleteCookies("JSESSIONID")
                 )
                 .with(AdminLoginConfigurer.of(
                         objectMapper, authenticationManager, loginSuccessHandler, loginFailureHandler),
-                        configurer -> { })
-                .build();
+                        configurer -> { });
+
+        ClientRegistrationRepository clientRegistrationRepository =
+                clientRegistrationRepositoryProvider.getIfAvailable();
+
+        // OAuth 클라이언트 환경변수가 없는 개발 환경에서는 기존 관리자 인증만 기동한다.
+        // 등록 정보가 생긴 환경에서만 Spring Security OAuth2 필터를 연결한다.
+        if (clientRegistrationRepository != null) {
+            httpSecurity.oauth2Login(oauth2 -> oauth2
+                    .clientRegistrationRepository(clientRegistrationRepository)
+                    .userInfoEndpoint(userInfo -> userInfo
+                            .userService(customOAuth2UserService))
+                    .successHandler(oauth2LoginSuccessHandler)
+                    .failureHandler(oauth2LoginFailureHandler)
+            );
+        }
+
+        return httpSecurity.build();
     }
 
     /**
