@@ -101,5 +101,9 @@ function mergeDefined(base, next) {
       <PostSection title="인기글" :posts="home.featuredPosts" />
       <PostSection title="최근 글" :posts="home.recentPosts" />
     </main>
+    <footer class="public-footer">
+      <RouterLink to="/privacy">개인정보처리방침</RouterLink>
+      <RouterLink to="/terms">서비스 이용약관</RouterLink>
+    </footer>
   </div>
 </template>
