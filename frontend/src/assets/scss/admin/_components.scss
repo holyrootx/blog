@@ -946,6 +946,206 @@
   font-size: 12px;
 }
 
+/* ── 댓글 관리 ─────────────────────────────── */
+
+.admin-comment-page {
+  width: 100%;
+}
+
+.admin-comment-feed {
+  border-top: 1px solid var(--admin-card-line);
+  border-bottom: 1px solid var(--admin-card-line);
+  background: var(--admin-card);
+}
+
+.admin-comment-feed__message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 180px;
+  color: var(--admin-text-muted);
+  font-size: 13px;
+}
+
+.admin-comment-feed__message--error {
+  color: #9b3d2d;
+}
+
+.admin-comment-feed__message button {
+  border: 0;
+  background: none;
+  color: var(--admin-accent-dark);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-comment-row {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr) auto;
+  gap: 20px;
+  align-items: start;
+  padding: 22px 20px;
+  border-bottom: 1px solid var(--admin-list-line);
+}
+
+.admin-comment-row:last-child {
+  border-bottom: 0;
+}
+
+.admin-comment-row--hidden {
+  background: var(--admin-surface-subtle);
+}
+
+.admin-comment-row__identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.admin-comment-row__avatar {
+  display: grid;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--admin-chart-5);
+  color: var(--admin-text-strong);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.admin-comment-row__identity strong,
+.admin-comment-row__identity span {
+  display: block;
+}
+
+.admin-comment-row__identity strong {
+  overflow: hidden;
+  color: var(--admin-text-strong);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-comment-row__identity div > span {
+  margin-top: 3px;
+  color: var(--admin-meta);
+  font-size: 11px;
+}
+
+.admin-comment-row__body {
+  min-width: 0;
+}
+
+.admin-comment-row__meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--admin-meta);
+  font-size: 11.5px;
+}
+
+.admin-comment-row__meta a {
+  overflow: hidden;
+  color: var(--admin-text);
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-comment-row__meta a:hover {
+  color: var(--admin-accent-dark);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.admin-comment-row__body > p {
+  margin-top: 10px;
+  color: var(--admin-text-strong);
+  font-size: 14px;
+  line-height: 1.75;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.admin-comment-row--hidden .admin-comment-row__body > p {
+  color: var(--admin-text-muted);
+}
+
+.admin-comment-row__reply-mark {
+  display: block;
+  margin-top: 8px;
+  color: var(--admin-meta);
+  font-size: 11px;
+}
+
+.admin-comment-row__actions {
+  display: flex;
+  gap: 6px;
+}
+
+.admin-comment-reply-form blockquote {
+  margin: 0 0 18px;
+  padding: 12px 14px;
+  border-left: 3px solid var(--admin-accent-line);
+  background: var(--admin-surface-subtle);
+  color: var(--admin-text);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.admin-comment-reply-form label {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--admin-text-strong);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.admin-comment-reply-form textarea {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid var(--admin-input-line);
+  border-radius: 7px;
+  padding: 12px;
+  background: var(--admin-card);
+  color: var(--admin-text-strong);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.admin-comment-reply-form textarea:focus {
+  border-color: var(--admin-accent);
+  outline: none;
+}
+
+.admin-comment-reply-form__meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 7px;
+  color: var(--admin-meta);
+  font-size: 11.5px;
+}
+
+.admin-comment-reply-form__error {
+  color: #9b3d2d;
+}
+
+@media (max-width: 900px) {
+  .admin-comment-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .admin-comment-row__identity {
+    grid-column: 1 / -1;
+  }
+}
+
 .admin-post__actions {
   display: inline-flex;
   gap: 6px;
