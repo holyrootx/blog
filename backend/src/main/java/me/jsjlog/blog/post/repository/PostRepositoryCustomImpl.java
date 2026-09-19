@@ -68,7 +68,7 @@ public class PostRepositoryCustomImpl implements PostRepositoryCustom{
                         post.views
                 )).from(post)
                 .where(builder)
-                .orderBy(post.views.desc())
+                .orderBy(post.views.desc(), post.id.desc())
                 .limit(4)
                 .fetch();
         return postSummaryResponseList;

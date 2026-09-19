@@ -10,6 +10,7 @@ import me.jsjlog.blog.post.dto.*;
 import me.jsjlog.blog.post.repository.CommentRepository;
 import me.jsjlog.blog.post.repository.PostRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.time.LocalDateTime;
@@ -77,9 +78,17 @@ public class PostService {
         return post;
     }
 
-    public PostDetailResponse getPostDetail(Long postId) {
+    @Transactional
+    public PostDetailResponse getPostDetail(Long postId, boolean increaseViewCount) {
 
         findReadablePost(postId);
+
+        if (increaseViewCount) {
+            int updatedRows = postRepository.increaseViewCount(postId, PostStatus.PUBLISHED);
+            if (updatedRows != 1) {
+                throw new BlogException(ErrorCode.POST_NOT_FOUND);
+            }
+        }
 
         return postRepository.getPostDetail(postId);
     }

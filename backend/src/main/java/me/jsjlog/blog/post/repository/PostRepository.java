@@ -4,7 +4,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import me.jsjlog.blog.post.domain.Post;
+import me.jsjlog.blog.post.domain.PostStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -26,4 +28,18 @@ public interface PostRepository extends JpaRepository<Post,Long>, PostRepository
      * (Post.category 가 nullable = false 라 남겨둘 수 없기 때문).
      */
     boolean existsByCategoryId(Long categoryId);
+
+    /**
+     * 조회수를 DB에서 직접 증가시킨다.
+     *
+     * <p>엔티티를 읽고 {@code views + 1}을 저장하면 동시에 들어온 조회가 같은 값을 읽어
+     * 증가분 하나를 덮어쓸 수 있다. 단일 UPDATE 문으로 처리하면 DB가 증가 연산을 직렬화한다.</p>
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("update Post post set post.views = post.views + 1 "
+            + "where post.id = :postId and post.status = :status")
+    int increaseViewCount(
+            @Param("postId") Long postId,
+            @Param("status") PostStatus status
+    );
 }
