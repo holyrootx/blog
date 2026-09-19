@@ -2,7 +2,12 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
-import { getPostComments } from '../api/postApi';
+import {
+  createPostComment,
+  getPostComments,
+  removeCommentReaction,
+  setCommentReaction,
+} from '../api/postApi';
 import { signOutMember, useMemberAuth } from '../../member/data/memberAuthStore';
 import { rememberReturnPath } from '../../member/data/memberReturnPath';
 
@@ -29,9 +34,15 @@ const items = ref([]);
 const nextCursor = ref(null);
 const hasNext = ref(false);
 const loading = ref(false);
+const submitting = ref(false);
+const replySubmitting = ref(false);
+const reactionPendingIds = ref(new Set());
 const draft = ref('');
 const replyTargetId = ref(null);
 const replyDraft = ref('');
+const formError = ref('');
+const replyError = ref('');
+const reactionError = ref('');
 const showReportAction = false;
 const showBottomAd = false;
 
@@ -84,13 +95,21 @@ function avatarInitial(name) {
   return Array.from(name ?? '')[0] ?? '';
 }
 
-function signOut() {
+async function signOut() {
   // 쓰던 내용은 지운다. 로그아웃한 사람의 이름으로 올라갈 글이 칸에 남아 있으면 안 된다
   draft.value = '';
   replyDraft.value = '';
   replyTargetId.value = null;
 
-  return signOutMember();
+  await signOutMember();
+  items.value.forEach((comment) => {
+    comment.likedByMe = false;
+    comment.dislikedByMe = false;
+    comment.replies.forEach((reply) => {
+      reply.likedByMe = false;
+      reply.dislikedByMe = false;
+    });
+  });
 }
 
 function goToLogin() {
@@ -103,6 +122,112 @@ function goToLogin() {
 function toggleReply(commentId) {
   replyTargetId.value = replyTargetId.value === commentId ? null : commentId;
   replyDraft.value = '';
+  replyError.value = '';
+}
+
+async function submitComment() {
+  const content = draft.value.trim();
+
+  if (!content || submitting.value) {
+    formError.value = content ? '' : '댓글 내용을 입력해 주세요.';
+    return;
+  }
+
+  submitting.value = true;
+  formError.value = '';
+
+  try {
+    const created = await createPostComment(props.postId, { content });
+    items.value = [toCreatedComment(created?.id, content), ...items.value];
+    total.value += 1;
+    draft.value = '';
+  } catch (error) {
+    formError.value = error?.message ?? '댓글을 등록하지 못했습니다.';
+  } finally {
+    submitting.value = false;
+  }
+}
+
+async function submitReply(parentId) {
+  const content = replyDraft.value.trim();
+
+  if (!content || replySubmitting.value) {
+    replyError.value = content ? '' : '답글 내용을 입력해 주세요.';
+    return;
+  }
+
+  replySubmitting.value = true;
+  replyError.value = '';
+
+  try {
+    const created = await createPostComment(props.postId, { content, parentId });
+    const parent = items.value.find((comment) => comment.id === parentId);
+
+    if (parent) {
+      parent.replies = [...parent.replies, toCreatedComment(created?.id, content)];
+    }
+
+    total.value += 1;
+    replyDraft.value = '';
+    replyTargetId.value = null;
+  } catch (error) {
+    replyError.value = error?.message ?? '답글을 등록하지 못했습니다.';
+  } finally {
+    replySubmitting.value = false;
+  }
+}
+
+function toCreatedComment(id, content) {
+  return {
+    id,
+    author: member.value?.nickname ?? '',
+    createdAt: '방금 전',
+    content,
+    isAuthor: member.value?.role === 'ADMIN',
+    deleted: false,
+    likeCount: 0,
+    dislikeCount: 0,
+    likedByMe: false,
+    dislikedByMe: false,
+    hiddenReplyCount: 0,
+    replies: [],
+  };
+}
+
+function isReactionPending(commentId) {
+  return reactionPendingIds.value.has(commentId);
+}
+
+async function reactToComment(comment, type) {
+  if (!isSignedIn.value) {
+    goToLogin();
+    return;
+  }
+
+  if (isReactionPending(comment.id)) {
+    return;
+  }
+
+  reactionPendingIds.value = new Set([...reactionPendingIds.value, comment.id]);
+  reactionError.value = '';
+
+  try {
+    const active = type === 'LIKE' ? comment.likedByMe : comment.dislikedByMe;
+    const reaction = active
+      ? await removeCommentReaction(comment.id, type)
+      : await setCommentReaction(comment.id, type);
+
+    comment.likeCount = Number(reaction?.likeCount ?? 0);
+    comment.dislikeCount = Number(reaction?.dislikeCount ?? 0);
+    comment.likedByMe = Boolean(reaction?.likedByMe);
+    comment.dislikedByMe = Boolean(reaction?.dislikedByMe);
+  } catch (error) {
+    reactionError.value = error?.message ?? '댓글 반응을 저장하지 못했습니다.';
+  } finally {
+    const pendingIds = new Set(reactionPendingIds.value);
+    pendingIds.delete(comment.id);
+    reactionPendingIds.value = pendingIds;
+  }
 }
 
 async function loadMore() {
@@ -192,7 +317,7 @@ watch(
       </button>
     </div>
 
-    <form v-else class="comment-form" @submit.prevent>
+    <form v-else class="comment-form" @submit.prevent="submitComment">
       <div class="comment-form__body">
         <!-- 프사가 있으면 그림, 없거나 못 받아오면 첫 글자.
              카카오·네이버는 프사가 선택 동의라 주소가 안 오는 경우도 정상이다 -->
@@ -222,10 +347,21 @@ watch(
         </span>
         <div class="comment-form__actions">
           <span class="comment-form__counter">{{ draft.length }} / {{ commentMaxLength }}</span>
-          <button class="post-button post-button--accent" type="submit">등록</button>
+          <button
+            class="post-button post-button--accent"
+            type="submit"
+            :disabled="submitting"
+          >
+            {{ submitting ? '등록 중' : '등록' }}
+          </button>
         </div>
       </div>
+      <p v-if="formError" class="comment-form__error" role="alert">{{ formError }}</p>
     </form>
+
+    <p v-if="reactionError" class="comment-reaction__error" role="alert">
+      {{ reactionError }}
+    </p>
 
     <ul class="comment-list">
       <li v-for="comment in items" :key="comment.id" class="comment">
@@ -249,6 +385,26 @@ watch(
 
             <div class="comment__actions">
               <button
+                class="comment__action"
+                :class="{ 'comment__action--active': comment.likedByMe }"
+                type="button"
+                :disabled="isReactionPending(comment.id)"
+                :aria-pressed="comment.likedByMe"
+                @click="reactToComment(comment, 'LIKE')"
+              >
+                좋아요 {{ comment.likeCount }}
+              </button>
+              <button
+                class="comment__action"
+                :class="{ 'comment__action--active': comment.dislikedByMe }"
+                type="button"
+                :disabled="isReactionPending(comment.id)"
+                :aria-pressed="comment.dislikedByMe"
+                @click="reactToComment(comment, 'DISLIKE')"
+              >
+                싫어요 {{ comment.dislikeCount }}
+              </button>
+              <button
                 class="comment__action comment__action--strong"
                 type="button"
                 @click="toggleReply(comment.id)"
@@ -266,7 +422,10 @@ watch(
 
         <div v-if="comment.replies.length || replyTargetId === comment.id" class="comment__replies">
           <div v-for="reply in comment.replies" :key="reply.id" class="reply">
-            <span class="comment-avatar comment-avatar--author">
+            <span
+              class="comment-avatar"
+              :class="{ 'comment-avatar--author': reply.isAuthor }"
+            >
               {{ avatarInitial(reply.author) }}
             </span>
             <div class="comment__content">
@@ -277,12 +436,35 @@ watch(
               </div>
               <p class="comment__text">{{ reply.content }}</p>
               <div class="comment__actions">
-                <button class="comment__action comment__action--strong" type="button">답글</button>
+                <button
+                  class="comment__action"
+                  :class="{ 'comment__action--active': reply.likedByMe }"
+                  type="button"
+                  :disabled="isReactionPending(reply.id)"
+                  :aria-pressed="reply.likedByMe"
+                  @click="reactToComment(reply, 'LIKE')"
+                >
+                  좋아요 {{ reply.likeCount }}
+                </button>
+                <button
+                  class="comment__action"
+                  :class="{ 'comment__action--active': reply.dislikedByMe }"
+                  type="button"
+                  :disabled="isReactionPending(reply.id)"
+                  :aria-pressed="reply.dislikedByMe"
+                  @click="reactToComment(reply, 'DISLIKE')"
+                >
+                  싫어요 {{ reply.dislikeCount }}
+                </button>
               </div>
             </div>
           </div>
 
-          <form v-if="replyTargetId === comment.id" class="reply-form" @submit.prevent>
+          <form
+            v-if="replyTargetId === comment.id"
+            class="reply-form"
+            @submit.prevent="submitReply(comment.id)"
+          >
             <p class="reply-form__target">{{ comment.author }} 님에게 답글 쓰는 중</p>
             <textarea
               v-model="replyDraft"
@@ -298,9 +480,16 @@ watch(
                 <button class="post-button" type="button" @click="toggleReply(comment.id)">
                   취소
                 </button>
-                <button class="post-button post-button--accent" type="submit">답글 등록</button>
+                <button
+                  class="post-button post-button--accent"
+                  type="submit"
+                  :disabled="replySubmitting"
+                >
+                  {{ replySubmitting ? '등록 중' : '답글 등록' }}
+                </button>
               </div>
             </div>
+            <p v-if="replyError" class="comment-form__error" role="alert">{{ replyError }}</p>
           </form>
         </div>
       </li>
