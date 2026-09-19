@@ -1,11 +1,13 @@
 package me.jsjlog.blog.post.controller;
 
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import me.jsjlog.blog.common.response.ApiResponse;
 import me.jsjlog.blog.common.security.MemberPrincipal;
 import me.jsjlog.blog.post.dto.*;
 import me.jsjlog.blog.post.service.PostService;
+import me.jsjlog.blog.post.service.PostViewService;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,6 +20,7 @@ import java.util.List;
 public class PostController {
 
     private final PostService postService;
+    private final PostViewService postViewService;
 
     @GetMapping("/blog/home/posts")
     public ApiResponse<List<PostSummaryResponse>> getPostsForHomePage(
@@ -29,8 +32,11 @@ public class PostController {
     }
 
     @GetMapping("/blog/posts/{postId}")
-    public ApiResponse<PostDetailResponse> getPostDetail(@PathVariable Long postId) {
-        PostDetailResponse postDetail = postService.getPostDetail(postId);
+    public ApiResponse<PostDetailResponse> getPostDetail(
+            @PathVariable Long postId,
+            HttpSession session
+    ) {
+        PostDetailResponse postDetail = postViewService.getPostDetail(postId, session);
         return ApiResponse.ok(postDetail);
     }
 
