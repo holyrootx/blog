@@ -105,7 +105,12 @@ public class PostService {
         return postRepository.getRelatedPosts(postId, categoryId);
     }
 
-    public CommentListResponse getCommentInPostDetail(Long postId, Long cursor, Long size){
+    public CommentListResponse getCommentInPostDetail(
+            Long postId,
+            Long cursor,
+            Long size,
+            Long memberId
+    ) {
 
         findReadablePost(postId);
 
@@ -121,6 +126,6 @@ public class PostService {
             throw new BlogException(ErrorCode.COMMENT_SIZE_LIMIT_EXCEEDED);
         }
 
-        return commentRepository.getCommentPageByPostId(postId, cursor, size);
+        return commentRepository.getCommentPageByPostId(postId, cursor, size, memberId);
     }
 }

@@ -42,4 +42,13 @@ public final class ApiPaths {
         private Admin() {
         }
     }
+
+    public static final class Comment {
+
+        public static final String CREATE = "/api/v1/blog/posts/*/comments";
+        public static final String REACTION = "/api/v1/blog/comments/*/reaction";
+
+        private Comment() {
+        }
+    }
 }
