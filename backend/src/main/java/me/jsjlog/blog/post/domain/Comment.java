@@ -78,6 +78,10 @@ public class Comment extends BaseEntity {
         this.deleted = true;
     }
 
+    public void restore() {
+        this.deleted = false;
+    }
+
     /**
      * 답글 여부입니다. 답글에 답글을 다는 것을 막는 검증에서 사용합니다.
      */

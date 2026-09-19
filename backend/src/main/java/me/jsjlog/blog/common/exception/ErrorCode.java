@@ -68,6 +68,7 @@ public enum ErrorCode {
     COMMENT_REPLY_DEPTH_EXCEEDED(HttpStatus.BAD_REQUEST, "COMMENT_REPLY_DEPTH_EXCEEDED", "답글에는 다시 답글을 작성할 수 없습니다."),
     COMMENT_DELETED(HttpStatus.CONFLICT, "COMMENT_DELETED", "삭제된 댓글에는 작업할 수 없습니다."),
     COMMENT_REACTION_REQUIRED(HttpStatus.BAD_REQUEST, "COMMENT_REACTION_REQUIRED", "좋아요 또는 싫어요를 선택해 주세요."),
+    COMMENT_VISIBILITY_REQUIRED(HttpStatus.BAD_REQUEST, "COMMENT_VISIBILITY_REQUIRED", "댓글 공개 상태를 선택해 주세요."),
     CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "CATEGORY_NOT_FOUND", "카테고리를 찾을 수 없습니다."),
     CATEGORY_NAME_DUPLICATED(HttpStatus.CONFLICT, "CATEGORY_NAME_DUPLICATED", "이미 사용 중인 카테고리 이름입니다."),
     CATEGORY_IN_USE(HttpStatus.CONFLICT, "CATEGORY_IN_USE", "글이 달린 카테고리는 삭제할 수 없습니다."),
