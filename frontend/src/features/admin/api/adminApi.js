@@ -127,6 +127,52 @@ export function deleteAdminPost(postId) {
   return sendApiData(`${ADMIN_BLOG_API_BASE}/posts/${postId}`, { method: 'DELETE' });
 }
 
+export async function getAdminComments(condition = {}) {
+  const result = await getApiData(withQuery(`${ADMIN_BLOG_API_BASE}/comments`, condition));
+
+  return {
+    items: Array.isArray(result?.items) ? result.items.map(toAdminComment) : [],
+    statusCounts: {
+      all: toNumber(result?.statusCounts?.all),
+      unanswered: toNumber(result?.statusCounts?.unanswered),
+      hidden: toNumber(result?.statusCounts?.hidden),
+    },
+    page: toNumber(result?.page),
+    size: toNumber(result?.size),
+    totalElements: toNumber(result?.totalElements),
+    totalPages: toNumber(result?.totalPages),
+  };
+}
+
+export function replyAdminComment(commentId, content) {
+  return sendApiData(`${ADMIN_BLOG_API_BASE}/comments/${commentId}/replies`, {
+    method: 'POST',
+    body: { content },
+  });
+}
+
+export function updateAdminCommentVisibility(commentId, hidden) {
+  return sendApiData(`${ADMIN_BLOG_API_BASE}/comments/${commentId}/visibility`, {
+    method: 'PUT',
+    body: { hidden },
+  });
+}
+
+function toAdminComment(comment) {
+  return {
+    id: comment.id,
+    postId: comment.postId,
+    postTitle: comment.postTitle ?? '제목 없는 글',
+    parentId: comment.parentId ?? null,
+    nickname: comment.nickname ?? '알 수 없는 회원',
+    memberRole: comment.memberRole ?? 'USER',
+    content: comment.content ?? '',
+    createdAt: comment.createdAt ?? null,
+    hidden: Boolean(comment.hidden),
+    answered: Boolean(comment.answered),
+  };
+}
+
 // 메뉴 등록. 수정과 달리 menuType 을 보낸다 (만들 때만 정할 수 있다)
 export function createAdminMenu(request) {
   return sendApiData(`${ADMIN_BLOG_API_BASE}/menus`, {

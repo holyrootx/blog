@@ -7,6 +7,7 @@ import AdminMenuPage from '../../features/admin/pages/AdminMenuPage.vue';
 import AdminCategoryPage from '../../features/admin/pages/AdminCategoryPage.vue';
 import AdminPostPage from '../../features/admin/pages/AdminPostPage.vue';
 import AdminPostEditPage from '../../features/admin/pages/AdminPostEditPage.vue';
+import AdminCommentPage from '../../features/admin/pages/AdminCommentPage.vue';
 import AdminLoginPage from '../../features/admin/pages/AdminLoginPage.vue';
 import MemberLoginPage from '../../features/member/pages/MemberLoginPage.vue';
 import OAuthCallbackPage from '../../features/member/pages/OAuthCallbackPage.vue';
@@ -153,6 +154,15 @@ const router = createRouter({
           component: AdminCategoryPage,
           meta: {
             title: '카테고리',
+            group: '콘텐츠',
+          },
+        },
+        {
+          path: 'comments',
+          name: 'admin-comments',
+          component: AdminCommentPage,
+          meta: {
+            title: '댓글 관리',
             group: '콘텐츠',
           },
         },

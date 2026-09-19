@@ -1,10 +1,12 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue';
+import { useRouter } from 'vue-router';
 
 import { getAdminDashboard } from '../api/adminApi';
 import AdminPageHeader from '../components/AdminPageHeader.vue';
 
 const dashboard = reactive(createEmptyDashboard());
+const router = useRouter();
 const loading = ref(true);
 const loadFailed = ref(false);
 
@@ -29,7 +31,7 @@ const summaryCards = computed(() => [
     value: formatCount(dashboard.unansweredCommentCount, '개'),
     helper: dashboard.oldestUnansweredAt
       ? `가장 오래된 댓글 ${formatRelativeTime(dashboard.oldestUnansweredAt)}`
-      : '관리자 댓글 API 연결 필요',
+      : '답변을 기다리는 댓글이 없습니다.',
     tone: 'accent',
   },
   {
@@ -54,7 +56,7 @@ const operationItems = computed(() => [
     value: formatCount(dashboard.unansweredCommentCount, '개'),
     detail: dashboard.oldestUnansweredAt
       ? `가장 오래된 댓글 ${formatRelativeTime(dashboard.oldestUnansweredAt)}`
-      : '답변 대기 시간을 계산하려면 댓글 API가 필요합니다.',
+      : '답변을 기다리는 댓글이 없습니다.',
   },
   {
     id: 'category',
@@ -172,6 +174,15 @@ function getCategoryPercent(category) {
 
   return Math.round((category.postCount / categoryTotal.value) * 100);
 }
+
+function goToComments(commentId = null) {
+  const query = { status: 'UNANSWERED' };
+  if (commentId !== null) {
+    query.reply = String(commentId);
+  }
+
+  return router.push({ name: 'admin-comments', query });
+}
 </script>
 
 <template>
@@ -265,7 +276,7 @@ function getCategoryPercent(category) {
               <h2>답변 기다리는 댓글</h2>
               <p>오래 기다린 댓글부터 확인합니다.</p>
             </div>
-            <button class="admin-panel__link" type="button" disabled>
+            <button class="admin-panel__link" type="button" @click="goToComments()">
               댓글 관리로
             </button>
           </div>
@@ -285,14 +296,20 @@ function getCategoryPercent(category) {
                 <p class="admin-comment-item__content">{{ comment.content }}</p>
                 <span class="admin-comment-item__post">{{ comment.postTitle }}</span>
               </div>
-              <button class="admin-comment-item__reply" type="button" disabled>답글</button>
+              <button
+                class="admin-comment-item__reply"
+                type="button"
+                @click="goToComments(comment.id)"
+              >
+                답글
+              </button>
             </li>
           </ul>
 
           <div v-else class="admin-empty-state">
             <strong>{{ loading ? '댓글을 불러오는 중입니다.' : '확인할 댓글이 없습니다.' }}</strong>
             <p>
-              관리자 댓글 목록 API가 붙으면 미답변 댓글 3건이 이곳에 먼저 표시됩니다.
+              새 댓글이 등록되면 답변이 필요한 순서대로 이곳에 표시됩니다.
             </p>
           </div>
           </article>
