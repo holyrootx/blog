@@ -14,6 +14,7 @@ import me.jsjlog.blog.common.exception.ErrorCode;
 import me.jsjlog.blog.post.domain.Category;
 import me.jsjlog.blog.post.domain.Post;
 import me.jsjlog.blog.post.repository.CategoryRepository;
+import me.jsjlog.blog.post.repository.CommentReactionRepository;
 import me.jsjlog.blog.post.repository.CommentRepository;
 import me.jsjlog.blog.post.repository.PostRepository;
 import org.springframework.stereotype.Service;
@@ -40,6 +41,7 @@ public class AdminPostService {
 
     private final PostRepository postRepository;
     private final CommentRepository commentRepository;
+    private final CommentReactionRepository commentReactionRepository;
     private final CategoryRepository categoryRepository;
 
     @Transactional(readOnly = true)
@@ -250,6 +252,7 @@ public class AdminPostService {
     public void deletePost(Long postId) {
         Post post = findPost(postId);
 
+        commentReactionRepository.deleteByPostId(postId);
         commentRepository.deleteByPostId(postId);
         postRepository.delete(post);
     }

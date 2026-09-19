@@ -241,7 +241,7 @@ function toUnansweredComment(comment) {
     id: comment.id,
     postId: comment.postId,
     postTitle: comment.postTitle ?? '제목 없는 글',
-    guestNickname: comment.guestNickname ?? comment.nickname ?? '방문자',
+    nickname: comment.nickname ?? '알 수 없는 회원',
     content: comment.content ?? '',
     createdAt: comment.createdAt ?? null,
   };

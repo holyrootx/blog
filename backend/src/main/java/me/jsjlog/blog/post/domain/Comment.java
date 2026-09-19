@@ -1,6 +1,7 @@
 package me.jsjlog.blog.post.domain;
 
 import me.jsjlog.blog.common.domain.BaseEntity;
+import me.jsjlog.blog.member.domain.Member;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -40,15 +41,12 @@ public class Comment extends BaseEntity {
     @JoinColumn(name = "parent_id")
     private Comment parent;
 
-    @Column(name = "guest_nickname", nullable = false, length = 50)
-    private String guestNickname;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "member_id", nullable = false)
+    private Member member;
 
     @Column(name = "content", nullable = false, columnDefinition = "TEXT")
     private String content;
-
-    /** 블로그 주인이 작성한 댓글. 관리자 경로에서만 true로 설정합니다. */
-    @Column(name = "author_comment", nullable = false)
-    private boolean authorComment;
 
     /**
      * soft delete 표식입니다.
@@ -59,23 +57,17 @@ public class Comment extends BaseEntity {
     @Column(name = "deleted", nullable = false)
     private boolean deleted;
 
-    @Column(name = "like_count", nullable = false)
-    private long likeCount;
-
     public Comment(
             Post post,
             Comment parent,
-            String guestNickname,
-            String content,
-            boolean authorComment
+            Member member,
+            String content
     ) {
         this.post = post;
         this.parent = parent;
-        this.guestNickname = guestNickname;
+        this.member = member;
         this.content = content;
-        this.authorComment = authorComment;
         this.deleted = false;
-        this.likeCount = 0;
     }
 
     public void updateContent(String content) {
