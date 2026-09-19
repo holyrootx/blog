@@ -79,6 +79,12 @@ public class SecurityConfig {
                                 ApiPaths.Auth.OAUTH_REACTIVATE,
                                 ApiPaths.Auth.OAUTH_REJOIN
                         ).permitAll()
+                        .requestMatchers(HttpMethod.POST, ApiPaths.Comment.CREATE)
+                        .hasAnyRole(MemberRole.USER.name(), MemberRole.ADMIN.name())
+                        .requestMatchers(HttpMethod.PUT, ApiPaths.Comment.REACTION)
+                        .hasAnyRole(MemberRole.USER.name(), MemberRole.ADMIN.name())
+                        .requestMatchers(HttpMethod.DELETE, ApiPaths.Comment.REACTION)
+                        .hasAnyRole(MemberRole.USER.name(), MemberRole.ADMIN.name())
                         .requestMatchers(ApiPaths.Admin.ALL).hasRole(MemberRole.ADMIN.name())
                         .anyRequest().denyAll()
                 )
