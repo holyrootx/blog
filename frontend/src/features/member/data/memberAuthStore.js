@@ -37,8 +37,15 @@ export function useMemberAuth() {
 export function ensureMemberSession() {
   if (!sessionCheck) {
     sessionCheck = getMemberSession()
-      .then((session) => {
+      .then(async (session) => {
         member.value = session;
+
+        // 새로고침 뒤에도 쓰기 요청에는 CSRF 토큰이 필요하다. 로그인 세션만 복원하고
+        // 토큰을 비워 두면 첫 댓글 등록이 403으로 실패한다.
+        if (session) {
+          await refreshCsrfToken().catch(() => null);
+        }
+
         return session;
       })
       .catch(() => {

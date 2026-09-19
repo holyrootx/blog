@@ -8,6 +8,10 @@ public record CommentReplyResponse(
         String content,
         LocalDateTime createdAt,
         boolean authorComment,
-        boolean deleted
+        boolean deleted,
+        long likeCount,
+        long dislikeCount,
+        boolean likedByMe,
+        boolean dislikedByMe
 ) {
 }

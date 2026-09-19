@@ -279,7 +279,7 @@ function getCategoryPercent(category) {
               <span class="admin-comment-item__avatar" aria-hidden="true"></span>
               <div class="admin-comment-item__body">
                 <div class="admin-comment-item__meta">
-                  <strong>{{ comment.guestNickname }}</strong>
+                  <strong>{{ comment.nickname }}</strong>
                   <span>{{ formatDateTime(comment.createdAt) }}</span>
                 </div>
                 <p class="admin-comment-item__content">{{ comment.content }}</p>

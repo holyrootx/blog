@@ -4,5 +4,5 @@ import me.jsjlog.blog.post.dto.CommentListResponse;
 
 public interface CommentRepositoryCustom {
 
-    CommentListResponse getCommentPageByPostId(Long postId, Long cursor, long size);
+    CommentListResponse getCommentPageByPostId(Long postId, Long cursor, long size, Long memberId);
 }

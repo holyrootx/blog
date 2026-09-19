@@ -1,4 +1,4 @@
-import { getApiData } from '../../../shared/api/blogApiClient';
+import { getApiData, sendApiData } from '../../../shared/api/blogApiClient';
 import { toPostBody, toPostToc } from '../../../shared/post/postContentMapper';
 import {
   formatDate,
@@ -55,6 +55,28 @@ export async function getPostComments(
   return toCommentPage(comments);
 }
 
+export function createPostComment(postId, { content, parentId = null }) {
+  return sendApiData(`/api/v1/blog/posts/${postId}/comments`, {
+    method: 'POST',
+    body: { content, parentId },
+  });
+}
+
+export function setCommentReaction(commentId, type) {
+  return sendApiData(`/api/v1/blog/comments/${commentId}/reaction`, {
+    method: 'PUT',
+    body: { type },
+  });
+}
+
+export function removeCommentReaction(commentId, type) {
+  const searchParams = new URLSearchParams({ type });
+
+  return sendApiData(`/api/v1/blog/comments/${commentId}/reaction?${searchParams.toString()}`, {
+    method: 'DELETE',
+  });
+}
+
 function toPostDetail(post) {
   const body = toPostBody(post.content);
 
@@ -96,10 +118,12 @@ function toCommentItem(comment) {
     author: deleted ? '' : getCommentNickname(comment),
     createdAt: formatDateTime(comment.createdAt),
     content: deleted ? '' : (comment.content ?? ''),
-    // 서버는 최상위 댓글에도 authorComment 를 내려주는데 여기서 읽지 않아
-    // 블로그 주인이 최상위 댓글을 달면 답글과 달리 작성자 뱃지가 안 붙었다
     isAuthor: Boolean(comment.authorComment),
     deleted,
+    likeCount: Number(comment.likeCount ?? 0),
+    dislikeCount: Number(comment.dislikeCount ?? 0),
+    likedByMe: Boolean(comment.likedByMe),
+    dislikedByMe: Boolean(comment.dislikedByMe),
     hiddenReplyCount: 0,
     replies: Array.isArray(comment.replies) ? comment.replies.map(toCommentReply) : [],
   };
@@ -113,6 +137,10 @@ function toCommentReply(reply) {
     content: reply.content ?? '',
     isAuthor: Boolean(reply.authorComment),
     deleted: Boolean(reply.deleted),
+    likeCount: Number(reply.likeCount ?? 0),
+    dislikeCount: Number(reply.dislikeCount ?? 0),
+    likedByMe: Boolean(reply.likedByMe),
+    dislikedByMe: Boolean(reply.dislikedByMe),
   };
 }
 

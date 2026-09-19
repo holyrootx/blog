@@ -3,8 +3,10 @@ package me.jsjlog.blog.post.controller;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import me.jsjlog.blog.common.response.ApiResponse;
+import me.jsjlog.blog.common.security.MemberPrincipal;
 import me.jsjlog.blog.post.dto.*;
 import me.jsjlog.blog.post.service.PostService;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -49,9 +51,11 @@ public class PostController {
     public ApiResponse<CommentListResponse> getCommentsOfPostDetail(
             @PathVariable Long postId,
             @RequestParam(required = false) Long cursor,
-            @RequestParam(defaultValue = "20") Long size
+            @RequestParam(defaultValue = "20") Long size,
+            @AuthenticationPrincipal MemberPrincipal principal
     ) {
-        CommentListResponse comments = postService.getCommentInPostDetail(postId, cursor, size);
+        Long memberId = principal == null ? null : principal.getId();
+        CommentListResponse comments = postService.getCommentInPostDetail(postId, cursor, size, memberId);
         return ApiResponse.ok(comments);
     }
 

@@ -7,6 +7,7 @@ import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import me.jsjlog.blog.admin.dto.AdminCategoryShareResponse;
 import me.jsjlog.blog.admin.dto.AdminUnansweredCommentResponse;
+import me.jsjlog.blog.member.domain.MemberRole;
 import me.jsjlog.blog.post.domain.PostStatus;
 import me.jsjlog.blog.post.domain.QCategory;
 import me.jsjlog.blog.post.domain.QComment;
@@ -135,7 +136,7 @@ public class AdminDashboardQueryRepository {
                         comment.id,
                         comment.post.id,
                         comment.post.title,
-                        comment.guestNickname,
+                        comment.member.nickname,
                         comment.content,
                         comment.createdAt
                 ))
@@ -152,10 +153,15 @@ public class AdminDashboardQueryRepository {
 
         return comment.parent.isNull()
                 .and(comment.deleted.isFalse())
+                .and(comment.member.role.ne(MemberRole.ADMIN))
                 .and(JPAExpressions
                         .selectOne()
                         .from(reply)
-                        .where(reply.parent.id.eq(comment.id), reply.authorComment.isTrue())
+                        .where(
+                                reply.parent.id.eq(comment.id),
+                                reply.deleted.isFalse(),
+                                reply.member.role.eq(MemberRole.ADMIN)
+                        )
                         .notExists());
     }
 

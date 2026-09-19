@@ -10,6 +10,10 @@ public record CommentItemResponse(
         LocalDateTime createdAt,
         boolean authorComment,
         boolean deleted,
+        long likeCount,
+        long dislikeCount,
+        boolean likedByMe,
+        boolean dislikedByMe,
         List<CommentReplyResponse> replies
 ) {
 }
