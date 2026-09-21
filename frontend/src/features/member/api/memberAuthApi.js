@@ -44,6 +44,42 @@ export function logoutMember() {
   return sendApiData(`${MEMBER_AUTH_API_BASE}/logout`, { method: 'POST' });
 }
 
+/** 가입 화면에서 "나중에 바꿀 수 있습니다" 라고 알린 그 기능 */
+export async function changeMemberNickname(nickname) {
+  return toMemberSession(await sendApiData(`${MEMBER_AUTH_API_BASE}/me/nickname`, {
+    method: 'PUT',
+    body: { nickname },
+  }));
+}
+
+/** 내가 쓴 댓글. 어느 글에 썼는지 같이 온다 */
+export async function getMyComments() {
+  const comments = await getApiData(`${MEMBER_AUTH_API_BASE}/me/comments`);
+
+  return Array.isArray(comments) ? comments.map(toMyComment) : [];
+}
+
+/**
+ * 탈퇴.
+ *
+ * 성공하면 서버가 세션을 끊는다. 화면도 로그인 상태를 비워야 한다 —
+ * 스토어의 {@code withdrawMember} 가 그것까지 한다.
+ */
+export function withdrawMember() {
+  return sendApiData(`${MEMBER_AUTH_API_BASE}/withdraw`, { method: 'POST' });
+}
+
+function toMyComment(comment) {
+  return {
+    id: comment?.id ?? null,
+    postId: comment?.postId ?? null,
+    postTitle: comment?.postTitle ?? '',
+    content: comment?.content ?? '',
+    createdAt: comment?.createdAt ?? '',
+    hidden: Boolean(comment?.hidden),
+  };
+}
+
 /** 신규 가입. 성공하면 그 자리에서 로그인까지 끝난다 */
 export async function signUpMember(nickname) {
   return toMemberSession(await sendApiData(`${OAUTH_API_BASE}/signup`, {

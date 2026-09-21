@@ -228,3 +228,450 @@
     width: 100%;
   }
 }
+
+/* ── 헤더 회원 메뉴 ───────────────────────── */
+
+.member-menu {
+  position: relative;
+}
+
+.member-menu__trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px 4px 4px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: none;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.member-menu__trigger:hover,
+.member-menu__trigger[aria-expanded='true'] {
+  border-color: var(--line);
+  background: var(--surface);
+}
+
+.member-menu__avatar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface-muted);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  object-fit: cover;
+  user-select: none;
+}
+
+.member-menu__nickname {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.member-menu__dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  min-width: 140px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.member-menu__item {
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.member-menu__item:hover {
+  background: var(--surface-muted);
+  color: var(--accent-dark);
+}
+
+/* ── 내 설정 화면 ─────────────────────────── */
+
+.member-settings {
+  width: min(760px, 100%);
+  margin: 0 auto;
+  padding: 40px 24px 80px;
+}
+
+.member-settings__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.member-settings__title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.member-settings__back {
+  color: var(--text-muted);
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.member-settings__back:hover {
+  color: var(--accent);
+}
+
+.member-settings__section {
+  margin-top: 28px;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.member-settings__section--danger {
+  border-color: #f0d5cb;
+  background: #fdf7f4;
+}
+
+.member-settings__section-title {
+  margin: 0 0 16px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.member-settings__profile {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+}
+
+.member-settings__avatar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 4px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface-muted);
+  color: var(--text-muted);
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1;
+  object-fit: cover;
+  user-select: none;
+}
+
+.member-settings__field {
+  flex: 1;
+  min-width: 0;
+}
+
+.member-settings__label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.member-settings__input {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.member-settings__input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.member-settings__hint,
+.member-settings__note {
+  margin: 8px 0 0;
+  color: var(--text-subtle);
+  font-size: 12.5px;
+  line-height: 1.7;
+}
+
+.member-settings__note strong {
+  color: var(--text-muted);
+}
+
+.member-settings__error,
+.member-settings__done {
+  margin: 12px 0 0;
+  font-size: 13px;
+}
+
+.member-settings__error {
+  color: var(--accent-dark);
+}
+
+.member-settings__done {
+  color: var(--text-muted);
+}
+
+.member-settings__empty {
+  margin: 0;
+  color: var(--text-subtle);
+  font-size: 13.5px;
+}
+
+.member-settings__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.member-settings__confirm {
+  margin-right: 4px;
+  color: var(--text-muted);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.member-settings__danger-button {
+  border-color: var(--accent-dark);
+  background: var(--accent-dark);
+  color: #fff;
+}
+
+.member-comments {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.member-comments__item {
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+}
+
+.member-comments__item:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.member-comments__post {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.member-comments__post:hover {
+  color: var(--accent-dark);
+  text-decoration: underline;
+}
+
+.member-comments__content {
+  margin: 6px 0 0;
+  font-size: 14.5px;
+  line-height: 1.7;
+}
+
+.member-comments__content--hidden {
+  color: var(--text-subtle);
+  font-style: italic;
+}
+
+.member-comments__date {
+  display: block;
+  margin-top: 6px;
+  color: var(--text-subtle);
+  font-size: 12px;
+}
+
+@media (max-width: 600px) {
+  .member-settings__profile {
+    flex-wrap: wrap;
+  }
+
+  .member-menu__nickname {
+    display: none;
+  }
+}
+
+/* ── 헤더 알림 종 ─────────────────────────── */
+
+.notification-bell {
+  position: relative;
+}
+
+.notification-bell__trigger {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+}
+
+.notification-bell__trigger:hover,
+.notification-bell__trigger[aria-expanded='true'] {
+  border-color: var(--line);
+  background: var(--surface);
+}
+
+.notification-bell__icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* 숫자는 종 위에 올라탄다. 옆에 두면 헤더 폭이 숫자에 따라 흔들린다 */
+.notification-bell__badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-width: 17px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 17px;
+  text-align: center;
+}
+
+.notification-bell__dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  width: min(320px, calc(100vw - 32px));
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.notification-bell__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.notification-bell__title {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.notification-bell__read-all {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-subtle);
+  font-family: inherit;
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.notification-bell__read-all:hover {
+  color: var(--accent);
+}
+
+.notification-bell__empty {
+  margin: 0;
+  padding: 18px 8px;
+  color: var(--text-subtle);
+  font-size: 13px;
+  text-align: center;
+}
+
+.notification-bell__list {
+  max-height: 60vh;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.notification-bell__item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+  padding: 10px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.notification-bell__item:hover {
+  background: var(--surface-muted);
+}
+
+/* 안 읽은 것만 왼쪽에 표시가 붙는다. 색만 바꾸면 흑백 화면에서 구분이 안 된다 */
+.notification-bell__item--unread {
+  border-left: 3px solid var(--accent);
+  border-radius: 0 6px 6px 0;
+}
+
+.notification-bell__message {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.notification-bell__preview {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notification-bell__post {
+  color: var(--text-subtle);
+  font-size: 11.5px;
+}

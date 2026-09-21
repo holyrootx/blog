@@ -79,6 +79,20 @@ public class SecurityConfig {
                                 ApiPaths.Auth.OAUTH_REACTIVATE,
                                 ApiPaths.Auth.OAUTH_REJOIN
                         ).permitAll()
+                        // 자기 계정을 고치는 자리. 관리자도 회원이라 같이 들어온다.
+                        // 관리자 탈퇴는 여기서 막지 않고 서비스가 사유를 붙여 거절한다 —
+                        // 403 만 주면 왜 안 되는지 화면이 설명할 수 없다
+                        .requestMatchers(HttpMethod.PUT, ApiPaths.Auth.MEMBER_NICKNAME)
+                        .hasAnyRole(MemberRole.USER.name(), MemberRole.ADMIN.name())
+                        .requestMatchers(HttpMethod.GET, ApiPaths.Auth.MEMBER_COMMENTS)
+                        .hasAnyRole(MemberRole.USER.name(), MemberRole.ADMIN.name())
+                        .requestMatchers(HttpMethod.POST, ApiPaths.Auth.MEMBER_WITHDRAW)
+                        .hasAnyRole(MemberRole.USER.name(), MemberRole.ADMIN.name())
+                        // 알림은 로그인한 사람에게만 존재하는 개념이라 조회도 인증을 건다
+                        .requestMatchers(
+                                ApiPaths.Auth.MEMBER_NOTIFICATIONS,
+                                ApiPaths.Auth.MEMBER_NOTIFICATIONS_ALL
+                        ).hasAnyRole(MemberRole.USER.name(), MemberRole.ADMIN.name())
                         .requestMatchers(HttpMethod.POST, ApiPaths.Comment.CREATE)
                         .hasAnyRole(MemberRole.USER.name(), MemberRole.ADMIN.name())
                         .requestMatchers(HttpMethod.PUT, ApiPaths.Comment.REACTION)

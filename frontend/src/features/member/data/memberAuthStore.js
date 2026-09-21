@@ -1,13 +1,16 @@
 import { computed, ref } from 'vue';
 
 import {
+  changeMemberNickname,
   getMemberSession,
   logoutMember,
   reactivateMember,
   rejoinMember,
   signUpMember,
+  withdrawMember,
 } from '../api/memberAuthApi';
 import { refreshCsrfToken } from '../../../shared/api/csrfApi';
+import { clearNotifications } from './notificationStore';
 
 /**
  * 로그인한 회원 상태.
@@ -70,6 +73,38 @@ export async function completeRejoin(nickname) {
   return applySession(await rejoinMember(nickname));
 }
 
+/**
+ * 닉네임 변경.
+ *
+ * 서버가 돌려준 값으로 스토어를 갈아 끼운다. 보낸 값을 그대로 믿지 않는 것은
+ * 서버가 앞뒤 공백을 다듬기 때문이다 — 화면과 DB 가 다른 이름을 들고 있으면 안 된다.
+ */
+export async function changeNickname(nickname) {
+  const session = await changeMemberNickname(nickname);
+
+  member.value = session;
+  sessionCheck = Promise.resolve(session);
+
+  return session;
+}
+
+/**
+ * 탈퇴.
+ *
+ * 서버가 세션을 끊으므로 화면도 로그인 상태를 비운다. 남겨 두면 탈퇴했는데 로그인한
+ * 것처럼 보이고, 다음 요청에서 401 이 나서야 알게 된다.
+ */
+export async function withdraw() {
+  try {
+    await withdrawMember();
+  } finally {
+    clearMemberSession();
+
+    // 세션이 끊겼으니 토큰도 새로 받아야 한다. 안 받으면 다시 로그인할 때 첫 요청이 403 이 된다
+    await refreshCsrfToken().catch(() => null);
+  }
+}
+
 export async function signOutMember() {
   try {
     await logoutMember();
@@ -86,6 +121,10 @@ export async function signOutMember() {
 export function clearMemberSession() {
   member.value = null;
   sessionCheck = null;
+
+  // 알림도 같이 비운다. 남겨 두면 로그아웃한 뒤에도 종에 숫자가 남고,
+  // 같은 브라우저에서 다른 사람이 로그인하면 남의 숫자를 보게 된다
+  clearNotifications();
 }
 
 async function applySession(session) {
