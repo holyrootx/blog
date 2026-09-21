@@ -2,6 +2,8 @@ package me.jsjlog.blog.home.dto;
 
 import me.jsjlog.blog.home.domain.BlogProfile;
 
+import java.time.LocalDate;
+
 public record BlogProfileResponse (
         Long id,
         String name,
@@ -9,7 +11,9 @@ public record BlogProfileResponse (
         String job,
         String avatarImageUrl,
         String githubUrl,
-        String email
+        String email,
+        LocalDate blogStartedAt,
+        Long daysSinceStart
 ) {
     public static BlogProfileResponse from(BlogProfile blogProfile) {
         return new BlogProfileResponse(
@@ -19,7 +23,9 @@ public record BlogProfileResponse (
                 blogProfile.getJob(),
                 blogProfile.getAvatarImageUrl(),
                 blogProfile.getGithubUrl(),
-                blogProfile.getEmail()
+                blogProfile.getEmail(),
+                blogProfile.getBlogStartedAt(),
+                blogProfile.daysSinceStart(LocalDate.now())
         );
     }
 }

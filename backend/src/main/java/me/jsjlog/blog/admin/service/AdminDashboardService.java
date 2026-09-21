@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import me.jsjlog.blog.admin.dto.AdminDashboardResponse;
 import me.jsjlog.blog.admin.repository.AdminDashboardQueryRepository;
+import me.jsjlog.blog.home.service.BlogProfileService;
 import me.jsjlog.blog.post.domain.PostStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +21,7 @@ public class AdminDashboardService {
     private static final long UNANSWERED_PREVIEW_SIZE = 3;
 
     private final AdminDashboardQueryRepository dashboardQueryRepository;
+    private final BlogProfileService blogProfileService;
 
     @Transactional(readOnly = true)
     public AdminDashboardResponse getDashboard() {
@@ -27,9 +29,7 @@ public class AdminDashboardService {
         LocalDateTime monthStart = LocalDate.now().withDayOfMonth(1).atStartOfDay();
 
         return new AdminDashboardResponse(
-                // BlogProfile 에 blogStartedAt 이 없어서 아직 셀 수 없다.
-                // 0 으로 주면 "오늘 시작한 블로그"로 읽히므로 null 로 둔다
-                null,
+                blogProfileService.getDaysSinceStart(),
                 dashboardQueryRepository.countPostsByStatus(PostStatus.DRAFT),
                 dashboardQueryRepository.sumViews(),
                 dashboardQueryRepository.countPostsByStatus(PostStatus.PUBLISHED),

@@ -1,6 +1,49 @@
 import { getApiData, sendApiData, sendApiFile } from '../../../shared/api/blogApiClient';
 
 const ADMIN_BLOG_API_BASE = '/api/v1/admin/blog';
+const PUBLIC_BLOG_API_BASE = '/api/v1/blog';
+
+export async function getAdminBlogProfile(profileId = 1) {
+  const profile = await getApiData(`${PUBLIC_BLOG_API_BASE}/profile?profileId=${profileId}`);
+
+  return {
+    id: profile?.id ?? profileId,
+    name: profile?.name ?? '',
+    intro: profile?.intro ?? '',
+    job: profile?.job ?? '',
+    avatarImageUrl: profile?.avatarImageUrl ?? '',
+    githubUrl: profile?.githubUrl ?? '',
+    email: profile?.email ?? '',
+    blogStartedAt: profile?.blogStartedAt ?? '',
+    daysSinceStart: toNumberOrNull(profile?.daysSinceStart),
+  };
+}
+
+export function updateAdminBlogProfile(request) {
+  return sendApiData(`${ADMIN_BLOG_API_BASE}/profile`, {
+    method: 'PUT',
+    body: request,
+  });
+}
+
+export async function getAdminHomePageHero(homePageHeroId = 1) {
+  const hero = await getApiData(`${PUBLIC_BLOG_API_BASE}/home/hero?homePageHeroId=${homePageHeroId}`);
+
+  return {
+    id: hero?.id ?? homePageHeroId,
+    subTitle: hero?.subTitle ?? '',
+    title: hero?.title ?? '',
+    intro: hero?.intro ?? '',
+    heroImageUrl: hero?.heroImageUrl ?? '',
+  };
+}
+
+export function updateAdminHomePageHero(request) {
+  return sendApiData(`${ADMIN_BLOG_API_BASE}/home/hero`, {
+    method: 'PUT',
+    body: request,
+  });
+}
 
 export async function getAdminDashboard() {
   const dashboard = await getApiData(`${ADMIN_BLOG_API_BASE}/dashboard`);

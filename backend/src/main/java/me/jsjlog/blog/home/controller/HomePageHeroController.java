@@ -2,6 +2,7 @@ package me.jsjlog.blog.home.controller;
 
 import me.jsjlog.blog.common.response.ApiResponse;
 import me.jsjlog.blog.home.dto.HomePageHeroResponse;
+import me.jsjlog.blog.home.dto.UpdateHomePageHeroRequest;
 import me.jsjlog.blog.home.service.HomePageHeroService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,9 +23,10 @@ public class HomePageHeroController {
     }
 
     @PutMapping("/admin/blog/home/hero")
-    public ApiResponse<?> updateHomePageHero(){
-
-        return ApiResponse.ok();
+    public ApiResponse<HomePageHeroResponse> updateHomePageHero(
+            @RequestBody UpdateHomePageHeroRequest request
+    ) {
+        return ApiResponse.ok(homePageHeroService.updateHomePageHero(request));
     }
 
 }

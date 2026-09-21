@@ -10,7 +10,6 @@ import java.util.List;
  * 0으로 주면 진짜 0인지 미구현인지 구분할 수 없다.
  */
 public record AdminDashboardResponse(
-        // BlogProfile.blogStartedAt 이 아직 없어서 null 이다. 필드가 생기면 채운다
         Long daysSinceStart,
         Long draftPostCount,
         Long totalViews,

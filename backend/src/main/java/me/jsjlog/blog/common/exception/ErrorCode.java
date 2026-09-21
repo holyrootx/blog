@@ -44,7 +44,12 @@ public enum ErrorCode {
 	IMAGE_DELETE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "IMAGE_DELETE_FAILED", "이미지를 삭제하지 못했습니다."),
 
 	PROFILE_NOT_FOUND(HttpStatus.NOT_FOUND, "PROFILE_NOT_FOUND", "프로필을 찾을 수 없습니다."),
+    PROFILE_REQUIRED_VALUE_MISSING(HttpStatus.BAD_REQUEST, "PROFILE_REQUIRED_VALUE_MISSING", "이름, 소개와 직업을 입력해 주세요."),
+    PROFILE_VALUE_TOO_LONG(HttpStatus.BAD_REQUEST, "PROFILE_VALUE_TOO_LONG", "프로필 입력값이 허용 길이를 초과했습니다."),
+    BLOG_STARTED_AT_FUTURE(HttpStatus.BAD_REQUEST, "BLOG_STARTED_AT_FUTURE", "블로그 시작일은 오늘 이후로 설정할 수 없습니다."),
     MAIN_HERO_NOT_FOUND(HttpStatus.NOT_FOUND, "MAIN_HERO_NOT_FOUND", "메인 소개글을 찾을 수 없습니다."),
+    MAIN_HERO_REQUIRED_VALUE_MISSING(HttpStatus.BAD_REQUEST, "MAIN_HERO_REQUIRED_VALUE_MISSING", "대문 제목과 소개를 입력해 주세요."),
+    MAIN_HERO_VALUE_TOO_LONG(HttpStatus.BAD_REQUEST, "MAIN_HERO_VALUE_TOO_LONG", "대문 입력값이 허용 길이를 초과했습니다."),
     MENU_NOT_FOUND(HttpStatus.NOT_FOUND, "MENU_NOT_FOUND", "메뉴를 찾을 수 없습니다."),
     MENU_HAS_ITEMS(HttpStatus.CONFLICT, "MENU_HAS_ITEMS", "속한 항목이 있는 그룹은 삭제할 수 없습니다."),
     POST_NOT_FOUND(HttpStatus.NOT_FOUND, "POST_NOT_FOUND", "게시글을 찾을 수 없습니다."),
