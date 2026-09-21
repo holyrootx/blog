@@ -8,6 +8,7 @@ import AdminCategoryPage from '../../features/admin/pages/AdminCategoryPage.vue'
 import AdminPostPage from '../../features/admin/pages/AdminPostPage.vue';
 import AdminPostEditPage from '../../features/admin/pages/AdminPostEditPage.vue';
 import AdminCommentPage from '../../features/admin/pages/AdminCommentPage.vue';
+import AdminHomeSettingsPage from '../../features/admin/pages/AdminHomeSettingsPage.vue';
 import AdminLoginPage from '../../features/admin/pages/AdminLoginPage.vue';
 import MemberLoginPage from '../../features/member/pages/MemberLoginPage.vue';
 import OAuthCallbackPage from '../../features/member/pages/OAuthCallbackPage.vue';
@@ -164,6 +165,15 @@ const router = createRouter({
           meta: {
             title: '댓글 관리',
             group: '콘텐츠',
+          },
+        },
+        {
+          path: 'home',
+          name: 'admin-home',
+          component: AdminHomeSettingsPage,
+          meta: {
+            title: '대문 설정',
+            group: '블로그',
           },
         },
       ],
