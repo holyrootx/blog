@@ -74,6 +74,30 @@ function csrfHeader() {
 }
 
 /**
+ * 토큰이 어긋났을 때 다시 받아 오는 함수. {@code csrfApi} 가 심어 준다.
+ *
+ * 여기서 직접 부르지 못하는 이유는 토큰을 내주는 것도 이 파일의 요청 함수를 쓰기 때문이다.
+ * 서로 import 하면 순환이 된다.
+ */
+let refreshCsrf = null;
+
+export function onCsrfRejected(refresh) {
+  refreshCsrf = refresh;
+}
+
+/**
+ * 토큰이 어긋나서 막힌 것인가.
+ *
+ * <p>서버는 CSRF 실패와 권한 부족을 똑같이 403 · FORBIDDEN 으로 답한다. 응답만 봐서는
+ * 구분할 수 없어서, 토큰을 들고 있었는데 403 이 난 경우를 어긋난 것으로 본다.</p>
+ *
+ * <p>진짜 권한 부족이었다면 다시 받아도 또 403 이 난다. 요청 한 번 더 나가는 것이 전부다.</p>
+ */
+function looksLikeStaleCsrf(status) {
+  return status === 403 && csrf !== null && refreshCsrf !== null;
+}
+
+/**
  * 파일을 올리는 요청.
  *
  * Content-Type 을 직접 넣지 않는다. FormData 를 보낼 때는 브라우저가 경계 문자열까지 붙여
@@ -104,12 +128,8 @@ export async function sendApiFile(path, formData) {
   return payload?.data ?? null;
 }
 
-/**
- * 값을 바꾸는 요청(POST·PUT·DELETE).
- * 실패하면 서버가 준 메시지를 그대로 던진다 — 화면에서 왜 실패했는지 보여줘야 하기 때문.
- */
-export async function sendApiData(path, { method, body } = {}) {
-  const response = await fetch(path, {
+function sendOnce(path, method, body) {
+  return fetch(path, {
     method,
     headers: {
       Accept: 'application/json',
@@ -118,6 +138,22 @@ export async function sendApiData(path, { method, body } = {}) {
     },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
+}
+
+/**
+ * 값을 바꾸는 요청(POST·PUT·DELETE).
+ * 실패하면 서버가 준 메시지를 그대로 던진다 — 화면에서 왜 실패했는지 보여줘야 하기 때문.
+ */
+export async function sendApiData(path, { method, body } = {}) {
+  let response = await sendOnce(path, method, body);
+
+  // 서버가 재시작되거나 로그인·로그아웃으로 토큰이 새로 발급되면 화면이 든 값이 낡는다.
+  // 그대로 두면 새로고침 전까지 저장·등록이 전부 막히므로, 한 번만 다시 받아 재시도한다
+  if (looksLikeStaleCsrf(response.status)) {
+    await refreshCsrf().catch(() => null);
+
+    response = await sendOnce(path, method, body);
+  }
 
   // 에러 응답도 본문이 있으므로 먼저 읽는다. 본문이 없을 수도 있어 실패는 삼킨다
   const payload = await response.json().catch(() => null);
