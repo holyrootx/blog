@@ -5,6 +5,7 @@ import me.jsjlog.blog.common.exception.BlogException;
 import me.jsjlog.blog.common.exception.ErrorCode;
 import me.jsjlog.blog.member.domain.Member;
 import me.jsjlog.blog.member.repository.MemberRepository;
+import me.jsjlog.blog.notification.service.NotificationService;
 import me.jsjlog.blog.post.domain.Comment;
 import me.jsjlog.blog.post.domain.CommentReaction;
 import me.jsjlog.blog.post.domain.CommentReactionType;
@@ -29,6 +30,7 @@ public class CommentService {
     private final CommentReactionRepository commentReactionRepository;
     private final PostRepository postRepository;
     private final MemberRepository memberRepository;
+    private final NotificationService notificationService;
 
     @Transactional
     public CommentCreateResponse createComment(Long postId, CommentCreateRequest request, Long memberId) {
@@ -38,6 +40,11 @@ public class CommentService {
         Comment parent = findParent(request == null ? null : request.parentId(), postId);
 
         Comment comment = commentRepository.save(new Comment(post, parent, member, content));
+
+        // 답글이면 부모 댓글을 쓴 사람에게, 최상위 댓글이면 글쓴이에게 간다.
+        // 자기 자신에게는 가지 않는다 — 그 판단은 알림 쪽이 한다
+        notificationService.notifyCommentCreated(comment);
+
         return new CommentCreateResponse(comment.getId());
     }
 

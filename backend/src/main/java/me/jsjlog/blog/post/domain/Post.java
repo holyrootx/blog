@@ -1,6 +1,7 @@
 package me.jsjlog.blog.post.domain;
 
 import me.jsjlog.blog.common.domain.BaseEntity;
+import me.jsjlog.blog.member.domain.Member;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -43,6 +44,19 @@ public class Post extends BaseEntity {
     @JoinColumn(name = "category_id", nullable = false)
     private Category category;
 
+    /**
+     * 글쓴이.
+     *
+     * <p>댓글이 달렸을 때 누구에게 알릴지 정하려고 둔다. 없이도 {@code role = ADMIN} 조회로
+     * 우회할 수 있지만, 그러면 "필자는 관리자 한 명" 이라는 전제가 코드에 박힌다.</p>
+     *
+     * <p>널을 허용한다. 이 컬럼이 생기기 전에 쓴 글에는 값이 없고, MySQL 은 행이 있는 테이블에
+     * NOT NULL 컬럼을 그냥 붙이지 못한다. 값이 없으면 알림을 보내지 않는다.</p>
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "author_id")
+    private Member author;
+
     @Column(name = "thumbnail_image_url", length = 500)
     private String thumbnailImageUrl;
 
@@ -64,13 +78,15 @@ public class Post extends BaseEntity {
             String excerpt,
             String content,
             Category category,
-            String thumbnailImageUrl
+            String thumbnailImageUrl,
+            Member author
     ) {
         this.title = title;
         this.excerpt = excerpt;
         this.content = content;
         this.category = category;
         this.thumbnailImageUrl = thumbnailImageUrl;
+        this.author = author;
         this.status = PostStatus.DRAFT;
         this.views = 0;
         this.likeCount = 0;

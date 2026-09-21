@@ -11,6 +11,8 @@ import me.jsjlog.blog.admin.dto.AdminPostSummaryResponse;
 import me.jsjlog.blog.common.exception.BlogException;
 import me.jsjlog.blog.common.exception.ConcurrencyGuard;
 import me.jsjlog.blog.common.exception.ErrorCode;
+import me.jsjlog.blog.member.domain.Member;
+import me.jsjlog.blog.member.repository.MemberRepository;
 import me.jsjlog.blog.post.domain.Category;
 import me.jsjlog.blog.post.domain.Post;
 import me.jsjlog.blog.post.repository.CategoryRepository;
@@ -43,6 +45,7 @@ public class AdminPostService {
     private final CommentRepository commentRepository;
     private final CommentReactionRepository commentReactionRepository;
     private final CategoryRepository categoryRepository;
+    private final MemberRepository memberRepository;
 
     @Transactional(readOnly = true)
     public AdminPostListResponse getPostList(AdminPostSearchCondition condition) {
@@ -95,7 +98,7 @@ public class AdminPostService {
      * 사용자 눈에는 "저장했는데 아무 일도 안 일어남 + 내용 유실"로 보인다.
      */
     @Transactional
-    public Long createPost(AdminPostRequest request) {
+    public Long createPost(AdminPostRequest request, Long authorId) {
         String title = requireTitle(request.title());
         checkLengths(request);
 
@@ -105,7 +108,8 @@ public class AdminPostService {
                 // content 가 NOT NULL 이라 null 로는 INSERT 가 안 된다
                 Objects.requireNonNullElse(request.content(), ""),
                 findCategory(request.categoryId()),
-                request.thumbnailImageUrl()
+                request.thumbnailImageUrl(),
+                findAuthor(authorId)
         );
 
         return postRepository.save(post).getId();
@@ -131,6 +135,8 @@ public class AdminPostService {
             checkPublishable(request.content(), request.excerpt());
         }
 
+        // 글쓴이는 여기서 건드리지 않는다. 생성할 때 한 번 정해지는 값이고,
+        // 저장할 때마다 바꾸면 남의 글을 고친 사람이 글쓴이가 된다
         post.update(
                 title,
                 request.excerpt(),
@@ -173,6 +179,19 @@ public class AdminPostService {
         if (request.thumbnailImageUrl() != null && request.thumbnailImageUrl().length() > THUMBNAIL_MAX) {
             throw new BlogException(ErrorCode.POST_THUMBNAIL_TOO_LONG);
         }
+    }
+
+    /**
+     * 글쓴이. 댓글이 달렸을 때 누구에게 알릴지 정하는 값이다.
+     *
+     * 못 찾으면 글 저장을 막지 않고 비워 둔다 — 글을 쓰는 일이 알림 때문에 실패하면 안 된다.
+     */
+    private Member findAuthor(Long authorId) {
+        if (authorId == null) {
+            return null;
+        }
+
+        return memberRepository.findById(authorId).orElse(null);
     }
 
     private Category findCategory(Long categoryId) {

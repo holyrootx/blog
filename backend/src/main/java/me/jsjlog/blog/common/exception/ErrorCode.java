@@ -36,6 +36,14 @@ public enum ErrorCode {
 	OAUTH_SIGNUP_NOT_ALLOWED(HttpStatus.CONFLICT, "OAUTH_SIGNUP_NOT_ALLOWED", "현재 로그인 정보로는 신규 가입을 진행할 수 없습니다."),
 	OAUTH_REACTIVATION_NOT_ALLOWED(HttpStatus.CONFLICT, "OAUTH_REACTIVATION_NOT_ALLOWED", "현재 로그인 정보로는 계정 복구를 진행할 수 없습니다."),
 
+	MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "MEMBER_NOT_FOUND", "회원을 찾을 수 없습니다."),
+	// 남의 알림 번호를 넣은 경우도 여기로 온다. 있는데 네 것이 아니라고 알려 주면
+	// 남의 알림이 존재한다는 사실을 확인해 주는 셈이 된다
+	NOTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "NOTIFICATION_NOT_FOUND", "알림을 찾을 수 없습니다."),
+	// 관리자는 이 블로그의 주인이다. 탈퇴하면 관리자 화면에 들어갈 사람이 없어지고
+	// 되돌리려면 DB 를 직접 고쳐야 한다. 화면에서 실수로 누를 수 있는 자리에 두지 않는다
+	MEMBER_ADMIN_CANNOT_WITHDRAW(HttpStatus.CONFLICT, "MEMBER_ADMIN_CANNOT_WITHDRAW", "관리자 계정은 탈퇴할 수 없습니다."),
+
 	IMAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "IMAGE_NOT_FOUND", "이미지를 찾을 수 없습니다."),
 	IMAGE_EMPTY(HttpStatus.BAD_REQUEST, "IMAGE_EMPTY", "이미지 파일이 없습니다."),
 	IMAGE_TOO_LARGE(HttpStatus.BAD_REQUEST, "IMAGE_TOO_LARGE", "이미지 용량이 너무 큽니다."),

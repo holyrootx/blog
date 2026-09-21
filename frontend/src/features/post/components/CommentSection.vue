@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import {
@@ -39,6 +39,11 @@ const replySubmitting = ref(false);
 const reactionPendingIds = ref(new Set());
 const draft = ref('');
 const replyTargetId = ref(null);
+
+// 칸을 열어 놓고 커서를 옮겨 주지 않으면 쓰려던 사람이 한 번 더 눌러야 한다
+const commentInput = ref(null);
+const replyInput = ref(null);
+const signinBox = ref(null);
 const replyDraft = ref('');
 const formError = ref('');
 const replyError = ref('');
@@ -123,7 +128,37 @@ function toggleReply(commentId) {
   replyTargetId.value = replyTargetId.value === commentId ? null : commentId;
   replyDraft.value = '';
   replyError.value = '';
+
+  if (replyTargetId.value === null) {
+    return;
+  }
+
+  // 답글 칸은 지금 막 만들어져서 아직 화면에 없다. 그려진 뒤에 커서를 옮긴다.
+  // v-for 안이라 ref 는 배열로 들어오는데, 열려 있는 답글 폼은 언제나 하나뿐이다
+  nextTick(() => {
+    const input = Array.isArray(replyInput.value) ? replyInput.value[0] : replyInput.value;
+
+    input?.focus();
+  });
 }
+
+/**
+ * 본문의 "댓글 N" 에서 부른다. 댓글 칸으로 데려오고 커서까지 옮긴다.
+ *
+ * 로그인하지 않았으면 쓰는 칸이 없다. 그때는 로그인 안내까지만 데려간다 —
+ * 아무 일도 안 일어나면 버튼이 고장 난 것처럼 보인다.
+ *
+ * 스크롤을 먼저 하고 포커스는 preventScroll 로 준다. 반대로 하면 focus 가 즉시
+ * 튕겨 올린 뒤 부드러운 스크롤이 덮어써서 화면이 두 번 움직인다.
+ */
+function focusCommentInput() {
+  const target = commentInput.value ?? signinBox.value;
+
+  target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  commentInput.value?.focus({ preventScroll: true });
+}
+
+defineExpose({ focusCommentInput });
 
 async function submitComment() {
   const content = draft.value.trim();
@@ -310,7 +345,7 @@ watch(
 
     <!-- 로그인하지 않았으면 쓰는 칸 대신 로그인으로 보낸다.
          빈 칸을 보여 주고 누른 뒤에 막으면 쓴 글이 날아간다 -->
-    <div v-if="!isSignedIn" class="comment-signin">
+    <div v-if="!isSignedIn" ref="signinBox" class="comment-signin">
       <p class="comment-signin__text">댓글을 남기려면 로그인이 필요합니다.</p>
       <button class="post-button post-button--accent" type="button" @click="goToLogin">
         로그인하고 댓글 쓰기
@@ -332,6 +367,7 @@ watch(
         <span v-else class="comment-avatar">{{ avatarInitial(member?.nickname) }}</span>
         <div class="comment-form__content">
           <textarea
+            ref="commentInput"
             v-model="draft"
             class="comment-form__input"
             :placeholder="commentPlaceholder"
@@ -364,7 +400,12 @@ watch(
     </p>
 
     <ul class="comment-list">
-      <li v-for="comment in items" :key="comment.id" class="comment">
+      <li
+        v-for="comment in items"
+        :id="`comment-${comment.id}`"
+        :key="comment.id"
+        class="comment"
+      >
         <div class="comment__main">
           <span
             class="comment-avatar"
@@ -421,7 +462,12 @@ watch(
         </div>
 
         <div v-if="comment.replies.length || replyTargetId === comment.id" class="comment__replies">
-          <div v-for="reply in comment.replies" :key="reply.id" class="reply">
+          <div
+            v-for="reply in comment.replies"
+            :id="`comment-${reply.id}`"
+            :key="reply.id"
+            class="reply"
+          >
             <span
               class="comment-avatar"
               :class="{ 'comment-avatar--author': reply.isAuthor }"
@@ -467,6 +513,7 @@ watch(
           >
             <p class="reply-form__target">{{ comment.author }} 님에게 답글 쓰는 중</p>
             <textarea
+              ref="replyInput"
               v-model="replyDraft"
               class="reply-form__input"
               :maxlength="commentMaxLength"

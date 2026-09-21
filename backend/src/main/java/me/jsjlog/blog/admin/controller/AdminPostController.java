@@ -9,6 +9,8 @@ import me.jsjlog.blog.admin.dto.AdminPostRequest;
 import me.jsjlog.blog.admin.dto.AdminPostSearchCondition;
 import me.jsjlog.blog.admin.service.AdminPostService;
 import me.jsjlog.blog.common.response.ApiResponse;
+import me.jsjlog.blog.common.security.MemberPrincipal;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -40,9 +42,14 @@ public class AdminPostController {
     }
 
     // POST /api/v1/admin/blog/posts
+    // 글쓴이를 요청에서 받지 않는다. 로그인한 사람이 곧 글쓴이다 —
+    // 받게 만들면 남의 이름으로 글을 쓸 수 있게 된다
     @PostMapping("/posts")
-    public ApiResponse<Long> createPost(@RequestBody AdminPostRequest request) {
-        return ApiResponse.ok(adminPostService.createPost(request));
+    public ApiResponse<Long> createPost(
+            @AuthenticationPrincipal MemberPrincipal principal,
+            @RequestBody AdminPostRequest request
+    ) {
+        return ApiResponse.ok(adminPostService.createPost(request, principal.getId()));
     }
 
     // PUT /api/v1/admin/blog/posts/{postId}

@@ -24,6 +24,12 @@ public final class ApiPaths {
         /** 회원 세션 조회. 로그인하지 않은 사람도 부르는 자리라 인증 없이 열어 둔다 */
         public static final String MEMBER_ME = "/api/v1/auth/me";
         public static final String MEMBER_LOGOUT = "/api/v1/auth/logout";
+        public static final String MEMBER_NICKNAME = "/api/v1/auth/me/nickname";
+        /** 알림은 하위 경로가 여럿이라 묶어서 건다. 전부 로그인이 필요하다 */
+        public static final String MEMBER_NOTIFICATIONS = "/api/v1/auth/me/notifications";
+        public static final String MEMBER_NOTIFICATIONS_ALL = "/api/v1/auth/me/notifications/**";
+        public static final String MEMBER_COMMENTS = "/api/v1/auth/me/comments";
+        public static final String MEMBER_WITHDRAW = "/api/v1/auth/withdraw";
         public static final String OAUTH_PENDING = "/api/v1/auth/oauth/pending";
         public static final String OAUTH_SIGNUP = "/api/v1/auth/oauth/signup";
         public static final String OAUTH_REACTIVATE = "/api/v1/auth/oauth/reactivate";
