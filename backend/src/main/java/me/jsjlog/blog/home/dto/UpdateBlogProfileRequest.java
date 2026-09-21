@@ -1,5 +1,7 @@
 package me.jsjlog.blog.home.dto;
 
+import java.time.LocalDate;
+
 public record UpdateBlogProfileRequest(
         Long id,
         String name,
@@ -7,7 +9,8 @@ public record UpdateBlogProfileRequest(
         String job,
         String avatarImageUrl,
         String githubUrl,
-        String email
+        String email,
+        LocalDate blogStartedAt
 ){
 
 }
