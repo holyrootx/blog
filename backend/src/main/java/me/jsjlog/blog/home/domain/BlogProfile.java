@@ -2,7 +2,6 @@ package me.jsjlog.blog.home.domain;
 
 import me.jsjlog.blog.common.domain.BaseEntity;
 
-import me.jsjlog.blog.home.dto.UpdateBlogProfileRequest;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -13,6 +12,9 @@ import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 
 @Getter
 @Entity
@@ -42,13 +44,17 @@ public class BlogProfile extends BaseEntity {
     @Column(name = "email", length = 255)
     private String email;
 
+    @Column(name = "blog_started_at")
+    private LocalDate blogStartedAt;
+
     public BlogProfile(
             String name,
             String intro,
             String job,
             String avatarImageUrl,
             String githubUrl,
-            String email
+            String email,
+            LocalDate blogStartedAt
     ) {
         this.name = name;
         this.intro = intro;
@@ -56,6 +62,7 @@ public class BlogProfile extends BaseEntity {
         this.avatarImageUrl = avatarImageUrl;
         this.githubUrl = githubUrl;
         this.email = email;
+        this.blogStartedAt = blogStartedAt;
     }
 
     public void update(
@@ -64,7 +71,8 @@ public class BlogProfile extends BaseEntity {
             String job,
             String avatarImageUrl,
             String githubUrl,
-            String email
+            String email,
+            LocalDate blogStartedAt
     ) {
         this.name = name;
         this.intro = intro;
@@ -72,6 +80,16 @@ public class BlogProfile extends BaseEntity {
         this.avatarImageUrl = avatarImageUrl;
         this.githubUrl = githubUrl;
         this.email = email;
+        this.blogStartedAt = blogStartedAt;
+    }
+
+    /** 시작한 날을 1일째로 센다. 시작일이 없으면 대시보드도 값을 표시하지 않는다. */
+    public Long daysSinceStart(LocalDate today) {
+        if (blogStartedAt == null) {
+            return null;
+        }
+
+        return ChronoUnit.DAYS.between(blogStartedAt, today) + 1;
     }
 
 }
