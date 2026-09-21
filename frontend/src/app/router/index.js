@@ -12,10 +12,12 @@ import AdminHomeSettingsPage from '../../features/admin/pages/AdminHomeSettingsP
 import AdminLoginPage from '../../features/admin/pages/AdminLoginPage.vue';
 import MemberLoginPage from '../../features/member/pages/MemberLoginPage.vue';
 import OAuthCallbackPage from '../../features/member/pages/OAuthCallbackPage.vue';
+import MemberSettingsPage from '../../features/member/pages/MemberSettingsPage.vue';
 import PrivacyPolicyPage from '../../features/legal/pages/PrivacyPolicyPage.vue';
 import TermsPage from '../../features/legal/pages/TermsPage.vue';
 import { clearAdminSession, ensureAdminSession } from '../../features/admin/data/adminAuthStore';
 import { onUnauthorized } from '../../shared/api/blogApiClient';
+import { scrollToHash } from './scrollToHash';
 
 // 샌드박스(src/sandbox)는 gitignore 대상이라 없을 수 있다.
 // import.meta.glob은 매칭되는 파일이 없으면 빈 객체를 주므로 빌드가 깨지지 않는다.
@@ -25,6 +27,8 @@ const sandboxRoutes = Object.values(
 
 const router = createRouter({
   history: createWebHistory(),
+  // 해시가 있으면 그 자리로, 없으면 맨 위로. 안 주면 Vue Router 가 해시를 무시한다
+  scrollBehavior: scrollToHash,
   routes: [
     ...sandboxRoutes,
     {
@@ -59,6 +63,16 @@ const router = createRouter({
       path: '/oauth/callback',
       name: 'oauth-callback',
       component: OAuthCallbackPage,
+      meta: {
+        layout: 'public',
+      },
+    },
+    // 내 계정 설정. 로그인 확인은 화면이 직접 한다 — 앱이 뜰 때 시작한 /me 응답을
+    // 기다려야 해서, 가드에서 막으면 아직 확인 전인 사람이 로그인 화면으로 튕긴다
+    {
+      path: '/settings',
+      name: 'member-settings',
+      component: MemberSettingsPage,
       meta: {
         layout: 'public',
       },
