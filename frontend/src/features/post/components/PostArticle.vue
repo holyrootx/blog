@@ -6,6 +6,9 @@ const showInlineAds = false;
 const showTags = false;
 const showSecondaryActions = false;
 
+// 댓글 칸은 이 컴포넌트 밖에 있다. 직접 건드리지 않고 부모에게 넘긴다
+const emit = defineEmits(['focus-comments']);
+
 defineProps({
   post: {
     type: Object,
@@ -65,7 +68,11 @@ defineProps({
     </div>
 
     <div class="post-reactions">
-      <button class="post-reactions__button" type="button">댓글 {{ post.commentCount }}</button>
+      <button
+        class="post-reactions__button"
+        type="button"
+        @click="emit('focus-comments')"
+      >댓글 {{ post.commentCount }}</button>
       <div class="post-reactions__spacer"></div>
       <span v-if="showSecondaryActions" class="post-reactions__links">저장 · 링크 복사</span>
     </div>

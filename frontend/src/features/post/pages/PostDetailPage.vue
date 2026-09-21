@@ -1,5 +1,5 @@
 <script setup>
-import { reactive, watch } from 'vue';
+import { reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 
 import PostHeader from '../components/PostHeader.vue';
@@ -55,6 +55,9 @@ const EMPTY_DETAIL = {
 };
 
 const route = useRoute();
+
+// 본문의 "댓글 N" 이 댓글 칸에 커서를 옮기려면 그 컴포넌트를 잡고 있어야 한다
+const commentSection = ref(null);
 const detail = reactive({
   ...structuredClone(EMPTY_DETAIL),
   comments: { ...EMPTY_COMMENTS },
@@ -163,13 +166,18 @@ function mergeDefined(base, next) {
         <!-- 본문·댓글·관련글이 한 컬럼. 오른쪽 레일은 그 옆으로 계속 내려온다 -->
         <div class="post-shell__column">
           <PostArticle
+            @focus-comments="commentSection?.focusCommentInput()"
             :post="detail.post"
             :author="detail.author"
             :body="detail.body"
             :adjacent-posts="detail.adjacentPosts"
           />
 
-          <CommentSection :post-id="route.params.id" :comments="detail.comments" />
+          <CommentSection
+            ref="commentSection"
+            :post-id="route.params.id"
+            :comments="detail.comments"
+          />
 
           <PostRelated :posts="detail.relatedPosts" />
         </div>
