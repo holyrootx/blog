@@ -16,6 +16,34 @@ export function getCategories() {
   return getApiData('/api/v1/blog/categories');
 }
 
+/**
+ * 공개 글 목록 한 페이지.
+ *
+ * 화면은 1부터 세고 서버는 0부터 센다. 그 변환을 여기서 한 번만 한다 —
+ * 화면 곳곳에서 빼고 더하면 언젠가 한 곳을 빠뜨린다.
+ */
+export async function getPosts({ page = 1, size = 12, categoryId = null, sort = 'latest' } = {}) {
+  const params = new URLSearchParams({
+    page: String(Math.max(0, page - 1)),
+    size: String(size),
+    sort,
+  });
+
+  if (categoryId) {
+    params.set('categoryId', String(categoryId));
+  }
+
+  const result = await getApiData(`/api/v1/blog/posts?${params.toString()}`);
+
+  return {
+    items: Array.isArray(result?.items) ? result.items.map(toPostCard) : [],
+    page: (result?.page ?? 0) + 1,
+    size: result?.size ?? size,
+    totalElements: result?.totalElements ?? 0,
+    totalPages: result?.totalPages ?? 0,
+  };
+}
+
 export async function getPostDetail(postId) {
   const post = await getApiData(`/api/v1/blog/posts/${postId}`);
   return toPostDetail(post);

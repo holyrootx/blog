@@ -31,6 +31,17 @@ public class PostController {
         return ApiResponse.ok(postServicePostsForHomePage);
     }
 
+
+    /**
+     * 공개 글 목록. 대문의 "전체 보기" 와 상단 카테고리가 여기로 온다.
+     *
+     * 조회조건을 객체로 받는다 — 나중에 태그나 검색이 붙어도 메서드 시그니처가 흔들리지 않는다.
+     */
+    @GetMapping("/blog/posts")
+    public ApiResponse<PostListResponse> getPosts(PostListCondition condition) {
+        return ApiResponse.ok(postService.getPosts(condition));
+    }
+
     @GetMapping("/blog/posts/{postId}")
     public ApiResponse<PostDetailResponse> getPostDetail(
             @PathVariable Long postId,

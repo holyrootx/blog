@@ -1,5 +1,8 @@
 <script setup>
-defineProps({
+import { computed } from 'vue';
+import { RouterLink } from 'vue-router';
+
+const props = defineProps({
   title: {
     type: String,
     required: true,
@@ -8,14 +11,30 @@ defineProps({
     type: Array,
     required: true,
   },
+  /**
+   * 이 묶음을 고른 순서. 목록 화면의 sort 값과 같은 말을 쓴다.
+   *
+   * "전체 보기" 가 이걸 그대로 들고 가야 한다. 안 들고 가면 인기글에서 눌렀는데
+   * 최신순 목록이 열려서, 방금 보던 넉 장이 첫 화면에 없다.
+   */
+  sort: {
+    type: String,
+    default: 'latest',
+    validator: (value) => value === 'latest' || value === 'popular',
+  },
 });
+
+// 최신순은 목록의 기본값이라 주소에서 뺀다. /posts?sort=latest 보다 /posts 가 낫다
+const moreQuery = computed(() => (props.sort === 'popular' ? { sort: 'popular' } : {}));
 </script>
 
 <template>
   <section class="home-section" :aria-labelledby="`${title}-title`">
     <div class="home-section__header">
       <h2 :id="`${title}-title`" class="home-section__title">{{ title }}</h2>
-      <a class="home-section__more" href="/posts">전체 보기</a>
+      <RouterLink class="home-section__more" :to="{ name: 'post-list', query: moreQuery }">
+        전체 보기
+      </RouterLink>
     </div>
 
     <div class="post-grid">

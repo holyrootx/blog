@@ -31,6 +31,7 @@ const EMPTY_DETAIL = {
   categories: [],
   post: {
     id: null,
+    categoryId: null,
     category: '',
     title: '',
     excerpt: '',
@@ -179,7 +180,7 @@ function mergeDefined(base, next) {
             :comments="detail.comments"
           />
 
-          <PostRelated :posts="detail.relatedPosts" />
+          <PostRelated :posts="detail.relatedPosts" :category-id="detail.post.categoryId ?? null" />
         </div>
 
         <PostAside

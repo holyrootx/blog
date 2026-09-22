@@ -1,6 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import HomePage from '../../features/home/pages/HomePage.vue';
 import PostDetailPage from '../../features/post/pages/PostDetailPage.vue';
+import PostListPage from '../../features/post/pages/PostListPage.vue';
+import NotFoundPage from '../../features/post/pages/NotFoundPage.vue';
 import AdminLayout from '../../features/admin/components/AdminLayout.vue';
 import AdminDashboardPage from '../../features/admin/pages/AdminDashboardPage.vue';
 import AdminMenuPage from '../../features/admin/pages/AdminMenuPage.vue';
@@ -35,6 +37,16 @@ const router = createRouter({
       path: '/',
       name: 'home',
       component: HomePage,
+      meta: {
+        layout: 'public',
+      },
+    },
+    // 대문과 글 하단의 "전체 보기" 가 오는 자리.
+    // 이 라우트가 없던 동안 두 링크는 흰 화면으로 떨어졌다
+    {
+      path: '/posts',
+      name: 'post-list',
+      component: PostListPage,
       meta: {
         layout: 'public',
       },
@@ -191,6 +203,16 @@ const router = createRouter({
           },
         },
       ],
+    },
+    // 어느 라우트와도 안 맞을 때. 없으면 RouterView 가 아무것도 안 그려서
+    // 오류라는 것조차 안 보이는 흰 화면이 된다
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'not-found',
+      component: NotFoundPage,
+      meta: {
+        layout: 'public',
+      },
     },
   ],
 });

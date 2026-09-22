@@ -12,4 +12,10 @@ public interface PostRepositoryCustom {
     PostDetailResponse getPostDetail(Long postId);
     AdjacentPostResponse getAdjacentPost(Long postId);
     List<PostSummaryResponse> getRelatedPosts(Long postId, Long categoryId);
+
+    /** 공개 글 목록 한 페이지 */
+    List<PostSummaryResponse> getPublicPosts(PostListCondition condition);
+
+    /** 같은 조건의 전체 개수. 화면이 마지막 페이지를 알아야 한다 */
+    long countPublicPosts(PostListCondition condition);
 }
