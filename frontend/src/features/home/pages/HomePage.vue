@@ -98,8 +98,8 @@ function mergeDefined(base, next) {
     <main class="public-shell__main">
       <HomeHero :hero="home.hero" :profile="home.profile" />
       <HomeTopicSection :topics="home.topics" />
-      <PostSection title="인기글" :posts="home.featuredPosts" />
-      <PostSection title="최근 글" :posts="home.recentPosts" />
+      <PostSection title="인기글" sort="popular" :posts="home.featuredPosts" />
+      <PostSection title="최근 글" sort="latest" :posts="home.recentPosts" />
     </main>
     <footer class="public-footer">
       <RouterLink to="/privacy">개인정보처리방침</RouterLink>
