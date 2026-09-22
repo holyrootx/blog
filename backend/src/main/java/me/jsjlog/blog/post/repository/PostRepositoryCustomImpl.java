@@ -225,4 +225,64 @@ public class PostRepositoryCustomImpl implements PostRepositoryCustom{
         return postSummaryResponseList;
     }
 
+    /**
+     * 공개 글 목록.
+     *
+     * <p>상태 조건을 요청에서 받지 않는다. 발행됐고 발행 시각이 지난 글만 보여주는 것은
+     * 공개 화면의 규칙이라, 조회조건으로 열어 두면 주소를 고쳐 비공개 글을 꺼내 볼 수 있다.</p>
+     */
+    @Override
+    public List<PostSummaryResponse> getPublicPosts(PostListCondition condition) {
+        QPost post = QPost.post;
+
+        OrderSpecifier<?>[] order = condition.isPopular()
+                ? new OrderSpecifier<?>[]{ post.views.desc(), post.id.desc() }
+                : new OrderSpecifier<?>[]{ post.publishedAt.desc(), post.id.desc() };
+
+        return jpaQueryFactory
+                .select(Projections.constructor(
+                        PostSummaryResponse.class,
+                        post.id,
+                        post.title,
+                        post.category.id,
+                        post.category.name,
+                        post.thumbnailImageUrl,
+                        post.publishedAt,
+                        post.views
+                ))
+                .from(post)
+                .join(post.category)
+                .where(publicPostPredicate(post, condition.categoryId()))
+                .orderBy(order)
+                .offset((long) condition.pageOrDefault() * condition.sizeOrDefault())
+                .limit(condition.sizeOrDefault())
+                .fetch();
+    }
+
+    @Override
+    public long countPublicPosts(PostListCondition condition) {
+        QPost post = QPost.post;
+
+        Long total = jpaQueryFactory
+                .select(post.count())
+                .from(post)
+                .where(publicPostPredicate(post, condition.categoryId()))
+                .fetchOne();
+
+        return total == null ? 0L : total;
+    }
+
+    /** 목록과 개수가 같은 조건을 봐야 페이지 수가 맞는다. 그래서 한 곳에서 만든다 */
+    private BooleanBuilder publicPostPredicate(QPost post, Long categoryId) {
+        BooleanBuilder builder = new BooleanBuilder();
+
+        builder.and(post.status.eq(PostStatus.PUBLISHED));
+        builder.and(post.publishedAt.loe(LocalDateTime.now()));
+
+        if (categoryId != null) {
+            builder.and(post.category.id.eq(categoryId));
+        }
+
+        return builder;
+    }
 }
