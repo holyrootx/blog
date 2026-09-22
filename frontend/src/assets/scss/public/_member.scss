@@ -675,3 +675,23 @@
   color: var(--text-subtle);
   font-size: 11.5px;
 }
+
+/* 비로그인일 때 헤더에 뜨는 로그인 버튼.
+   회원 메뉴와 높이를 맞춘다 — 로그인 전후로 헤더 높이가 달라지면 안 된다 */
+.member-menu__signin {
+  height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.member-menu__signin:hover {
+  border-color: var(--accent);
+  color: var(--accent-dark);
+}
