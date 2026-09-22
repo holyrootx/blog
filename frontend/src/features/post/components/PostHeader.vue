@@ -22,10 +22,14 @@ defineProps({
     <RouterLink class="post-header__brand" :to="{ name: 'home' }">{{ title }}</RouterLink>
 
     <nav class="post-header__nav" aria-label="카테고리">
-      <!-- TODO 카테고리별 목록 화면이 없어서 아직 갈 곳이 없다 (docs/2026-09-21-public-screen-todo.md) -->
-      <a v-for="category in categories" :key="category.id" class="post-header__link" href="#">
+      <RouterLink
+        v-for="category in categories"
+        :key="category.id"
+        class="post-header__link"
+        :to="{ name: 'post-list', query: { category: String(category.id) } }"
+      >
         {{ category.name }}
-      </a>
+      </RouterLink>
 
       <span class="post-header__divider"></span>
 
