@@ -22,12 +22,21 @@ import { clearNotifications } from './notificationStore';
  */
 const member = ref(null);
 
+/**
+ * 서버에 누구인지 물어본 결과가 도착했는가.
+ *
+ * 이게 없으면 응답 전에는 member 가 null 이라 "로그인 안 함" 과 구별되지 않는다.
+ * 헤더가 그 사이에 로그인 링크를 그렸다가 닉네임으로 바꾸면 화면이 한 번 깜빡인다.
+ */
+const sessionResolved = ref(false);
+
 // 진행 중이거나 이미 끝난 세션 확인. 여러 화면이 동시에 들어와도 요청은 한 번만 나간다
 let sessionCheck = null;
 
 export function useMemberAuth() {
   return {
     member,
+    sessionResolved,
     isSignedIn: computed(() => member.value !== null),
   };
 }
@@ -42,6 +51,7 @@ export function ensureMemberSession() {
     sessionCheck = getMemberSession()
       .then(async (session) => {
         member.value = session;
+        sessionResolved.value = true;
 
         // 새로고침 뒤에도 쓰기 요청에는 CSRF 토큰이 필요하다. 로그인 세션만 복원하고
         // 토큰을 비워 두면 첫 댓글 등록이 403으로 실패한다.
@@ -54,6 +64,7 @@ export function ensureMemberSession() {
       .catch(() => {
         // 서버가 죽었어도 공개 화면은 읽을 수 있어야 한다. 로그인 안 한 것으로 본다
         member.value = null;
+        sessionResolved.value = true;
         return null;
       });
   }
@@ -129,6 +140,7 @@ export function clearMemberSession() {
 
 async function applySession(session) {
   member.value = session;
+  sessionResolved.value = true;
   sessionCheck = Promise.resolve(session);
 
   // 로그인에 성공하면 서버가 CSRF 토큰을 새로 발급한다.

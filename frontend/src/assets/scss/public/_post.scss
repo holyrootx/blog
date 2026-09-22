@@ -1309,3 +1309,181 @@
   background: var(--accent-soft);
   box-shadow: 0 0 0 8px var(--accent-soft);
 }
+
+/* ── 전체 글 목록 ─────────────────────────── */
+
+/* 폭을 따로 정하지 않는다. .public-shell__main 이 이미 헤더·푸터와 같은
+   min(1440px, 100%) 로 잡아 주는데, 여기서 다시 주면 목록만 안쪽으로 들어가
+   헤더와 선이 어긋난다. 좌우 여백은 대문 섹션(.home-section)과 같은 48px 로 맞춘다 */
+.post-list {
+  padding: 32px 48px 64px;
+  border: 1px solid var(--line);
+  border-top: 0;
+  border-radius: 0 0 var(--radius) var(--radius);
+  background: var(--surface);
+}
+
+.post-list__head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.post-list__title {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.post-list__count {
+  margin: 0;
+  color: var(--text-subtle);
+  font-size: 13px;
+}
+
+/* 분류와 정렬이 한 줄에 있다. 좁아지면 접힌다 */
+.post-list__filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 20px 0 28px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+/* 분류와 정렬을 갈라 놓는다. 둘이 붙어 있으면 같은 묶음으로 읽힌다 */
+.post-list__filter-gap {
+  flex: 1;
+  min-width: 12px;
+}
+
+.post-list__filter {
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.post-list__filter:hover {
+  border-color: var(--accent);
+  color: var(--accent-dark);
+}
+
+.post-list__filter--active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.post-list__filter--active:hover {
+  color: #fff;
+}
+
+.post-list__empty {
+  padding: 60px 0;
+  color: var(--text-subtle);
+  font-size: 14px;
+  text-align: center;
+}
+
+.post-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 40px;
+}
+
+.post-pager__button,
+.post-pager__number {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.post-pager__button:hover:not(:disabled),
+.post-pager__number:hover {
+  border-color: var(--accent);
+  color: var(--accent-dark);
+}
+
+.post-pager__button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.post-pager__number--active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.post-pager__number--active:hover {
+  color: #fff;
+}
+
+/* ── 404 ──────────────────────────────────── */
+
+.not-found {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 70vh;
+  padding: 24px;
+  text-align: center;
+}
+
+.not-found__code {
+  margin: 0;
+  color: var(--accent);
+  font-size: 56px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.not-found__title {
+  margin: 8px 0 0;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.not-found__text {
+  margin: 10px 0 0;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.not-found__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 28px;
+}
+
+.not-found__actions .post-button {
+  text-decoration: none;
+}
+
+@media (max-width: 600px) {
+  .post-list {
+    padding: 24px 20px 48px;
+  }
+
+  .post-list__filter-gap {
+    display: none;
+  }
+}

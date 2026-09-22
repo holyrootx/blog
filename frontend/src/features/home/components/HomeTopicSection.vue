@@ -11,7 +11,7 @@ defineProps({
   <section v-if="topics.length > 0" class="home-section home-topics" aria-labelledby="home-topics-title">
     <div class="home-topics__header">
       <h2 id="home-topics-title" class="home-section__title">여기서 다루는 이야기</h2>
-      <p class="home-topics__intro">이제 막 시작한 기록이라, 앞으로 이런 걸 씁니다.</p>
+      <p class="home-topics__intro">앞으로 이런 글을 쓸거에요.</p>
     </div>
 
     <div class="home-topic-grid">
@@ -30,7 +30,7 @@ defineProps({
 
     <div class="home-topics__note">
       <span class="home-topics__badge">쓰는 중</span>
-      <span>막힌 지점과 해결 과정을 다음의 나도 알아볼 수 있게 적어갑니다.</span>
+      <span>아직 글이 많지 않아요. 하나씩 채워가는 중이에요.</span>
     </div>
   </section>
 </template>

@@ -78,6 +78,22 @@ public class PostService {
         return post;
     }
 
+    /**
+     * 공개 글 목록.
+     *
+     * 목록과 개수를 따로 조회한다. 한 방에 세려면 전체를 읽어야 하는데, 화면은 한 페이지만 쓴다.
+     */
+    @Transactional(readOnly = true)
+    public PostListResponse getPosts(PostListCondition condition) {
+        return PostListResponse.of(
+                postRepository.getPublicPosts(condition),
+                condition.pageOrDefault(),
+                condition.sizeOrDefault(),
+                postRepository.countPublicPosts(condition)
+        );
+    }
+
+    /** 조회수를 올리므로 쓰기 트랜잭션이 필요하다 */
     @Transactional
     public PostDetailResponse getPostDetail(Long postId, boolean increaseViewCount) {
 

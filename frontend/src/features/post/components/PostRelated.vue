@@ -1,17 +1,34 @@
 <script setup>
-defineProps({
+import { computed } from 'vue';
+import { RouterLink } from 'vue-router';
+
+const props = defineProps({
   posts: {
     type: Array,
     required: true,
   },
+  /**
+   * 여기 걸린 글들의 분류. "전체 보기" 가 그대로 들고 간다.
+   *
+   * 같은 분류의 글을 보여 주고서 전체 목록으로 보내면, 누른 사람이 기대한 "이런 글 더"
+   * 가 아니라 아무 글이나 나온다. 대문 인기글의 전체 보기와 같은 규칙이다.
+   */
+  categoryId: {
+    type: Number,
+    default: null,
+  },
 });
+
+const moreQuery = computed(() => (props.categoryId ? { category: String(props.categoryId) } : {}));
 </script>
 
 <template>
   <section v-if="posts.length > 0" class="post-related" aria-labelledby="post-related-title">
     <div class="post-related__header">
       <h2 id="post-related-title" class="post-related__title">함께 읽으면 좋은 글</h2>
-      <a class="post-related__more" href="/posts">전체 보기 →</a>
+      <RouterLink class="post-related__more" :to="{ name: 'post-list', query: moreQuery }">
+        전체 보기 →
+      </RouterLink>
     </div>
 
     <div class="post-related__grid">

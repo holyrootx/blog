@@ -3,23 +3,26 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 
 import { signOutMember, useMemberAuth } from '../data/memberAuthStore';
+import { rememberReturnPath } from '../data/memberReturnPath';
 
 /**
  * 헤더의 회원 영역. 대문과 글보기가 같이 쓴다.
  *
- * <p><b>로그인하지 않았으면 아무것도 그리지 않는다.</b> 이 블로그에서 로그인의 쓸모는
- * 댓글뿐이고, 그 안내는 댓글칸이 제 자리에서 하고 있다. 헤더에 로그인 버튼을 두면
- * 눌러도 늘어나는 것이 없어 "왜 가입을 시키지" 라는 인상만 남는다.</p>
+ * <p>상태에 따라 셋으로 갈린다.</p>
  *
- * <p>덤으로 깜빡임도 없어진다. 앱이 뜰 때 {@code /me} 를 기다리지 않고 부르는데,
- * 로그인 전 모습과 확인 중 모습이 똑같아서 응답이 와도 화면이 바뀌지 않는다.</p>
+ * <pre>
+ * 확인 중     아무것도 안 그림
+ * 비로그인    [로그인]
+ * 로그인      (아바타) 닉네임 ▾
+ * </pre>
  *
- * <p>반대로 로그인했으면 반드시 보여야 한다. 지금까지 로그아웃이 댓글칸에만 있어서
- * 대문에서는 나갈 방법이 없었다.</p>
+ * <p>확인 중에 비워 두는 이유는 깜빡임 때문이다. 앱이 뜰 때 {@code /me} 를 기다리지 않고
+ * 부르는데, 그 사이를 "비로그인" 으로 그리면 로그인한 사람에게 [로그인] 이 한 번 보였다가
+ * 닉네임으로 바뀐다.</p>
  */
 const route = useRoute();
 const router = useRouter();
-const { member, isSignedIn } = useMemberAuth();
+const { member, sessionResolved, isSignedIn } = useMemberAuth();
 
 const open = ref(false);
 const root = ref(null);
@@ -55,6 +58,13 @@ watch(() => route.fullPath, () => {
   open.value = false;
 });
 
+function goToLogin() {
+  // 로그인은 제공자 화면까지 다녀오는 길이라 라우터 상태가 남지 않는다.
+  // 보던 자리를 적어 두지 않으면 돌아왔을 때 홈으로 떨어진다
+  rememberReturnPath(route.fullPath);
+  router.push({ name: 'member-login' });
+}
+
 async function signOut() {
   open.value = false;
 
@@ -68,7 +78,14 @@ async function signOut() {
 </script>
 
 <template>
-  <div v-if="isSignedIn" ref="root" class="member-menu">
+  <button
+    v-if="sessionResolved && !isSignedIn"
+    class="member-menu__signin"
+    type="button"
+    @click="goToLogin"
+  >로그인</button>
+
+  <div v-else-if="isSignedIn" ref="root" class="member-menu">
     <button
       class="member-menu__trigger"
       type="button"
