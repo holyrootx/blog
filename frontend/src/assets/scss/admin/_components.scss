@@ -222,6 +222,80 @@
   padding-top: 22px;
 }
 
+.admin-settings__topic-copy,
+.admin-settings__topic-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.admin-settings__topic-list {
+  margin-top: 26px;
+  border-top: 1px solid var(--admin-card-line);
+}
+
+.admin-settings__topic-item {
+  padding: 22px 0 26px;
+  border-bottom: 1px solid var(--admin-card-line);
+}
+
+.admin-settings__topic-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.admin-settings__topic-item-header strong {
+  color: var(--admin-title);
+  font-size: 14px;
+}
+
+.admin-settings__topic-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.admin-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--admin-card-line);
+  border-radius: var(--radius);
+  background: var(--admin-card);
+  color: var(--admin-text);
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.admin-icon-button:hover:not(:disabled) {
+  border-color: var(--admin-accent-border);
+  color: var(--admin-accent-dark);
+}
+
+.admin-icon-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.admin-field__hint {
+  color: var(--admin-meta);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.admin-settings__topic-empty {
+  padding: 28px 0;
+  border-bottom: 1px solid var(--admin-card-line);
+  color: var(--admin-meta);
+  font-size: 13px;
+  text-align: center;
+}
+
 @media (max-width: 1100px) {
   .admin-settings__columns {
     grid-template-columns: 1fr;
@@ -229,6 +303,13 @@
 
   .admin-settings__media {
     max-width: 560px;
+  }
+}
+
+@media (max-width: 760px) {
+  .admin-settings__topic-copy,
+  .admin-settings__topic-fields {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -711,6 +792,38 @@
 .admin-badge--danger {
   background: var(--admin-danger-soft);
   color: var(--admin-danger);
+}
+
+/* ── 회원 관리 ─────────────────────────────── */
+
+.admin-member__identity,
+.admin-member__confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.admin-member__identity strong,
+.admin-member__confirm strong {
+  color: var(--admin-text-strong);
+}
+
+.admin-member__identity small,
+.admin-member__confirm span {
+  color: var(--admin-text-muted);
+  font-size: 12px;
+}
+
+.admin-member__actions {
+  display: inline-flex;
+  justify-content: flex-end;
+}
+
+.admin-member__confirm {
+  padding: 12px 14px;
+  border: 1px solid var(--admin-card-line);
+  border-radius: 8px;
+  background: var(--admin-surface-hover);
 }
 
 /* ── 그룹·항목 트리 ────────────────────────── */

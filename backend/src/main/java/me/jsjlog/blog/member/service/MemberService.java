@@ -36,7 +36,7 @@ public class MemberService {
 
     @Transactional
     public Member changeNickname(Long memberId, String nickname) {
-        Member member = requiredMember(memberId);
+        Member member = requiredActiveMember(memberId);
 
         member.changeNickname(nickname.trim());
 
@@ -60,6 +60,10 @@ public class MemberService {
             throw new BlogException(ErrorCode.MEMBER_ADMIN_CANNOT_WITHDRAW);
         }
 
+        if (!member.getStatus().isActive()) {
+            throw new BlogException(ErrorCode.FORBIDDEN);
+        }
+
         member.withdraw();
     }
 
@@ -76,5 +80,15 @@ public class MemberService {
         return memberRepository
                 .findById(memberId)
                 .orElseThrow(() -> new BlogException(ErrorCode.MEMBER_NOT_FOUND));
+    }
+
+    private Member requiredActiveMember(Long memberId) {
+        Member member = requiredMember(memberId);
+
+        if (!member.getStatus().isActive()) {
+            throw new BlogException(ErrorCode.FORBIDDEN);
+        }
+
+        return member;
     }
 }
