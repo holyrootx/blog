@@ -50,13 +50,25 @@
   gap: 8px;
 }
 
+
+/* 가운데 정렬을 명시한다. 단추마다 display 가 다르면(하나는 inline-block, 하나는
+   inline-flex) 글자의 기준선이 달라져서 한 줄에 섰을 때 위아래로 어긋난다 */
 .blog-header__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 56px;
   min-height: 36px;
   border: 1px solid transparent;
   border-radius: 999px;
   background: transparent;
   cursor: pointer;
+}
+
+/* 그림만 든 단추. 글자 단추의 min-width(56px) 를 그대로 두면 돋보기 하나가
+   글자 두 자와 같은 폭을 차지해 허전해 보인다 */
+.blog-header__button--icon {
+  min-width: 40px;
 }
 
 .blog-header__button:hover,
