@@ -12,13 +12,13 @@ public class PostViewService {
 
     private final PostService postService;
 
-    public PostDetailResponse getPostDetail(Long postId, HttpSession session) {
+    public PostDetailResponse getPostDetail(Long postId, HttpSession session, Long memberId) {
         PostViewHistory history = getOrCreateHistory(session);
 
         // 같은 세션에서 동시에 같은 글을 요청해도 한 요청만 증가시키도록 이력 객체를 잠근다.
         synchronized (history) {
             boolean firstView = !history.hasViewed(postId);
-            PostDetailResponse detail = postService.getPostDetail(postId, firstView);
+            PostDetailResponse detail = postService.getPostDetail(postId, firstView, memberId);
 
             // 상세 조회 트랜잭션이 성공한 뒤에만 기록한다. 실패한 요청은 다음 조회를 막지 않는다.
             if (firstView) {

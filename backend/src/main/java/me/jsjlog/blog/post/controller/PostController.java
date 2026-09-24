@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import me.jsjlog.blog.common.response.ApiResponse;
 import me.jsjlog.blog.common.security.MemberPrincipal;
+import me.jsjlog.blog.post.domain.PostReactionType;
 import me.jsjlog.blog.post.dto.*;
 import me.jsjlog.blog.post.service.PostService;
 import me.jsjlog.blog.post.service.PostViewService;
@@ -63,10 +64,34 @@ public class PostController {
     @GetMapping("/blog/posts/{postId}")
     public ApiResponse<PostDetailResponse> getPostDetail(
             @PathVariable Long postId,
-            HttpSession session
+            HttpSession session,
+            @AuthenticationPrincipal MemberPrincipal principal
     ) {
-        PostDetailResponse postDetail = postViewService.getPostDetail(postId, session);
+        Long memberId = principal == null ? null : principal.getId();
+        PostDetailResponse postDetail = postViewService.getPostDetail(postId, session, memberId);
         return ApiResponse.ok(postDetail);
+    }
+
+    @PutMapping("/blog/posts/{postId}/reaction")
+    public ApiResponse<PostReactionResponse> setReaction(
+            @PathVariable Long postId,
+            @RequestBody PostReactionRequest request,
+            @AuthenticationPrincipal MemberPrincipal principal
+    ) {
+        return ApiResponse.ok(postService.setReaction(
+                postId,
+                request == null ? null : request.type(),
+                principalId(principal)
+        ));
+    }
+
+    @DeleteMapping("/blog/posts/{postId}/reaction")
+    public ApiResponse<PostReactionResponse> removeReaction(
+            @PathVariable Long postId,
+            @RequestParam PostReactionType type,
+            @AuthenticationPrincipal MemberPrincipal principal
+    ) {
+        return ApiResponse.ok(postService.removeReaction(postId, type, principalId(principal)));
     }
 
     @GetMapping("/blog/posts/{postId}/related")
@@ -92,6 +117,10 @@ public class PostController {
         Long memberId = principal == null ? null : principal.getId();
         CommentListResponse comments = postService.getCommentInPostDetail(postId, cursor, size, memberId);
         return ApiResponse.ok(comments);
+    }
+
+    private Long principalId(MemberPrincipal principal) {
+        return principal == null ? null : principal.getId();
     }
 
 

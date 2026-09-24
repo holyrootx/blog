@@ -66,4 +66,12 @@ public final class ApiPaths {
         private Comment() {
         }
     }
+
+    public static final class Post {
+
+        public static final String REACTION = "/api/v1/blog/posts/*/reaction";
+
+        private Post() {
+        }
+    }
 }

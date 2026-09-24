@@ -19,6 +19,7 @@ import me.jsjlog.blog.post.repository.CategoryRepository;
 import me.jsjlog.blog.post.repository.CommentReactionRepository;
 import me.jsjlog.blog.post.repository.CommentRepository;
 import me.jsjlog.blog.post.repository.PostRepository;
+import me.jsjlog.blog.post.repository.PostReactionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -44,6 +45,7 @@ public class AdminPostService {
     private final PostRepository postRepository;
     private final CommentRepository commentRepository;
     private final CommentReactionRepository commentReactionRepository;
+    private final PostReactionRepository postReactionRepository;
     private final CategoryRepository categoryRepository;
     private final MemberRepository memberRepository;
 
@@ -272,6 +274,7 @@ public class AdminPostService {
         Post post = findPost(postId);
 
         commentReactionRepository.deleteByPostId(postId);
+        postReactionRepository.deleteByPostId(postId);
         commentRepository.deleteByPostId(postId);
         postRepository.delete(post);
     }
