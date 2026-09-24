@@ -42,6 +42,24 @@ public class PostController {
         return ApiResponse.ok(postService.getPosts(condition));
     }
 
+    /**
+     * 검색창 아래에 바로 띄울 글 몇 건.
+     *
+     * 목록({@code /blog/posts?q=})과 따로 둔 이유는 두 가지다. 타자마다 불리므로 개수 세기와
+     * 페이지 계산을 안 하고, 검색 기록도 여기서는 남기지 않는다 — 덜 친 말까지 다 쌓이면
+     * 나중에 인기 검색어를 뽑을 수 없다.
+     *
+     * 이 경로는 {@code /blog/posts/{postId}} 보다 먼저 잡힌다. 스프링이 변수 자리보다
+     * 글자 그대로인 경로를 먼저 보기 때문이다.
+     */
+    @GetMapping("/blog/posts/suggest")
+    public ApiResponse<List<PostSuggestResponse>> getPostSuggestions(
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) Integer size
+    ) {
+        return ApiResponse.ok(postService.getPostSuggestions(q, size));
+    }
+
     @GetMapping("/blog/posts/{postId}")
     public ApiResponse<PostDetailResponse> getPostDetail(
             @PathVariable Long postId,
