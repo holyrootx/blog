@@ -17,6 +17,10 @@ export function getHomeTopics() {
   return getApiData('/api/v1/blog/home/topics');
 }
 
+export function getHomeTopicSection() {
+  return getApiData('/api/v1/blog/home/topic-section');
+}
+
 export async function getHomePosts(sort = 'latest', size = DEFAULT_HOME_POST_SIZE) {
   const searchParams = new URLSearchParams({
     sort,

@@ -184,6 +184,10 @@ public class Member extends BaseEntity {
         this.status = MemberStatus.SUSPENDED;
     }
 
+    public void unsuspend() {
+        this.status = MemberStatus.ACTIVE;
+    }
+
     public boolean isAdmin() {
         return role.isAdmin();
     }

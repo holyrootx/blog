@@ -45,6 +45,37 @@ export function updateAdminHomePageHero(request) {
   });
 }
 
+export async function getAdminHomePageTopicSection() {
+  const section = await getApiData(`${PUBLIC_BLOG_API_BASE}/home/topic-section`);
+
+  return {
+    id: section?.id ?? 1,
+    title: section?.title ?? '',
+    intro: section?.intro ?? '',
+    noteBadge: section?.noteBadge ?? '',
+    note: section?.note ?? '',
+  };
+}
+
+export async function getAdminHomePageTopics() {
+  const topics = await getApiData(`${PUBLIC_BLOG_API_BASE}/home/topics`);
+
+  return Array.isArray(topics) ? topics.map((topic) => ({
+    id: topic.id ?? null,
+    label: topic.label ?? '',
+    title: topic.title ?? '',
+    description: topic.description ?? '',
+    keywords: Array.isArray(topic.keywords) ? topic.keywords : [],
+  })) : [];
+}
+
+export function updateAdminHomePageTopics(request) {
+  return sendApiData(`${ADMIN_BLOG_API_BASE}/home/topics`, {
+    method: 'PUT',
+    body: request,
+  });
+}
+
 export async function getAdminDashboard() {
   const dashboard = await getApiData(`${ADMIN_BLOG_API_BASE}/dashboard`);
   return toAdminDashboard(dashboard);
@@ -185,6 +216,44 @@ export async function getAdminComments(condition = {}) {
     size: toNumber(result?.size),
     totalElements: toNumber(result?.totalElements),
     totalPages: toNumber(result?.totalPages),
+  };
+}
+
+export async function getAdminMembers(condition = {}) {
+  const result = await getApiData(withQuery(`${ADMIN_BLOG_API_BASE}/members`, condition));
+
+  return {
+    items: Array.isArray(result?.items) ? result.items.map(toAdminMember) : [],
+    statusCounts: {
+      all: toNumber(result?.statusCounts?.all),
+      active: toNumber(result?.statusCounts?.active),
+      suspended: toNumber(result?.statusCounts?.suspended),
+      withdrawn: toNumber(result?.statusCounts?.withdrawn),
+    },
+    page: toNumber(result?.page),
+    size: toNumber(result?.size),
+    totalElements: toNumber(result?.totalElements),
+    totalPages: toNumber(result?.totalPages),
+  };
+}
+
+export function suspendAdminMember(memberId) {
+  return sendApiData(`${ADMIN_BLOG_API_BASE}/members/${memberId}/suspend`, { method: 'POST' });
+}
+
+export function unsuspendAdminMember(memberId) {
+  return sendApiData(`${ADMIN_BLOG_API_BASE}/members/${memberId}/unsuspend`, { method: 'POST' });
+}
+
+function toAdminMember(member) {
+  return {
+    id: member.id,
+    nickname: member.nickname ?? '이름 없는 회원',
+    email: member.email ?? '',
+    provider: member.provider ?? '',
+    status: member.status ?? 'ACTIVE',
+    commentCount: toNumber(member.commentCount),
+    createdAt: member.createdAt ?? null,
   };
 }
 

@@ -4,8 +4,11 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import {
   getAdminBlogProfile,
   getAdminHomePageHero,
+  getAdminHomePageTopicSection,
+  getAdminHomePageTopics,
   updateAdminBlogProfile,
   updateAdminHomePageHero,
+  updateAdminHomePageTopics,
   uploadAdminImage,
 } from '../api/adminApi';
 import AdminPageHeader from '../components/AdminPageHeader.vue';
@@ -30,8 +33,21 @@ const EMPTY_HERO = {
   heroImageUrl: '',
 };
 
+const EMPTY_TOPIC_SECTION = {
+  id: 1,
+  title: '',
+  intro: '',
+  noteBadge: '',
+  note: '',
+};
+
+const MAX_TOPIC_COUNT = 6;
+
 const profile = reactive({ ...EMPTY_PROFILE });
 const hero = reactive({ ...EMPTY_HERO });
+const topicSection = reactive({ ...EMPTY_TOPIC_SECTION });
+const topics = ref([]);
+let topicKeySequence = 0;
 
 const loading = ref(true);
 const saving = ref(false);
@@ -49,6 +65,7 @@ const heroInput = ref(null);
 const currentSnapshot = computed(() => JSON.stringify({
   profile: profileRequest(),
   hero: heroRequest(),
+  topicSettings: topicSettingsRequest(),
 }));
 
 const hasChanges = computed(() => savedSnapshot.value !== ''
@@ -84,19 +101,64 @@ function heroRequest() {
   };
 }
 
+function topicSettingsRequest() {
+  return {
+    sectionId: topicSection.id,
+    title: topicSection.title.trim(),
+    intro: topicSection.intro.trim(),
+    noteBadge: topicSection.noteBadge.trim(),
+    note: topicSection.note.trim(),
+    topics: topics.value.map((topic) => ({
+      id: topic.id,
+      label: topic.label.trim(),
+      title: topic.title.trim(),
+      description: topic.description.trim(),
+      keywords: parseKeywords(topic.keywordsText),
+    })),
+  };
+}
+
+function parseKeywords(value) {
+  return [...new Set(value
+    .split(',')
+    .map((keyword) => keyword.trim())
+    .filter(Boolean))];
+}
+
+function toEditableTopic(topic = {}) {
+  topicKeySequence += 1;
+
+  return {
+    key: topic.id ? `topic-${topic.id}` : `new-topic-${topicKeySequence}`,
+    id: topic.id ?? null,
+    label: topic.label ?? '',
+    title: topic.title ?? '',
+    description: topic.description ?? '',
+    keywordsText: Array.isArray(topic.keywords) ? topic.keywords.join(', ') : '',
+  };
+}
+
+function replaceTopics(nextTopics) {
+  topics.value = nextTopics.map(toEditableTopic);
+}
+
 async function loadSettings() {
   loading.value = true;
   loadError.value = '';
   formError.value = '';
 
   try {
-    const [profileResult, heroResult] = await Promise.all([
+    const [profileResult, heroResult, topicSectionResult, topicsResult] = await Promise.all([
       getAdminBlogProfile(),
       getAdminHomePageHero(),
+      getAdminHomePageTopicSection(),
+      getAdminHomePageTopics(),
     ]);
 
     Object.assign(profile, EMPTY_PROFILE, profileResult);
     Object.assign(hero, EMPTY_HERO, heroResult);
+    Object.assign(topicSection, EMPTY_TOPIC_SECTION, topicSectionResult);
+    replaceTopics(topicsResult);
     savedSnapshot.value = currentSnapshot.value;
   } catch (error) {
     console.error(error);
@@ -113,6 +175,26 @@ function validate() {
 
   if (!hero.subTitle.trim() || !hero.title.trim() || !hero.intro.trim()) {
     return '대문 소제목, 제목과 소개를 입력해 주세요.';
+  }
+
+  if (!topicSection.title.trim()
+    || !topicSection.intro.trim()
+    || !topicSection.noteBadge.trim()
+    || !topicSection.note.trim()) {
+    return '이야기 소개 문구를 모두 입력해 주세요.';
+  }
+
+  const incompleteTopic = topics.value.find((topic) => !topic.label.trim()
+    || !topic.title.trim()
+    || !topic.description.trim());
+
+  if (incompleteTopic) {
+    return '각 이야기의 분류, 제목과 설명을 모두 입력해 주세요.';
+  }
+
+  const tooManyKeywords = topics.value.some((topic) => parseKeywords(topic.keywordsText).length > 6);
+  if (tooManyKeywords) {
+    return '이야기별 키워드는 최대 6개까지 입력할 수 있습니다.';
   }
 
   if (profile.blogStartedAt && profile.blogStartedAt > localToday()) {
@@ -145,11 +227,17 @@ async function saveSettings() {
   saving.value = true;
 
   try {
-    await updateAdminBlogProfile(profileRequest());
-    await updateAdminHomePageHero(heroRequest());
+    const [, , topicResult] = await Promise.all([
+      updateAdminBlogProfile(profileRequest()),
+      updateAdminHomePageHero(heroRequest()),
+      updateAdminHomePageTopics(topicSettingsRequest()),
+    ]);
+
+    Object.assign(topicSection, EMPTY_TOPIC_SECTION, topicResult?.section);
+    replaceTopics(Array.isArray(topicResult?.topics) ? topicResult.topics : []);
 
     savedSnapshot.value = currentSnapshot.value;
-    notifySuccess('대문과 프로필을 저장했습니다.');
+    notifySuccess('대문 설정을 저장했습니다.');
   } catch (error) {
     console.error(error);
     formError.value = error.message || '설정을 저장하지 못했습니다.';
@@ -207,6 +295,30 @@ function removeAvatar() {
 function removeHeroImage() {
   hero.heroImageUrl = '';
   heroUploadError.value = '';
+}
+
+function addTopic() {
+  if (topics.value.length >= MAX_TOPIC_COUNT) {
+    formError.value = `이야기는 최대 ${MAX_TOPIC_COUNT}개까지 등록할 수 있습니다.`;
+    return;
+  }
+
+  formError.value = '';
+  topics.value.push(toEditableTopic());
+}
+
+function removeTopic(index) {
+  topics.value.splice(index, 1);
+}
+
+function moveTopic(index, offset) {
+  const nextIndex = index + offset;
+  if (nextIndex < 0 || nextIndex >= topics.value.length) {
+    return;
+  }
+
+  const [topic] = topics.value.splice(index, 1);
+  topics.value.splice(nextIndex, 0, topic);
 }
 
 onMounted(loadSettings);
@@ -316,6 +428,164 @@ onMounted(loadSettings);
             />
             <p v-if="heroUploadError" class="admin-settings__field-error">{{ heroUploadError }}</p>
           </div>
+        </div>
+      </section>
+
+      <section class="admin-settings__section">
+        <header class="admin-settings__section-header">
+          <div>
+            <span>HOME TOPICS</span>
+            <h2>이야기 소개</h2>
+          </div>
+          <button
+            class="admin-button"
+            type="button"
+            :disabled="busy || topics.length >= MAX_TOPIC_COUNT"
+            @click="addTopic"
+          >
+            항목 추가
+          </button>
+        </header>
+
+        <div class="admin-settings__topic-copy">
+          <label class="admin-field">
+            <span class="admin-field__label">영역 제목</span>
+            <input
+              v-model="topicSection.title"
+              class="admin-field__input"
+              type="text"
+              maxlength="100"
+              required
+            />
+          </label>
+
+          <label class="admin-field">
+            <span class="admin-field__label">영역 소개</span>
+            <input
+              v-model="topicSection.intro"
+              class="admin-field__input"
+              type="text"
+              maxlength="255"
+              required
+            />
+          </label>
+
+          <label class="admin-field">
+            <span class="admin-field__label">하단 배지</span>
+            <input
+              v-model="topicSection.noteBadge"
+              class="admin-field__input"
+              type="text"
+              maxlength="50"
+              required
+            />
+          </label>
+
+          <label class="admin-field">
+            <span class="admin-field__label">하단 안내</span>
+            <input
+              v-model="topicSection.note"
+              class="admin-field__input"
+              type="text"
+              maxlength="255"
+              required
+            />
+          </label>
+        </div>
+
+        <div class="admin-settings__topic-list">
+          <div
+            v-for="(topic, index) in topics"
+            :key="topic.key"
+            class="admin-settings__topic-item"
+          >
+            <div class="admin-settings__topic-item-header">
+              <strong>이야기 {{ index + 1 }}</strong>
+              <div class="admin-settings__topic-actions">
+                <button
+                  class="admin-icon-button"
+                  type="button"
+                  title="위로 이동"
+                  aria-label="위로 이동"
+                  :disabled="busy || index === 0"
+                  @click="moveTopic(index, -1)"
+                >
+                  ↑
+                </button>
+                <button
+                  class="admin-icon-button"
+                  type="button"
+                  title="아래로 이동"
+                  aria-label="아래로 이동"
+                  :disabled="busy || index === topics.length - 1"
+                  @click="moveTopic(index, 1)"
+                >
+                  ↓
+                </button>
+                <button
+                  class="admin-button admin-button--danger admin-button--small"
+                  type="button"
+                  :disabled="busy"
+                  @click="removeTopic(index)"
+                >
+                  삭제
+                </button>
+              </div>
+            </div>
+
+            <div class="admin-settings__topic-fields">
+              <label class="admin-field">
+                <span class="admin-field__label">분류</span>
+                <input
+                  v-model="topic.label"
+                  class="admin-field__input"
+                  type="text"
+                  maxlength="50"
+                  placeholder="개발"
+                  required
+                />
+              </label>
+
+              <label class="admin-field">
+                <span class="admin-field__label">제목</span>
+                <input
+                  v-model="topic.title"
+                  class="admin-field__input"
+                  type="text"
+                  maxlength="100"
+                  placeholder="만들면서 배운 것"
+                  required
+                />
+              </label>
+
+              <label class="admin-field admin-settings__wide-field">
+                <span class="admin-field__label">설명</span>
+                <textarea
+                  v-model="topic.description"
+                  class="admin-field__textarea"
+                  rows="3"
+                  maxlength="500"
+                  required
+                ></textarea>
+              </label>
+
+              <label class="admin-field admin-settings__wide-field">
+                <span class="admin-field__label">키워드</span>
+                <input
+                  v-model="topic.keywordsText"
+                  class="admin-field__input"
+                  type="text"
+                  maxlength="255"
+                  placeholder="사이드 프로젝트, 삽질 기록"
+                />
+                <span class="admin-field__hint">쉼표로 구분하며 최대 6개까지 표시됩니다.</span>
+              </label>
+            </div>
+          </div>
+
+          <p v-if="topics.length === 0" class="admin-settings__topic-empty">
+            공개할 이야기가 없습니다. 항목을 추가하면 대문에 다시 표시됩니다.
+          </p>
         </div>
       </section>
 

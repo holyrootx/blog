@@ -4,10 +4,15 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import me.jsjlog.blog.common.exception.BlogException;
 import me.jsjlog.blog.common.exception.ErrorCode;
+import me.jsjlog.blog.member.domain.Member;
+import me.jsjlog.blog.member.repository.MemberRepository;
 import me.jsjlog.blog.post.domain.Post;
+import me.jsjlog.blog.post.domain.PostReaction;
+import me.jsjlog.blog.post.domain.PostReactionType;
 import me.jsjlog.blog.post.domain.PostStatus;
 import me.jsjlog.blog.post.dto.*;
 import me.jsjlog.blog.post.repository.CommentRepository;
+import me.jsjlog.blog.post.repository.PostReactionRepository;
 import me.jsjlog.blog.post.repository.PostRepository;
 import me.jsjlog.blog.search.service.SearchLogService;
 import org.springframework.stereotype.Service;
@@ -30,6 +35,8 @@ public class PostService {
 
     private final PostRepository postRepository;
     private final CommentRepository commentRepository;
+    private final PostReactionRepository postReactionRepository;
+    private final MemberRepository memberRepository;
     private final SearchLogService searchLogService;
 
     public List<PostSummaryResponse> getLatestPostsForHomePage(){
@@ -135,7 +142,7 @@ public class PostService {
 
     /** 조회수를 올리므로 쓰기 트랜잭션이 필요하다 */
     @Transactional
-    public PostDetailResponse getPostDetail(Long postId, boolean increaseViewCount) {
+    public PostDetailResponse getPostDetail(Long postId, boolean increaseViewCount, Long memberId) {
 
         findReadablePost(postId);
 
@@ -146,7 +153,80 @@ public class PostService {
             }
         }
 
-        return postRepository.getPostDetail(postId);
+        return postRepository
+                .getPostDetail(postId)
+                .withReactions(reactionResponse(postId, memberId));
+    }
+
+    @Transactional
+    public PostReactionResponse setReaction(
+            Long postId,
+            PostReactionType type,
+            Long memberId
+    ) {
+        if (type == null) {
+            throw new BlogException(ErrorCode.POST_REACTION_REQUIRED);
+        }
+
+        Post post = findReadablePost(postId);
+        Member member = findActiveMember(memberId);
+
+        postReactionRepository
+                .findByPostIdAndMemberIdAndType(postId, memberId, type)
+                .orElseGet(() -> postReactionRepository.save(new PostReaction(post, member, type)));
+
+        return reactionResponse(postId, memberId);
+    }
+
+    @Transactional
+    public PostReactionResponse removeReaction(
+            Long postId,
+            PostReactionType type,
+            Long memberId
+    ) {
+        if (type == null) {
+            throw new BlogException(ErrorCode.POST_REACTION_REQUIRED);
+        }
+
+        findReadablePost(postId);
+        findActiveMember(memberId);
+
+        postReactionRepository.findByPostIdAndMemberIdAndType(postId, memberId, type)
+                .ifPresent(postReactionRepository::delete);
+
+        return reactionResponse(postId, memberId);
+    }
+
+    private PostReactionResponse reactionResponse(Long postId, Long memberId) {
+        var myReactions = memberId == null
+                ? java.util.Set.<PostReactionType>of()
+                : postReactionRepository
+                        .findAllByPostIdAndMemberId(postId, memberId)
+                        .stream()
+                        .map(PostReaction::getType)
+                        .collect(java.util.stream.Collectors.toSet());
+
+        return new PostReactionResponse(
+                postReactionRepository.countByPostIdAndType(postId, PostReactionType.LIKE),
+                postReactionRepository.countByPostIdAndType(postId, PostReactionType.DISLIKE),
+                myReactions.contains(PostReactionType.LIKE),
+                myReactions.contains(PostReactionType.DISLIKE)
+        );
+    }
+
+    private Member findActiveMember(Long memberId) {
+        if (memberId == null) {
+            throw new BlogException(ErrorCode.UNAUTHORIZED);
+        }
+
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new BlogException(ErrorCode.UNAUTHORIZED));
+
+        if (!member.getStatus().isActive()) {
+            throw new BlogException(ErrorCode.FORBIDDEN);
+        }
+
+        return member;
     }
 
     public AdjacentPostResponse getAdjacentPost(Long postId) {

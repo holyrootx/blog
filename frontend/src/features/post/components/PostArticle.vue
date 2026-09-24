@@ -1,17 +1,21 @@
 <script setup>
 import { onBeforeUnmount, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 
 // 마크다운 :::tip / :::warning / :::note 에 대응하는 고정 종류
 import PostBody from './PostBody.vue';
+import { removePostReaction, setPostReaction } from '../api/postApi';
+import { useMemberAuth } from '../../member/data/memberAuthStore';
+import { rememberReturnPath } from '../../member/data/memberReturnPath';
 
 const showInlineAds = false;
 const showTags = false;
 const showSecondaryActions = false;
 
 // 댓글 칸은 이 컴포넌트 밖에 있다. 직접 건드리지 않고 부모에게 넘긴다
-const emit = defineEmits(['focus-comments']);
+const emit = defineEmits(['focus-comments', 'reaction-changed']);
 
-defineProps({
+const props = defineProps({
   post: {
     type: Object,
     required: true,
@@ -29,6 +33,39 @@ defineProps({
     required: true,
   },
 });
+
+const route = useRoute();
+const router = useRouter();
+const { isSignedIn } = useMemberAuth();
+const reactionPending = ref(false);
+const reactionError = ref('');
+
+async function toggleLike() {
+  if (!isSignedIn.value) {
+    rememberReturnPath(route.fullPath);
+    await router.push({ name: 'member-login' });
+    return;
+  }
+
+  if (reactionPending.value) {
+    return;
+  }
+
+  reactionPending.value = true;
+  reactionError.value = '';
+
+  try {
+    const reaction = props.post.likedByMe
+      ? await removePostReaction(props.post.id, 'LIKE')
+      : await setPostReaction(props.post.id, 'LIKE');
+
+    emit('reaction-changed', reaction);
+  } catch (error) {
+    reactionError.value = error?.message ?? '좋아요를 저장하지 못했습니다.';
+  } finally {
+    reactionPending.value = false;
+  }
+}
 
 /**
  * 공유 — 지금 글의 주소를 클립보드에 넣는다.
@@ -102,10 +139,25 @@ onBeforeUnmount(() => clearTimeout(noticeTimer));
 
     <div class="post-reactions">
       <button
+        class="post-reactions__button post-reactions__button--like"
+        :class="{ 'post-reactions__button--accent': post.likedByMe }"
+        type="button"
+        :disabled="reactionPending"
+        :aria-pressed="post.likedByMe"
+        @click="toggleLike"
+      >
+        <span class="post-reactions__heart" aria-hidden="true">{{ post.likedByMe ? '♥' : '♡' }}</span>
+        <span>좋아요</span>
+        <strong>{{ post.likeCount }}</strong>
+      </button>
+      <button
         class="post-reactions__button"
         type="button"
         @click="emit('focus-comments')"
       >댓글 {{ post.commentCount }}</button>
+      <span v-if="reactionError" class="post-reactions__error" role="alert">
+        {{ reactionError }}
+      </span>
       <div class="post-reactions__spacer"></div>
       <!--
         공유는 글 맨 위가 아니라 여기다. 남에게 보내고 싶어지는 것은 읽기 전이 아니라

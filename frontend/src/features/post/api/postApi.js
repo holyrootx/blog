@@ -73,6 +73,21 @@ export async function getPostDetail(postId) {
   return toPostDetail(post);
 }
 
+export function setPostReaction(postId, type) {
+  return sendApiData(`/api/v1/blog/posts/${postId}/reaction`, {
+    method: 'PUT',
+    body: { type },
+  });
+}
+
+export function removePostReaction(postId, type) {
+  const searchParams = new URLSearchParams({ type });
+
+  return sendApiData(`/api/v1/blog/posts/${postId}/reaction?${searchParams.toString()}`, {
+    method: 'DELETE',
+  });
+}
+
 export async function getAdjacentPosts(postId) {
   const adjacentPosts = await getApiData(`/api/v1/blog/posts/${postId}/adjacent`);
 
@@ -173,6 +188,10 @@ function toPostDetail(post) {
       excerpt: post.excerpt,
       publishedAt: formatDate(post.publishedAt),
       views: formatNumber(post.views),
+      likeCount: Number(post.likeCount ?? 0),
+      dislikeCount: Number(post.dislikeCount ?? 0),
+      likedByMe: Boolean(post.likedByMe),
+      dislikedByMe: Boolean(post.dislikedByMe),
       coverImageUrl: post.thumbnailImageUrl || getFallbackPostImageUrl(),
       coverImageAlt: `${post.title} 대표 이미지`,
       tags: [],
