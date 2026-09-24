@@ -16,7 +16,7 @@ import AdminGridToolbar from '../components/AdminGridToolbar.vue';
 import AdminTextInput from '../components/AdminTextInput.vue';
 import AdminSelect from '../components/AdminSelect.vue';
 import AdminSegmented from '../components/AdminSegmented.vue';
-import AdminModal from '../components/AdminModal.vue';
+import BaseModal from '../../../shared/components/BaseModal.vue';
 
 // 서버의 MenuSearchCondition 과 이름·개수를 그대로 맞춘다.
 // 서버가 안 받는 조건은 화면에도 두지 않는다 (걸러지는 것처럼 보이면 더 헷갈린다)
@@ -380,7 +380,7 @@ onMounted(search);
     </div>
 
     <!-- 수정은 이 팝업에서 한다. 유형(그룹·항목)은 바꿀 수 없다 -->
-    <AdminModal
+    <BaseModal variant="admin"
       :open="modalOpen"
       :title="modalTitle"
       :description="formMode === 'create'
@@ -441,9 +441,6 @@ onMounted(search);
         >
           삭제
         </button>
-        <button class="admin-button admin-button--ghost" type="button" @click="modalOpen = false">
-          닫기
-        </button>
         <button
           class="admin-button admin-button--solid"
           type="button"
@@ -452,11 +449,14 @@ onMounted(search);
         >
           {{ saving ? '저장 중…' : '저장' }}
         </button>
-      </template>
-    </AdminModal>
+      <button class="admin-button admin-button--ghost" type="button" @click="modalOpen = false">
+          닫기
+        </button>
+        </template>
+    </BaseModal>
 
     <!-- 삭제 확인. 사이드바에서 사라지는 일이라 한 번 더 묻는다 -->
-    <AdminModal
+    <BaseModal variant="admin"
       :open="deleteConfirmOpen"
       :title="isGroupForm ? '이 그룹을 삭제할까요?' : '이 항목을 삭제할까요?'"
       :description="isGroupForm
@@ -467,15 +467,7 @@ onMounted(search);
     >
       <p class="admin-category__confirm">{{ selectedMenu?.menuName }}</p>
 
-      <template #footer>
-        <button
-          class="admin-button admin-button--ghost"
-          type="button"
-          @click="deleteConfirmOpen = false"
-        >
-          취소
-        </button>
-        <button
+      <template #footer><button
           class="admin-button admin-button--danger"
           type="button"
           :disabled="saving"
@@ -483,7 +475,15 @@ onMounted(search);
         >
           {{ saving ? '삭제 중…' : '삭제' }}
         </button>
-      </template>
-    </AdminModal>
+      
+        <button
+          class="admin-button admin-button--ghost"
+          type="button"
+          @click="deleteConfirmOpen = false"
+        >
+          취소
+        </button>
+        </template>
+    </BaseModal>
   </div>
 </template>
