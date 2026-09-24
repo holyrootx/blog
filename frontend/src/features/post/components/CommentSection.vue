@@ -4,10 +4,15 @@ import { useRoute, useRouter } from 'vue-router';
 
 import {
   createPostComment,
+  deletePostComment,
   getPostComments,
   removeCommentReaction,
+  reportComment,
   setCommentReaction,
+  updatePostComment,
 } from '../api/postApi';
+import CommentActionIcon from './CommentActionIcon.vue';
+import CommentReportDialog from './CommentReportDialog.vue';
 import { signOutMember, useMemberAuth } from '../../member/data/memberAuthStore';
 import { rememberReturnPath } from '../../member/data/memberReturnPath';
 
@@ -48,8 +53,31 @@ const replyDraft = ref('');
 const formError = ref('');
 const replyError = ref('');
 const reactionError = ref('');
-const showReportAction = false;
 const showBottomAd = false;
+
+/**
+ * 신고 창.
+ *
+ * 대상 댓글을 들고 있다가 보낼 때 쓴다. 신고는 잘못 누르면 남을 가리키는 일이라
+ * 바로 보내지 않고 한 번 더 묻는다.
+ */
+const reportTarget = ref(null);
+const reportPending = ref(false);
+const reportError = ref('');
+const reportDone = ref('');
+
+/**
+ * 고치는 중인 댓글과 지우려고 묻는 중인 댓글.
+ *
+ * 지우기는 한 번 더 묻는다. 되돌릴 수 없는데 좋아요 옆에 붙어 있어서, 누르자마자
+ * 지워지면 잘못 누른 사람이 손쓸 틈이 없다.
+ */
+const editingId = ref(null);
+const editDraft = ref('');
+const editPending = ref(false);
+const editError = ref('');
+const deletingId = ref(null);
+const deletePending = ref(false);
 
 const sentinel = ref(null);
 let observer = null;
@@ -224,6 +252,8 @@ function toCreatedComment(id, content) {
     dislikeCount: 0,
     likedByMe: false,
     dislikedByMe: false,
+    // 방금 내가 쓴 것이다. 안 넣으면 새로고침 전까지 내 댓글에 신고 단추가 보인다
+    mine: true,
     hiddenReplyCount: 0,
     replies: [],
   };
@@ -231,6 +261,157 @@ function toCreatedComment(id, content) {
 
 function isReactionPending(commentId) {
   return reactionPendingIds.value.has(commentId);
+}
+
+/**
+ * 신고 단추를 보일 것인가.
+ *
+ * 로그인하지 않았으면 안 보인다. 눌러 봐야 로그인 화면으로 튕기는데, 신고는
+ * 그렇게까지 해서 하라고 떠밀 일이 아니다. 삭제된 댓글과 내 댓글도 뺀다.
+ */
+function canReport(comment) {
+  return isSignedIn.value && !comment.deleted && !comment.mine;
+}
+
+/**
+ * 이미 신고한 댓글인가.
+ *
+ * 단추를 감추지 않고 "신고됨" 으로 바꾼다. 감추면 내가 신고했었는지를 알 수 없어서,
+ * 같은 댓글을 볼 때마다 다시 신고해야 하나 망설이게 된다.
+ */
+function alreadyReported(comment) {
+  return Boolean(comment.reportedByMe);
+}
+
+/** 고치거나 지울 수 있는가. 막는 일은 서버가 한다 — 여기는 헛걸음을 줄이는 표시다 */
+function canManage(comment) {
+  return isSignedIn.value && !comment.deleted && comment.mine;
+}
+
+function startEdit(comment) {
+  editError.value = '';
+  deletingId.value = null;
+  editingId.value = comment.id;
+  editDraft.value = comment.content;
+}
+
+function cancelEdit() {
+  editingId.value = null;
+  editDraft.value = '';
+  editError.value = '';
+}
+
+async function saveEdit(comment) {
+  const content = editDraft.value.trim();
+
+  if (!content || editPending.value) {
+    return;
+  }
+
+  editPending.value = true;
+  editError.value = '';
+
+  try {
+    await updatePostComment(comment.id, content);
+
+    // 목록을 다시 받지 않고 자리에서 바꾼다. 다시 받으면 읽던 위치가 위로 튄다
+    comment.content = content;
+    comment.edited = true;
+    cancelEdit();
+  } catch (error) {
+    editError.value = error.message ?? '고치지 못했습니다. 잠시 뒤에 다시 시도해 주세요.';
+  } finally {
+    editPending.value = false;
+  }
+}
+
+function askDelete(comment) {
+  cancelEdit();
+  deletingId.value = comment.id;
+}
+
+function cancelDelete() {
+  deletingId.value = null;
+}
+
+/**
+ * 지운 뒤 화면을 서버와 같은 모습으로 맞춘다.
+ *
+ * 서버는 지운 댓글을 무조건 감추지 않는다. 살아 있는 답글이 달린 댓글만 "삭제된
+ * 댓글입니다" 로 자리를 남기고, 그 외에는 목록에서 빠진다. 답글은 언제나 빠진다.
+ *
+ * 여기서 서버와 다르게 그리면, 새로고침하는 순간 화면이 달라져서 지운 것이
+ * 되살아난 것처럼 보인다.
+ *
+ * @param parent 답글이면 그 답글이 달린 댓글. 최상위 댓글이면 null
+ */
+async function confirmDelete(target, parent = null) {
+  if (deletePending.value) {
+    return;
+  }
+
+  deletePending.value = true;
+
+  try {
+    await deletePostComment(target.id);
+
+    if (parent) {
+      parent.replies = parent.replies.filter((reply) => reply.id !== target.id);
+    } else if (target.replies.length > 0) {
+      target.deleted = true;
+      target.content = '';
+      target.author = '';
+      target.mine = false;
+      // 내가 지운 것이다. 운영자가 가린 것으로 보이면 안 된다
+      target.hiddenByAdmin = false;
+    } else {
+      items.value = items.value.filter((comment) => comment.id !== target.id);
+    }
+
+    total.value = Math.max(0, total.value - 1);
+    deletingId.value = null;
+  } catch (error) {
+    reactionError.value = error.message ?? '지우지 못했습니다. 잠시 뒤에 다시 시도해 주세요.';
+    deletingId.value = null;
+  } finally {
+    deletePending.value = false;
+  }
+}
+
+function openReport(comment) {
+  reportError.value = '';
+  reportDone.value = '';
+  reportTarget.value = comment;
+}
+
+function closeReport() {
+  reportTarget.value = null;
+  reportError.value = '';
+}
+
+async function submitReport({ reason, detail }) {
+  if (reportPending.value || reportTarget.value === null) {
+    return;
+  }
+
+  reportPending.value = true;
+  reportError.value = '';
+
+  try {
+    await reportComment(reportTarget.value.id, { reason, detail });
+
+    // 목록을 다시 받지 않고 자리에서 바꾼다. 다시 받으면 읽던 위치가 위로 튄다
+    reportTarget.value.reportedByMe = true;
+    reportTarget.value = null;
+    // 신고 수는 화면에 안 보인다. 보이면 그 자체로 낙인이 되고,
+    // 몰려서 신고하면 숫자가 오르는 것이 보여 재미가 붙는다
+    reportDone.value = '신고를 접수했습니다. 확인 뒤 처리하겠습니다.';
+  } catch (error) {
+    // 이미 신고했거나 내 댓글인 경우 서버가 이유를 준다. 그대로 보여 준다
+    reportError.value = error.message ?? '신고하지 못했습니다. 잠시 뒤에 다시 시도해 주세요.';
+  } finally {
+    reportPending.value = false;
+  }
 }
 
 async function reactToComment(comment, type) {
@@ -413,7 +594,13 @@ watch(
           >{{ comment.deleted ? '' : avatarInitial(comment.author) }}</span>
 
           <div v-if="comment.deleted" class="comment__content">
-            <p class="comment__text comment__text--deleted">삭제된 댓글입니다.</p>
+            <!--
+              가린 주체에 따라 말이 달라야 한다. 운영자가 가린 것을 "삭제된 댓글" 이라고
+              하면 글쓴이가 자기가 지운 줄 알고, 반대면 없는 일을 만든다
+            -->
+            <p class="comment__text comment__text--deleted">
+              {{ comment.hiddenByAdmin ? '운영자가 가린 댓글입니다.' : '삭제된 댓글입니다.' }}
+            </p>
           </div>
 
           <div v-else class="comment__content">
@@ -421,29 +608,63 @@ watch(
               <span class="comment__author">{{ comment.author }}</span>
               <span v-if="comment.isAuthor" class="comment__badge">작성자</span>
               <time class="comment__time">{{ comment.createdAt }}</time>
+              <!--
+                말이 오간 뒤에 조용히 바뀌면 뒤에 달린 답글이 엉뚱한 말에 답한 것처럼
+                보인다. 고쳤다는 사실만 남기고 무엇을 고쳤는지는 남기지 않는다
+              -->
+              <span v-if="comment.edited" class="comment__edited">수정됨</span>
             </div>
-            <p class="comment__text">{{ comment.content }}</p>
+            <form
+              v-if="editingId === comment.id"
+              class="comment-edit"
+              @submit.prevent="saveEdit(comment)"
+            >
+              <textarea
+                v-model="editDraft"
+                class="comment-edit__input"
+                rows="3"
+                :maxlength="commentMaxLength"
+                aria-label="댓글 고치기"
+              ></textarea>
+              <p v-if="editError" class="comment-edit__error" role="alert">{{ editError }}</p>
+              <div class="comment-edit__actions">
+                <button class="comment__action" type="button" @click="cancelEdit">취소</button>
+                <button
+                  class="comment__action comment__action--strong"
+                  type="submit"
+                  :disabled="editPending || editDraft.trim() === ''"
+                >{{ editPending ? '저장 중…' : '저장' }}</button>
+              </div>
+            </form>
+
+            <p v-else class="comment__text">{{ comment.content }}</p>
 
             <div class="comment__actions">
               <button
-                class="comment__action"
+                class="comment__action comment__action--icon"
                 :class="{ 'comment__action--active': comment.likedByMe }"
                 type="button"
                 :disabled="isReactionPending(comment.id)"
                 :aria-pressed="comment.likedByMe"
+                aria-label="좋아요"
+                title="좋아요"
                 @click="reactToComment(comment, 'LIKE')"
               >
-                좋아요 {{ comment.likeCount }}
+                <CommentActionIcon name="like" />
+                {{ comment.likeCount }}
               </button>
               <button
-                class="comment__action"
+                class="comment__action comment__action--icon"
                 :class="{ 'comment__action--active': comment.dislikedByMe }"
                 type="button"
                 :disabled="isReactionPending(comment.id)"
                 :aria-pressed="comment.dislikedByMe"
+                aria-label="싫어요"
+                title="싫어요"
                 @click="reactToComment(comment, 'DISLIKE')"
               >
-                싫어요 {{ comment.dislikeCount }}
+                <CommentActionIcon name="dislike" />
+                {{ comment.dislikeCount }}
               </button>
               <button
                 class="comment__action comment__action--strong"
@@ -452,7 +673,43 @@ watch(
               >
                 답글
               </button>
-              <button v-if="showReportAction" class="comment__action" type="button">신고</button>
+              <button
+                v-if="canReport(comment)"
+                class="comment__action comment__action--icon comment__action--report"
+                :class="{ 'comment__action--reported': alreadyReported(comment) }"
+                type="button"
+                :disabled="alreadyReported(comment)"
+                :aria-label="alreadyReported(comment) ? '이미 신고한 댓글' : '신고'"
+                :title="alreadyReported(comment) ? '이미 신고한 댓글입니다' : '신고'"
+                @click="openReport(comment)"
+              >
+                <CommentActionIcon name="report" />
+                {{ alreadyReported(comment) ? '신고됨' : '신고' }}
+              </button>
+
+              <template v-if="canManage(comment)">
+                <button
+                  v-if="editingId !== comment.id"
+                  class="comment__action"
+                  type="button"
+                  @click="startEdit(comment)"
+                >수정</button>
+
+                <!-- 지우기는 되돌릴 수 없다. 좋아요 옆에 붙어 있어서 한 번 더 묻는다 -->
+                <template v-if="deletingId === comment.id">
+                  <span class="comment__confirm">정말 지울까요?</span>
+                  <button
+                    class="comment__action comment__action--danger"
+                    type="button"
+                    :disabled="deletePending"
+                    @click="confirmDelete(comment)"
+                  >{{ deletePending ? '지우는 중…' : '지우기' }}</button>
+                  <button class="comment__action" type="button" @click="cancelDelete">취소</button>
+                </template>
+                <button v-else class="comment__action" type="button" @click="askDelete(comment)">
+                  삭제
+                </button>
+              </template>
             </div>
 
             <button v-if="comment.hiddenReplyCount" class="comment__more" type="button">
@@ -479,29 +736,95 @@ watch(
                 <span class="comment__author">{{ reply.author }}</span>
                 <span v-if="reply.isAuthor" class="comment__badge">작성자</span>
                 <time class="comment__time">{{ reply.createdAt }}</time>
+                <span v-if="reply.edited" class="comment__edited">수정됨</span>
               </div>
-              <p class="comment__text">{{ reply.content }}</p>
+              <form
+                v-if="editingId === reply.id"
+                class="comment-edit"
+                @submit.prevent="saveEdit(reply)"
+              >
+                <textarea
+                  v-model="editDraft"
+                  class="comment-edit__input"
+                  rows="2"
+                  :maxlength="commentMaxLength"
+                  aria-label="답글 고치기"
+                ></textarea>
+                <p v-if="editError" class="comment-edit__error" role="alert">{{ editError }}</p>
+                <div class="comment-edit__actions">
+                  <button class="comment__action" type="button" @click="cancelEdit">취소</button>
+                  <button
+                    class="comment__action comment__action--strong"
+                    type="submit"
+                    :disabled="editPending || editDraft.trim() === ''"
+                  >{{ editPending ? '저장 중…' : '저장' }}</button>
+                </div>
+              </form>
+
+              <p v-else class="comment__text">{{ reply.content }}</p>
               <div class="comment__actions">
                 <button
-                  class="comment__action"
+                  class="comment__action comment__action--icon"
                   :class="{ 'comment__action--active': reply.likedByMe }"
                   type="button"
                   :disabled="isReactionPending(reply.id)"
                   :aria-pressed="reply.likedByMe"
+                  aria-label="좋아요"
+                  title="좋아요"
                   @click="reactToComment(reply, 'LIKE')"
                 >
-                  좋아요 {{ reply.likeCount }}
+                  <CommentActionIcon name="like" />
+                  {{ reply.likeCount }}
                 </button>
                 <button
-                  class="comment__action"
+                  class="comment__action comment__action--icon"
                   :class="{ 'comment__action--active': reply.dislikedByMe }"
                   type="button"
                   :disabled="isReactionPending(reply.id)"
                   :aria-pressed="reply.dislikedByMe"
+                  aria-label="싫어요"
+                  title="싫어요"
                   @click="reactToComment(reply, 'DISLIKE')"
                 >
-                  싫어요 {{ reply.dislikeCount }}
+                  <CommentActionIcon name="dislike" />
+                  {{ reply.dislikeCount }}
                 </button>
+                <button
+                  v-if="canReport(reply)"
+                  class="comment__action comment__action--icon comment__action--report"
+                  :class="{ 'comment__action--reported': alreadyReported(reply) }"
+                  type="button"
+                  :disabled="alreadyReported(reply)"
+                  :aria-label="alreadyReported(reply) ? '이미 신고한 답글' : '신고'"
+                  :title="alreadyReported(reply) ? '이미 신고한 답글입니다' : '신고'"
+                  @click="openReport(reply)"
+                >
+                  <CommentActionIcon name="report" />
+                  {{ alreadyReported(reply) ? '신고됨' : '신고' }}
+                </button>
+
+                <template v-if="canManage(reply)">
+                  <button
+                    v-if="editingId !== reply.id"
+                    class="comment__action"
+                    type="button"
+                    @click="startEdit(reply)"
+                  >수정</button>
+
+                  <template v-if="deletingId === reply.id">
+                    <span class="comment__confirm">정말 지울까요?</span>
+                    <button
+                      class="comment__action comment__action--danger"
+                      type="button"
+                      :disabled="deletePending"
+                      @click="confirmDelete(reply, comment)"
+                    >{{ deletePending ? '지우는 중…' : '지우기' }}</button>
+                    <button class="comment__action" type="button" @click="cancelDelete">취소</button>
+                  </template>
+                  <button v-else class="comment__action" type="button" @click="askDelete(reply)">
+                    삭제
+                  </button>
+                </template>
               </div>
             </div>
           </div>
@@ -555,5 +878,17 @@ watch(
       <span class="post-ad__label">광고 · AD</span>
       <div class="post-ad__slot">{{ comments.bottomAd.label }}</div>
     </div>
+
+    <!-- 접수 결과. 창은 닫히므로 남는 자리가 있어야 무엇이 됐는지 알 수 있다 -->
+    <p v-if="reportDone" class="comments__report-done" role="status">{{ reportDone }}</p>
+
+    <CommentReportDialog
+      :open="reportTarget !== null"
+      :target="reportTarget?.author ?? ''"
+      :pending="reportPending"
+      :error="reportError"
+      @submit="submitReport"
+      @close="closeReport"
+    />
   </section>
 </template>
