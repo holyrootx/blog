@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { formatExactTime, formatRelativeTime } from '../../../shared/time/relativeTime';
 
 import {
   loadNotifications,
@@ -133,16 +134,33 @@ watch(isSignedIn, (signedIn) => {
 
       <ul v-else class="notification-bell__list">
         <li v-for="notification in notifications" :key="notification.id">
+          <!--
+            정확한 시각은 브라우저 기본 툴팁(title) 대신 직접 그린다. 기본 툴팁은
+            환경에 따라 아예 안 뜨고, 뜨더라도 1초를 멈춰 있어야 한다.
+
+            마우스가 없는 기기에서는 툴팁 자리가 없으므로 시각을 아예 같이 적는다 —
+            그쪽은 hover 라는 것이 존재하지 않는다.
+          -->
           <button
             class="notification-bell__item"
             :class="{ 'notification-bell__item--unread': notification.unread }"
             type="button"
             role="menuitem"
+            :data-exact-time="formatExactTime(notification.createdAt)"
             @click="go(notification)"
           >
             <span class="notification-bell__message">{{ messageOf(notification) }}</span>
             <span class="notification-bell__preview">{{ notification.preview }}</span>
-            <span class="notification-bell__post">{{ notification.postTitle }}</span>
+            <span class="notification-bell__foot">
+              <span class="notification-bell__post">{{ notification.postTitle }}</span>
+              <!-- 상대 시각. 알림에서 궁금한 것은 몇 시 몇 분인가가 아니라 새 것인가다 -->
+              <time class="notification-bell__time" :datetime="notification.createdAt">
+                {{ formatRelativeTime(notification.createdAt) }}
+                <span class="notification-bell__exact">
+                  · {{ formatExactTime(notification.createdAt) }}
+                </span>
+              </time>
+            </span>
           </button>
         </li>
       </ul>
