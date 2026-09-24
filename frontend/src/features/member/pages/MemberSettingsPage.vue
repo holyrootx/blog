@@ -120,9 +120,14 @@ async function confirmWithdraw() {
     </header>
 
     <section class="member-settings__section" aria-labelledby="settings-profile">
-      <h2 id="settings-profile" class="member-settings__section-title">프로필</h2>
+      <!--
+        사진을 제목 옆에 둔다. 닉네임 입력칸 옆에 두면 "이 사진도 여기서 바꾸나" 로 읽히는데,
+        사진은 소셜 계정에서 가져오는 값이라 여기서 바꿀 수 없다.
+        바꿀 수 있는 것과 없는 것을 줄로 나눈다
+      -->
+      <div class="member-settings__section-head">
+        <h2 id="settings-profile" class="member-settings__section-title">프로필</h2>
 
-      <div class="member-settings__profile">
         <img
           v-if="member?.profileImageUrl"
           class="member-settings__avatar"
@@ -131,20 +136,18 @@ async function confirmWithdraw() {
           referrerpolicy="no-referrer"
         />
         <span v-else class="member-settings__avatar">{{ avatarInitial(member?.nickname) }}</span>
+      </div>
 
-        <div class="member-settings__field">
-          <label class="member-settings__label" for="settings-nickname">닉네임</label>
-          <input
-            id="settings-nickname"
-            v-model="nickname"
-            class="member-settings__input"
-            type="text"
-            autocomplete="nickname"
-            :maxlength="NICKNAME_MAX_LENGTH"
-          />
-          <p class="member-settings__hint">댓글에 이 이름으로 표시됩니다.</p>
-        </div>
-
+      <div class="member-settings__profile">
+        <label class="member-settings__label" for="settings-nickname">닉네임</label>
+        <input
+          id="settings-nickname"
+          v-model="nickname"
+          class="member-settings__input"
+          type="text"
+          autocomplete="nickname"
+          :maxlength="NICKNAME_MAX_LENGTH"
+        />
         <button
           class="post-button post-button--accent"
           type="button"
@@ -152,6 +155,12 @@ async function confirmWithdraw() {
           @click="saveNickname"
         >{{ savingNickname ? '저장 중…' : '변경' }}</button>
       </div>
+
+      <!--
+        설명은 줄 밖에 둔다. 안에 두면 이 줄의 바닥이 입력칸이 아니라 이 글줄이 되어,
+        아바타와 변경 단추가 입력칸보다 한 줄 아래로 내려가 어긋난다
+      -->
+      <p class="member-settings__hint">댓글에 이 이름으로 표시됩니다.</p>
 
       <p v-if="nicknameError" class="member-settings__error" role="alert">{{ nicknameError }}</p>
       <p v-else-if="nicknameSaved" class="member-settings__done" role="status">닉네임을 변경했습니다.</p>
@@ -174,8 +183,12 @@ async function confirmWithdraw() {
             :to="{ name: 'post-detail', params: { id: comment.postId } }"
           >{{ comment.postTitle }}</RouterLink>
 
+          <!--
+            전에는 둘 다 "관리자가 숨긴 댓글" 이라고 했다. 내가 지운 댓글까지 그렇게
+            나와서, 지운 기억이 없는 사람은 가려진 줄 알고 지운 사람은 없는 일을 의심했다
+          -->
           <p v-if="comment.hidden" class="member-comments__content member-comments__content--hidden">
-            관리자가 숨긴 댓글입니다.
+            {{ comment.hiddenByAdmin ? '운영자가 가린 댓글입니다.' : '내가 지운 댓글입니다.' }}
           </p>
           <p v-else class="member-comments__content">{{ comment.content }}</p>
 
