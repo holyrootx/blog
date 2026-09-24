@@ -53,6 +53,15 @@ public final class ApiPaths {
 
         public static final String CREATE = "/api/v1/blog/posts/*/comments";
         public static final String REACTION = "/api/v1/blog/comments/*/reaction";
+        public static final String REPORT = "/api/v1/blog/comments/*/reports";
+
+        /**
+         * 댓글 하나를 가리키는 자리. 내 댓글을 고치거나 지울 때 쓴다.
+         *
+         * <p>별 하나는 경로 한 마디만 받으므로 {@code .../reaction} 이나 {@code .../reports}
+         * 와 겹치지 않는다.</p>
+         */
+        public static final String ITEM = "/api/v1/blog/comments/*";
 
         private Comment() {
         }

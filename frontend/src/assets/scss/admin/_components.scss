@@ -676,95 +676,6 @@
 
 /* ── 모달 ──────────────────────────────────── */
 
-.admin-modal {
-  position: fixed;
-  inset: 0;
-  z-index: 100;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  background: rgba(30, 27, 24, 0.45);
-}
-
-.admin-modal__panel {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  max-height: calc(100vh - 48px);
-  border-radius: 14px;
-  background: var(--admin-card);
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.22);
-  outline: none;
-  overflow: hidden;
-}
-
-.admin-modal__panel--small {
-  max-width: 420px;
-}
-
-.admin-modal__panel--medium {
-  max-width: 640px;
-}
-
-.admin-modal__panel--large {
-  max-width: 900px;
-}
-
-.admin-modal__header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 20px 22px 16px;
-  border-bottom: 1px solid var(--admin-card-line);
-}
-
-.admin-modal__title {
-  margin: 0;
-  font-size: 17px;
-  font-weight: 800;
-  color: var(--admin-title);
-}
-
-.admin-modal__description {
-  margin: 4px 0 0;
-  font-size: 13px;
-  color: var(--admin-text);
-}
-
-.admin-modal__close {
-  flex: none;
-  width: 28px;
-  height: 28px;
-  border: 0;
-  border-radius: var(--radius);
-  background: none;
-  color: var(--admin-meta);
-  font-size: 20px;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.admin-modal__close:hover {
-  background: var(--admin-surface-hover);
-  color: var(--admin-title);
-}
-
-.admin-modal__body {
-  padding: 20px 22px;
-  overflow-y: auto;
-}
-
-.admin-modal__footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  padding: 14px 22px 18px;
-  border-top: 1px solid var(--admin-card-line);
-}
-
-/* 모달 안의 폼 */
 .admin-modal__form {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2272,4 +2183,76 @@
 @keyframes admin-toast-in {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── 신고 내역과 조치 이력 ─────────────────
+   신고가 쌓여도 댓글이 저절로 숨지 않는다. 운영자가 읽고 정하는 자리라
+   신고 주장과 지금까지의 판단을 한 화면에 같이 놓는다 */
+
+.admin-badge--report {
+  border: 1px solid var(--admin-line, #d8d8d8);
+  background: transparent;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* 아직 안 본 신고만 눈에 띄게. 처리한 것까지 붉으면 목록이 늘 빨갛다 */
+.admin-badge--report-pending {
+  border-color: #c0392b;
+  background: #fdecea;
+  color: #a5281b;
+  font-weight: 700;
+}
+
+.admin-moderation__quote {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border-left: 3px solid var(--admin-line, #d8d8d8);
+  background: #f7f7f7;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.admin-moderation__title {
+  margin: 18px 0 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.admin-moderation__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-moderation__list li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: baseline;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--admin-line, #eee);
+  font-size: 13px;
+}
+
+.admin-moderation__reason {
+  font-weight: 700;
+}
+
+.admin-moderation__detail {
+  flex: 1 1 100%;
+  color: #555;
+  line-height: 1.6;
+}
+
+.admin-moderation__time {
+  margin-left: auto;
+  color: #888;
+  font-size: 12px;
+}
+
+.admin-moderation__empty {
+  margin: 0;
+  color: #888;
+  font-size: 13px;
 }

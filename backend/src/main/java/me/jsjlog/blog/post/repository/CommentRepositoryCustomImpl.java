@@ -10,6 +10,7 @@ import me.jsjlog.blog.member.domain.MemberRole;
 import me.jsjlog.blog.post.domain.CommentReactionType;
 import me.jsjlog.blog.post.domain.QComment;
 import me.jsjlog.blog.post.domain.QCommentReaction;
+import me.jsjlog.blog.post.domain.QCommentReport;
 import me.jsjlog.blog.post.dto.CommentItemResponse;
 import me.jsjlog.blog.post.dto.CommentListResponse;
 import me.jsjlog.blog.post.dto.CommentReplyResponse;
@@ -21,6 +22,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.HashSet;
 import java.util.Set;
 
 @RequiredArgsConstructor
@@ -63,11 +65,14 @@ public class CommentRepositoryCustomImpl implements CommentRepositoryCustom {
         // 다음 묶음이 있는지 보려고 한 건 더 가져온다.
         List<Tuple> commentRows = jpaQueryFactory.select(
                         comment.id,
+                        comment.member.id,
                         comment.member.nickname,
                         comment.content,
                         comment.createdAt,
                         comment.member.role,
-                        comment.deleted
+                        comment.deleted,
+                        comment.edited,
+                        comment.hiddenByAdmin
                 ).from(comment)
                 .where(builder)
                 .orderBy(comment.id.desc())
@@ -86,6 +91,7 @@ public class CommentRepositoryCustomImpl implements CommentRepositoryCustom {
         Map<Long, List<ReplyRow>> repliesByParentId = getReplyRowsByParentId(parentIds);
         List<Long> visibleCommentIds = collectVisibleCommentIds(parentIds, repliesByParentId);
         ReactionData reactionData = getReactionData(visibleCommentIds, memberId);
+        Set<Long> reportedByMe = getReportedCommentIds(visibleCommentIds, memberId);
 
         List<CommentItemResponse> items = new ArrayList<>();
         for (Tuple commentRow : commentRows) {
@@ -96,7 +102,11 @@ public class CommentRepositoryCustomImpl implements CommentRepositoryCustom {
             List<CommentReplyResponse> replies = repliesByParentId
                     .getOrDefault(commentId, List.of())
                     .stream()
-                    .map(reply -> toReplyResponse(reply, reactionData.summary(reply.id())))
+                    .map(reply -> toReplyResponse(
+                            reply,
+                            reactionData.summary(reply.id()),
+                            memberId,
+                            reportedByMe.contains(reply.id())))
                     .toList();
 
             items.add(new CommentItemResponse(
@@ -110,6 +120,13 @@ public class CommentRepositoryCustomImpl implements CommentRepositoryCustom {
                     deleted ? 0L : reactions.dislikeCount(),
                     !deleted && reactions.likedByMe(),
                     !deleted && reactions.dislikedByMe(),
+                    // 삭제된 댓글은 내 것이라도 내 것으로 치지 않는다. 지워진 자리에
+                    // 신고할 것도 감출 것도 없다
+                    !deleted && isMine(commentRow.get(comment.member.id), memberId),
+                    // 지운 댓글은 내용이 사라지므로 고쳤다는 표시도 뜻이 없다
+                    !deleted && Boolean.TRUE.equals(commentRow.get(comment.edited)),
+                    deleted && Boolean.TRUE.equals(commentRow.get(comment.hiddenByAdmin)),
+                    !deleted && reportedByMe.contains(commentId),
                     replies
             ));
         }
@@ -133,11 +150,13 @@ public class CommentRepositoryCustomImpl implements CommentRepositoryCustom {
         List<Tuple> replyRows = jpaQueryFactory.select(
                         reply.parent.id,
                         reply.id,
+                        reply.member.id,
                         reply.member.nickname,
                         reply.content,
                         reply.createdAt,
                         reply.member.role,
-                        reply.deleted
+                        reply.deleted,
+                        reply.edited
                 ).from(reply)
                 .where(
                         reply.parent.id.in(parentIds),
@@ -150,11 +169,13 @@ public class CommentRepositoryCustomImpl implements CommentRepositoryCustom {
             Long parentId = row.get(reply.parent.id);
             ReplyRow replyRow = new ReplyRow(
                     row.get(reply.id),
+                    row.get(reply.member.id),
                     row.get(reply.member.nickname),
                     row.get(reply.content),
                     row.get(reply.createdAt),
                     row.get(reply.member.role),
-                    Boolean.TRUE.equals(row.get(reply.deleted))
+                    Boolean.TRUE.equals(row.get(reply.deleted)),
+                    Boolean.TRUE.equals(row.get(reply.edited))
             );
 
             repliesByParentId.computeIfAbsent(parentId, ignored -> new ArrayList<>()).add(replyRow);
@@ -224,7 +245,12 @@ public class CommentRepositoryCustomImpl implements CommentRepositoryCustom {
         return new ReactionData(counts, myReactions);
     }
 
-    private CommentReplyResponse toReplyResponse(ReplyRow reply, ReactionSummary reactions) {
+    private CommentReplyResponse toReplyResponse(
+            ReplyRow reply,
+            ReactionSummary reactions,
+            Long memberId,
+            boolean reportedByMe
+    ) {
         return new CommentReplyResponse(
                 reply.id(),
                 reply.nickname(),
@@ -235,8 +261,43 @@ public class CommentRepositoryCustomImpl implements CommentRepositoryCustom {
                 reactions.likeCount(),
                 reactions.dislikeCount(),
                 reactions.likedByMe(),
-                reactions.dislikedByMe()
+                reactions.dislikedByMe(),
+                isMine(reply.memberId(), memberId),
+                reply.edited(),
+                reportedByMe
         );
+    }
+
+    /**
+     * 이 사람이 이미 신고한 댓글들.
+     *
+     * <p>좋아요를 모아 오는 것과 같은 방식이다. 댓글마다 따로 물으면 목록 한 번에
+     * 쿼리가 스무 번 나간다.</p>
+     *
+     * <p>로그인하지 않았으면 물어보지 않는다 — 신고한 것이 있을 수가 없다.</p>
+     */
+    private Set<Long> getReportedCommentIds(List<Long> commentIds, Long memberId) {
+        if (memberId == null || commentIds.isEmpty()) {
+            return Set.of();
+        }
+
+        QCommentReport report = QCommentReport.commentReport;
+
+        return new HashSet<>(jpaQueryFactory
+                .select(report.comment.id)
+                .from(report)
+                .where(report.comment.id.in(commentIds), report.member.id.eq(memberId))
+                .fetch());
+    }
+
+    /**
+     * 이 글을 보고 있는 사람이 쓴 것인가.
+     *
+     * <p>로그인하지 않았으면 언제나 아니다. {@code null == null} 로 걸려서 남의 댓글이
+     * 전부 "내 것" 이 되는 일을 막는다.</p>
+     */
+    private boolean isMine(Long writerId, Long viewerId) {
+        return viewerId != null && viewerId.equals(writerId);
     }
 
     private long countVisibleComments(Long postId) {
@@ -255,11 +316,13 @@ public class CommentRepositoryCustomImpl implements CommentRepositoryCustom {
 
     private record ReplyRow(
             Long id,
+            Long memberId,
             String nickname,
             String content,
             LocalDateTime createdAt,
             MemberRole role,
-            boolean deleted
+            boolean deleted,
+            boolean edited
     ) {
     }
 

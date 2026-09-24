@@ -1,4 +1,12 @@
 <script setup>
+// 모든 팝업이 쓰는 한 벌. 관리자·공개 화면 공통이다.
+//
+// 구조를 여기서 강제한다 — 제목은 항상 맨 위, 닫는 단추는 제목 오른쪽의 ×.
+// 팝업마다 손으로 지키게 두면 반드시 빠뜨리는 곳이 생긴다. 실제로 전에는
+// 검색창에 제목이 없었고 신고창에는 × 가 없었다.
+//
+// 푸터 단추는 넘겨받는다. 다만 순서 규칙이 있다 — 닫기·취소가 가장 오른쪽이다.
+//
 // 작은 폼과 확인창 전용 모달.
 //
 // ⚠️ 글 편집처럼 "쓰던 내용이 날아가면 곤란한" 화면은 모달로 만들지 않는다.
@@ -15,7 +23,7 @@ import {
   isTopModal,
   popModal,
   pushModal,
-} from './adminModalStack';
+} from './modalStack';
 
 const props = defineProps({
   open: {
@@ -39,13 +47,23 @@ const props = defineProps({
     type: String,
     default: 'medium', // small | medium | large
   },
+  /**
+   * 색만 가른다. 구조(제목·X·본문·푸터)는 어느 쪽이든 같다.
+   *
+   * 관리자와 공개 화면은 바탕색·글꼴 무게가 달라서 한 벌로는 어느 한쪽이 튄다.
+   * 그렇다고 모달을 두 벌 만들면 "제목은 위, 닫기는 X" 같은 규칙이 한쪽에서 빠진다.
+   */
+  variant: {
+    type: String,
+    default: 'public', // public | admin
+  },
 });
 
 const emit = defineEmits(['close']);
 
 const panelRef = ref(null);
 // 이 인스턴스를 스택에서 식별할 표식
-const modalId = Symbol('admin-modal');
+const modalId = Symbol('modal');
 
 function close() {
   emit('close');
@@ -107,31 +125,32 @@ onBeforeUnmount(() => {
 
 <template>
   <Teleport to="body">
-    <div v-if="open" class="admin-modal" @click.self="onBackdrop">
+    <div v-if="open" class="modal"
+      :class="`modal--${variant}`" @click.self="onBackdrop">
       <div
         ref="panelRef"
-        class="admin-modal__panel"
-        :class="`admin-modal__panel--${size}`"
+        class="modal__panel"
+        :class="`modal__panel--${size}`"
         role="dialog"
         aria-modal="true"
         :aria-label="title"
         tabindex="-1"
       >
-        <header class="admin-modal__header">
+        <header class="modal__header">
           <div>
-            <h2 class="admin-modal__title">{{ title }}</h2>
-            <p v-if="description" class="admin-modal__description">{{ description }}</p>
+            <h2 class="modal__title">{{ title }}</h2>
+            <p v-if="description" class="modal__description">{{ description }}</p>
           </div>
-          <button class="admin-modal__close" type="button" aria-label="닫기" @click="close">
+          <button class="modal__close" type="button" aria-label="닫기" @click="close">
             ×
           </button>
         </header>
 
-        <div class="admin-modal__body">
+        <div class="modal__body">
           <slot />
         </div>
 
-        <footer v-if="$slots.footer" class="admin-modal__footer">
+        <footer v-if="$slots.footer" class="modal__footer">
           <slot name="footer" />
         </footer>
       </div>

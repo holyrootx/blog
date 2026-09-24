@@ -15,7 +15,7 @@ import AdminTextInput from '../components/AdminTextInput.vue';
 import AdminDataGrid from '../components/AdminDataGrid.vue';
 import AdminPageSize from '../components/AdminPageSize.vue';
 import AdminPagination from '../components/AdminPagination.vue';
-import AdminModal from '../components/AdminModal.vue';
+import BaseModal from '../../../shared/components/BaseModal.vue';
 
 // 카테고리는 계층이 없어서 표로 보여준다 (메뉴와 다른 점)
 const COLUMNS = [
@@ -301,7 +301,7 @@ onMounted(search);
     <AdminPagination v-model:page="page" :total-pages="totalPages" />
 
     <!-- 등록·수정 팝업 -->
-    <AdminModal
+    <BaseModal variant="admin"
       :open="formOpen"
       :title="formMode === 'create' ? '카테고리 추가' : '카테고리 수정'"
       :description="formMode === 'create'
@@ -328,9 +328,6 @@ onMounted(search);
         >
           삭제
         </button>
-        <button class="admin-button admin-button--ghost" type="button" @click="formOpen = false">
-          닫기
-        </button>
         <button
           class="admin-button admin-button--solid"
           type="button"
@@ -339,11 +336,14 @@ onMounted(search);
         >
           {{ saving ? '저장 중…' : '저장' }}
         </button>
-      </template>
-    </AdminModal>
+      <button class="admin-button admin-button--ghost" type="button" @click="formOpen = false">
+          닫기
+        </button>
+        </template>
+    </BaseModal>
 
     <!-- 한 건 삭제 확인. 되돌릴 수 없어서 한 번 더 묻는다 -->
-    <AdminModal
+    <BaseModal variant="admin"
       :open="editDeleteConfirmOpen"
       title="이 카테고리를 삭제할까요?"
       description="되돌릴 수 없습니다."
@@ -355,15 +355,7 @@ onMounted(search);
         글이 달린 카테고리는 삭제할 수 없습니다.
       </p>
 
-      <template #footer>
-        <button
-          class="admin-button admin-button--ghost"
-          type="button"
-          @click="editDeleteConfirmOpen = false"
-        >
-          취소
-        </button>
-        <button
+      <template #footer><button
           class="admin-button admin-button--danger"
           type="button"
           :disabled="saving"
@@ -371,11 +363,19 @@ onMounted(search);
         >
           {{ saving ? '삭제 중…' : '삭제' }}
         </button>
-      </template>
-    </AdminModal>
+      
+        <button
+          class="admin-button admin-button--ghost"
+          type="button"
+          @click="editDeleteConfirmOpen = false"
+        >
+          취소
+        </button>
+        </template>
+    </BaseModal>
 
     <!-- 선택 삭제 확인 -->
-    <AdminModal
+    <BaseModal variant="admin"
       :open="deleteConfirmOpen"
       title="선택한 카테고리를 삭제할까요?"
       :description="`${selectedIds.length}건을 삭제합니다. 되돌릴 수 없습니다.`"
@@ -389,15 +389,7 @@ onMounted(search);
 
       <p v-if="deleteError" class="admin-form-error">{{ deleteError }}</p>
 
-      <template #footer>
-        <button
-          class="admin-button admin-button--ghost"
-          type="button"
-          @click="deleteConfirmOpen = false"
-        >
-          취소
-        </button>
-        <button
+      <template #footer><button
           class="admin-button admin-button--danger"
           type="button"
           :disabled="saving"
@@ -405,7 +397,15 @@ onMounted(search);
         >
           {{ saving ? '삭제 중…' : '삭제' }}
         </button>
-      </template>
-    </AdminModal>
+      
+        <button
+          class="admin-button admin-button--ghost"
+          type="button"
+          @click="deleteConfirmOpen = false"
+        >
+          취소
+        </button>
+        </template>
+    </BaseModal>
   </div>
 </template>

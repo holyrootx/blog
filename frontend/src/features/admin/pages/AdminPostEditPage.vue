@@ -20,7 +20,7 @@ import { notifySuccess } from '../data/adminToastStore';
 import AdminPageHeader from '../components/AdminPageHeader.vue';
 import AdminTextInput from '../components/AdminTextInput.vue';
 import AdminSelect from '../components/AdminSelect.vue';
-import AdminModal from '../components/AdminModal.vue';
+import BaseModal from '../../../shared/components/BaseModal.vue';
 import AdminBlockEditor from '../components/AdminBlockEditor.vue';
 
 const TITLE_MAX = 255;
@@ -744,7 +744,7 @@ watch(postId, enter);
     </template>
 
     <!-- 로컬 스냅샷 복구 -->
-    <AdminModal
+    <BaseModal variant="admin"
       :open="draftFound !== null"
       title="작성 중이던 내용이 있습니다"
       description="브라우저에 남아 있던 내용입니다. 불러올까요?"
@@ -769,10 +769,10 @@ watch(postId, enter);
           불러오기
         </button>
       </template>
-    </AdminModal>
+    </BaseModal>
 
     <!-- 발행·내리기·삭제 확인 -->
-    <AdminModal
+    <BaseModal variant="admin"
       :open="confirmAction !== ''"
       :title="confirmText.title"
       :description="confirmText.description"
@@ -796,11 +796,7 @@ watch(postId, enter);
         </small>
       </label>
 
-      <template #footer>
-        <button class="admin-button admin-button--ghost" type="button" @click="confirmAction = ''">
-          취소
-        </button>
-        <button
+      <template #footer><button
           class="admin-button"
           :class="confirmAction === 'delete' ? 'admin-button--danger' : 'admin-button--solid'"
           type="button"
@@ -809,7 +805,11 @@ watch(postId, enter);
         >
           {{ saving ? '처리 중…' : confirmAction === 'delete' ? '삭제' : '확인' }}
         </button>
-      </template>
-    </AdminModal>
+      
+        <button class="admin-button admin-button--ghost" type="button" @click="confirmAction = ''">
+          취소
+        </button>
+        </template>
+    </BaseModal>
   </div>
 </template>

@@ -19,7 +19,7 @@ import AdminSegmented from '../components/AdminSegmented.vue';
 import AdminDataGrid from '../components/AdminDataGrid.vue';
 import AdminPageSize from '../components/AdminPageSize.vue';
 import AdminPagination from '../components/AdminPagination.vue';
-import AdminModal from '../components/AdminModal.vue';
+import BaseModal from '../../../shared/components/BaseModal.vue';
 
 // 댓글 수·좋아요·썸네일은 열에 두지 않는다.
 // 값이 늘 0이거나 비어 있어서 정보가 아니라 잡음이 된다
@@ -348,7 +348,7 @@ onMounted(() => {
     <AdminPagination :page="page" :total-pages="totalPages" @update:page="changePage" />
 
     <!-- 발행·내리기·삭제 확인. 셋 다 공개 화면에 바로 영향을 준다 -->
-    <AdminModal
+    <BaseModal variant="admin"
       :open="confirmTarget !== null"
       :title="confirmText.title"
       :description="confirmText.description"
@@ -359,11 +359,7 @@ onMounted(() => {
 
       <p v-if="actionError" class="admin-form-error">{{ actionError }}</p>
 
-      <template #footer>
-        <button class="admin-button admin-button--ghost" type="button" @click="confirmTarget = null">
-          취소
-        </button>
-        <button
+      <template #footer><button
           class="admin-button"
           :class="confirmAction === 'delete' ? 'admin-button--danger' : 'admin-button--solid'"
           type="button"
@@ -372,7 +368,11 @@ onMounted(() => {
         >
           {{ working ? '처리 중…' : confirmText.title.includes('삭제') ? '삭제' : '확인' }}
         </button>
-      </template>
-    </AdminModal>
+      
+        <button class="admin-button admin-button--ghost" type="button" @click="confirmTarget = null">
+          취소
+        </button>
+        </template>
+    </BaseModal>
   </div>
 </template>

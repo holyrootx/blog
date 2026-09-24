@@ -1,0 +1,110 @@
+/*
+ * 팝업 한 벌. 관리자·공개 화면이 같이 쓴다.
+ *
+ * 구조는 한 곳에서만 정한다 — 제목은 맨 위, 닫는 단추는 제목 오른쪽의 ×.
+ * 색만 variant 로 가른다: 관리자는 어두운 카드, 공개 화면은 따뜻한 종이색.
+ */
+
+.modal--admin {
+  --modal-surface: var(--admin-card);
+  --modal-line: var(--admin-card-line);
+  --modal-title: var(--admin-title);
+  --modal-muted: var(--admin-muted);
+}
+
+.modal--public {
+  --modal-surface: var(--surface);
+  --modal-line: var(--line);
+  --modal-title: var(--text);
+  --modal-muted: var(--text-muted);
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(30, 27, 24, 0.45);
+}
+
+.modal__panel {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-height: calc(100vh - 48px);
+  border-radius: 14px;
+  background: var(--modal-surface);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.22);
+  outline: none;
+  overflow: hidden;
+}
+
+.modal__panel--small {
+  max-width: 420px;
+}
+
+.modal__panel--medium {
+  max-width: 640px;
+}
+
+.modal__panel--large {
+  max-width: 900px;
+}
+
+.modal__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 22px 16px;
+  border-bottom: 1px solid var(--modal-line);
+}
+
+.modal__title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--modal-title);
+}
+
+.modal__description {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--modal-title);
+}
+
+.modal__close {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--admin-meta);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.modal__close:hover {
+  background: var(--admin-surface-hover);
+  color: var(--modal-title);
+}
+
+.modal__body {
+  padding: 20px 22px;
+  overflow-y: auto;
+}
+
+.modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 14px 22px 18px;
+  border-top: 1px solid var(--modal-line);
+}
+
+/* 모달 안의 폼 */
