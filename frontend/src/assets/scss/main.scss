@@ -1,9 +1,11 @@
 @use 'base/fonts';
 @use 'base/reset';
 @use 'base/tokens';
+@use 'base/modal';
 @use 'public/home';
 @use 'public/post';
 @use 'public/member';
+@use 'public/search';
 @use 'public/legal';
 @use 'admin/dashboard';
 @use 'admin/components';

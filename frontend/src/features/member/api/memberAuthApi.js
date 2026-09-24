@@ -77,6 +77,7 @@ function toMyComment(comment) {
     content: comment?.content ?? '',
     createdAt: comment?.createdAt ?? '',
     hidden: Boolean(comment?.hidden),
+    hiddenByAdmin: Boolean(comment?.hiddenByAdmin),
   };
 }
 

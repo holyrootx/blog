@@ -99,6 +99,16 @@ public class SecurityConfig {
                         .hasAnyRole(MemberRole.USER.name(), MemberRole.ADMIN.name())
                         .requestMatchers(HttpMethod.DELETE, ApiPaths.Comment.REACTION)
                         .hasAnyRole(MemberRole.USER.name(), MemberRole.ADMIN.name())
+                        // 신고는 로그인한 회원만 한다. 익명으로 열어 두면 한 사람이 창을 새로
+                        // 열어 가며 몇 번이고 신고할 수 있어서 신고 수가 아무 뜻이 없어진다
+                        .requestMatchers(HttpMethod.POST, ApiPaths.Comment.REPORT)
+                        .hasAnyRole(MemberRole.USER.name(), MemberRole.ADMIN.name())
+                        // 내 댓글 고치기·지우기. 남의 것인지는 서비스가 본다 —
+                        // 여기서는 "로그인은 했는가" 까지만 가린다
+                        .requestMatchers(HttpMethod.PUT, ApiPaths.Comment.ITEM)
+                        .hasAnyRole(MemberRole.USER.name(), MemberRole.ADMIN.name())
+                        .requestMatchers(HttpMethod.DELETE, ApiPaths.Comment.ITEM)
+                        .hasAnyRole(MemberRole.USER.name(), MemberRole.ADMIN.name())
                         .requestMatchers(ApiPaths.Admin.ALL).hasRole(MemberRole.ADMIN.name())
                         .anyRequest().denyAll()
                 )

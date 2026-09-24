@@ -1,0 +1,129 @@
+/* ── 형광펜 ───────────────────────────────
+   찾은 자리를 칠한다. mark 의 기본색(노랑)은 이 블로그의 따뜻한 종이색과 부딪쳐서
+   같은 계열의 옅은 주황으로 바꾼다. 글자색은 건드리지 않는다 — 색만으로 알리면
+   색을 구별하기 어려운 사람에게는 아무 표시도 없는 것과 같아서, 굵기로도 알린다 */
+.keyword-hit {
+  padding: 0 1px;
+  border-radius: 3px;
+  background: linear-gradient(transparent 55%, rgba(235, 94, 40, 0.34) 55%);
+  color: inherit;
+  font-weight: 700;
+}
+
+/* ── 검색창 ─────────────────────────────── */
+
+.search-panel__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--page-bg);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 16px; /* 16px 미만이면 아이폰이 입력할 때 화면을 확대한다 */
+}
+
+.search-panel__input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.search-panel__hint {
+  margin: 14px 4px 4px;
+  color: var(--text-subtle);
+  font-size: 14px;
+}
+
+.search-results {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.search-results__item {
+  display: block;
+  width: 100%;
+  padding: 11px 12px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* 마우스로 짚든 방향키로 짚든 같은 자리가 같게 보여야 한다 */
+.search-results__item--active {
+  background: var(--surface-muted);
+}
+
+.search-results__category {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--text-subtle);
+  font-size: 12px;
+}
+
+.search-results__title {
+  display: block;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+
+
+/* ── 사이트 메뉴 ─────────────────────────────
+   화면을 덮지 않고 단추 아래로 연다. 갈 곳이 다섯 개뿐이라 덮개까지 씌울 값어치가
+   없고, 덮으면 보던 글이 가려져서 어디로 갈지 고르는 동안 맥락을 잃는다.
+   헤더의 회원 메뉴(.member-menu__dropdown)와 같은 방식이다 */
+
+.site-menu {
+  position: relative;
+}
+
+.site-menu__dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  min-width: 156px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.site-menu__link {
+  padding: 10px 10px;
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.site-menu__link:hover {
+  background: var(--surface-muted);
+  color: var(--accent-dark);
+}
+
+/* "분류" 는 누를 것이 아니라 아래 항목들을 묶는 이름이다 */
+.site-menu__label {
+  margin: 8px 0 2px;
+  padding: 0 10px;
+  color: var(--text-subtle);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+/* 공용 모달 안에서 가로를 다 쓴다. 안 주면 입력칸이 제 글자 수만큼만 차지해
+   창은 넓은데 칸만 짧은 모양이 된다 */
+.search-panel__input {
+  width: 100%;
+}

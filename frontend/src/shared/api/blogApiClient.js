@@ -32,11 +32,19 @@ function notifyIfSessionExpired(code) {
   }
 }
 
-export async function getApiData(path) {
+/**
+ * 읽기 요청.
+ *
+ * <p>{@code signal} 은 검색처럼 앞선 요청이 쓸모없어지는 자리에서 쓴다. 타자를 칠 때마다
+ * 요청이 나가는데 취소하지 않으면, 늦게 도착한 옛 응답이 최신 결과를 덮어써서 화면이
+ * 한 글자 전으로 되돌아간다.</p>
+ */
+export async function getApiData(path, { signal } = {}) {
   const response = await fetch(path, {
     headers: {
       Accept: 'application/json',
     },
+    signal,
   });
 
   // 실패 응답에도 본문이 있으므로 먼저 읽는다. 없을 수도 있어 실패는 삼킨다

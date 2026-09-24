@@ -12,12 +12,21 @@ public record PostListCondition(
         Integer page,
         Integer size,
         Long categoryId,
-        String sort
+        String sort,
+        String q
 ) {
 
     private static final int DEFAULT_PAGE = 0;
     private static final int DEFAULT_SIZE = 12;
     private static final int MAX_SIZE = 50;
+
+    /**
+     * 검색어 최소 길이.
+     *
+     * <p>한 글자를 허용하면 "개" 한 자로 거의 모든 글이 걸린다. 걸러 주는 게 없는 검색은
+     * 결과가 아니라 목록이라, 찾는 사람에게도 서버에도 쓸모가 없다.</p>
+     */
+    public static final int MIN_KEYWORD_LENGTH = 2;
 
     public static final String SORT_LATEST = "latest";
     public static final String SORT_POPULAR = "popular";
@@ -41,5 +50,28 @@ public record PostListCondition(
 
     public boolean isPopular() {
         return SORT_POPULAR.equals(sortOrDefault());
+    }
+
+    /**
+     * 실제로 검색에 쓸 말. 쓸 수 없으면 null.
+     *
+     * <p>앞뒤 공백을 턴 뒤 길이를 본다. 화면에서 걸러 보내지만 여기서도 본다 —
+     * 주소창에 {@code ?q=ㄱ} 을 직접 칠 수 있고, 그때 서버가 전체 글을 훑게 두면 안 된다.</p>
+     *
+     * <p>짧은 검색어를 오류로 막지 않는 이유는, 그게 잘못이 아니라 아직 덜 친 상태이기
+     * 때문이다. 검색이 아닌 것으로 보고 평범한 목록을 준다.</p>
+     */
+    public String keywordOrNull() {
+        if (q == null) {
+            return null;
+        }
+
+        String keyword = q.trim();
+
+        return keyword.length() >= MIN_KEYWORD_LENGTH ? keyword : null;
+    }
+
+    public boolean hasKeyword() {
+        return keywordOrNull() != null;
     }
 }

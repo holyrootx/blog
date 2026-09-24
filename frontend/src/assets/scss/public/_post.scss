@@ -1,91 +1,3 @@
-/* 글 상세 전용 헤더 — 시안 1a. 홈 헤더와 달리 카테고리 내비가 들어간다 */
-/* 대문 헤더와 같이 위에 붙어 따라온다. 글은 스크롤이 길어서 여기가 특히 필요하다 —
-   알림 종과 카테고리가 화면 밖으로 사라지면 글 중간에서 쓸 수가 없다.
-   배경이 반투명이면 밑의 본문이 비쳐 글자가 겹쳐 보이므로 blur 를 같이 건다 */
-.post-header {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: min(1440px, 100%);
-  margin: 0 auto;
-  padding: 20px 36px;
-  border: 1px solid var(--line);
-  border-bottom: 0;
-  border-radius: var(--radius) var(--radius) 0 0;
-  background: rgba(255, 250, 244, 0.92);
-  backdrop-filter: blur(14px);
-}
-
-.post-header__brand {
-  position: relative;
-  font-size: 19px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-}
-
-.post-header__brand::after {
-  position: absolute;
-  bottom: -7px;
-  left: 0;
-  width: 58px;
-  height: 4px;
-  border-radius: 3px;
-  background: var(--accent);
-  opacity: 0.85;
-  transform: rotate(-1.2deg);
-  content: '';
-}
-
-.post-header__nav {
-  display: flex;
-  align-items: center;
-  gap: 22px;
-}
-
-.post-header__link {
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--text-muted);
-}
-
-.post-header__link:hover {
-  color: var(--accent-dark);
-}
-
-.post-header__divider {
-  width: 1px;
-  height: 16px;
-  background: var(--line);
-}
-
-.post-header__icon {
-  display: flex;
-  align-items: center;
-  padding: 0;
-  border: 0;
-  background: none;
-  cursor: pointer;
-}
-
-.post-header__search {
-  width: 18px;
-  height: 18px;
-  border: 2px solid var(--text-muted);
-  border-radius: 50%;
-}
-
-.post-header__menu {
-  width: 20px;
-  height: 2px;
-  background: var(--text-muted);
-  box-shadow:
-    0 -6px 0 var(--text-muted),
-    0 6px 0 var(--text-muted);
-}
-
 /* 시안 카드 배경. 광고 슬롯(#fbf7f1)이 회색으로 도드라지려면 바탕이 거의 흰색이어야 한다 */
 .post-shell {
   background: #fffefb;
@@ -175,11 +87,11 @@
   color: var(--text-subtle);
 }
 
-.post-author .post-button:first-of-type {
-  margin-left: auto;
-}
-
 .post-button {
+  /* 공유 단추는 누르면 글자가 "복사했어요" 로 잠깐 바뀐다. 폭을 잡아 두지 않으면
+     그때마다 단추가 늘었다 줄었다 해서, 옆 글까지 밀렸다 돌아온다.
+     바뀔 수 있는 말 중 가장 긴 다섯 글자가 들어갈 폭이다 */
+  min-width: 108px;
   padding: 9px 16px;
   border: 1px solid var(--line);
   border-radius: 7px;
@@ -188,6 +100,7 @@
   font-family: inherit;
   font-size: 13px;
   font-weight: 600;
+  text-align: center;
   cursor: pointer;
 }
 
@@ -1177,39 +1090,6 @@
     padding-bottom: 108px;
   }
 
-  /* 모바일 헤더는 카테고리 내비 없이 브랜드 + 아이콘만 (시안 2a) */
-  .post-header {
-    padding: 14px 18px;
-  }
-
-  .post-header__brand {
-    font-size: 15px;
-  }
-
-  .post-header__brand::after {
-    bottom: -5px;
-    width: 44px;
-    height: 3px;
-  }
-
-  .post-header__link,
-  .post-header__divider {
-    display: none;
-  }
-
-  .post-header__nav {
-    gap: 14px;
-  }
-
-  .post-header__search {
-    width: 16px;
-    height: 16px;
-  }
-
-  .post-header__menu {
-    width: 18px;
-  }
-
   .post-article__header,
   .post-article__cover,
   .post-body,
@@ -1325,8 +1205,26 @@
 
 .post-list__head {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   gap: 12px;
+}
+
+/* 검색 중임을 알리는 자리이자 빠져나가는 길. 검색했을 때만 나온다 */
+.post-list__clear {
+  padding: 5px 11px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.post-list__clear:hover {
+  border-color: var(--accent);
+  color: var(--accent-dark);
 }
 
 .post-list__title {
@@ -1389,6 +1287,19 @@
   color: var(--text-subtle);
   font-size: 14px;
   text-align: center;
+}
+
+/* 검색이 빈손일 때 아래에 붙는 최근 글. 없다는 말만 남기지 않으려고 둔다 */
+.post-list__fallback {
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.post-list__fallback-title {
+  margin: 0 0 18px;
+  color: var(--text-muted);
+  font-size: 15px;
+  font-weight: 700;
 }
 
 .post-pager {
@@ -1486,4 +1397,165 @@
   .post-list__filter-gap {
     display: none;
   }
+}
+
+/* ── 댓글 신고 ─────────────────────────────
+   잘못 누르면 남을 가리키는 일이라, 바로 보내지 않고 한 번 더 묻는 창을 띄운다 */
+
+.report-dialog__reasons {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.report-dialog__legend {
+  margin-bottom: 8px;
+  padding: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.report-dialog__reason {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  margin-bottom: 6px;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.report-dialog__reason--picked {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-dark);
+  font-weight: 600;
+}
+
+.report-dialog__detail {
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--page-bg);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  resize: vertical;
+}
+
+/* 신고해도 바로 숨지 않는다는 것을 미리 알린다.
+   모르면 눌러 놓고 댓글이 그대로인 것을 보며 고장 났다고 생각한다 */
+.report-dialog__note {
+  margin: 14px 0 0;
+  color: var(--text-subtle);
+  font-size: 12.5px;
+  line-height: 1.7;
+}
+
+.report-dialog__error {
+  margin: 10px 0 0;
+  color: var(--accent-dark);
+  font-size: 13px;
+}
+
+
+.comments__report-done {
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-muted);
+  color: var(--text-muted);
+  font-size: 13.5px;
+}
+
+/* ── 내 댓글 고치기 ───────────────────────── */
+
+.comment-edit {
+  margin: 6px 0 0;
+}
+
+.comment-edit__input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--page-bg);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14.5px;
+  line-height: 1.7;
+  resize: vertical;
+}
+
+.comment-edit__input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.comment-edit__error {
+  margin: 6px 0 0;
+  color: var(--accent-dark);
+  font-size: 13px;
+}
+
+.comment-edit__actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 6px;
+}
+
+/* 지우기는 되돌릴 수 없다. 한 번 더 묻는 동안만 뜬다 */
+.comment__confirm {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.comment__action--danger {
+  color: var(--accent-dark);
+  font-weight: 700;
+}
+
+/* 고쳤다는 표시. 시각 옆에 작게 붙는다 — 알아볼 수는 있되 내용을 가리지 않는 크기 */
+.comment__edited {
+  color: var(--text-subtle);
+  font-size: 12px;
+}
+
+/* ── 댓글 아이콘 단추 ─────────────────────── */
+
+.comment__action--icon {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+}
+
+/* 그림 색은 글자색을 따라간다. 켜진 상태·신고 색을 단추 쪽에서 한 번에 정하려면
+   그림이 제 색을 고집하면 안 된다 */
+.comment-icon {
+  flex: 0 0 auto;
+  color: inherit;
+}
+
+/* 사이렌만 빨갛다. 평소 글자는 회색으로 두어 눈에 먼저 들어오지 않게 하고,
+   그림만으로 무슨 단추인지 알아보게 한다 */
+.comment__action--report .comment-icon {
+  color: #c0392b;
+}
+
+/* 이미 신고한 것. 눌리지 않으므로 색을 빼서 "할 일이 남지 않았다" 를 보인다 */
+.comment__action--reported,
+.comment__action--reported:hover {
+  color: var(--text-subtle);
+  cursor: default;
+}
+
+.comment__action--reported .comment-icon {
+  color: var(--text-subtle);
 }

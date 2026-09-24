@@ -179,6 +179,7 @@ export async function getAdminComments(condition = {}) {
       all: toNumber(result?.statusCounts?.all),
       unanswered: toNumber(result?.statusCounts?.unanswered),
       hidden: toNumber(result?.statusCounts?.hidden),
+      reported: toNumber(result?.statusCounts?.reported),
     },
     page: toNumber(result?.page),
     size: toNumber(result?.size),
@@ -194,10 +195,34 @@ export function replyAdminComment(commentId, content) {
   });
 }
 
-export function updateAdminCommentVisibility(commentId, hidden) {
+/**
+ * 댓글을 가리거나 되돌린다.
+ *
+ * reason 은 조치 이력에 함께 쌓인다. 나중에 글쓴이가 "왜 사라졌냐" 물었을 때
+ * 가리킬 것이 있으려면 그때 적어 두는 수밖에 없다.
+ */
+export function updateAdminCommentVisibility(commentId, hidden, reason = null) {
   return sendApiData(`${ADMIN_BLOG_API_BASE}/comments/${commentId}/visibility`, {
     method: 'PUT',
-    body: { hidden },
+    body: { hidden, reason },
+  });
+}
+
+/** 이 댓글의 신고 내역과 지금까지의 조치 */
+export async function getAdminCommentModeration(commentId) {
+  const detail = await getApiData(`${ADMIN_BLOG_API_BASE}/comments/${commentId}/moderation`);
+
+  return {
+    reports: Array.isArray(detail?.reports) ? detail.reports : [],
+    moderations: Array.isArray(detail?.moderations) ? detail.moderations : [],
+  };
+}
+
+/** 신고를 봤지만 댓글은 그대로 둔다 */
+export function dismissAdminCommentReports(commentId, reason = null) {
+  return sendApiData(`${ADMIN_BLOG_API_BASE}/comments/${commentId}/reports/dismiss`, {
+    method: 'POST',
+    body: { reason },
   });
 }
 
@@ -213,6 +238,8 @@ function toAdminComment(comment) {
     createdAt: comment.createdAt ?? null,
     hidden: Boolean(comment.hidden),
     answered: Boolean(comment.answered),
+    reportCount: Number(comment.reportCount ?? 0),
+    unhandledReportCount: Number(comment.unhandledReportCount ?? 0),
   };
 }
 

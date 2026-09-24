@@ -12,11 +12,14 @@ import me.jsjlog.blog.admin.dto.AdminCommentSearchCondition;
 import me.jsjlog.blog.admin.dto.AdminCommentSummaryResponse;
 import me.jsjlog.blog.member.domain.MemberRole;
 import me.jsjlog.blog.post.domain.QComment;
+import me.jsjlog.blog.post.domain.QCommentReport;
 import org.springframework.stereotype.Repository;
 import org.springframework.util.StringUtils;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -55,9 +58,13 @@ public class AdminCommentQueryRepository {
         }
 
         List<Tuple> rows = query.fetch();
-        Set<Long> answeredIds = getAnsweredRootIds(rows.stream()
+        List<Long> ids = rows.stream()
                 .map(row -> row.get(comment.id))
-                .toList());
+                .toList();
+
+        Set<Long> answeredIds = getAnsweredRootIds(ids);
+        Map<Long, Long> reportCounts = getReportCounts(ids);
+        Map<Long, Long> unhandledReportCounts = getUnhandledReportCounts(ids);
 
         return rows.stream()
                 .map(row -> new AdminCommentSummaryResponse(
@@ -70,9 +77,66 @@ public class AdminCommentQueryRepository {
                         row.get(comment.content),
                         row.get(comment.createdAt),
                         Boolean.TRUE.equals(row.get(comment.deleted)),
-                        answeredIds.contains(row.get(comment.id))
+                        answeredIds.contains(row.get(comment.id)),
+                        reportCounts.getOrDefault(row.get(comment.id), 0L),
+                        unhandledReportCounts.getOrDefault(row.get(comment.id), 0L)
                 ))
                 .toList();
+    }
+
+    /**
+     * 화면에 뜬 댓글들의 신고 수를 한 번에 센다.
+     *
+     * <p>댓글마다 따로 세면 목록 한 번 그리는 데 쿼리가 스무 번 나간다. 위의
+     * {@code getAnsweredRootIds} 와 같은 이유, 같은 방식이다.</p>
+     *
+     * <p>신고가 없는 댓글은 결과에 없다. 받는 쪽에서 0으로 채운다.</p>
+     */
+    private Map<Long, Long> getReportCounts(List<Long> commentIds) {
+        if (commentIds.isEmpty()) {
+            return Map.of();
+        }
+
+        QCommentReport report = QCommentReport.commentReport;
+
+        List<Tuple> rows = jpaQueryFactory
+                .select(report.comment.id, report.count())
+                .from(report)
+                .where(report.comment.id.in(commentIds))
+                .groupBy(report.comment.id)
+                .fetch();
+
+        Map<Long, Long> counts = new HashMap<>();
+
+        for (Tuple row : rows) {
+            counts.put(row.get(report.comment.id), row.get(report.count()));
+        }
+
+        return counts;
+    }
+
+    /** 미처리 신고 수. 위와 한 번에 세지 않는 이유는 조건부 집계가 방언마다 달라서다 */
+    private Map<Long, Long> getUnhandledReportCounts(List<Long> commentIds) {
+        if (commentIds.isEmpty()) {
+            return Map.of();
+        }
+
+        QCommentReport report = QCommentReport.commentReport;
+
+        List<Tuple> rows = jpaQueryFactory
+                .select(report.comment.id, report.count())
+                .from(report)
+                .where(report.comment.id.in(commentIds), report.handledAt.isNull())
+                .groupBy(report.comment.id)
+                .fetch();
+
+        Map<Long, Long> counts = new HashMap<>();
+
+        for (Tuple row : rows) {
+            counts.put(row.get(report.comment.id), row.get(report.count()));
+        }
+
+        return counts;
     }
 
     public long countComments(AdminCommentSearchCondition condition) {
@@ -83,7 +147,8 @@ public class AdminCommentQueryRepository {
         return new AdminCommentCounts(
                 count(condition, AdminCommentFilter.ALL),
                 count(condition, AdminCommentFilter.UNANSWERED),
-                count(condition, AdminCommentFilter.HIDDEN)
+                count(condition, AdminCommentFilter.HIDDEN),
+                count(condition, AdminCommentFilter.REPORTED)
         );
     }
 
@@ -119,9 +184,30 @@ public class AdminCommentQueryRepository {
             builder.and(unanswered(comment));
         } else if (filter == AdminCommentFilter.HIDDEN) {
             builder.and(comment.deleted.isTrue());
+        } else if (filter == AdminCommentFilter.REPORTED) {
+            builder.and(hasUnhandledReport(comment));
         }
 
         return builder;
+    }
+
+    /**
+     * 아직 판단하지 않은 신고가 달렸는가.
+     *
+     * <p>처리한 신고까지 세면 한 번 본 댓글이 목록에서 내려가지 않는다. 그러면 새로 온
+     * 신고가 옛것 사이에 묻혀서, 목록을 봐도 무엇이 새것인지 알 수 없다.</p>
+     */
+    private com.querydsl.core.types.dsl.BooleanExpression hasUnhandledReport(QComment comment) {
+        QCommentReport report = QCommentReport.commentReport;
+
+        return JPAExpressions
+                .selectOne()
+                .from(report)
+                .where(
+                        report.comment.id.eq(comment.id),
+                        report.handledAt.isNull()
+                )
+                .exists();
     }
 
     private com.querydsl.core.types.dsl.BooleanExpression unanswered(QComment comment) {

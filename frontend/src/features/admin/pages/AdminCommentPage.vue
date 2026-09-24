@@ -3,12 +3,14 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import {
+  dismissAdminCommentReports,
+  getAdminCommentModeration,
   getAdminComments,
   replyAdminComment,
   updateAdminCommentVisibility,
 } from '../api/adminApi';
 import AdminGridToolbar from '../components/AdminGridToolbar.vue';
-import AdminModal from '../components/AdminModal.vue';
+import BaseModal from '../../../shared/components/BaseModal.vue';
 import AdminPageHeader from '../components/AdminPageHeader.vue';
 import AdminPageSize from '../components/AdminPageSize.vue';
 import AdminPagination from '../components/AdminPagination.vue';
@@ -17,7 +19,7 @@ import AdminSegmented from '../components/AdminSegmented.vue';
 import AdminTextInput from '../components/AdminTextInput.vue';
 import { notifySuccess } from '../data/adminToastStore';
 
-const FILTERS = ['ALL', 'UNANSWERED', 'HIDDEN'];
+const FILTERS = ['ALL', 'UNANSWERED', 'REPORTED', 'HIDDEN'];
 const EMPTY_CONDITION = { status: 'ALL', keyword: '' };
 
 const route = useRoute();
@@ -28,7 +30,7 @@ const condition = reactive({
 });
 const applied = ref({ ...condition });
 const comments = ref([]);
-const statusCounts = ref({ all: 0, unanswered: 0, hidden: 0 });
+const statusCounts = ref({ all: 0, unanswered: 0, hidden: 0, reported: 0 });
 const totalElements = ref(0);
 const totalPages = ref(0);
 const page = ref(1);
@@ -45,9 +47,25 @@ const visibilityTarget = ref(null);
 const visibilityError = ref('');
 const visibilitySubmitting = ref(false);
 
+/** 가릴 때 남기는 메모. 조치 이력에 함께 쌓인다 */
+const visibilityReason = ref('');
+
+/**
+ * 신고 내역과 조치 이력을 펼쳐 볼 댓글.
+ *
+ * 둘을 함께 본다. 이미 가린 댓글인 줄 모르고 또 가리는 일을 막으려면
+ * 신고만 봐서는 안 된다.
+ */
+const moderationTarget = ref(null);
+const moderationDetail = ref({ reports: [], moderations: [] });
+const moderationLoading = ref(false);
+const moderationError = ref('');
+const dismissSubmitting = ref(false);
+
 const statusOptions = computed(() => [
   { value: 'ALL', label: `전체 ${formatCount(statusCounts.value.all)}` },
   { value: 'UNANSWERED', label: `미답변 ${formatCount(statusCounts.value.unanswered)}` },
+  { value: 'REPORTED', label: `신고 ${formatCount(statusCounts.value.reported)}` },
   { value: 'HIDDEN', label: `숨김 ${formatCount(statusCounts.value.hidden)}` },
 ]);
 
@@ -185,6 +203,7 @@ async function submitReply() {
 function askVisibility(comment) {
   visibilityTarget.value = comment;
   visibilityError.value = '';
+  visibilityReason.value = '';
 }
 
 function closeVisibility() {
@@ -206,14 +225,71 @@ async function changeVisibility() {
 
   try {
     const hidden = !visibilityTarget.value.hidden;
-    await updateAdminCommentVisibility(visibilityTarget.value.id, hidden);
+    await updateAdminCommentVisibility(
+      visibilityTarget.value.id,
+      hidden,
+      visibilityReason.value || null,
+    );
     visibilityTarget.value = null;
+    visibilityReason.value = '';
     await reload();
     notifySuccess(hidden ? '댓글을 숨겼습니다.' : '댓글을 다시 공개했습니다.');
   } catch (error) {
     visibilityError.value = error?.message ?? '댓글 상태를 변경하지 못했습니다.';
   } finally {
     visibilitySubmitting.value = false;
+  }
+}
+
+async function openModeration(comment) {
+  moderationTarget.value = comment;
+  moderationError.value = '';
+  moderationLoading.value = true;
+  moderationDetail.value = { reports: [], moderations: [] };
+
+  try {
+    moderationDetail.value = await getAdminCommentModeration(comment.id);
+  } catch (error) {
+    moderationError.value = error?.message ?? '신고 내역을 불러오지 못했습니다.';
+  } finally {
+    moderationLoading.value = false;
+  }
+}
+
+function closeModeration() {
+  if (dismissSubmitting.value) {
+    return;
+  }
+
+  moderationTarget.value = null;
+  moderationError.value = '';
+}
+
+/**
+ * 신고를 봤지만 댓글은 그대로 둔다.
+ *
+ * 이게 없으면 "문제 없음" 이라는 판단을 남길 자리가 없어서, 같은 신고를 볼 때마다
+ * 처음부터 다시 읽게 된다.
+ */
+async function dismissReports() {
+  if (!moderationTarget.value || dismissSubmitting.value) {
+    return;
+  }
+
+  dismissSubmitting.value = true;
+  moderationError.value = '';
+
+  try {
+    await dismissAdminCommentReports(moderationTarget.value.id, visibilityReason.value || null);
+
+    moderationTarget.value = null;
+    visibilityReason.value = '';
+    await load();
+    notifySuccess('신고를 처리했습니다. 댓글은 그대로 둡니다.');
+  } catch (error) {
+    moderationError.value = error?.message ?? '신고를 처리하지 못했습니다.';
+  } finally {
+    dismissSubmitting.value = false;
   }
 }
 
@@ -311,6 +387,21 @@ function formatDateTime(value) {
             >
               {{ commentState(comment) }}
             </span>
+            <!--
+              미처리와 전체를 나눠 보여 준다. 전체만 보이면 처리해도 숫자가 그대로라
+              무엇을 아직 안 봤는지 알 수 없다
+            -->
+            <button
+              v-if="comment.reportCount > 0"
+              class="admin-badge admin-badge--report"
+              :class="{ 'admin-badge--report-pending': comment.unhandledReportCount > 0 }"
+              type="button"
+              @click="openModeration(comment)"
+            >
+              신고 {{ comment.unhandledReportCount > 0
+                ? `${comment.unhandledReportCount}건 대기`
+                : `${comment.reportCount}건 처리됨` }}
+            </button>
             <span>{{ formatDateTime(comment.createdAt) }}</span>
             <a :href="`/posts/${comment.postId}`" target="_blank" rel="noopener noreferrer">
               {{ comment.postTitle }}
@@ -349,7 +440,7 @@ function formatDateTime(value) {
       @update:page="changePage"
     />
 
-    <AdminModal
+    <BaseModal variant="admin"
       :open="Boolean(replyTarget)"
       title="답글 작성"
       :description="replyTarget ? `${replyTarget.nickname} 님의 댓글에 답글을 남깁니다.` : ''"
@@ -373,11 +464,7 @@ function formatDateTime(value) {
           </span>
         </div>
       </div>
-      <template #footer>
-        <button class="admin-button" type="button" :disabled="replySubmitting" @click="closeReply">
-          취소
-        </button>
-        <button
+      <template #footer><button
           class="admin-button admin-button--solid"
           type="button"
           :disabled="replySubmitting"
@@ -385,24 +472,31 @@ function formatDateTime(value) {
         >
           {{ replySubmitting ? '등록 중' : '답글 등록' }}
         </button>
-      </template>
-    </AdminModal>
+      
+        <button class="admin-button" type="button" :disabled="replySubmitting" @click="closeReply">
+          취소
+        </button>
+        </template>
+    </BaseModal>
 
-    <AdminModal
+    <BaseModal variant="admin"
       :open="Boolean(visibilityTarget)"
       :title="visibilityText.title"
       :description="visibilityText.description"
       size="small"
       @close="closeVisibility"
     >
+      <!-- 나중에 글쓴이가 "왜 사라졌냐" 물었을 때 가리킬 것은 여기 적은 말뿐이다 -->
+      <AdminTextInput
+        v-model="visibilityReason"
+        label="사유 (선택)"
+        placeholder="조치 이력에 남습니다"
+        :maxlength="200"
+      />
       <p v-if="visibilityError" class="admin-comment-reply-form__error" role="alert">
         {{ visibilityError }}
       </p>
-      <template #footer>
-        <button class="admin-button" type="button" :disabled="visibilitySubmitting" @click="closeVisibility">
-          취소
-        </button>
-        <button
+      <template #footer><button
           class="admin-button"
           :class="visibilityTarget?.hidden ? 'admin-button--solid' : 'admin-button--danger'"
           type="button"
@@ -411,7 +505,82 @@ function formatDateTime(value) {
         >
           {{ visibilitySubmitting ? '처리 중' : visibilityText.action }}
         </button>
+      
+        <button class="admin-button" type="button" :disabled="visibilitySubmitting" @click="closeVisibility">
+          취소
+        </button>
+        </template>
+    </BaseModal>
+
+    <BaseModal variant="admin"
+      :open="Boolean(moderationTarget)"
+      title="신고 내역과 조치"
+      description="신고가 쌓여도 댓글이 저절로 숨겨지지는 않습니다. 읽어 보고 정하세요."
+      @close="closeModeration"
+    >
+      <p v-if="moderationLoading" class="admin-moderation__empty">불러오는 중…</p>
+      <p v-else-if="moderationError" class="admin-comment-reply-form__error" role="alert">
+        {{ moderationError }}
+      </p>
+
+      <template v-else>
+        <p class="admin-moderation__quote">{{ moderationTarget?.content }}</p>
+
+        <h3 class="admin-moderation__title">신고 {{ moderationDetail.reports.length }}건</h3>
+        <ul class="admin-moderation__list">
+          <li v-for="report in moderationDetail.reports" :key="report.id">
+            <span class="admin-moderation__reason">{{ report.reasonLabel }}</span>
+            <span v-if="report.detail" class="admin-moderation__detail">{{ report.detail }}</span>
+            <span class="admin-moderation__time">
+              {{ formatDateTime(report.reportedAt) }} · {{ report.handled ? '처리됨' : '대기' }}
+            </span>
+          </li>
+        </ul>
+
+        <h3 class="admin-moderation__title">지금까지의 조치</h3>
+        <p v-if="moderationDetail.moderations.length === 0" class="admin-moderation__empty">
+          아직 없습니다.
+        </p>
+        <ul v-else class="admin-moderation__list">
+          <li v-for="item in moderationDetail.moderations" :key="item.id">
+            <span class="admin-moderation__reason">{{ item.actionLabel }}</span>
+            <span v-if="item.reason" class="admin-moderation__detail">{{ item.reason }}</span>
+            <span class="admin-moderation__time">
+              {{ formatDateTime(item.actedAt) }} · {{ item.adminNickname }}
+            </span>
+          </li>
+        </ul>
+
+        <AdminTextInput
+          v-model="visibilityReason"
+          label="메모 (선택)"
+          placeholder="판단한 이유를 남겨 두면 다음에 다시 읽지 않아도 됩니다"
+          :maxlength="200"
+        />
       </template>
-    </AdminModal>
+
+      <template #footer><button
+          class="admin-button"
+          type="button"
+          :disabled="dismissSubmitting || moderationLoading"
+          @click="dismissReports"
+        >
+          {{ dismissSubmitting ? '처리 중' : '문제 없음' }}
+        </button>
+        <button
+          v-if="moderationTarget && !moderationTarget.hidden"
+          class="admin-button admin-button--danger"
+          type="button"
+          :disabled="dismissSubmitting"
+          @click="askVisibility(moderationTarget); closeModeration()"
+        >
+          가리기
+        </button>
+      
+        <button class="admin-button" type="button" :disabled="dismissSubmitting" @click="closeModeration">
+          닫기
+        </button>
+        </template>
+    </BaseModal>
   </div>
 </template>

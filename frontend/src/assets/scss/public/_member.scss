@@ -360,16 +360,30 @@
   background: #fdf7f4;
 }
 
+/* 제목과 사진이 한 줄. 사진은 못 바꾸는 값이라 여기 두고, 아래 줄에는 바꾸는 것만 남긴다 */
+.member-settings__section-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
 .member-settings__section-title {
   margin: 0 0 16px;
   font-size: 16px;
   font-weight: 700;
 }
 
+.member-settings__section-head .member-settings__section-title {
+  margin: 0;
+}
+
+/* 닉네임 한 줄: 라벨·입력칸·단추. 설명글은 이 줄 밖에 둔다 —
+   안에 있으면 줄의 바닥이 글줄이 되어 단추가 입력칸보다 내려간다 */
 .member-settings__profile {
   display: flex;
-  align-items: flex-end;
-  gap: 14px;
+  align-items: center;
+  gap: 12px;
 }
 
 .member-settings__avatar {
@@ -379,7 +393,6 @@
   justify-content: center;
   width: 44px;
   height: 44px;
-  margin-bottom: 4px;
   border: 1px solid var(--line);
   border-radius: 50%;
   background: var(--surface-muted);
@@ -396,15 +409,16 @@
   min-width: 0;
 }
 
+/* 입력칸 앞에 나란히 선다. 바로 위 "프로필" 과 같은 크기라 둘의 무게가 맞는다 */
 .member-settings__label {
-  display: block;
-  margin-bottom: 6px;
-  font-size: 13px;
-  font-weight: 600;
+  flex: none;
+  font-size: 16px;
+  font-weight: 700;
 }
 
 .member-settings__input {
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   height: 40px;
   padding: 0 12px;
   border: 1px solid var(--line);
@@ -674,6 +688,99 @@
 .notification-bell__post {
   color: var(--text-subtle);
   font-size: 11.5px;
+}
+
+/* 글 제목과 시각을 한 줄에. 제목이 길면 줄여서 시각 자리를 지킨다 —
+   언제 온 알림인지가 제목 뒷부분보다 먼저 필요하다 */
+.notification-bell__foot {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.notification-bell__foot .notification-bell__post {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notification-bell__time {
+  flex: 0 0 auto;
+  color: var(--text-subtle);
+  font-size: 11.5px;
+}
+
+/*
+ * 마우스를 올리면 뜨는 정확한 시각.
+ *
+ * 브라우저 기본 툴팁(title)을 안 쓴다 — 환경에 따라 아예 안 뜨고, 떠도 1초를
+ * 멈춰 있어야 한다. 직접 그리면 어디서나 같게 보인다.
+ *
+ * 줄 안쪽에 띄운다. 목록이 overflow-y: auto 라 밖으로 나가면 잘린다.
+ * "2일 전" 이 있던 자리를 덮으면서 왼쪽으로 펼쳐진다
+ */
+.notification-bell__item {
+  position: relative;
+}
+
+.notification-bell__item::after {
+  position: absolute;
+  right: 8px;
+  bottom: 6px;
+  padding: 3px 8px;
+  border-radius: 5px;
+  background: var(--text);
+  color: var(--surface);
+  font-size: 11px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s;
+  content: attr(data-exact-time);
+}
+
+.notification-bell__item:hover::after,
+.notification-bell__item:focus-visible::after {
+  opacity: 1;
+}
+
+/* 마우스가 없는 기기. 올릴 수가 없으니 시각을 아예 같이 적는다 */
+.notification-bell__exact {
+  display: none;
+}
+
+@media (hover: none) {
+  .notification-bell__item::after {
+    content: none;
+  }
+
+  .notification-bell__exact {
+    display: inline;
+  }
+}
+
+/*
+ * 좁은 화면에서는 종이 아니라 헤더에 붙인다.
+ *
+ * 종에 붙이면(.notification-bell 이 기준) 오른쪽 끝이 종의 오른쪽 끝에 맞는데,
+ * 종 오른쪽에는 회원 아바타가 한 칸 더 있다. 그만큼 창이 왼쪽으로 밀려서
+ * 375px 화면에서는 왼쪽이 13px 잘려 나갔다. 폭을 100vw 로 재 봐야 소용없다 —
+ * 모자라는 건 폭이 아니라 기준점이다.
+ *
+ * 기준을 헤더로 옮기면 헤더의 좌우 여백 안에 딱 맞게 눕는다. 헤더는 sticky 라
+ * 이미 기준이 될 수 있어서, 종의 relative 만 풀면 된다.
+ */
+@media (max-width: 560px) {
+  .notification-bell {
+    position: static;
+  }
+
+  .notification-bell__dropdown {
+    right: 0;
+    left: 0;
+    width: auto;
+  }
 }
 
 /* 비로그인일 때 헤더에 뜨는 로그인 버튼.

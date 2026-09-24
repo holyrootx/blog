@@ -9,6 +9,7 @@ import me.jsjlog.blog.post.domain.PostStatus;
 import me.jsjlog.blog.post.dto.*;
 import me.jsjlog.blog.post.repository.CommentRepository;
 import me.jsjlog.blog.post.repository.PostRepository;
+import me.jsjlog.blog.search.service.SearchLogService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,8 +25,12 @@ public class PostService {
     private static final long DEFAULT_COMMENT_PAGE_SIZE = 20L;
     private static final long MAX_COMMENT_PAGE_SIZE = 50L;
 
+    private static final int DEFAULT_SUGGEST_SIZE = 5;
+    private static final int MAX_SUGGEST_SIZE = 10;
+
     private final PostRepository postRepository;
     private final CommentRepository commentRepository;
+    private final SearchLogService searchLogService;
 
     public List<PostSummaryResponse> getLatestPostsForHomePage(){
         return postRepository.getLatestPostsForHomePage();
@@ -79,18 +84,53 @@ public class PostService {
     }
 
     /**
-     * 공개 글 목록.
+     * 공개 글 목록. 검색어가 있으면 검색 결과이기도 하다.
      *
      * 목록과 개수를 따로 조회한다. 한 방에 세려면 전체를 읽어야 하는데, 화면은 한 페이지만 쓴다.
      */
     @Transactional(readOnly = true)
     public PostListResponse getPosts(PostListCondition condition) {
+        long total = postRepository.countPublicPosts(condition);
+
+        recordSearch(condition, total);
+
         return PostListResponse.of(
                 postRepository.getPublicPosts(condition),
                 condition.pageOrDefault(),
                 condition.sizeOrDefault(),
-                postRepository.countPublicPosts(condition)
+                total
         );
+    }
+
+    /**
+     * 검색창 아래에 바로 뜨는 글 몇 건.
+     *
+     * 여기서는 기록을 남기지 않는다. 타자 한 자마다 불리는 자리라 "스", "스프", "스프링" 이
+     * 전부 쌓이는데, 사람이 실제로 찾은 말은 마지막 하나뿐이다.
+     */
+    @Transactional(readOnly = true)
+    public List<PostSuggestResponse> getPostSuggestions(String keyword, Integer size) {
+        PostListCondition condition = new PostListCondition(null, null, null, null, keyword);
+
+        if (!condition.hasKeyword()) {
+            return List.of();
+        }
+
+        int limit = size == null || size < 1 ? DEFAULT_SUGGEST_SIZE : Math.min(size, MAX_SUGGEST_SIZE);
+
+        return postRepository.getPublicPostSuggestions(condition.keywordOrNull(), limit);
+    }
+
+    /**
+     * 첫 페이지에서만 남긴다.
+     *
+     * 뒷장으로 넘길 때마다 쌓으면 같은 검색이 여러 번 센 것이 되어, 나중에 인기 검색어를
+     * 뽑을 때 페이지를 많이 넘긴 검색어가 인기 있는 것처럼 보인다.
+     */
+    private void recordSearch(PostListCondition condition, long total) {
+        if (condition.hasKeyword() && condition.pageOrDefault() == 0) {
+            searchLogService.record(condition.keywordOrNull(), total);
+        }
     }
 
     /** 조회수를 올리므로 쓰기 트랜잭션이 필요하다 */

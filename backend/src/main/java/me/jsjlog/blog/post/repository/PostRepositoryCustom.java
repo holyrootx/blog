@@ -18,4 +18,7 @@ public interface PostRepositoryCustom {
 
     /** 같은 조건의 전체 개수. 화면이 마지막 페이지를 알아야 한다 */
     long countPublicPosts(PostListCondition condition);
+
+    /** 검색창 아래에 바로 띄울 글 몇 건 */
+    List<PostSuggestResponse> getPublicPostSuggestions(String keyword, int size);
 }
