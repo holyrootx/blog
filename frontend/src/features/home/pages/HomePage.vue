@@ -5,7 +5,13 @@ import BlogHeader from '../components/BlogHeader.vue';
 import HomeHero from '../components/HomeHero.vue';
 import PostSection from '../components/PostSection.vue';
 import HomeTopicSection from '../components/HomeTopicSection.vue';
-import { getBlogProfile, getHomePageHero, getHomePosts, getHomeTopics } from '../api/homeApi';
+import {
+  getBlogProfile,
+  getHomePageHero,
+  getHomePosts,
+  getHomeTopics,
+  getHomeTopicSection,
+} from '../api/homeApi';
 
 // API 응답이 오기 전까지의 초기 상태. mergeDefined가 빈 값을 덮어쓰지 않으므로
 // 여기 남은 값은 API가 해당 필드를 내려주지 않았을 때 그대로 노출된다.
@@ -27,10 +33,18 @@ const EMPTY_PROFILE = {
   email: '',
 };
 
+const EMPTY_TOPIC_SECTION = {
+  title: '',
+  intro: '',
+  noteBadge: '',
+  note: '',
+};
+
 const home = reactive({
   header: { title: SITE_TITLE },
   hero: { ...EMPTY_HERO },
   profile: { ...EMPTY_PROFILE },
+  topicSection: { ...EMPTY_TOPIC_SECTION },
   topics: [],
   featuredPosts: [],
   recentPosts: [],
@@ -39,9 +53,17 @@ const home = reactive({
 const headerTitle = computed(() => home.profile.name || home.header.title);
 
 onMounted(async () => {
-  const [profileResult, heroResult, topicsResult, popularPostsResult, latestPostsResult] = await Promise.allSettled([
+  const [
+    profileResult,
+    heroResult,
+    topicSectionResult,
+    topicsResult,
+    popularPostsResult,
+    latestPostsResult,
+  ] = await Promise.allSettled([
     getBlogProfile(),
     getHomePageHero(),
+    getHomeTopicSection(),
     getHomeTopics(),
     getHomePosts('popular'),
     getHomePosts('latest'),
@@ -57,6 +79,12 @@ onMounted(async () => {
     home.hero = mergeDefined(home.hero, heroResult.value);
   } else {
     console.error(heroResult.reason);
+  }
+
+  if (topicSectionResult.status === 'fulfilled') {
+    home.topicSection = mergeDefined(home.topicSection, topicSectionResult.value);
+  } else {
+    console.error(topicSectionResult.reason);
   }
 
   if (topicsResult.status === 'fulfilled') {
@@ -97,7 +125,7 @@ function mergeDefined(base, next) {
     <BlogHeader :title="headerTitle" />
     <main class="public-shell__main">
       <HomeHero :hero="home.hero" :profile="home.profile" />
-      <HomeTopicSection :topics="home.topics" />
+      <HomeTopicSection :section="home.topicSection" :topics="home.topics" />
       <PostSection title="인기글" sort="popular" :posts="home.featuredPosts" />
       <PostSection title="최근 글" sort="latest" :posts="home.recentPosts" />
     </main>

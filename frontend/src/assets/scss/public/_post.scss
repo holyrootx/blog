@@ -404,6 +404,32 @@
   font-weight: 700;
 }
 
+.post-reactions__button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.post-reactions__button--like {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.post-reactions__button--like strong {
+  min-width: 1ch;
+  font-variant-numeric: tabular-nums;
+}
+
+.post-reactions__heart {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.post-reactions__error {
+  font-size: 12px;
+  color: #b42318;
+}
+
 .post-nav {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

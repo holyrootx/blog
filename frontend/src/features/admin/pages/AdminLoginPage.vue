@@ -65,7 +65,7 @@ async function submit() {
   <div class="admin-login">
     <form class="admin-login__card" @submit.prevent="submit">
       <div class="admin-login__head">
-        <span class="admin-login__brand">스물몇의 기록</span>
+        <span class="admin-login__brand">정성주의 기록</span>
         <h1 class="admin-login__title">관리자 로그인</h1>
       </div>
 

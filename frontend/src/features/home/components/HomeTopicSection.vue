@@ -1,5 +1,9 @@
 <script setup>
 defineProps({
+  section: {
+    type: Object,
+    required: true,
+  },
   topics: {
     type: Array,
     required: true,
@@ -10,8 +14,8 @@ defineProps({
 <template>
   <section v-if="topics.length > 0" class="home-section home-topics" aria-labelledby="home-topics-title">
     <div class="home-topics__header">
-      <h2 id="home-topics-title" class="home-section__title">여기서 다루는 이야기</h2>
-      <p class="home-topics__intro">앞으로 이런 글을 쓸거에요.</p>
+      <h2 id="home-topics-title" class="home-section__title">{{ section.title }}</h2>
+      <p class="home-topics__intro">{{ section.intro }}</p>
     </div>
 
     <div class="home-topic-grid">
@@ -29,8 +33,8 @@ defineProps({
     </div>
 
     <div class="home-topics__note">
-      <span class="home-topics__badge">쓰는 중</span>
-      <span>아직 글이 많지 않아요. 하나씩 채워가는 중이에요.</span>
+      <span class="home-topics__badge">{{ section.noteBadge }}</span>
+      <span>{{ section.note }}</span>
     </div>
   </section>
 </template>

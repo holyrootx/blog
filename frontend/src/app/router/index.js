@@ -11,6 +11,7 @@ import AdminPostPage from '../../features/admin/pages/AdminPostPage.vue';
 import AdminPostEditPage from '../../features/admin/pages/AdminPostEditPage.vue';
 import AdminCommentPage from '../../features/admin/pages/AdminCommentPage.vue';
 import AdminHomeSettingsPage from '../../features/admin/pages/AdminHomeSettingsPage.vue';
+import AdminMemberPage from '../../features/admin/pages/AdminMemberPage.vue';
 import AdminLoginPage from '../../features/admin/pages/AdminLoginPage.vue';
 import MemberLoginPage from '../../features/member/pages/MemberLoginPage.vue';
 import OAuthCallbackPage from '../../features/member/pages/OAuthCallbackPage.vue';
@@ -191,6 +192,15 @@ const router = createRouter({
           meta: {
             title: '댓글 관리',
             group: '콘텐츠',
+          },
+        },
+        {
+          path: 'members',
+          name: 'admin-members',
+          component: AdminMemberPage,
+          meta: {
+            title: '회원 관리',
+            group: '운영',
           },
         },
         {

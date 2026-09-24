@@ -35,6 +35,10 @@ const EMPTY_DETAIL = {
     excerpt: '',
     publishedAt: '',
     views: '',
+    likeCount: 0,
+    dislikeCount: 0,
+    likedByMe: false,
+    dislikedByMe: false,
     coverImageUrl: '',
     coverImageAlt: '',
     tags: [],
@@ -146,6 +150,16 @@ function mergeDefined(base, next) {
     { ...base },
   );
 }
+
+function applyPostReaction(reaction) {
+  detail.post = {
+    ...detail.post,
+    likeCount: Number(reaction?.likeCount ?? 0),
+    dislikeCount: Number(reaction?.dislikeCount ?? 0),
+    likedByMe: Boolean(reaction?.likedByMe),
+    dislikedByMe: Boolean(reaction?.dislikedByMe),
+  };
+}
 </script>
 
 <template>
@@ -158,6 +172,7 @@ function mergeDefined(base, next) {
         <div class="post-shell__column">
           <PostArticle
             @focus-comments="commentSection?.focusCommentInput()"
+            @reaction-changed="applyPostReaction"
             :post="detail.post"
             :author="detail.author"
             :body="detail.body"
