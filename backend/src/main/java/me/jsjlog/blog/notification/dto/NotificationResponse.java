@@ -15,7 +15,15 @@ import me.jsjlog.blog.post.domain.Comment;
 public record NotificationResponse(
         Long id,
         NotificationType type,
-        /** 알림을 만든 사람. 답글을 단 사람이거나 내 글에 댓글을 단 사람 */
+        /**
+         * 이 알림이 가리키는 <b>댓글을 쓴 사람</b>.
+         *
+         * <p>타입마다 누구인지가 달라진다. {@code REPLY} 는 답글을 단 사람,
+         * {@code POST_COMMENT} 는 내 글에 댓글을 단 사람이라 둘 다 "상대" 다.
+         * {@code REPORT_RECEIVED} 는 신고자가 아니라 <b>신고당한 댓글을 쓴 사람</b>이고
+         * — 운영자에게는 이쪽이 필요한 정보다 — {@code COMMENT_HIDDEN} 은
+         * <b>받는 사람 자신</b>이라 화면에서 쓰지 않는다.</p>
+         */
         String actorNickname,
         Long postId,
         String postTitle,

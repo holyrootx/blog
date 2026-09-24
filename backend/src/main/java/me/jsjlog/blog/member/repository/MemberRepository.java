@@ -1,5 +1,6 @@
 package me.jsjlog.blog.member.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import me.jsjlog.blog.member.domain.AuthProvider;
@@ -27,4 +28,13 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
      * 그 확인을 빠뜨린 경로가 하나 생기는 순간 일반 회원이 관리자 자리에 앉는다.
      */
     Optional<Member> findByUsernameAndRole(String username, MemberRole role);
+
+    /**
+     * 그 권한을 가진 회원 전부.
+     *
+     * <p>운영자에게 알릴 일이 생겼을 때 받는 사람을 찾는 자리다. 지금은 관리자가 한 명이라
+     * {@code Optional} 로도 되지만 복수로 둔다 — 한 명이라고 가정해 두면 둘이 되는 날
+     * 알림이 한 명에게만 가고, 그건 안 가는 것보다 알아채기 어렵다.</p>
+     */
+    List<Member> findAllByRole(MemberRole role);
 }
