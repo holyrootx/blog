@@ -19,7 +19,15 @@ public record MyCommentResponse(
         String postTitle,
         String content,
         LocalDateTime createdAt,
-        boolean hidden
+        boolean hidden,
+
+        /**
+         * 가린 것이 운영자인가.
+         *
+         * <p>내 댓글 목록은 이 구분이 가장 필요한 자리다. 내가 지운 것과 운영자가 가린 것을
+         * 똑같이 "숨김" 이라고만 하면, 가려진 사람은 자기가 지운 줄 알고 아무것도 묻지 않는다.</p>
+         */
+        boolean hiddenByAdmin
 ) {
 
     public static MyCommentResponse from(Comment comment) {
@@ -32,7 +40,8 @@ public record MyCommentResponse(
                 // 숨겨진 댓글의 본문은 공개 화면에서도 안 보인다. 목록에서도 같게 다룬다
                 hidden ? "" : comment.getContent(),
                 comment.getCreatedAt(),
-                hidden
+                hidden,
+                hidden && comment.isHiddenByAdmin()
         );
     }
 }
