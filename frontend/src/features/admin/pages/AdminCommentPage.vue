@@ -101,6 +101,20 @@ onMounted(async () => {
     delete query.reply;
     await router.replace({ query });
   }
+
+  // 신고 알림에서 눌러 들어온 경우다. 목록만 열어 주면 어느 댓글이었는지 다시 찾아야
+  // 하고, 신고 건수와 사유는 이 창을 열어야 보인다
+  const requestedReportId = Number(route.query.report);
+  if (Number.isFinite(requestedReportId)) {
+    const target = comments.value.find((comment) => comment.id === requestedReportId);
+    if (target) {
+      await openModeration(target);
+    }
+
+    const query = { ...route.query };
+    delete query.report;
+    await router.replace({ query });
+  }
 });
 
 async function loadComments(searchCondition) {

@@ -14,6 +14,7 @@ import me.jsjlog.blog.member.repository.MemberRepository;
 import me.jsjlog.blog.admin.dto.AdminCommentModerationDetail;
 import me.jsjlog.blog.admin.dto.AdminCommentModerationResponse;
 import me.jsjlog.blog.admin.dto.AdminCommentReportResponse;
+import me.jsjlog.blog.notification.service.NotificationService;
 import me.jsjlog.blog.post.domain.Comment;
 import me.jsjlog.blog.post.domain.CommentModeration;
 import me.jsjlog.blog.post.domain.CommentModerationAction;
@@ -38,6 +39,7 @@ public class AdminCommentService {
     private final CommentReportRepository commentReportRepository;
     private final CommentModerationRepository commentModerationRepository;
     private final MemberRepository memberRepository;
+    private final NotificationService notificationService;
 
     @Transactional(readOnly = true)
     public AdminCommentListResponse getComments(AdminCommentSearchCondition condition) {
@@ -94,6 +96,11 @@ public class AdminCommentService {
         // 가려진 사람이 자기가 지운 줄 알게 된다
         if (request.hidden()) {
             comment.hideByAdmin();
+
+            // 알리지 않으면 쓴 사람은 안 써진 줄 알고 다시 쓴다. 답글이 없는 댓글은
+            // 공개 화면에서 흔적 없이 사라지기 때문이다. 되돌릴 때는 알리지 않는다 —
+            // 받는 사람이 할 일이 없다
+            notificationService.notifyCommentHidden(comment);
         } else {
             comment.restore();
         }

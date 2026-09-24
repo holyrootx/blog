@@ -232,6 +232,15 @@
   padding: 42px 44px 38px;
 }
 
+/* 종 한 개만 오른쪽에 세운다. 화면마다 제목을 제 안에서 그리고 있어서 여기에 제목까지
+   두면 두 줄이 겹친다 — 이 줄은 자리만 잡고 내용은 갖지 않는다 */
+.admin-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin: -14px 0 10px;
+}
+
 .admin-dashboard__header {
   display: flex;
   align-items: flex-start;

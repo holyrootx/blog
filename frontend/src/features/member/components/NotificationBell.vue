@@ -34,10 +34,31 @@ const badge = computed(() => (unreadCount.value > 99 ? '99+' : String(unreadCoun
 const label = computed(() =>
   unreadCount.value > 0 ? `알림 ${unreadCount.value}개` : '알림');
 
+/**
+ * 알림 문구.
+ *
+ * <p>서버는 타입만 주고 말은 여기서 고른다. 문구를 서버가 정하면 말투를 다듬을 때마다
+ * 배포해야 한다.</p>
+ *
+ * <p>{@code actorNickname} 은 타입마다 누구인지가 다르다. 답글·글댓글은 상대,
+ * 신고는 신고당한 댓글을 쓴 사람이고, <b>가려짐은 받는 사람 자신</b>이라 쓰지 않는다 —
+ * "정성주 님이 내 댓글을 가렸습니다" 가 되어 버린다.</p>
+ */
 function messageOf(notification) {
-  return notification.type === 'REPLY'
-    ? `${notification.actorNickname} 님이 내 댓글에 답글을 남겼습니다`
-    : `${notification.actorNickname} 님이 내 글에 댓글을 남겼습니다`;
+  if (notification.type === 'REPLY') {
+    return `${notification.actorNickname} 님이 내 댓글에 답글을 남겼습니다`;
+  }
+
+  if (notification.type === 'POST_COMMENT') {
+    return `${notification.actorNickname} 님이 내 글에 댓글을 남겼습니다`;
+  }
+
+  if (notification.type === 'REPORT_RECEIVED') {
+    return `${notification.actorNickname} 님의 댓글이 신고되었습니다`;
+  }
+
+  // 사유는 서버가 보내지 않는다. 어떤 댓글에 누가 왜 신고했는지가 좁혀지기 때문이다
+  return '내 댓글이 운영 기준에 따라 가려졌습니다';
 }
 
 async function toggle() {
@@ -48,10 +69,33 @@ async function toggle() {
   }
 }
 
+/**
+ * 알림을 누르면 가는 곳.
+ *
+ * <p>타입마다 다르다. 답글·글댓글은 그 댓글 자리로 가면 되지만, 나머지 둘은 그 자리에
+ * 볼 것이 없다.</p>
+ *
+ * <ul>
+ *   <li>신고 — 공개 화면에는 신고 건수도 사유도 없다. 판단에 필요한 것은 관리자 쪽에 있다</li>
+ *   <li>가려짐 — 가려진 댓글은 답글이 없으면 공개 화면에 아예 그려지지 않는다.
+ *       글로 보내면 빈 화면으로 떨어진다. 내 댓글 목록에는 가려진 것도 남아 있다</li>
+ * </ul>
+ */
 async function go(notification) {
   open.value = false;
 
   await readNotification(notification.id);
+
+  if (notification.type === 'REPORT_RECEIVED') {
+    await router.push({ name: 'admin-comments', query: { report: notification.commentId } });
+    return;
+  }
+
+  if (notification.type === 'COMMENT_HIDDEN') {
+    await router.push({ name: 'member-settings' });
+    return;
+  }
+
   await router.push({
     name: 'post-detail',
     params: { id: notification.postId },
