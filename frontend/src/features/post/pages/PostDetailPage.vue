@@ -2,7 +2,7 @@
 import { reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 
-import PostHeader from '../components/PostHeader.vue';
+import BlogHeader from '../../home/components/BlogHeader.vue';
 import PostArticle from '../components/PostArticle.vue';
 import PostAside from '../components/PostAside.vue';
 import CommentSection from '../components/CommentSection.vue';
@@ -10,7 +10,6 @@ import PostRelated from '../components/PostRelated.vue';
 import { getBlogProfile } from '../../home/api/homeApi';
 import {
   getAdjacentPosts,
-  getCategories,
   getPostComments,
   getPostDetail,
   getRelatedPosts,
@@ -28,7 +27,6 @@ const EMPTY_COMMENTS = {
 // API 응답이 오기 전까지의 빈 상태. 화면이 참조하는 필드는 모두 존재해야 하므로
 // 값만 비우고 형태는 유지한다.
 const EMPTY_DETAIL = {
-  categories: [],
   post: {
     id: null,
     categoryId: null,
@@ -80,14 +78,12 @@ async function loadPostPage(postId) {
 
   const [
     profileResult,
-    categoriesResult,
     postDetailResult,
     adjacentPostsResult,
     relatedPostsResult,
     commentsResult,
   ] = await Promise.allSettled([
     getBlogProfile(),
-    getCategories(),
     getPostDetail(postId),
     getAdjacentPosts(postId),
     getRelatedPosts(postId),
@@ -102,12 +98,6 @@ async function loadPostPage(postId) {
     detail.author = mergeDefined(detail.author, profileResult.value);
   } else {
     console.error(profileResult.reason);
-  }
-
-  if (categoriesResult.status === 'fulfilled' && categoriesResult.value.length > 0) {
-    detail.categories = categoriesResult.value;
-  } else if (categoriesResult.status === 'rejected') {
-    console.error(categoriesResult.reason);
   }
 
   if (postDetailResult.status === 'fulfilled') {
@@ -160,7 +150,7 @@ function mergeDefined(base, next) {
 
 <template>
   <div class="public-shell">
-    <PostHeader :title="detail.author.name" :categories="detail.categories" />
+    <BlogHeader :title="detail.author.name" />
 
     <main class="public-shell__main post-shell">
       <div class="post-shell__layout">
