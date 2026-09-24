@@ -39,7 +39,7 @@ function isGroup(menu) {
 <template>
   <aside class="admin-sidebar" aria-label="관리자 메뉴">
     <RouterLink class="admin-sidebar__brand" :to="{ name: 'home' }">
-      <strong>스물몇의 기록</strong>
+      <strong>정성주의 기록</strong>
       <small>ADMIN</small>
     </RouterLink>
 
