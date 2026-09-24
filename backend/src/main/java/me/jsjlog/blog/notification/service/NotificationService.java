@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import me.jsjlog.blog.common.exception.BlogException;
 import me.jsjlog.blog.common.exception.ErrorCode;
 import me.jsjlog.blog.member.domain.Member;
+import me.jsjlog.blog.member.domain.MemberRole;
+import me.jsjlog.blog.member.repository.MemberRepository;
 import me.jsjlog.blog.notification.domain.Notification;
 import me.jsjlog.blog.notification.domain.NotificationType;
 import me.jsjlog.blog.notification.dto.NotificationResponse;
@@ -31,6 +33,9 @@ public class NotificationService {
     private static final int LIST_LIMIT = 30;
 
     private final NotificationRepository notificationRepository;
+
+    /** 신고 알림을 받을 운영자를 찾는 용도다. 다른 회원 조회는 여기서 하지 않는다 */
+    private final MemberRepository memberRepository;
 
     /**
      * 댓글이 하나 달렸을 때 알릴 사람을 고른다.
@@ -80,6 +85,59 @@ public class NotificationService {
         LocalDateTime now = LocalDateTime.now();
 
         notificationRepository.findUnread(memberId).forEach(notification -> notification.markRead(now));
+    }
+
+    /**
+     * 신고가 들어왔다고 운영자에게 알린다.
+     *
+     * <p><b>{@link #notify} 를 쓰지 않는다.</b> 거기에는 "받는 사람이 댓글 쓴 사람이면 버린다"
+     * 는 검사가 있는데, 답글·글댓글에는 맞지만 신고에는 틀린다. 관리자도 댓글을 쓰고
+     * 신고는 남의 댓글이면 누구나 할 수 있어서, 관리자가 쓴 댓글이 신고당하면
+     * 받는 사람(운영자) 과 댓글 쓴 사람이 같아져 알림이 조용히 사라진다.</p>
+     *
+     * <p>신고 알림이 뜻하는 것은 "누가 누구에게 무엇을 했나" 가 아니라 <b>"운영자가 봐야 할
+     * 일이 생겼다"</b> 이다. 그래서 받는 사람과 댓글 쓴 사람의 관계를 따지지 않는다.</p>
+     */
+    @Transactional
+    public void notifyReportReceived(Comment comment) {
+        for (Member admin : memberRepository.findAllByRole(MemberRole.ADMIN)) {
+            // 이미 울려 놓고 아직 안 본 건이 있으면 더 울리지 않는다. 신고 다섯 건에
+            // 알림 다섯 개가 되면 그 폭주가 그대로 공격 수단이 된다
+            boolean alreadyWaiting = notificationRepository
+                    .existsByRecipientIdAndTypeAndCommentIdAndReadAtIsNull(
+                            admin.getId(), NotificationType.REPORT_RECEIVED, comment.getId());
+
+            if (alreadyWaiting) {
+                continue;
+            }
+
+            notificationRepository.save(
+                    new Notification(admin, NotificationType.REPORT_RECEIVED, comment));
+        }
+    }
+
+    /**
+     * 댓글을 가렸다고 쓴 사람에게 알린다.
+     *
+     * <p>사유는 싣지 않는다. 화면 문구도 "운영 기준에 따라" 까지만 말한다 — 사유를 붙이면
+     * 어떤 댓글에 누가 왜 신고했는지가 좁혀지고, 댓글이 몇 개 없는 블로그에서는 거의
+     * 특정된다.</p>
+     *
+     * <p>되돌릴 때({@code restore}) 는 보내지 않는다. 받는 사람이 할 일이 없다.</p>
+     *
+     * <p>같은 댓글을 되돌렸다가 다시 가리면 그때는 다시 보낸다. 보이던 것이 또 가려진
+     * 것이라 새로 알릴 일이 맞다.</p>
+     */
+    @Transactional
+    public void notifyCommentHidden(Comment comment) {
+        Member author = comment.getMember();
+
+        if (author == null) {
+            return;
+        }
+
+        notificationRepository.save(
+                new Notification(author, NotificationType.COMMENT_HIDDEN, comment));
     }
 
     private void notify(Member recipient, NotificationType type, Comment comment) {

@@ -72,6 +72,19 @@ export function ensureMemberSession() {
   return sessionCheck;
 }
 
+/**
+ * 서버 세션이 바뀌었으니 다시 물어본다.
+ *
+ * {@link ensureMemberSession} 은 한 번 받은 답을 들고 있어서 두 번 묻지 않는다. 평소에는
+ * 그게 맞지만 로그인·로그아웃으로 세션 자체가 바뀌면 들고 있던 답이 거짓이 된다 —
+ * 관리자로 로그인해도 "비로그인" 으로 굳은 값이 남아서 종이 뜨지 않았다.
+ */
+export function refreshMemberSession() {
+  sessionCheck = null;
+
+  return ensureMemberSession();
+}
+
 export async function completeSignUp(nickname) {
   return applySession(await signUpMember(nickname));
 }

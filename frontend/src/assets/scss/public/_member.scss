@@ -770,13 +770,16 @@
  *
  * 기준을 헤더로 옮기면 헤더의 좌우 여백 안에 딱 맞게 눕는다. 헤더는 sticky 라
  * 이미 기준이 될 수 있어서, 종의 relative 만 풀면 된다.
+ *
+ * 헤더 안의 종에만 건다. 관리자 화면의 종은 기준으로 삼을 헤더가 없어서, 그쪽까지
+ * position 을 풀면 엉뚱한 조상에 붙는다.
  */
 @media (max-width: 560px) {
-  .notification-bell {
+  .blog-header .notification-bell {
     position: static;
   }
 
-  .notification-bell__dropdown {
+  .blog-header .notification-bell__dropdown {
     right: 0;
     left: 0;
     width: auto;

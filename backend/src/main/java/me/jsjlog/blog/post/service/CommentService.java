@@ -140,6 +140,11 @@ public class CommentService {
 
         commentReportRepository.save(new CommentReport(comment, member, reason, detail));
 
+        // 접수만 하고 끝내면 운영자가 우연히 댓글 관리 화면에 들어갈 때까지 아무 일도
+        // 일어나지 않는다. 그건 자동 숨김을 뺀 것과 다르다 — "사람이 본다" 가 이 판단의
+        // 전제인데, 볼 계기를 안 만들면 전제가 거짓이 된다
+        notificationService.notifyReportReceived(comment);
+
         return CommentReportResponse.accepted(commentId);
     }
 

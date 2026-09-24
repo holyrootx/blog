@@ -1,6 +1,7 @@
 import { ref } from 'vue';
 
 import { getAdminSession, loginAdmin, logoutAdmin, refreshCsrfToken } from '../api/adminAuthApi';
+import { clearMemberSession, refreshMemberSession } from '../../member/data/memberAuthStore';
 
 /**
  * 로그인한 관리자 상태.
@@ -58,6 +59,11 @@ export async function signInAdmin(username, password) {
   admin.value = session;
   sessionCheck = Promise.resolve(true);
 
+  // 관리자도 회원이다. 로그인하면 회원 세션도 같이 생기는데, 회원 쪽 스토어는 그걸
+  // 모르고 페이지가 처음 뜰 때 받아 둔 "비로그인" 을 들고 있다. 그대로 두면 관리자
+  // 화면의 알림 종이 새로고침하기 전까지 나타나지 않는다
+  await refreshMemberSession().catch(() => null);
+
   return session;
 }
 
@@ -68,6 +74,10 @@ export async function signOutAdmin() {
     // 서버 응답이 실패해도 화면에서는 로그아웃으로 친다.
     // 로그아웃을 눌렀는데 로그인 상태로 남아 있는 것이 더 나쁘다
     clearAdminSession();
+
+    // 회원 세션도 같이 끊긴다. 안 비우면 로그아웃한 뒤 공개 화면으로 갔을 때
+    // 종이 그대로 떠 있고, 누르면 401 이 난다
+    clearMemberSession();
 
     // 로그아웃 때도 토큰이 바뀐다. 다시 로그인하려면 새 토큰이 있어야 한다
     await refreshCsrfToken().catch(() => null);
