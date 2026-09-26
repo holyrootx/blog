@@ -9,7 +9,7 @@ import {
   publishAdminPost,
   unpublishAdminPost,
 } from '../api/adminApi';
-import { notifySuccess } from '../data/adminToastStore';
+import { notifySuccess } from '../../../shared/toast/toastStore';
 import AdminPageHeader from '../components/AdminPageHeader.vue';
 import AdminSearchPanel from '../components/AdminSearchPanel.vue';
 import AdminGridToolbar from '../components/AdminGridToolbar.vue';
