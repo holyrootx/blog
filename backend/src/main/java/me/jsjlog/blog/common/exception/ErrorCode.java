@@ -50,6 +50,7 @@ public enum ErrorCode {
     IMAGE_EMPTY(HttpStatus.BAD_REQUEST, "IMAGE_EMPTY", "이미지 파일이 없습니다."),
     IMAGE_TOO_LARGE(HttpStatus.BAD_REQUEST, "IMAGE_TOO_LARGE", "이미지 용량이 너무 큽니다."),
     IMAGE_TYPE_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "IMAGE_TYPE_NOT_ALLOWED", "지원하지 않는 이미지 형식입니다."),
+    IMAGE_THUMBNAIL_GENERATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "IMAGE_THUMBNAIL_GENERATION_FAILED", "이미지 썸네일을 만들지 못했습니다."),
     IMAGE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "IMAGE_UPLOAD_FAILED", "이미지를 저장하지 못했습니다."),
     IMAGE_DELETE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "IMAGE_DELETE_FAILED", "이미지를 삭제하지 못했습니다."),
 

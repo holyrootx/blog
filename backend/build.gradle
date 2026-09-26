@@ -27,6 +27,8 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
 	implementation 'org.springframework:spring-aop'
 	implementation 'org.aspectj:aspectjweaver'
+	implementation 'com.sksamuel.scrimage:scrimage-core:4.3.4'
+	implementation 'com.sksamuel.scrimage:scrimage-webp:4.3.4'
 	implementation 'software.amazon.awssdk:s3'
 	implementation 'software.amazon.awssdk:url-connection-client'
 	// 쿼리 로그용. implementation 으로 두면 운영 jar 에 실려 DataSource 를 감싸고
