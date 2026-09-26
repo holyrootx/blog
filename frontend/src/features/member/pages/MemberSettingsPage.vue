@@ -9,6 +9,7 @@ import {
   useMemberAuth,
   withdraw,
 } from '../data/memberAuthStore';
+import { notifyError, notifySuccess } from '../../../shared/toast/toastStore';
 
 /**
  * 내 계정 설정.
@@ -88,8 +89,11 @@ async function saveNickname() {
     await changeNickname(nickname.value.trim());
 
     nicknameSaved.value = true;
+    // 입력칸 값이 그대로라 바뀐 티가 안 난다. 화면에 안 보이는 일은 말해 줘야 한다
+    notifySuccess('닉네임을 바꿨습니다.');
   } catch (error) {
     nicknameError.value = error?.message ?? '닉네임을 변경하지 못했습니다.';
+    notifyError(nicknameError.value);
   } finally {
     savingNickname.value = false;
   }
@@ -108,6 +112,7 @@ async function confirmWithdraw() {
     await router.replace({ name: 'home' });
   } catch (error) {
     withdrawError.value = error?.message ?? '탈퇴하지 못했습니다.';
+    notifyError(withdrawError.value);
     withdrawConfirming.value = false;
   } finally {
     withdrawing.value = false;

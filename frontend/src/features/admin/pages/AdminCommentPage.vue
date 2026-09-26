@@ -17,7 +17,7 @@ import AdminPagination from '../components/AdminPagination.vue';
 import AdminSearchPanel from '../components/AdminSearchPanel.vue';
 import AdminSegmented from '../components/AdminSegmented.vue';
 import AdminTextInput from '../components/AdminTextInput.vue';
-import { notifySuccess } from '../data/adminToastStore';
+import { notifyError, notifySuccess } from '../../../shared/toast/toastStore';
 
 const FILTERS = ['ALL', 'UNANSWERED', 'REPORTED', 'HIDDEN'];
 const EMPTY_CONDITION = { status: 'ALL', keyword: '' };
@@ -250,6 +250,7 @@ async function changeVisibility() {
     notifySuccess(hidden ? '댓글을 숨겼습니다.' : '댓글을 다시 공개했습니다.');
   } catch (error) {
     visibilityError.value = error?.message ?? '댓글 상태를 변경하지 못했습니다.';
+    notifyError(visibilityError.value);
   } finally {
     visibilitySubmitting.value = false;
   }
@@ -302,6 +303,7 @@ async function dismissReports() {
     notifySuccess('신고를 처리했습니다. 댓글은 그대로 둡니다.');
   } catch (error) {
     moderationError.value = error?.message ?? '신고를 처리하지 못했습니다.';
+    notifyError(moderationError.value);
   } finally {
     dismissSubmitting.value = false;
   }

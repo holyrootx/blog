@@ -9,7 +9,7 @@ import {
 } from '../api/adminApi';
 import { sortAdminMenus } from '../data/adminMenus';
 import { reloadAdminSidebarMenus } from '../data/adminSidebarMenuStore';
-import { notifySuccess } from '../data/adminToastStore';
+import { notifyError, notifySuccess } from '../../../shared/toast/toastStore';
 import AdminPageHeader from '../components/AdminPageHeader.vue';
 import AdminSearchPanel from '../components/AdminSearchPanel.vue';
 import AdminGridToolbar from '../components/AdminGridToolbar.vue';
@@ -95,6 +95,12 @@ const state = computed(() => {
 
 const allCollapsed = computed(() => groups.value.length > 0
   && groups.value.every((group) => collapsedGroupIds.value.includes(group.id)));
+
+/** 실패도 성공만큼 눈에 띄어야 한다. 인라인 문구는 폼 아래라 화면 밖일 때가 있다 */
+function failWith(message) {
+  formError.value = message;
+  notifyError(message);
+}
 
 function isCollapsed(groupId) {
   return collapsedGroupIds.value.includes(groupId);
@@ -215,7 +221,7 @@ async function saveMenu() {
     notifySuccess(done);
   } catch (error) {
     // 서버가 준 메시지를 그대로 보여준다
-    formError.value = error.message;
+    failWith(error.message);
   } finally {
     saving.value = false;
   }
@@ -239,7 +245,7 @@ async function removeMenu() {
   } catch (error) {
     // 확인창을 닫아 팝업의 오류 자리에서 이유를 보여준다
     deleteConfirmOpen.value = false;
-    formError.value = error.message;
+    failWith(error.message);
   } finally {
     saving.value = false;
   }

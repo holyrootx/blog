@@ -1530,6 +1530,45 @@
   background: var(--admin-card);
 }
 
+.admin-editor__thumbnail {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-editor__thumbnail-media {
+  display: flex;
+  max-width: 520px;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-editor__thumbnail-media img,
+.admin-editor__thumbnail-dialog img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--admin-card-line);
+  border-radius: 8px;
+  background: var(--admin-surface-subtle);
+  object-fit: cover;
+}
+
+.admin-editor__thumbnail-media .admin-button {
+  align-self: flex-end;
+  width: auto;
+}
+
+.admin-editor__thumbnail-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.admin-editor__thumbnail-input {
+  display: none;
+}
+
 /* 입력칸과 글자 수 카운터를 한 묶음으로 */
 .admin-editor__row {
   display: flex;
@@ -1659,6 +1698,10 @@
   border: 1px solid var(--admin-card-line);
   border-radius: var(--radius);
   background: var(--admin-card);
+}
+
+.block-editor:focus {
+  outline: none;
 }
 
 .block-editor__row {
@@ -1836,6 +1879,7 @@
 }
 
 .block-editor__tail {
+  position: relative;
   display: block;
   width: 100%;
   margin-top: 16px;
@@ -1847,6 +1891,11 @@
   font-size: 12.5px;
   text-align: left;
   cursor: text;
+}
+
+.block-editor__tail--dropping,
+.block-editor__tail--keyboard-target {
+  box-shadow: inset 0 2px 0 var(--admin-accent);
 }
 
 /* 코드 블록 색칠 — 색칠 층을 뒤에 깔고 입력칸을 투명하게 겹친다.
@@ -1952,8 +2001,9 @@
 }
 
 /* 놓을 자리 */
-.block-editor__row--dropping {
-  box-shadow: 0 2px 0 0 var(--admin-accent);
+.block-editor__row--dropping,
+.block-editor__row--keyboard-target {
+  box-shadow: inset 0 2px 0 var(--admin-accent);
 }
 
 /* ── 본문 이미지 블록 ──────────────────────── */
@@ -2056,6 +2106,7 @@
   display: block;
   width: 100%;
   border-radius: var(--radius);
+  cursor: pointer;
 }
 
 /* 폭 손잡이. 평소엔 숨어 있다가 사진에 마우스를 올리면 나타난다 */
@@ -2346,66 +2397,6 @@
   margin-top: 6px;
   color: var(--admin-text-muted);
   font-size: 12px;
-}
-
-/* ── 결과 알림 ─────────────────────────────── */
-
-.admin-toast {
-  position: fixed;
-  right: 24px;
-  bottom: 24px;
-  z-index: 200;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-width: min(360px, calc(100vw - 48px));
-  /* 알림이 없을 때 그 자리의 클릭을 먹지 않도록 */
-  pointer-events: none;
-}
-
-.admin-toast__item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
-  border-radius: var(--radius);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
-  font-size: 13px;
-  line-height: 1.5;
-  pointer-events: auto;
-  animation: admin-toast-in 0.16s ease-out;
-}
-
-.admin-toast__item--success {
-  background: var(--admin-button-primary);
-  color: var(--admin-button-primary-text);
-}
-
-.admin-toast__item--error {
-  border: 1px solid var(--admin-danger-line);
-  background: var(--admin-danger-soft);
-  color: var(--admin-danger);
-}
-
-.admin-toast__message {
-  flex: 1;
-  white-space: pre-line;
-}
-
-.admin-toast__close {
-  flex: none;
-  padding: 0 2px;
-  border: 0;
-  background: none;
-  color: inherit;
-  font-size: 16px;
-  line-height: 1;
-  cursor: pointer;
-}
-
-@keyframes admin-toast-in {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
 }
 
 /* ── 신고 내역과 조치 이력 ─────────────────

@@ -673,10 +673,12 @@
 
 .post-aside__sticky {
   position: sticky;
-  top: 16px;
+  top: 88px;
   display: flex;
   flex-direction: column;
   gap: 16px;
+  max-height: calc(100vh - 104px);
+  overflow-y: auto;
 }
 
 /* 광고 카드 — 흰 카드 안에 라벨/닫기 줄과 회색 광고 자리 */

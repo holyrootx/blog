@@ -7,7 +7,7 @@ import {
   getAdminCategories,
   updateAdminCategory,
 } from '../api/adminApi';
-import { notifySuccess } from '../data/adminToastStore';
+import { notifyError, notifySuccess } from '../../../shared/toast/toastStore';
 import AdminPageHeader from '../components/AdminPageHeader.vue';
 import AdminSearchPanel from '../components/AdminSearchPanel.vue';
 import AdminGridToolbar from '../components/AdminGridToolbar.vue';
@@ -94,6 +94,12 @@ async function loadCategories(searchCondition) {
 }
 
 // 조회 — 목록이 바뀌는 것은 이 함수를 거칠 때뿐이다
+/** 실패도 성공만큼 눈에 띄어야 한다. 인라인 문구는 폼 아래라 화면 밖일 때가 있다 */
+function failWith(message) {
+  formError.value = message;
+  notifyError(message);
+}
+
 function search() {
   page.value = 1;
   applied.value = { ...condition };
@@ -162,7 +168,7 @@ async function saveCategory() {
     notifySuccess(done);
   } catch (error) {
     // 서버가 준 메시지를 그대로 보여준다 (이름 중복·필수값 누락 등)
-    formError.value = error.message;
+    failWith(error.message);
   } finally {
     saving.value = false;
   }
@@ -225,7 +231,7 @@ async function deleteEditing() {
   } catch (error) {
     // 확인창을 닫아 수정 팝업의 오류 자리에서 이유를 보여준다
     editDeleteConfirmOpen.value = false;
-    formError.value = error.message;
+    failWith(error.message);
   } finally {
     saving.value = false;
   }
