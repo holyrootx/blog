@@ -271,7 +271,12 @@ onBeforeUnmount(() => {
       </li>
     </ul>
 
-    <p v-else-if="loading" class="search-panel__hint">찾는 중…</p>
+    <ul v-else-if="loading" class="search-results search-results--skeleton" aria-hidden="true">
+      <li v-for="index in 4" :key="index" class="search-results__item">
+        <span class="ui-skeleton"></span>
+        <span class="ui-skeleton"></span>
+      </li>
+    </ul>
     <p v-else class="search-panel__hint">맞는 글이 없습니다.</p>
 
     <template v-if="canSearch" #footer>

@@ -87,6 +87,110 @@
   color: var(--text-subtle);
 }
 
+.post-author__info--skeleton {
+  display: grid;
+  width: min(220px, 60vw);
+  gap: 8px;
+}
+
+.post-author__info--skeleton .ui-skeleton:first-child {
+  width: 110px;
+  height: 16px;
+}
+
+.post-author__info--skeleton .ui-skeleton:last-child {
+  width: 170px;
+  height: 14px;
+}
+
+.post-article-skeleton__meta {
+  display: flex;
+  gap: 10px;
+}
+
+.post-article-skeleton__meta .ui-skeleton:first-child {
+  width: 70px;
+  height: 20px;
+}
+
+.post-article-skeleton__meta .ui-skeleton:last-child {
+  width: 132px;
+  height: 20px;
+}
+
+.post-article-skeleton__title {
+  width: min(680px, 88%);
+  height: 44px;
+  margin-top: 26px;
+}
+
+.post-article-skeleton__title--short {
+  width: min(420px, 62%);
+  margin-top: 10px;
+}
+
+.post-article-skeleton__excerpt {
+  width: min(620px, 78%);
+  height: 24px;
+  margin-top: 24px;
+}
+
+.post-article-skeleton__author {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 30px;
+}
+
+.post-article-skeleton__author > .ui-skeleton {
+  width: 52px;
+  height: 52px;
+}
+
+.post-article-skeleton__author > div {
+  display: grid;
+  width: 180px;
+  gap: 8px;
+}
+
+.post-article-skeleton__author > div .ui-skeleton:first-child {
+  width: 108px;
+  height: 16px;
+}
+
+.post-article-skeleton__author > div .ui-skeleton:last-child {
+  width: 160px;
+  height: 14px;
+}
+
+.post-article-skeleton__cover {
+  width: 100%;
+  height: 340px;
+  border-radius: 10px;
+}
+
+.post-article-skeleton__body {
+  display: grid;
+  gap: 16px;
+  padding-top: 32px;
+  padding-bottom: 48px;
+}
+
+.post-article-skeleton__body .ui-skeleton {
+  width: 100%;
+  height: 18px;
+}
+
+.post-article-skeleton__body .post-article-skeleton__body-short {
+  width: 68%;
+}
+
+.post-article-skeleton__body .post-article-skeleton__heading {
+  width: 42%;
+  height: 28px;
+  margin-top: 18px;
+}
+
 .post-button {
   /* 공유 단추는 누르면 글자가 "복사했어요" 로 잠깐 바뀐다. 폭을 잡아 두지 않으면
      그때마다 단추가 늘었다 줄었다 해서, 옆 글까지 밀렸다 돌아온다.
@@ -525,6 +629,21 @@
   box-shadow: inset 8px 0 12px -8px rgba(0, 0, 0, 0.1);
 }
 
+.post-aside--skeleton .ui-skeleton:nth-child(1) {
+  width: 44%;
+  height: 16px;
+}
+
+.post-aside--skeleton .ui-skeleton:nth-child(2) {
+  width: 100%;
+  height: 180px;
+}
+
+.post-aside--skeleton .ui-skeleton:nth-child(3) {
+  width: 100%;
+  height: 240px;
+}
+
 .post-aside__head {
   display: flex;
   align-items: center;
@@ -689,6 +808,77 @@
 .comments__note {
   font-size: 12.5px;
   color: #a1988f;
+}
+
+.comments__count-skeleton {
+  width: 26px;
+  height: 20px;
+}
+
+.comments__initial-skeleton {
+  display: grid;
+  gap: 0;
+}
+
+.comments__form-skeleton {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 12px;
+  padding: 14px 16px 42px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.comments__form-skeleton > .ui-skeleton:first-child,
+.comments__row-skeleton > .ui-skeleton:first-child,
+.comments__more-skeleton > .ui-skeleton:first-child {
+  width: 34px;
+  height: 34px;
+}
+
+.comments__form-skeleton > .ui-skeleton:last-child {
+  width: 100%;
+  height: 70px;
+}
+
+.comments__row-skeleton {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 12px;
+  padding: 22px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.comments__row-skeleton > div {
+  display: grid;
+  gap: 9px;
+}
+
+.comments__row-skeleton > div .ui-skeleton:nth-child(1) {
+  width: 150px;
+  height: 15px;
+}
+
+.comments__row-skeleton > div .ui-skeleton:nth-child(2) {
+  width: min(640px, 92%);
+  height: 18px;
+}
+
+.comments__row-skeleton > div .ui-skeleton:nth-child(3) {
+  width: 220px;
+  height: 14px;
+}
+
+.comments__more-skeleton {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: min(360px, 80%);
+}
+
+.comments__more-skeleton > .ui-skeleton:last-child {
+  flex: 1;
+  height: 18px;
 }
 
 .comment-form {
@@ -1266,6 +1456,11 @@
   font-size: 13px;
 }
 
+.post-list__count-skeleton {
+  width: 42px;
+  height: 18px;
+}
+
 /* 분류와 정렬이 한 줄에 있다. 좁아지면 접힌다 */
 .post-list__filters {
   display: flex;
@@ -1281,6 +1476,12 @@
 .post-list__filter-gap {
   flex: 1;
   min-width: 12px;
+}
+
+.post-list__filter-skeleton {
+  width: 58px;
+  height: 34px;
+  border-radius: 999px;
 }
 
 .post-list__filter {

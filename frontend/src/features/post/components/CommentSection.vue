@@ -25,6 +25,10 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  initialLoading: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const route = useRoute();
@@ -517,16 +521,32 @@ watch(
 </script>
 
 <template>
-  <section class="comments" aria-labelledby="comments-title">
+  <section class="comments" aria-labelledby="comments-title" :aria-busy="initialLoading || loading">
     <div class="comments__header">
       <h2 id="comments-title" class="comments__title">댓글</h2>
-      <span class="comments__count">{{ total }}</span>
+      <span v-if="initialLoading" class="ui-skeleton comments__count-skeleton" aria-hidden="true"></span>
+      <span v-else class="comments__count">{{ total }}</span>
       <span class="comments__note">이 글에 남겨진 이야기</span>
+    </div>
+
+    <div v-if="initialLoading" class="comments__initial-skeleton" aria-hidden="true">
+      <div class="comments__form-skeleton">
+        <span class="ui-skeleton ui-skeleton--circle"></span>
+        <span class="ui-skeleton"></span>
+      </div>
+      <div v-for="index in 2" :key="index" class="comments__row-skeleton">
+        <span class="ui-skeleton ui-skeleton--circle"></span>
+        <div>
+          <span class="ui-skeleton"></span>
+          <span class="ui-skeleton"></span>
+          <span class="ui-skeleton"></span>
+        </div>
+      </div>
     </div>
 
     <!-- 로그인하지 않았으면 쓰는 칸 대신 로그인으로 보낸다.
          빈 칸을 보여 주고 누른 뒤에 막으면 쓴 글이 날아간다 -->
-    <div v-if="!isSignedIn" ref="signinBox" class="comment-signin">
+    <div v-else-if="!isSignedIn" ref="signinBox" class="comment-signin">
       <p class="comment-signin__text">댓글을 남기려면 로그인이 필요합니다.</p>
       <button class="post-button post-button--accent" type="button" @click="goToLogin">
         로그인하고 댓글 쓰기
@@ -576,11 +596,11 @@ watch(
       <p v-if="formError" class="comment-form__error" role="alert">{{ formError }}</p>
     </form>
 
-    <p v-if="reactionError" class="comment-reaction__error" role="alert">
+    <p v-if="!initialLoading && reactionError" class="comment-reaction__error" role="alert">
       {{ reactionError }}
     </p>
 
-    <ul class="comment-list">
+    <ul v-if="!initialLoading" class="comment-list">
       <li
         v-for="comment in items"
         :id="`comment-${comment.id}`"
@@ -866,8 +886,11 @@ watch(
     </ul>
 
     <!-- 스크롤이 닿으면 자동으로 불러오고, 버튼은 키보드 사용자를 위한 대체 수단 -->
-    <div ref="sentinel" class="comments__sentinel">
-      <span v-if="loading">댓글을 불러오는 중…</span>
+    <div v-if="!initialLoading" ref="sentinel" class="comments__sentinel">
+      <div v-if="loading" class="comments__more-skeleton" aria-hidden="true">
+        <span class="ui-skeleton ui-skeleton--circle"></span>
+        <span class="ui-skeleton"></span>
+      </div>
       <button v-else-if="hasNext" class="comments__more" type="button" @click="loadMore">
         댓글 더 보기
       </button>

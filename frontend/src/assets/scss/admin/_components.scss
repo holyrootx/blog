@@ -216,6 +216,38 @@
   color: var(--admin-danger);
 }
 
+.admin-settings--skeleton .admin-settings__section-header > div {
+  display: grid;
+  gap: 8px;
+  width: 180px;
+}
+
+.admin-settings--skeleton .admin-settings__section-header > div .ui-skeleton:first-child {
+  width: 88px;
+  height: 12px;
+}
+
+.admin-settings--skeleton .admin-settings__section-header > div .ui-skeleton:last-child {
+  width: 128px;
+  height: 24px;
+}
+
+.admin-settings--skeleton .admin-settings__section-header > .ui-skeleton {
+  width: 54px;
+  height: 14px;
+}
+
+.admin-settings--skeleton .admin-settings__fields .ui-skeleton {
+  width: 100%;
+  height: 68px;
+}
+
+.admin-settings-skeleton__media {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius);
+}
+
 .admin-settings__footer {
   display: flex;
   justify-content: flex-end;
@@ -1188,6 +1220,84 @@
   color: var(--admin-accent-dark);
   font-weight: 700;
   cursor: pointer;
+}
+
+.admin-comment-feed__skeleton .admin-comment-row__identity > div,
+.admin-comment-feed__skeleton .admin-comment-row__body {
+  display: grid;
+  gap: 9px;
+}
+
+.admin-comment-feed__skeleton .admin-comment-row__avatar {
+  width: 38px;
+  height: 38px;
+}
+
+.admin-comment-feed__skeleton .admin-comment-row__identity > div .ui-skeleton:first-child {
+  width: 82px;
+  height: 15px;
+}
+
+.admin-comment-feed__skeleton .admin-comment-row__identity > div .ui-skeleton:last-child {
+  width: 52px;
+  height: 13px;
+}
+
+.admin-comment-feed__skeleton .admin-comment-row__body .ui-skeleton:nth-child(1) {
+  width: 120px;
+  height: 18px;
+}
+
+.admin-comment-feed__skeleton .admin-comment-row__body .ui-skeleton:nth-child(2) {
+  width: min(620px, 90%);
+  height: 20px;
+}
+
+.admin-comment-feed__skeleton .admin-comment-row__body .ui-skeleton:nth-child(3) {
+  width: 44%;
+  height: 14px;
+}
+
+.admin-comment-row__action-skeleton {
+  width: 70px;
+  height: 32px;
+}
+
+.admin-editor-skeleton .admin-editor__bar > .ui-skeleton {
+  width: 74px;
+  height: 28px;
+}
+
+.admin-editor-skeleton .admin-editor__actions .ui-skeleton {
+  width: 76px;
+  height: 36px;
+}
+
+.admin-editor-skeleton .admin-editor__form {
+  display: grid;
+  gap: 22px;
+}
+
+.admin-editor-skeleton__title,
+.admin-editor-skeleton__select,
+.admin-editor-skeleton__excerpt,
+.admin-editor-skeleton__input,
+.admin-editor-skeleton__body {
+  width: 100%;
+}
+
+.admin-editor-skeleton__title,
+.admin-editor-skeleton__select,
+.admin-editor-skeleton__input {
+  height: 68px;
+}
+
+.admin-editor-skeleton__excerpt {
+  height: 116px;
+}
+
+.admin-editor-skeleton__body {
+  height: 420px;
 }
 
 .admin-comment-row {
@@ -2368,4 +2478,30 @@
   margin: 0;
   color: #888;
   font-size: 13px;
+}
+
+.admin-moderation__skeleton {
+  display: grid;
+  gap: 14px;
+  padding: 4px 0 18px;
+}
+
+.admin-moderation__skeleton .ui-skeleton:nth-child(1) {
+  width: 100%;
+  height: 76px;
+}
+
+.admin-moderation__skeleton .ui-skeleton:nth-child(2) {
+  width: 34%;
+  height: 20px;
+}
+
+.admin-moderation__skeleton .ui-skeleton:nth-child(3) {
+  width: 100%;
+  height: 92px;
+}
+
+.admin-moderation__skeleton .ui-skeleton:nth-child(4) {
+  width: 100%;
+  height: 48px;
 }

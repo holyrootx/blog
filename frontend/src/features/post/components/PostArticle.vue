@@ -32,6 +32,10 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  authorLoading: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const route = useRoute();
@@ -113,22 +117,40 @@ onBeforeUnmount(() => clearTimeout(noticeTimer));
       <h1 class="post-article__title">{{ post.title }}</h1>
       <p class="post-article__excerpt">{{ post.excerpt }}</p>
 
-      <div class="post-author">
-        <img
-          v-if="author.avatarImageUrl"
-          class="post-author__avatar"
-          :src="author.avatarImageUrl"
-          :alt="author.name"
-        />
-        <div class="post-author__info">
-          <div class="post-author__name">{{ author.name }}</div>
-          <div class="post-author__desc">{{ author.job }}</div>
-        </div>
+      <div class="post-author" :aria-busy="authorLoading">
+        <template v-if="authorLoading">
+          <span class="ui-skeleton ui-skeleton--circle post-author__avatar" aria-hidden="true"></span>
+          <div class="post-author__info post-author__info--skeleton" aria-hidden="true">
+            <span class="ui-skeleton"></span>
+            <span class="ui-skeleton"></span>
+          </div>
+        </template>
+        <template v-else>
+          <img
+            v-if="author.avatarImageUrl"
+            class="post-author__avatar"
+            :src="author.avatarImageUrl"
+            :alt="author.name"
+            width="52"
+            height="52"
+            decoding="async"
+          />
+          <div class="post-author__info">
+            <div class="post-author__name">{{ author.name }}</div>
+            <div class="post-author__desc">{{ author.job }}</div>
+          </div>
+        </template>
       </div>
     </header>
 
     <figure v-if="post.coverImageUrl" class="post-article__cover">
-      <img :src="post.coverImageUrl" :alt="post.coverImageAlt" />
+      <img
+        :src="post.coverImageUrl"
+        :alt="post.coverImageAlt"
+        loading="eager"
+        decoding="async"
+        fetchpriority="high"
+      />
     </figure>
 
     <PostBody :body="body" :show-inline-ads="showInlineAds" />

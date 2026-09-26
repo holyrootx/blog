@@ -8,17 +8,42 @@ defineProps({
     type: Array,
     required: true,
   },
+  sectionLoading: {
+    type: Boolean,
+    default: false,
+  },
+  topicsLoading: {
+    type: Boolean,
+    default: false,
+  },
 });
 </script>
 
 <template>
-  <section v-if="topics.length > 0" class="home-section home-topics" aria-labelledby="home-topics-title">
-    <div class="home-topics__header">
+  <section
+    v-if="sectionLoading || topicsLoading || topics.length > 0"
+    class="home-section home-topics"
+    aria-labelledby="home-topics-title"
+    :aria-busy="sectionLoading || topicsLoading"
+  >
+    <div v-if="sectionLoading" class="home-topics__header" aria-hidden="true">
+      <span class="ui-skeleton home-skeleton--section-title"></span>
+      <span class="ui-skeleton home-skeleton--section-intro"></span>
+    </div>
+    <div v-else class="home-topics__header">
       <h2 id="home-topics-title" class="home-section__title">{{ section.title }}</h2>
       <p class="home-topics__intro">{{ section.intro }}</p>
     </div>
 
-    <div class="home-topic-grid">
+    <div v-if="topicsLoading" class="home-topic-grid" aria-hidden="true">
+      <article v-for="index in 3" :key="index" class="home-topic-card home-topic-card--skeleton">
+        <span class="ui-skeleton home-skeleton--topic-label"></span>
+        <span class="ui-skeleton home-skeleton--topic-title"></span>
+        <span class="ui-skeleton home-skeleton--topic-description"></span>
+        <span class="ui-skeleton home-skeleton--topic-keywords"></span>
+      </article>
+    </div>
+    <div v-else class="home-topic-grid">
       <article v-for="topic in topics" :key="topic.id" class="home-topic-card">
         <span class="home-topic-card__label">{{ topic.label }}</span>
         <h3 class="home-topic-card__title">{{ topic.title }}</h3>
@@ -32,7 +57,11 @@ defineProps({
       </article>
     </div>
 
-    <div class="home-topics__note">
+    <div v-if="sectionLoading" class="home-topics__note" aria-hidden="true">
+      <span class="ui-skeleton home-skeleton--note-badge"></span>
+      <span class="ui-skeleton home-skeleton--note"></span>
+    </div>
+    <div v-else class="home-topics__note">
       <span class="home-topics__badge">{{ section.noteBadge }}</span>
       <span>{{ section.note }}</span>
     </div>

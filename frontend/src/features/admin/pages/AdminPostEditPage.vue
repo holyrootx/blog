@@ -58,7 +58,7 @@ const serverUpdatedAt = ref(null);
 const lastSavedForm = ref(null);
 
 const categories = ref([]);
-const loading = ref(false);
+const loading = ref(!isNew.value);
 const loadError = ref('');
 const saving = ref(false);
 const formError = ref('');
@@ -613,7 +613,25 @@ watch(postId, enter);
       </template>
     </AdminPageHeader>
 
-    <div v-if="loadError" class="admin-tree__state">
+    <div v-if="loading" class="admin-editor-skeleton" aria-busy="true">
+      <div class="admin-editor__bar" aria-hidden="true">
+        <span class="ui-skeleton"></span>
+        <div class="admin-editor__actions">
+          <span class="ui-skeleton"></span>
+          <span class="ui-skeleton"></span>
+          <span class="ui-skeleton"></span>
+        </div>
+      </div>
+      <div class="admin-editor__form" aria-hidden="true">
+        <span class="ui-skeleton admin-editor-skeleton__title"></span>
+        <span class="ui-skeleton admin-editor-skeleton__select"></span>
+        <span class="ui-skeleton admin-editor-skeleton__excerpt"></span>
+        <span class="ui-skeleton admin-editor-skeleton__input"></span>
+        <span class="ui-skeleton admin-editor-skeleton__body"></span>
+      </div>
+    </div>
+
+    <div v-else-if="loadError" class="admin-tree__state">
       <div class="admin-grid__error">
         <span class="admin-grid__error-icon" aria-hidden="true">!</span>
         <span>{{ loadError }}</span>

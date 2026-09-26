@@ -367,7 +367,23 @@ function formatDateTime(value) {
     </AdminGridToolbar>
 
     <div class="admin-comment-feed" aria-live="polite">
-      <div v-if="loading" class="admin-comment-feed__message">댓글을 불러오는 중입니다.</div>
+      <div v-if="loading" class="admin-comment-feed__skeleton" aria-hidden="true">
+        <article v-for="index in 5" :key="index" class="admin-comment-row">
+          <div class="admin-comment-row__identity">
+            <span class="ui-skeleton ui-skeleton--circle admin-comment-row__avatar"></span>
+            <div>
+              <span class="ui-skeleton"></span>
+              <span class="ui-skeleton"></span>
+            </div>
+          </div>
+          <div class="admin-comment-row__body">
+            <span class="ui-skeleton"></span>
+            <span class="ui-skeleton"></span>
+            <span class="ui-skeleton"></span>
+          </div>
+          <span class="ui-skeleton admin-comment-row__action-skeleton"></span>
+        </article>
+      </div>
       <div v-else-if="loadError" class="admin-comment-feed__message admin-comment-feed__message--error">
         <span>{{ loadError }}</span>
         <button type="button" @click="reload">다시 시도</button>
@@ -532,7 +548,12 @@ function formatDateTime(value) {
       description="신고가 쌓여도 댓글이 저절로 숨겨지지는 않습니다. 읽어 보고 정하세요."
       @close="closeModeration"
     >
-      <p v-if="moderationLoading" class="admin-moderation__empty">불러오는 중…</p>
+      <div v-if="moderationLoading" class="admin-moderation__skeleton" aria-hidden="true">
+        <span class="ui-skeleton"></span>
+        <span class="ui-skeleton"></span>
+        <span class="ui-skeleton"></span>
+        <span class="ui-skeleton"></span>
+      </div>
       <p v-else-if="moderationError" class="admin-comment-reply-form__error" role="alert">
         {{ moderationError }}
       </p>

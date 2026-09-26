@@ -98,6 +98,37 @@
   justify-content: center;
 }
 
+.home-hero__copy-skeleton,
+.home-skeleton-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.home-hero__copy-skeleton {
+  gap: 16px;
+}
+
+.home-skeleton-stack {
+  width: 100%;
+  gap: 10px;
+}
+
+.home-skeleton--eyebrow {
+  width: 132px;
+  height: 20px;
+}
+
+.home-skeleton--headline {
+  width: min(480px, 82%);
+  height: 54px;
+}
+
+.home-skeleton--description {
+  width: min(420px, 72%);
+  height: 30px;
+}
+
 .home-hero__eyebrow {
   margin: 0 0 16px;
   color: var(--text-muted);
@@ -143,6 +174,27 @@
   margin-top: 46px;
 }
 
+.home-skeleton--avatar {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+}
+
+.home-skeleton--profile-name {
+  width: 150px;
+  height: 22px;
+}
+
+.home-skeleton--profile-bio {
+  width: min(330px, 92%);
+  height: 18px;
+}
+
+.home-skeleton--profile-bio-short {
+  width: min(230px, 66%);
+  height: 18px;
+}
+
 .home-hero__avatar {
   width: 96px;
   height: 96px;
@@ -168,10 +220,22 @@
   line-height: 1.7;
 }
 
+.home-hero__media {
+  min-width: 0;
+  min-height: 460px;
+  overflow: hidden;
+  border-radius: var(--radius);
+  background: var(--surface-muted);
+}
+
+.home-hero__media.is-loading {
+  animation: ui-skeleton-pulse 1.2s ease-in-out infinite alternate;
+}
+
 .home-hero__image {
   width: 100%;
-  min-height: 460px;
-  border-radius: var(--radius);
+  height: 100%;
+  min-height: inherit;
   object-fit: cover;
 }
 
@@ -209,6 +273,16 @@
   margin: 0;
 }
 
+.home-skeleton--section-title {
+  width: 180px;
+  height: 24px;
+}
+
+.home-skeleton--section-intro {
+  width: 260px;
+  height: 18px;
+}
+
 .home-topics__intro {
   margin: 0;
   color: var(--text-subtle);
@@ -228,6 +302,34 @@
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
+}
+
+.home-topic-card--skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.home-skeleton--topic-label {
+  width: 70px;
+  height: 18px;
+}
+
+.home-skeleton--topic-title {
+  width: 72%;
+  height: 28px;
+}
+
+.home-skeleton--topic-description {
+  width: 94%;
+  height: 48px;
+}
+
+.home-skeleton--topic-keywords {
+  width: 150px;
+  height: 28px;
+  margin-top: auto;
+  border-radius: 999px;
 }
 
 .home-topic-card__label {
@@ -291,6 +393,18 @@
   font-weight: 700;
 }
 
+.home-skeleton--note-badge {
+  width: 72px;
+  height: 28px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+}
+
+.home-skeleton--note {
+  width: min(420px, 70%);
+  height: 20px;
+}
+
 .post-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -341,6 +455,35 @@
   font-size: 13px;
 }
 
+.post-card--skeleton .post-card__image {
+  border-radius: var(--radius);
+}
+
+.post-card--skeleton .post-card__body {
+  min-height: 124px;
+}
+
+.home-skeleton--post-category {
+  width: 64px;
+  height: 18px;
+}
+
+.home-skeleton--post-title {
+  width: 88%;
+  height: 48px;
+}
+
+.home-skeleton--post-meta {
+  width: 72%;
+  height: 18px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-hero__media.is-loading {
+    animation: none;
+  }
+}
+
 @media (max-width: 900px) {
   .public-shell {
     padding: 0 10px 18px;
@@ -357,13 +500,21 @@
     padding: 32px 20px;
   }
 
+  .home-hero__copy {
+    min-height: 290px;
+  }
+
   .home-hero__headline {
     font-size: 30px;
   }
 
-  .home-hero__image {
+  .home-hero__media {
     min-height: auto;
     aspect-ratio: 16 / 9;
+  }
+
+  .home-hero__image {
+    min-height: 0;
   }
 
   .home-section {
@@ -407,6 +558,10 @@
     font-size: 26px;
   }
 
+  .home-hero__copy {
+    min-height: 324px;
+  }
+
   .home-hero__description {
     font-size: 14px;
   }
@@ -422,8 +577,25 @@
     height: 72px;
   }
 
+  .home-skeleton--avatar {
+    width: 72px;
+    height: 72px;
+  }
+
+  .home-skeleton--headline {
+    height: 40px;
+  }
+
+  .home-skeleton--description {
+    height: 42px;
+  }
+
   .home-topic-grid {
     grid-template-columns: 1fr;
+  }
+
+  .home-topic-card--skeleton {
+    gap: 10px;
   }
 
   .home-topics__header {
@@ -434,11 +606,20 @@
     margin-top: 8px;
   }
 
+  .home-skeleton--section-intro {
+    width: 80%;
+    margin-top: 8px;
+  }
+
   .home-topics__note {
     align-items: flex-start;
     flex-direction: column;
     gap: 10px;
     padding: 14px 16px;
+  }
+
+  .home-skeleton--note {
+    width: 92%;
   }
 
   .post-grid {
@@ -457,6 +638,10 @@
 
   .post-card__body {
     padding-top: 0;
+  }
+
+  .post-card--skeleton .post-card__body {
+    min-height: 100px;
   }
 
   .post-card__title {

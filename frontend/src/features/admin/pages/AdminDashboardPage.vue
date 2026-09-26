@@ -189,7 +189,8 @@ function goToComments(commentId = null) {
   <div class="admin-dashboard">
         <AdminPageHeader>
           <template #meta>
-            {{ loading ? '기록 상태를 불러오는 중입니다.' : formatDashboardIntro() }}
+            <span v-if="loading" class="ui-skeleton admin-dashboard-skeleton__intro" aria-hidden="true"></span>
+            <template v-else>{{ formatDashboardIntro() }}</template>
           </template>
 
           <template #actions>
@@ -209,7 +210,19 @@ function goToComments(commentId = null) {
           </span>
         </section>
 
-        <section class="admin-summary-grid" aria-label="운영 요약">
+        <section v-if="loading" class="admin-summary-grid" aria-label="운영 요약" aria-busy="true">
+          <article
+            v-for="index in 4"
+            :key="index"
+            class="admin-summary-card admin-summary-card--quiet admin-summary-card--skeleton"
+            aria-hidden="true"
+          >
+            <span class="ui-skeleton"></span>
+            <span class="ui-skeleton"></span>
+            <span class="ui-skeleton"></span>
+          </article>
+        </section>
+        <section v-else class="admin-summary-grid" aria-label="운영 요약">
           <article
             v-for="card in summaryCards"
             :key="card.id"
@@ -217,9 +230,7 @@ function goToComments(commentId = null) {
             :class="`admin-summary-card--${card.tone}`"
           >
             <span class="admin-summary-card__label">{{ card.label }}</span>
-            <strong class="admin-summary-card__value">
-              {{ loading ? '불러오는 중' : card.value }}
-            </strong>
+            <strong class="admin-summary-card__value">{{ card.value }}</strong>
             <span class="admin-summary-card__helper">{{ card.helper }}</span>
           </article>
         </section>
@@ -233,13 +244,19 @@ function goToComments(commentId = null) {
               </div>
             </div>
 
-            <ul class="admin-operation-list">
+            <ul v-if="loading" class="admin-operation-list admin-operation-list--skeleton" aria-hidden="true">
+              <li v-for="index in 3" :key="index">
+                <span><span class="ui-skeleton"></span><span class="ui-skeleton"></span></span>
+                <span class="ui-skeleton"></span>
+              </li>
+            </ul>
+            <ul v-else class="admin-operation-list">
               <li v-for="item in operationItems" :key="item.id">
                 <span>
                   <strong>{{ item.title }}</strong>
                   <small>{{ item.detail }}</small>
                 </span>
-                <em>{{ loading ? '확인 중' : item.value }}</em>
+                <em>{{ item.value }}</em>
               </li>
             </ul>
           </article>
@@ -252,7 +269,16 @@ function goToComments(commentId = null) {
               </div>
             </div>
 
-            <ul v-if="dashboard.categoryShares.length > 0" class="admin-category-list">
+            <ul v-if="loading" class="admin-category-list admin-category-list--skeleton" aria-hidden="true">
+              <li v-for="index in 4" :key="index">
+                <div class="admin-category-list__row">
+                  <span class="ui-skeleton"></span>
+                  <span class="ui-skeleton"></span>
+                </div>
+                <span class="ui-skeleton"></span>
+              </li>
+            </ul>
+            <ul v-else-if="dashboard.categoryShares.length > 0" class="admin-category-list">
               <li v-for="category in dashboard.categoryShares" :key="category.categoryId">
                 <div class="admin-category-list__row">
                   <strong>{{ category.name }}</strong>
@@ -265,7 +291,7 @@ function goToComments(commentId = null) {
             </ul>
 
             <div v-else class="admin-empty-state admin-empty-state--compact">
-              <strong>{{ loading ? '분포를 계산하는 중입니다.' : '카테고리 데이터 연결 전입니다.' }}</strong>
+              <strong>카테고리 데이터 연결 전입니다.</strong>
               <p>관리자 대시보드 API에서 <code>categoryShares</code>를 내려주면 표시됩니다.</p>
             </div>
           </article>
@@ -281,7 +307,18 @@ function goToComments(commentId = null) {
             </button>
           </div>
 
-          <ul v-if="dashboard.unansweredComments.length > 0" class="admin-comment-list">
+          <ul v-if="loading" class="admin-comment-list admin-comment-list--skeleton" aria-hidden="true">
+            <li v-for="index in 3" :key="index" class="admin-comment-item">
+              <span class="ui-skeleton ui-skeleton--circle admin-comment-item__avatar"></span>
+              <div class="admin-comment-item__body">
+                <span class="ui-skeleton"></span>
+                <span class="ui-skeleton"></span>
+                <span class="ui-skeleton"></span>
+              </div>
+              <span class="ui-skeleton"></span>
+            </li>
+          </ul>
+          <ul v-else-if="dashboard.unansweredComments.length > 0" class="admin-comment-list">
             <li
               v-for="comment in dashboard.unansweredComments"
               :key="comment.id"
@@ -307,7 +344,7 @@ function goToComments(commentId = null) {
           </ul>
 
           <div v-else class="admin-empty-state">
-            <strong>{{ loading ? '댓글을 불러오는 중입니다.' : '확인할 댓글이 없습니다.' }}</strong>
+            <strong>확인할 댓글이 없습니다.</strong>
             <p>
               새 댓글이 등록되면 답변이 필요한 순서대로 이곳에 표시됩니다.
             </p>
