@@ -10,18 +10,21 @@ import {
   publishAdminPost,
   unpublishAdminPost,
   updateAdminPost,
+  uploadAdminImage,
 } from '../api/adminApi';
 import {
   clearPostDraft,
   loadPostDraft,
   savePostDraft,
 } from '../data/adminPostDraftStore';
-import { notifySuccess } from '../data/adminToastStore';
+import { notifyError, notifySuccess } from '../../../shared/toast/toastStore';
+import { firstImageUrlOf } from '../data/postEditorBlocks';
 import AdminPageHeader from '../components/AdminPageHeader.vue';
 import AdminTextInput from '../components/AdminTextInput.vue';
 import AdminSelect from '../components/AdminSelect.vue';
 import BaseModal from '../../../shared/components/BaseModal.vue';
 import AdminBlockEditor from '../components/AdminBlockEditor.vue';
+import { getFallbackPostImageUrl } from '../../../shared/post/postCardMapper';
 
 const TITLE_MAX = 255;
 const EXCERPT_MAX = 500;
@@ -64,7 +67,17 @@ const saving = ref(false);
 const formError = ref('');
 const savedMessage = ref('');
 
+const thumbnailInput = ref(null);
+const thumbnailEditorOpen = ref(false);
+const uploadingThumbnail = ref(false);
+const thumbnailUploadError = ref('');
+
 const confirmAction = ref('');
+
+const firstBodyImageUrl = computed(() => firstImageUrlOf(form.content));
+const representativeImageUrl = computed(() => form.thumbnailImageUrl
+  || firstBodyImageUrl.value
+  || getFallbackPostImageUrl());
 
 // 발행 확인 창에서 고르는 시각. 비우면 지금 발행이다
 const scheduledAt = ref('');
@@ -235,15 +248,78 @@ function discardDraft() {
   draftConflict.value = false;
 }
 
+/* ── 대표 이미지 ───────────────────────────── */
+
+function openThumbnailEditor() {
+  thumbnailUploadError.value = '';
+  thumbnailEditorOpen.value = true;
+}
+
+async function uploadThumbnail(event) {
+  const file = event.target.files?.[0];
+
+  if (!file || uploadingThumbnail.value) {
+    return;
+  }
+
+  uploadingThumbnail.value = true;
+  thumbnailUploadError.value = '';
+
+  try {
+    const image = await uploadAdminImage(file);
+
+    if (!image.url) {
+      throw new Error('업로드한 이미지 주소를 받지 못했습니다.');
+    }
+
+    form.thumbnailImageUrl = image.url;
+    thumbnailEditorOpen.value = false;
+  } catch (error) {
+    console.error(error);
+    thumbnailUploadError.value = error.message || '대표 이미지를 업로드하지 못했습니다.';
+  } finally {
+    uploadingThumbnail.value = false;
+    event.target.value = '';
+  }
+}
+
+function resetThumbnail() {
+  form.thumbnailImageUrl = '';
+  thumbnailUploadError.value = '';
+  thumbnailEditorOpen.value = false;
+}
+
+/** 대표 이미지가 비어 있으면 저장 시점의 본문 첫 이미지를 한 번 적용한다. */
+function applyAutomaticThumbnail() {
+  if (!form.thumbnailImageUrl) {
+    form.thumbnailImageUrl = firstBodyImageUrl.value;
+  }
+}
+
 /* ── 저장 ─────────────────────────────────── */
+
+/**
+ * 저장에 실패했다고 알린다.
+ *
+ * <p>인라인 문구만으로는 부족하다. 그 줄은 폼 맨 아래에 있어서, 긴 글을 쓰다가 저장을
+ * 누르면 화면 밖이다. 성공은 토스트로 크게 알리면서 실패는 조용한 것은 방향이 거꾸로다.</p>
+ *
+ * <p>인라인도 같이 남긴다. 다시 시도 단추가 거기 붙어 있고, 토스트는 사라지기 때문이다.</p>
+ */
+function failWith(message) {
+  formError.value = message;
+  notifyError(message);
+}
 
 async function save() {
   if (saving.value || !canSave.value) {
     return;
   }
 
+  applyAutomaticThumbnail();
+
   if (lengthError.value) {
-    formError.value = lengthError.value;
+    failWith(lengthError.value);
     return;
   }
 
@@ -272,7 +348,7 @@ async function save() {
       savedMessage.value = '저장했습니다.';
     }
   } catch (error) {
-    formError.value = error.message;
+    failWith(error.message);
   } finally {
     saving.value = false;
   }
@@ -286,7 +362,7 @@ function buildRequest() {
     categoryId: Number(form.categoryId),
     excerpt: form.excerpt,
     content: form.content,
-    thumbnailImageUrl: form.thumbnailImageUrl,
+    thumbnailImageUrl: form.thumbnailImageUrl || null,
   };
 }
 
@@ -356,11 +432,12 @@ async function runConfirmedAction() {
 
   // 발행·내리기는 저장 → 상태 변경 두 단계다. 저장을 건너뛰면 지금 쓴 내용이 아니라
   // 서버에 있던 예전 내용이 공개되고, 이어지는 loadPost 가 화면의 내용까지 덮는다
+  applyAutomaticThumbnail();
   const blockReason = action === 'publish' ? publishBlockReason.value : saveBlockReason.value;
 
   if (lengthError.value || blockReason) {
     confirmAction.value = '';
-    formError.value = lengthError.value || blockReason;
+    failWith(lengthError.value || blockReason);
     return;
   }
 
@@ -391,9 +468,9 @@ async function runConfirmedAction() {
     // "발행 실패"라고만 하면 방금 쓴 내용도 날아갔다고 생각하고 다시 쓰게 된다
     if (saved) {
       retryAction.value = action;
-      formError.value = `내용은 저장되었지만 ${ACTION_LABELS[action]}하지 못했습니다. ${error.message}`;
+      failWith(`내용은 저장되었지만 ${ACTION_LABELS[action]}하지 못했습니다. ${error.message}`);
     } else {
-      formError.value = error.message;
+      failWith(error.message);
     }
   } finally {
     saving.value = false;
@@ -462,7 +539,7 @@ async function retryStatusChange() {
 
     notifySuccess(publishedMessage(action));
   } catch (error) {
-    formError.value = `${ACTION_LABELS[retryAction.value]}하지 못했습니다. ${error.message}`;
+    failWith(`${ACTION_LABELS[retryAction.value]}하지 못했습니다. ${error.message}`);
   } finally {
     saving.value = false;
   }
@@ -482,7 +559,7 @@ async function runDelete() {
     await router.push({ name: 'admin-posts' });
   } catch (error) {
     confirmAction.value = '';
-    formError.value = error.message;
+    failWith(error.message);
   } finally {
     saving.value = false;
   }
@@ -729,11 +806,20 @@ watch(postId, enter);
           </span>
         </div>
 
-        <AdminTextInput
-          v-model="form.thumbnailImageUrl"
-          label="썸네일 주소"
-          placeholder="https://..."
-        />
+        <div class="admin-editor__thumbnail">
+          <span class="admin-field__label">대표 이미지</span>
+          <div class="admin-editor__thumbnail-media">
+            <img :src="representativeImageUrl" :alt="`${form.title || '게시글'} 대표 이미지`" />
+            <button
+              class="admin-button admin-button--ghost admin-button--small"
+              type="button"
+              :disabled="saving || uploadingThumbnail"
+              @click="openThumbnailEditor"
+            >
+              수정하기
+            </button>
+          </div>
+        </div>
 
         <div class="admin-field">
           <span class="admin-field__label">
@@ -760,6 +846,46 @@ watch(postId, enter);
         </button>
       </p>
     </template>
+
+    <BaseModal
+      variant="admin"
+      :open="thumbnailEditorOpen"
+      title="대표 이미지 수정"
+      size="small"
+      @close="thumbnailEditorOpen = false"
+    >
+      <div class="admin-editor__thumbnail-dialog">
+        <img :src="representativeImageUrl" :alt="`${form.title || '게시글'} 대표 이미지 미리보기`" />
+        <p v-if="thumbnailUploadError" class="admin-form-error">{{ thumbnailUploadError }}</p>
+      </div>
+
+      <template #footer>
+        <button
+          class="admin-button admin-button--ghost"
+          type="button"
+          :disabled="uploadingThumbnail"
+          @click="resetThumbnail"
+        >
+          초기화
+        </button>
+        <button
+          class="admin-button admin-button--solid"
+          type="button"
+          :disabled="uploadingThumbnail"
+          @click="thumbnailInput?.click()"
+        >
+          {{ uploadingThumbnail ? '업로드 중' : '이미지 교체' }}
+        </button>
+      </template>
+    </BaseModal>
+
+    <input
+      ref="thumbnailInput"
+      class="admin-editor__thumbnail-input"
+      type="file"
+      accept="image/jpeg,image/png,image/webp"
+      @change="uploadThumbnail"
+    />
 
     <!-- 로컬 스냅샷 복구 -->
     <BaseModal variant="admin"
