@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router';
 
 import BlogHeader from '../../home/components/BlogHeader.vue';
 import PostArticle from '../components/PostArticle.vue';
+import PostArticleSkeleton from '../components/PostArticleSkeleton.vue';
 import PostAside from '../components/PostAside.vue';
 import CommentSection from '../components/CommentSection.vue';
 import PostRelated from '../components/PostRelated.vue';
@@ -65,6 +66,13 @@ const detail = reactive({
   ...structuredClone(EMPTY_DETAIL),
   comments: { ...EMPTY_COMMENTS },
 });
+const loading = reactive({
+  author: true,
+  post: true,
+  adjacent: true,
+  related: true,
+  comments: true,
+});
 const showAds = false;
 
 watch(
@@ -75,67 +83,56 @@ watch(
   { immediate: true },
 );
 
-async function loadPostPage(postId) {
+function loadPostPage(postId) {
   const requestedPostId = String(postId);
 
-  detail.comments = { ...EMPTY_COMMENTS };
+  Object.assign(detail, structuredClone({
+    ...EMPTY_DETAIL,
+    comments: EMPTY_COMMENTS,
+  }));
+  Object.keys(loading).forEach((key) => {
+    loading[key] = true;
+  });
 
-  const [
-    profileResult,
-    postDetailResult,
-    adjacentPostsResult,
-    relatedPostsResult,
-    commentsResult,
-  ] = await Promise.allSettled([
-    getBlogProfile(),
-    getPostDetail(postId),
-    getAdjacentPosts(postId),
-    getRelatedPosts(postId),
-    getPostComments(postId),
-  ]);
-
-  if (String(route.params.id) !== requestedPostId) {
-    return;
-  }
-
-  if (profileResult.status === 'fulfilled') {
-    detail.author = mergeDefined(detail.author, profileResult.value);
-  } else {
-    console.error(profileResult.reason);
-  }
-
-  if (postDetailResult.status === 'fulfilled') {
+  loadPostData('author', requestedPostId, getBlogProfile, (profile) => {
+    detail.author = mergeDefined(detail.author, profile);
+  });
+  loadPostData('post', requestedPostId, () => getPostDetail(postId), (postDetail) => {
     detail.post = {
-      ...postDetailResult.value.post,
+      ...postDetail.post,
       commentCount: detail.comments.total,
     };
-    detail.body = postDetailResult.value.body;
-    detail.toc = postDetailResult.value.toc;
-  } else {
-    console.error(postDetailResult.reason);
-  }
-
-  if (adjacentPostsResult.status === 'fulfilled') {
-    detail.adjacentPosts = adjacentPostsResult.value;
-  } else {
-    console.error(adjacentPostsResult.reason);
-  }
-
-  if (relatedPostsResult.status === 'fulfilled' && relatedPostsResult.value !== null) {
-    detail.relatedPosts = relatedPostsResult.value;
-  } else if (relatedPostsResult.status === 'rejected') {
-    console.error(relatedPostsResult.reason);
-  }
-
-  if (commentsResult.status === 'fulfilled') {
-    detail.comments = commentsResult.value;
+    detail.body = postDetail.body;
+    detail.toc = postDetail.toc;
+  });
+  loadPostData('adjacent', requestedPostId, () => getAdjacentPosts(postId), (adjacentPosts) => {
+    detail.adjacentPosts = adjacentPosts;
+  });
+  loadPostData('related', requestedPostId, () => getRelatedPosts(postId), (relatedPosts) => {
+    detail.relatedPosts = relatedPosts ?? [];
+  });
+  loadPostData('comments', requestedPostId, () => getPostComments(postId), (comments) => {
+    detail.comments = comments;
     detail.post = {
       ...detail.post,
-      commentCount: commentsResult.value.total,
+      commentCount: comments.total,
     };
-  } else {
-    console.error(commentsResult.reason);
-  }
+  });
+}
+
+function loadPostData(key, requestedPostId, request, apply) {
+  request()
+    .then((value) => {
+      if (String(route.params.id) === requestedPostId) {
+        apply(value);
+      }
+    })
+    .catch((error) => console.error(error))
+    .finally(() => {
+      if (String(route.params.id) === requestedPostId) {
+        loading[key] = false;
+      }
+    });
 }
 
 function mergeDefined(base, next) {
@@ -164,32 +161,45 @@ function applyPostReaction(reaction) {
 
 <template>
   <div class="public-shell">
-    <BlogHeader :title="detail.author.name" />
+    <BlogHeader :title="detail.author.name || 'JSJ.log'" />
 
     <main class="public-shell__main post-shell">
       <div class="post-shell__layout">
         <!-- 본문·댓글·관련글이 한 컬럼. 오른쪽 레일은 그 옆으로 계속 내려온다 -->
         <div class="post-shell__column">
+          <PostArticleSkeleton v-if="loading.post" />
           <PostArticle
+            v-else
             @focus-comments="commentSection?.focusCommentInput()"
             @reaction-changed="applyPostReaction"
             :post="detail.post"
             :author="detail.author"
             :body="detail.body"
             :adjacent-posts="detail.adjacentPosts"
+            :author-loading="loading.author"
           />
 
           <CommentSection
             ref="commentSection"
             :post-id="route.params.id"
             :comments="detail.comments"
+            :initial-loading="loading.comments"
           />
 
-          <PostRelated :posts="detail.relatedPosts" :category-id="detail.post.categoryId ?? null" />
+          <PostRelated
+            :posts="detail.relatedPosts"
+            :category-id="detail.post.categoryId ?? null"
+            :loading="loading.related"
+          />
         </div>
 
+        <aside v-if="loading.post" class="post-aside post-aside--skeleton" aria-hidden="true">
+          <span class="ui-skeleton"></span>
+          <span class="ui-skeleton"></span>
+          <span class="ui-skeleton"></span>
+        </aside>
         <PostAside
-          v-if="detail.toc.length > 0 || showAds"
+          v-else-if="detail.toc.length > 0 || showAds"
           :toc="detail.toc"
           :ads="detail.asideAds"
           :show-ads="showAds"

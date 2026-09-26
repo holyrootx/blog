@@ -36,6 +36,22 @@
   font-size: 14px;
 }
 
+.search-results--skeleton .search-results__item {
+  display: grid;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.search-results--skeleton .ui-skeleton:first-child {
+  width: 76px;
+  height: 14px;
+}
+
+.search-results--skeleton .ui-skeleton:last-child {
+  width: 78%;
+  height: 18px;
+}
+
 .search-results {
   margin: 12px 0 0;
   padding: 0;

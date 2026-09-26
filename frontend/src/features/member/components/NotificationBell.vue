@@ -171,7 +171,13 @@ watch(isSignedIn, (signedIn) => {
         >모두 읽음</button>
       </div>
 
-      <p v-if="loading" class="notification-bell__empty">불러오는 중…</p>
+      <ul v-if="loading" class="notification-bell__list notification-bell__list--skeleton" aria-hidden="true">
+        <li v-for="index in 3" :key="index" class="notification-bell__item">
+          <span class="ui-skeleton"></span>
+          <span class="ui-skeleton"></span>
+          <span class="ui-skeleton"></span>
+        </li>
+      </ul>
       <p v-else-if="notifications.length === 0" class="notification-bell__empty">
         아직 알림이 없습니다.
       </p>

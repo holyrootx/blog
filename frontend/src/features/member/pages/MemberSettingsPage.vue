@@ -29,6 +29,7 @@ const nicknameSaved = ref(false);
 
 const comments = ref([]);
 const commentsLoading = ref(true);
+const pageLoading = ref(true);
 
 const withdrawing = ref(false);
 const withdrawConfirming = ref(false);
@@ -44,11 +45,13 @@ onMounted(async () => {
   await ensureMemberSession();
 
   if (!isSignedIn.value) {
+    pageLoading.value = false;
     await router.replace({ name: 'member-login' });
     return;
   }
 
   nickname.value = member.value?.nickname ?? '';
+  pageLoading.value = false;
 
   try {
     comments.value = await getMyComments();
@@ -113,7 +116,26 @@ async function confirmWithdraw() {
 </script>
 
 <template>
-  <main v-if="isSignedIn" class="member-settings">
+  <main v-if="pageLoading" class="member-settings member-settings--skeleton" aria-busy="true">
+    <header class="member-settings__head" aria-hidden="true">
+      <span class="ui-skeleton member-settings-skeleton__title"></span>
+      <span class="ui-skeleton member-settings-skeleton__back"></span>
+    </header>
+
+    <section v-for="index in 3" :key="index" class="member-settings__section" aria-hidden="true">
+      <span class="ui-skeleton member-settings-skeleton__heading"></span>
+      <div class="member-settings-skeleton__body">
+        <span class="ui-skeleton ui-skeleton--circle"></span>
+        <div>
+          <span class="ui-skeleton"></span>
+          <span class="ui-skeleton"></span>
+          <span class="ui-skeleton"></span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <main v-else-if="isSignedIn" class="member-settings">
     <header class="member-settings__head">
       <h1 class="member-settings__title">내 설정</h1>
       <RouterLink class="member-settings__back" to="/">블로그로 돌아가기</RouterLink>
@@ -173,7 +195,13 @@ async function confirmWithdraw() {
     <section class="member-settings__section" aria-labelledby="settings-comments">
       <h2 id="settings-comments" class="member-settings__section-title">내가 쓴 댓글</h2>
 
-      <p v-if="commentsLoading" class="member-settings__empty">불러오는 중…</p>
+      <ul v-if="commentsLoading" class="member-comments member-comments--skeleton" aria-hidden="true">
+        <li v-for="index in 3" :key="index" class="member-comments__item">
+          <span class="ui-skeleton"></span>
+          <span class="ui-skeleton"></span>
+          <span class="ui-skeleton"></span>
+        </li>
+      </ul>
       <p v-else-if="comments.length === 0" class="member-settings__empty">아직 쓴 댓글이 없습니다.</p>
 
       <ul v-else class="member-comments">

@@ -30,6 +30,7 @@ const fallbackPosts = ref([]);
 const totalElements = ref(0);
 const totalPages = ref(0);
 const loading = ref(true);
+const categoriesLoading = ref(true);
 const failed = ref(false);
 
 const page = computed(() => {
@@ -176,6 +177,8 @@ watch(() => route.fullPath, load, { immediate: true });
 // 헤더도 같은 값을 쓴다. 같이 쓰는 자리를 거치므로 한 화면에 요청이 한 번만 나간다
 loadCategories().then((found) => {
   categories.value = found;
+}).finally(() => {
+  categoriesLoading.value = false;
 });
 
 getBlogProfile()
@@ -193,10 +196,11 @@ function goTo(number) {
   <div class="public-shell">
     <BlogHeader :title="headerTitle" />
 
-    <main class="public-shell__main post-list">
+    <main class="public-shell__main post-list" :aria-busy="loading || categoriesLoading">
       <header class="post-list__head">
         <h1 class="post-list__title">{{ heading }}</h1>
-        <p v-if="!loading" class="post-list__count">{{ totalElements }}편</p>
+        <span v-if="loading" class="ui-skeleton post-list__count-skeleton" aria-hidden="true"></span>
+        <p v-else class="post-list__count">{{ totalElements }}편</p>
         <button
           v-if="keyword"
           class="post-list__clear"
@@ -211,6 +215,14 @@ function goTo(number) {
           :class="{ 'post-list__filter--active': categoryId === null }"
           :to="{ name: 'post-list', query: queryFor({ category: '', page: '' }) }"
         >전체</RouterLink>
+        <template v-if="categoriesLoading">
+          <span
+            v-for="index in 3"
+            :key="`category-skeleton-${index}`"
+            class="ui-skeleton post-list__filter-skeleton"
+            aria-hidden="true"
+          ></span>
+        </template>
         <RouterLink
           v-for="category in categories"
           :key="category.id"
@@ -233,7 +245,16 @@ function goTo(number) {
         >인기순</RouterLink>
       </nav>
 
-      <p v-if="loading" class="post-list__empty">불러오는 중…</p>
+      <div v-if="loading" class="post-grid" aria-hidden="true">
+        <article v-for="index in PAGE_SIZE" :key="index" class="post-card post-card--skeleton">
+          <div class="post-card__image ui-skeleton"></div>
+          <div class="post-card__body home-skeleton-stack">
+            <span class="ui-skeleton home-skeleton--post-category"></span>
+            <span class="ui-skeleton home-skeleton--post-title"></span>
+            <span class="ui-skeleton home-skeleton--post-meta"></span>
+          </div>
+        </article>
+      </div>
       <p v-else-if="failed" class="post-list__empty" role="alert">
         글을 불러오지 못했습니다. 잠시 뒤에 다시 시도해 주세요.
       </p>
@@ -257,7 +278,13 @@ function goTo(number) {
               class="post-card"
               :to="{ name: 'post-detail', params: { id: post.id } }"
             >
-              <img class="post-card__image" :src="post.imageUrl" :alt="post.title" />
+              <img
+                class="post-card__image"
+                :src="post.imageUrl"
+                :alt="post.title"
+                loading="lazy"
+                decoding="async"
+              />
               <div class="post-card__body">
                 <span class="post-card__category">{{ post.category }}</span>
                 <h3 class="post-card__title">{{ post.title }}</h3>
@@ -278,7 +305,13 @@ function goTo(number) {
           class="post-card"
           :to="{ name: 'post-detail', params: { id: post.id } }"
         >
-          <img class="post-card__image" :src="post.imageUrl" :alt="post.title" />
+          <img
+            class="post-card__image"
+            :src="post.imageUrl"
+            :alt="post.title"
+            loading="lazy"
+            decoding="async"
+          />
           <div class="post-card__body">
             <span class="post-card__category">{{ post.category }}</span>
             <h2 class="post-card__title">
