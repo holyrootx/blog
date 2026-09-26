@@ -344,8 +344,22 @@ onMounted(loadSettings);
       </template>
     </AdminPageHeader>
 
-    <div v-if="loading" class="admin-settings__state" aria-live="polite">
-      설정을 불러오는 중입니다.
+    <div v-if="loading" class="admin-settings admin-settings--skeleton" aria-busy="true">
+      <section v-for="index in 3" :key="index" class="admin-settings__section" aria-hidden="true">
+        <header class="admin-settings__section-header">
+          <div>
+            <span class="ui-skeleton"></span>
+            <span class="ui-skeleton"></span>
+          </div>
+          <span class="ui-skeleton"></span>
+        </header>
+        <div class="admin-settings__columns">
+          <div class="admin-settings__fields">
+            <span v-for="field in 3" :key="field" class="ui-skeleton"></span>
+          </div>
+          <span class="ui-skeleton admin-settings-skeleton__media"></span>
+        </div>
+      </section>
     </div>
 
     <div v-else-if="loadError" class="admin-settings__state admin-settings__state--error">

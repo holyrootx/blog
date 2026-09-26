@@ -1,0 +1,26 @@
+.ui-skeleton {
+  display: block;
+  border-radius: 4px;
+  background: var(--surface-muted);
+  animation: ui-skeleton-pulse 1.2s ease-in-out infinite alternate;
+}
+
+.ui-skeleton--circle {
+  border-radius: 50%;
+}
+
+@keyframes ui-skeleton-pulse {
+  from {
+    opacity: 0.58;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-skeleton {
+    animation: none;
+  }
+}

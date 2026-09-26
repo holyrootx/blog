@@ -17,13 +17,22 @@ const props = defineProps({
     type: Number,
     default: null,
   },
+  loading: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const moreQuery = computed(() => (props.categoryId ? { category: String(props.categoryId) } : {}));
 </script>
 
 <template>
-  <section v-if="posts.length > 0" class="post-related" aria-labelledby="post-related-title">
+  <section
+    v-if="loading || posts.length > 0"
+    class="post-related"
+    aria-labelledby="post-related-title"
+    :aria-busy="loading"
+  >
     <div class="post-related__header">
       <h2 id="post-related-title" class="post-related__title">함께 읽으면 좋은 글</h2>
       <RouterLink class="post-related__more" :to="{ name: 'post-list', query: moreQuery }">
@@ -31,14 +40,30 @@ const moreQuery = computed(() => (props.categoryId ? { category: String(props.ca
       </RouterLink>
     </div>
 
-    <div class="post-related__grid">
+    <div v-if="loading" class="post-related__grid" aria-hidden="true">
+      <article v-for="index in 3" :key="index" class="post-related__card post-card post-card--skeleton">
+        <div class="post-card__image ui-skeleton"></div>
+        <div class="post-card__body home-skeleton-stack">
+          <span class="ui-skeleton home-skeleton--post-category"></span>
+          <span class="ui-skeleton home-skeleton--post-title"></span>
+          <span class="ui-skeleton home-skeleton--post-meta"></span>
+        </div>
+      </article>
+    </div>
+    <div v-else class="post-related__grid">
       <RouterLink
         v-for="post in posts"
         :key="post.id"
         class="post-related__card post-card"
         :to="{ name: 'post-detail', params: { id: post.id } }"
       >
-        <img class="post-card__image" :src="post.imageUrl" :alt="post.title" />
+        <img
+          class="post-card__image"
+          :src="post.imageUrl"
+          :alt="post.title"
+          loading="lazy"
+          decoding="async"
+        />
         <div class="post-card__body">
           <span class="post-card__category">{{ post.category }}</span>
           <h3 class="post-card__title">{{ post.title }}</h3>
