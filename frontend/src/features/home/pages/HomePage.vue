@@ -50,61 +50,46 @@ const home = reactive({
   recentPosts: [],
 });
 
+const loading = reactive({
+  profile: true,
+  hero: true,
+  topicSection: true,
+  topics: true,
+  featuredPosts: true,
+  recentPosts: true,
+});
+
 const headerTitle = computed(() => home.profile.name || home.header.title);
 
-onMounted(async () => {
-  const [
-    profileResult,
-    heroResult,
-    topicSectionResult,
-    topicsResult,
-    popularPostsResult,
-    latestPostsResult,
-  ] = await Promise.allSettled([
-    getBlogProfile(),
-    getHomePageHero(),
-    getHomeTopicSection(),
-    getHomeTopics(),
-    getHomePosts('popular'),
-    getHomePosts('latest'),
-  ]);
-
-  if (profileResult.status === 'fulfilled') {
-    home.profile = mergeDefined(home.profile, profileResult.value);
-  } else {
-    console.error(profileResult.reason);
-  }
-
-  if (heroResult.status === 'fulfilled') {
-    home.hero = mergeDefined(home.hero, heroResult.value);
-  } else {
-    console.error(heroResult.reason);
-  }
-
-  if (topicSectionResult.status === 'fulfilled') {
-    home.topicSection = mergeDefined(home.topicSection, topicSectionResult.value);
-  } else {
-    console.error(topicSectionResult.reason);
-  }
-
-  if (topicsResult.status === 'fulfilled') {
-    home.topics = Array.isArray(topicsResult.value) ? topicsResult.value : [];
-  } else {
-    console.error(topicsResult.reason);
-  }
-
-  if (popularPostsResult.status === 'fulfilled') {
-    home.featuredPosts = popularPostsResult.value;
-  } else {
-    console.error(popularPostsResult.reason);
-  }
-
-  if (latestPostsResult.status === 'fulfilled') {
-    home.recentPosts = latestPostsResult.value;
-  } else {
-    console.error(latestPostsResult.reason);
-  }
+onMounted(() => {
+  loadHomeData('profile', getBlogProfile, (profile) => {
+    home.profile = mergeDefined(home.profile, profile);
+  });
+  loadHomeData('hero', getHomePageHero, (hero) => {
+    home.hero = mergeDefined(home.hero, hero);
+  });
+  loadHomeData('topicSection', getHomeTopicSection, (section) => {
+    home.topicSection = mergeDefined(home.topicSection, section);
+  });
+  loadHomeData('topics', getHomeTopics, (topics) => {
+    home.topics = Array.isArray(topics) ? topics : [];
+  });
+  loadHomeData('featuredPosts', () => getHomePosts('popular'), (posts) => {
+    home.featuredPosts = posts;
+  });
+  loadHomeData('recentPosts', () => getHomePosts('latest'), (posts) => {
+    home.recentPosts = posts;
+  });
 });
+
+function loadHomeData(key, request, apply) {
+  request()
+    .then(apply)
+    .catch((error) => console.error(error))
+    .finally(() => {
+      loading[key] = false;
+    });
+}
 
 function mergeDefined(base, next) {
   return Object.entries(next ?? {}).reduce(
@@ -124,10 +109,30 @@ function mergeDefined(base, next) {
   <div class="public-shell">
     <BlogHeader :title="headerTitle" />
     <main class="public-shell__main">
-      <HomeHero :hero="home.hero" :profile="home.profile" />
-      <HomeTopicSection :section="home.topicSection" :topics="home.topics" />
-      <PostSection title="인기글" sort="popular" :posts="home.featuredPosts" />
-      <PostSection title="최근 글" sort="latest" :posts="home.recentPosts" />
+      <HomeHero
+        :hero="home.hero"
+        :profile="home.profile"
+        :hero-loading="loading.hero"
+        :profile-loading="loading.profile"
+      />
+      <HomeTopicSection
+        :section="home.topicSection"
+        :topics="home.topics"
+        :section-loading="loading.topicSection"
+        :topics-loading="loading.topics"
+      />
+      <PostSection
+        title="인기글"
+        sort="popular"
+        :posts="home.featuredPosts"
+        :loading="loading.featuredPosts"
+      />
+      <PostSection
+        title="최근 글"
+        sort="latest"
+        :posts="home.recentPosts"
+        :loading="loading.recentPosts"
+      />
     </main>
     <footer class="public-footer">
       <RouterLink to="/privacy">개인정보처리방침</RouterLink>
