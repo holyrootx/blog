@@ -1,17 +1,39 @@
-@font-face {
-  font-family: 'Noto Sans KR';
-  font-weight: 300;
-  src: url('../../fonts/NotoSansKR-Light.ttf') format('truetype');
-}
+/* ── 본문 글꼴 ───────────────────────────────
+   TTF 가 아니라 WOFF2 다. TrueType 은 1990년대 데스크톱 포맷이라 압축이라는 개념이
+   없어서, 한글 폰트 하나가 6MB 로 나간다. 처음 오는 사람이 12MB 를 받고 그동안
+   글자를 못 보고 있었다.
+
+   WOFF2 는 압축하기 전에 글리프 데이터를 재배열한다 — 좌표를 직전 점과의 차이로
+   바꾸고, 플래그는 플래그끼리 x 는 x 끼리 모은 다음 Brotli 로 누른다. gzip 은
+   바이트만 보므로 그 재배열을 못 해서 절반밖에 못 줄인다.
+
+   거기에 한자와 가나를 뺐다. 한글 음절 11,172 자는 하나도 빠짐없이 들어 있으므로
+   한글이 깨질 일은 없다. 한자를 쓰면 그 글자만 시스템 글꼴로 그려진다 — 두부(□)가
+   뜨는 것이 아니라 서체만 달라진다. 맥·윈도·안드로이드 모두 한자를 가진 한글
+   글꼴을 기본으로 들고 있다.
+
+   결과: 12,080KB → 1,353KB.
+
+   Light(300) 은 뺐다. 선언만 있고 쓰는 곳이 없어서 6MB 를 들고만 있었다.
+   화면에서 쓰는 500·600·800 은 400·700 으로 그려진다 — 이 파일을 바꾸기 전에도
+   그랬으므로 달라지는 것은 없다.
+
+   font-display: swap — 글꼴이 오기 전에는 시스템 글꼴로 먼저 그린다. 기본값
+   (auto, 사실상 block)은 글꼴이 올 때까지 글자를 아예 안 칠해서, 화면에 자리는
+   다 잡혀 있는데 아무것도 안 보이는 시간이 생긴다 */
 
 @font-face {
   font-family: 'Noto Sans KR';
+  font-style: normal;
   font-weight: 400;
-  src: url('../../fonts/NotoSansKR-Regular.ttf') format('truetype');
+  font-display: swap;
+  src: url('../../fonts/NotoSansKR-Regular.woff2') format('woff2');
 }
 
 @font-face {
   font-family: 'Noto Sans KR';
+  font-style: normal;
   font-weight: 700;
-  src: url('../../fonts/NotoSansKR-Bold.ttf') format('truetype');
+  font-display: swap;
+  src: url('../../fonts/NotoSansKR-Bold.woff2') format('woff2');
 }
