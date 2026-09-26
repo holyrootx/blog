@@ -62,6 +62,36 @@ export function isEmptyBlock(block) {
   return block.text.trim() === '';
 }
 
+/**
+ * 본문에서 첫 번째 이미지 주소를 찾는다.
+ *
+ * 코드 블록 안의 마크다운 예시는 실제 이미지가 아니므로 건너뛴다. 대표 이미지가
+ * 비어 있을 때만 이 값을 사용하고, 사용자가 직접 등록한 주소는 건드리지 않는다.
+ */
+export function firstImageUrlOf(markdown) {
+  const lines = String(markdown ?? '').replace(/\r\n/g, '\n').split('\n');
+  let inCode = false;
+
+  for (const line of lines) {
+    if (/^```/.test(line.trim())) {
+      inCode = !inCode;
+      continue;
+    }
+
+    if (inCode) {
+      continue;
+    }
+
+    const image = line.replace(/^\s+/, '').match(IMAGE_LINE_PATTERN);
+
+    if (image) {
+      return image[2];
+    }
+  }
+
+  return '';
+}
+
 /* ── 마크다운 → 블록 ──────────────────────── */
 
 export function toEditorBlocks(markdown) {

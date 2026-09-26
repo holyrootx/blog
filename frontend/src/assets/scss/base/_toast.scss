@@ -1,0 +1,61 @@
+/* ── 결과 알림 ───────────────────────────────
+   관리자와 공개 화면이 같이 쓴다. 앱 뿌리에 한 번만 붙는 컴포넌트라
+   여기 색은 두 화면 모두에서 읽혀야 한다 */
+
+.app-toast {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: min(360px, calc(100vw - 48px));
+  /* 알림이 없을 때 그 자리의 클릭을 먹지 않도록 */
+  pointer-events: none;
+}
+
+.app-toast__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
+  font-size: 13px;
+  line-height: 1.5;
+  pointer-events: auto;
+  animation: app-toast-in 0.16s ease-out;
+}
+
+.app-toast__item--success {
+  background: var(--admin-button-primary);
+  color: var(--admin-button-primary-text);
+}
+
+.app-toast__item--error {
+  border: 1px solid var(--admin-danger-line);
+  background: var(--admin-danger-soft);
+  color: var(--admin-danger);
+}
+
+.app-toast__message {
+  flex: 1;
+  white-space: pre-line;
+}
+
+.app-toast__close {
+  flex: none;
+  padding: 0 2px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+@keyframes app-toast-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}

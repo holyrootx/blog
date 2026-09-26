@@ -7,6 +7,7 @@ import PostBody from './PostBody.vue';
 import { removePostReaction, setPostReaction } from '../api/postApi';
 import { useMemberAuth } from '../../member/data/memberAuthStore';
 import { rememberReturnPath } from '../../member/data/memberReturnPath';
+import { notifyError, notifySuccess } from '../../../shared/toast/toastStore';
 
 const showInlineAds = false;
 const showTags = false;
@@ -66,6 +67,7 @@ async function toggleLike() {
     emit('reaction-changed', reaction);
   } catch (error) {
     reactionError.value = error?.message ?? '좋아요를 저장하지 못했습니다.';
+    notifyError(reactionError.value);
   } finally {
     reactionPending.value = false;
   }

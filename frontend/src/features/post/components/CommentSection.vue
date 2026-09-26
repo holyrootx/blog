@@ -15,6 +15,7 @@ import CommentActionIcon from './CommentActionIcon.vue';
 import CommentReportDialog from './CommentReportDialog.vue';
 import { signOutMember, useMemberAuth } from '../../member/data/memberAuthStore';
 import { rememberReturnPath } from '../../member/data/memberReturnPath';
+import { notifyError, notifySuccess } from '../../../shared/toast/toastStore';
 
 const props = defineProps({
   postId: {
@@ -210,6 +211,7 @@ async function submitComment() {
     draft.value = '';
   } catch (error) {
     formError.value = error?.message ?? '댓글을 등록하지 못했습니다.';
+    notifyError(formError.value);
   } finally {
     submitting.value = false;
   }
@@ -239,6 +241,7 @@ async function submitReply(parentId) {
     replyTargetId.value = null;
   } catch (error) {
     replyError.value = error?.message ?? '답글을 등록하지 못했습니다.';
+    notifyError(replyError.value);
   } finally {
     replySubmitting.value = false;
   }
@@ -324,6 +327,7 @@ async function saveEdit(comment) {
     cancelEdit();
   } catch (error) {
     editError.value = error.message ?? '고치지 못했습니다. 잠시 뒤에 다시 시도해 주세요.';
+    notifyError(editError.value);
   } finally {
     editPending.value = false;
   }
@@ -376,6 +380,7 @@ async function confirmDelete(target, parent = null) {
     deletingId.value = null;
   } catch (error) {
     reactionError.value = error.message ?? '지우지 못했습니다. 잠시 뒤에 다시 시도해 주세요.';
+    notifyError(reactionError.value);
     deletingId.value = null;
   } finally {
     deletePending.value = false;
@@ -410,9 +415,12 @@ async function submitReport({ reason, detail }) {
     // 신고 수는 화면에 안 보인다. 보이면 그 자체로 낙인이 되고,
     // 몰려서 신고하면 숫자가 오르는 것이 보여 재미가 붙는다
     reportDone.value = '신고를 접수했습니다. 확인 뒤 처리하겠습니다.';
+    // 신고는 눌러도 화면이 거의 안 바뀐다. 접수됐다는 말을 한 번은 크게 해 준다
+    notifySuccess('신고가 접수되었습니다.');
   } catch (error) {
     // 이미 신고했거나 내 댓글인 경우 서버가 이유를 준다. 그대로 보여 준다
     reportError.value = error.message ?? '신고하지 못했습니다. 잠시 뒤에 다시 시도해 주세요.';
+    notifyError(reportError.value);
   } finally {
     reportPending.value = false;
   }
@@ -443,6 +451,7 @@ async function reactToComment(comment, type) {
     comment.dislikedByMe = Boolean(reaction?.dislikedByMe);
   } catch (error) {
     reactionError.value = error?.message ?? '댓글 반응을 저장하지 못했습니다.';
+    notifyError(reactionError.value);
   } finally {
     const pendingIds = new Set(reactionPendingIds.value);
     pendingIds.delete(comment.id);

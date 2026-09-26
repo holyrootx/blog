@@ -12,7 +12,7 @@ import {
   uploadAdminImage,
 } from '../api/adminApi';
 import AdminPageHeader from '../components/AdminPageHeader.vue';
-import { notifySuccess } from '../data/adminToastStore';
+import { notifyError, notifySuccess } from '../../../shared/toast/toastStore';
 
 const EMPTY_PROFILE = {
   id: 1,
@@ -77,6 +77,12 @@ const busy = computed(() => loading.value
   || uploadingHero.value);
 
 const saveLabel = computed(() => (saving.value ? '저장 중' : '변경사항 저장'));
+
+/** 실패도 성공만큼 눈에 띄어야 한다. 인라인 문구는 폼 아래라 화면 밖일 때가 있다 */
+function failWith(message) {
+  formError.value = message;
+  notifyError(message);
+}
 
 function profileRequest() {
   return {
@@ -240,7 +246,7 @@ async function saveSettings() {
     notifySuccess('대문 설정을 저장했습니다.');
   } catch (error) {
     console.error(error);
-    formError.value = error.message || '설정을 저장하지 못했습니다.';
+    failWith(error.message || '설정을 저장하지 못했습니다.');
   } finally {
     saving.value = false;
   }
@@ -281,6 +287,7 @@ async function uploadImage(event, target) {
   } catch (error) {
     console.error(error);
     errorMessage.value = error.message || '이미지를 업로드하지 못했습니다.';
+    notifyError(errorMessage.value);
   } finally {
     uploading.value = false;
     event.target.value = '';
@@ -299,7 +306,7 @@ function removeHeroImage() {
 
 function addTopic() {
   if (topics.value.length >= MAX_TOPIC_COUNT) {
-    formError.value = `이야기는 최대 ${MAX_TOPIC_COUNT}개까지 등록할 수 있습니다.`;
+    failWith(`이야기는 최대 ${MAX_TOPIC_COUNT}개까지 등록할 수 있습니다.`);
     return;
   }
 
