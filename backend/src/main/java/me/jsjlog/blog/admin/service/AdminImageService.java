@@ -141,7 +141,7 @@ public class AdminImageService {
      * <p>현재 접미사로 다시 계산하지 않아야 과거 버전의 썸네일도 정확히 지울 수 있다.
      * URL 은 서버가 생성한 날짜/UUID 키만 사용하므로 경로가 곧 R2 객체 키다.</p>
      */
-    private String storageKeyFromUrl(String imageUrl) {
+    static String storageKeyFromUrl(String imageUrl) {
         try {
             String path = URI.create(imageUrl).getPath();
             String storageKey = path != null && path.startsWith("/") ? path.substring(1) : path;

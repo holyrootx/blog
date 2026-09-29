@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -14,6 +15,7 @@ import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import me.jsjlog.blog.admin.domain.UploadImage;
+import me.jsjlog.blog.admin.dto.AdminImageCleanupResponse;
 import me.jsjlog.blog.admin.dto.AdminImageListResponse;
 import me.jsjlog.blog.admin.dto.AdminImageResponse;
 import me.jsjlog.blog.admin.dto.AdminImageUsage;
@@ -109,16 +111,53 @@ public class ImageCleanupService {
      * 새 글에 넣었을 수 있어서, 지우기 직전에 참조를 한 번 더 본다.
      */
     @Transactional
-    public void cleanup(List<Long> imageIds) {
+    public AdminImageCleanupResponse cleanup(List<Long> imageIds) {
         if (imageIds == null || imageIds.isEmpty()) {
-            return;
+            return AdminImageCleanupResponse.empty();
         }
 
-        Set<String> urls = imageUsageRepository.findAllById(imageIds).stream()
-                .map(UploadImage::getUrl)
+        Set<Long> requestedIds = imageIds.stream()
+                .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
-        deleteUnused(urls);
+        if (requestedIds.isEmpty()) {
+            return AdminImageCleanupResponse.empty();
+        }
+
+        List<UploadImage> images = imageUsageRepository.findAllById(requestedIds);
+        Set<String> urls = images.stream()
+                .map(UploadImage::getUrl)
+                .collect(Collectors.toSet());
+        Set<Long> stillUsed = urls.isEmpty()
+                ? Set.of()
+                : imageUsageRepository.findStillUsed(urls).stream()
+                        .map(UploadImage::getId)
+                        .collect(Collectors.toSet());
+
+        int deletedCount = 0;
+        int skippedUsedCount = 0;
+        int failedCount = 0;
+
+        for (UploadImage image : images) {
+            if (stillUsed.contains(image.getId())) {
+                skippedUsedCount++;
+                continue;
+            }
+
+            if (delete(image)) {
+                deletedCount++;
+            } else {
+                failedCount++;
+            }
+        }
+
+        return new AdminImageCleanupResponse(
+                requestedIds.size(),
+                deletedCount,
+                skippedUsedCount,
+                requestedIds.size() - images.size(),
+                failedCount
+        );
     }
 
     /** 글을 건드리기 전에 호출해야 한다. 저장한 뒤에는 원래 뭘 쓰고 있었는지 알 수 없다 */
@@ -183,17 +222,25 @@ public class ImageCleanupService {
     /**
      * 저장소를 먼저 지우고 기록을 지운다. 순서를 바꾸면 삭제가 실패했을 때 파일을 찾을 수 없다.
      *
-     * 실패해도 예외를 던지지 않는다. 글 저장은 이미 끝났고, 남은 파일은 나중에 치우면 된다.
+     * 실패해도 예외를 던지지 않고 false 를 반환한다. 글 저장은 이미 끝났으므로 자동 정리는
+     * 나중에 다시 시도할 수 있어야 하고, 수동 정리는 이 값을 세어 관리자에게 실패 건수를 알린다.
      */
-    private void delete(UploadImage image) {
+    private boolean delete(UploadImage image) {
         try {
-            imageStorage.delete(image.getStorageKey());
-            imageStorage.delete(AdminImageService.thumbnailKey(image.getStorageKey()));
+            String originalKey = image.getStorageKey();
+            String actualThumbnailKey = AdminImageService.storageKeyFromUrl(image.getUrl());
+
+            imageStorage.delete(originalKey);
+            if (!originalKey.equals(actualThumbnailKey)) {
+                imageStorage.delete(actualThumbnailKey);
+            }
             imageUsageRepository.delete(image);
 
             log.info("안 쓰는 이미지 삭제. key={}", image.getStorageKey());
+            return true;
         } catch (RuntimeException exception) {
             log.warn("이미지 삭제 실패. 기록은 남긴다. key={}", image.getStorageKey(), exception);
+            return false;
         }
     }
 

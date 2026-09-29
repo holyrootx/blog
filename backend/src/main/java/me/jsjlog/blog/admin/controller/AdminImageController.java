@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import me.jsjlog.blog.admin.dto.AdminImageCleanupRequest;
+import me.jsjlog.blog.admin.dto.AdminImageCleanupResponse;
 import me.jsjlog.blog.admin.dto.AdminImageListResponse;
 import me.jsjlog.blog.admin.dto.UploadImageResponse;
 import me.jsjlog.blog.admin.service.ImageCleanupService;
@@ -46,10 +47,8 @@ public class AdminImageController {
 
     /** 고른 것을 지운다. 지우기 직전에 참조를 한 번 더 본다 */
     @PostMapping("/images/cleanup")
-    public ApiResponse<Void> cleanup(@RequestBody AdminImageCleanupRequest request) {
-        imageCleanupService.cleanup(request.imageIds());
-
-        return ApiResponse.ok();
+    public ApiResponse<AdminImageCleanupResponse> cleanup(@RequestBody AdminImageCleanupRequest request) {
+        return ApiResponse.ok(imageCleanupService.cleanup(request.imageIds()));
     }
 
     @DeleteMapping("/images/{imageId}")
