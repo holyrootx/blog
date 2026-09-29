@@ -29,10 +29,12 @@ public class AdminLoginConfigurer extends AbstractHttpConfigurer<AdminLoginConfi
     private final AuthenticationManager authenticationManager;
     private final AuthenticationSuccessHandler successHandler;
     private final AuthenticationFailureHandler failureHandler;
+    private final LoginAttemptGuard attemptGuard;
+    private final ClientIpResolver clientIpResolver;
 
     @Override
     public void configure(HttpSecurity http) {
-        AdminLoginFilter filter = new AdminLoginFilter(objectMapper);
+        AdminLoginFilter filter = new AdminLoginFilter(objectMapper, attemptGuard, clientIpResolver);
 
         filter.setAuthenticationManager(authenticationManager);
         filter.setAuthenticationSuccessHandler(successHandler);
@@ -58,8 +60,12 @@ public class AdminLoginConfigurer extends AbstractHttpConfigurer<AdminLoginConfi
             ObjectMapper objectMapper,
             AuthenticationManager authenticationManager,
             AuthenticationSuccessHandler successHandler,
-            AuthenticationFailureHandler failureHandler
+            AuthenticationFailureHandler failureHandler,
+            LoginAttemptGuard attemptGuard,
+            ClientIpResolver clientIpResolver
     ) {
-        return new AdminLoginConfigurer(objectMapper, authenticationManager, successHandler, failureHandler);
+        return new AdminLoginConfigurer(
+                objectMapper, authenticationManager, successHandler, failureHandler,
+                attemptGuard, clientIpResolver);
     }
 }

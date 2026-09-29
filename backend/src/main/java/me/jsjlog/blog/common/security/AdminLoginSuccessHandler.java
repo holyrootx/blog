@@ -21,6 +21,8 @@ import java.io.IOException;
 public class AdminLoginSuccessHandler implements AuthenticationSuccessHandler {
 
     private final SecurityResponseWriter responseWriter;
+    private final LoginAttemptGuard attemptGuard;
+    private final ClientIpResolver clientIpResolver;
 
     @Override
     public void onAuthenticationSuccess(
@@ -28,6 +30,9 @@ public class AdminLoginSuccessHandler implements AuthenticationSuccessHandler {
             HttpServletResponse response,
             Authentication authentication
     ) throws IOException {
+        // 제 비밀번호를 아는 사람이 몇 번 틀린 것은 공격이 아니다
+        attemptGuard.clear(clientIpResolver.resolve(request));
+
         responseWriter.writeOk(response, AdminSessionResponse.from((MemberPrincipal) authentication.getPrincipal()));
     }
 }
