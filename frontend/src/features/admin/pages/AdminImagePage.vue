@@ -118,13 +118,17 @@ async function remove() {
   deleting.value = true;
 
   try {
-    const count = selectedIds.value.length;
-
-    await cleanupAdminImages([...selectedIds.value]);
+    const result = await cleanupAdminImages([...selectedIds.value]);
     confirmOpen.value = false;
-
-    notifySuccess(`이미지 ${count}장을 지웠습니다.`);
     await load();
+
+    const message = cleanupMessage(result);
+
+    if (result.failedCount > 0) {
+      notifyError(message);
+    } else {
+      notifySuccess(message);
+    }
   } catch (error) {
     const message = error?.message ?? '이미지를 지우지 못했습니다.';
 
@@ -133,6 +137,28 @@ async function remove() {
   } finally {
     deleting.value = false;
   }
+}
+
+function cleanupMessage(result) {
+  const parts = [];
+
+  if (result.deletedCount > 0) {
+    parts.push(`이미지 ${result.deletedCount}장을 지웠습니다.`);
+  }
+
+  if (result.skippedUsedCount > 0) {
+    parts.push(`${result.skippedUsedCount}장은 사용 중이라 건너뛰었습니다.`);
+  }
+
+  if (result.notFoundCount > 0) {
+    parts.push(`${result.notFoundCount}장은 이미 없어졌습니다.`);
+  }
+
+  if (result.failedCount > 0) {
+    parts.push(`${result.failedCount}장은 지우지 못했습니다.`);
+  }
+
+  return parts.join(' ') || '처리할 이미지가 없습니다.';
 }
 
 function draftTitlesOf(url) {

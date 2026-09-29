@@ -478,11 +478,19 @@ export async function getAdminImages({ onlyUnused = false, page = 0, size = 20 }
 }
 
 /** 고른 이미지를 지운다. 서버가 지우기 직전에 참조를 한 번 더 본다 */
-export function cleanupAdminImages(imageIds) {
-  return sendApiData(`${ADMIN_BLOG_API_BASE}/images/cleanup`, {
+export async function cleanupAdminImages(imageIds) {
+  const result = await sendApiData(`${ADMIN_BLOG_API_BASE}/images/cleanup`, {
     method: 'POST',
     body: { imageIds },
   });
+
+  return {
+    requestedCount: toNumber(result?.requestedCount),
+    deletedCount: toNumber(result?.deletedCount),
+    skippedUsedCount: toNumber(result?.skippedUsedCount),
+    notFoundCount: toNumber(result?.notFoundCount),
+    failedCount: toNumber(result?.failedCount),
+  };
 }
 
 export async function uploadAdminImage(file) {
