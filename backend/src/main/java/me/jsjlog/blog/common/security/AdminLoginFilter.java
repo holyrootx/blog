@@ -6,6 +6,7 @@ import me.jsjlog.blog.admin.dto.AdminLoginRequest;
 import me.jsjlog.blog.common.config.ApiPaths;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter;
@@ -27,14 +28,28 @@ import tools.jackson.databind.ObjectMapper;
 public class AdminLoginFilter extends AbstractAuthenticationProcessingFilter {
 
     private final ObjectMapper objectMapper;
+    private final LoginAttemptGuard attemptGuard;
+    private final ClientIpResolver clientIpResolver;
 
-    public AdminLoginFilter(ObjectMapper objectMapper) {
+    public AdminLoginFilter(
+            ObjectMapper objectMapper,
+            LoginAttemptGuard attemptGuard,
+            ClientIpResolver clientIpResolver
+    ) {
         super(PathPatternRequestMatcher.pathPattern(HttpMethod.POST, ApiPaths.Auth.LOGIN));
         this.objectMapper = objectMapper;
+        this.attemptGuard = attemptGuard;
+        this.clientIpResolver = clientIpResolver;
     }
 
     @Override
     public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) {
+        // 본문을 읽기도 전에 본다. 여기를 지나면 BCrypt 가 돌고, 그 한 번이 42ms 다 —
+        // 비밀번호를 못 맞히더라도 서버 CPU 는 그대로 나간다
+        if (attemptGuard.isBlocked(clientIpResolver.resolve(request))) {
+            throw new LockedException("로그인 시도가 너무 많습니다.");
+        }
+
         AdminLoginRequest loginRequest = readBody(request);
 
         if (!StringUtils.hasText(loginRequest.username()) || !StringUtils.hasText(loginRequest.password())) {
