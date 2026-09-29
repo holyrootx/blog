@@ -20,13 +20,16 @@ import me.jsjlog.blog.post.repository.CommentReactionRepository;
 import me.jsjlog.blog.post.repository.CommentRepository;
 import me.jsjlog.blog.post.repository.PostRepository;
 import me.jsjlog.blog.post.repository.PostReactionRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * 관리자 글 관리.
@@ -44,6 +47,8 @@ public class AdminPostService {
 
     private final PostRepository postRepository;
     private final CommentRepository commentRepository;
+    private final ApplicationEventPublisher eventPublisher;
+    private final ImageCleanupService imageCleanupService;
     private final CommentReactionRepository commentReactionRepository;
     private final PostReactionRepository postReactionRepository;
     private final CategoryRepository categoryRepository;
@@ -127,6 +132,10 @@ public class AdminPostService {
     public void updatePost(Long postId, AdminPostRequest request) {
         Post post = findPost(postId);
 
+        // 저장하고 나면 뭐가 빠졌는지 알 수 없다
+        Set<String> before =
+                imageCleanupService.collectUsedUrls(post.getContent(), post.getThumbnailImageUrl());
+
         // 화면이 불러온 뒤 다른 곳에서 바뀌었으면 덮어쓰지 않는다
         ConcurrencyGuard.check(request.updatedAt(), post.getUpdatedAt());
 
@@ -146,6 +155,15 @@ public class AdminPostService {
                 findCategory(request.categoryId()),
                 request.thumbnailImageUrl()
         );
+
+        // 본문에서 뺐어도 대표 이미지로 걸려 있으면 살아 있다.
+        // 실제 판정은 커밋 뒤에 DB 를 보고 한 번 더 한다
+        Set<String> after =
+                imageCleanupService.collectUsedUrls(post.getContent(), post.getThumbnailImageUrl());
+        Set<String> released = new HashSet<>(before);
+        released.removeAll(after);
+
+        eventPublisher.publishEvent(new ImageCleanupService.PostImagesReleasedEvent(released));
     }
 
     /** 발행 상태를 유지하려면 본문과 요약이 있어야 한다 */
@@ -273,10 +291,17 @@ public class AdminPostService {
     public void deletePost(Long postId) {
         Post post = findPost(postId);
 
+        // 지운 뒤에는 이 글이 쓰던 이미지를 알 수 없다
+        Set<String> released =
+                imageCleanupService.collectUsedUrls(post.getContent(), post.getThumbnailImageUrl());
+
         commentReactionRepository.deleteByPostId(postId);
         postReactionRepository.deleteByPostId(postId);
         commentRepository.deleteByPostId(postId);
         postRepository.delete(post);
+
+        // 커밋 뒤에 지운다. 여기서 바로 지우면 롤백됐을 때 파일만 없어진다
+        eventPublisher.publishEvent(new ImageCleanupService.PostImagesReleasedEvent(released));
     }
 
     private Post findPost(Long postId) {

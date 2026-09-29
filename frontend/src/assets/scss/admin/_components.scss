@@ -2496,3 +2496,57 @@
   width: 100%;
   height: 48px;
 }
+
+/* ── 이미지 정리 ─────────────────────────────
+   파일 이름만으로는 뭔지 모른다. 지우기 전에 눈으로 확인할 수 있어야 한다 */
+
+.admin-image-thumb {
+  display: block;
+  width: 56px;
+  height: 40px;
+  border: 1px solid var(--admin-card-line);
+  border-radius: 4px;
+  background: var(--admin-surface-subtle);
+  object-fit: cover;
+}
+
+.admin-image-name strong,
+.admin-image-name small {
+  display: block;
+}
+
+.admin-image-name small {
+  margin-top: 2px;
+  color: var(--admin-meta);
+  font-size: 12px;
+}
+
+.admin-image-usage {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.admin-image-usage__none {
+  color: var(--admin-meta);
+  font-size: 13px;
+}
+
+/* 지우기 직전에 한 번 더 말하는 자리. 고를 때는 막지 않는다 */
+.admin-image-warning {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--admin-danger-line);
+  border-radius: var(--radius);
+  background: var(--admin-danger-soft);
+  color: var(--admin-danger);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.admin-image-warning ul {
+  margin: 0;
+  padding-left: 18px;
+}
