@@ -1,6 +1,8 @@
 package me.jsjlog.blog.common.config;
 
 import me.jsjlog.blog.common.security.AdminLoginConfigurer;
+import me.jsjlog.blog.common.security.ClientIpResolver;
+import me.jsjlog.blog.common.security.LoginAttemptGuard;
 import me.jsjlog.blog.common.security.AdminLoginFailureHandler;
 import me.jsjlog.blog.common.security.AdminLoginSuccessHandler;
 import me.jsjlog.blog.common.security.AdminLogoutSuccessHandler;
@@ -43,6 +45,8 @@ public class SecurityConfig {
             JsonAccessDeniedHandler accessDeniedHandler,
             AdminLoginSuccessHandler loginSuccessHandler,
             AdminLoginFailureHandler loginFailureHandler,
+            LoginAttemptGuard attemptGuard,
+            ClientIpResolver clientIpResolver,
             AdminLogoutSuccessHandler logoutSuccessHandler,
             OAuth2LoginSuccessHandler oauth2LoginSuccessHandler,
             OAuth2LoginFailureHandler oauth2LoginFailureHandler,
@@ -148,7 +152,8 @@ public class SecurityConfig {
                         .deleteCookies("JSESSIONID")
                 )
                 .with(AdminLoginConfigurer.of(
-                        objectMapper, authenticationManager, loginSuccessHandler, loginFailureHandler),
+                        objectMapper, authenticationManager, loginSuccessHandler, loginFailureHandler,
+                        attemptGuard, clientIpResolver),
                         configurer -> { });
 
         ClientRegistrationRepository clientRegistrationRepository =

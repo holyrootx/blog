@@ -23,6 +23,9 @@ public enum ErrorCode {
     // UNAUTHORIZED 와 나누는 이유는 화면이 할 일이 달라서다.
     // UNAUTHORIZED 는 로그인 화면으로 보내야 하고, 이건 지금 보고 있는 로그인 폼에 사유를 적어야 한다
     ADMIN_LOGIN_FAILED(HttpStatus.UNAUTHORIZED, "ADMIN_LOGIN_FAILED", "아이디 또는 비밀번호가 올바르지 않습니다."),
+    // 비밀번호를 검사하기도 전에 거절한다. 실패를 반복하면 BCrypt 가 계속 돌아
+    // 서버 한 대의 CPU 가 그대로 소모되기 때문이다
+    ADMIN_LOGIN_BLOCKED(HttpStatus.TOO_MANY_REQUESTS, "ADMIN_LOGIN_BLOCKED", "로그인 시도가 너무 많습니다. 잠시 뒤에 다시 시도해 주세요."),
     FORBIDDEN(HttpStatus.FORBIDDEN, "FORBIDDEN", "접근 권한이 없습니다."),
     NOT_FOUND(HttpStatus.NOT_FOUND, "NOT_FOUND", "요청한 리소스를 찾을 수 없습니다."),
     DATA_CONSTRAINT_VIOLATED(HttpStatus.CONFLICT, "DATA_CONSTRAINT_VIOLATED", "데이터 규칙에 맞지 않아 처리하지 못했습니다."),
