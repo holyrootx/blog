@@ -459,6 +459,32 @@ function toVisible(menu) {
  *
  * 응답의 url 을 그대로 마크다운에 박는다. 파일은 R2 에 있고 DB 에는 기록만 남는다.
  */
+/** 이미지 목록. 올린 지 일주일 안 된 것은 서버가 빼고 준다 */
+export async function getAdminImages({ onlyUnused = false, page = 0, size = 20 } = {}) {
+  const params = new URLSearchParams({
+    onlyUnused: String(onlyUnused), page: String(page), size: String(size),
+  });
+  const data = await getApiData(`${ADMIN_BLOG_API_BASE}/images?${params.toString()}`);
+
+  return {
+    items: (Array.isArray(data?.items) ? data.items : [])
+      .map((item) => ({ ...item, usages: Array.isArray(item.usages) ? item.usages : [] })),
+    unusedBytes: data?.unusedBytes ?? 0,
+    page: data?.page ?? 0,
+    size: data?.size ?? size,
+    totalElements: data?.totalElements ?? 0,
+    totalPages: data?.totalPages ?? 0,
+  };
+}
+
+/** 고른 이미지를 지운다. 서버가 지우기 직전에 참조를 한 번 더 본다 */
+export function cleanupAdminImages(imageIds) {
+  return sendApiData(`${ADMIN_BLOG_API_BASE}/images/cleanup`, {
+    method: 'POST',
+    body: { imageIds },
+  });
+}
+
 export async function uploadAdminImage(file) {
   const form = new FormData();
   form.append('file', file);
