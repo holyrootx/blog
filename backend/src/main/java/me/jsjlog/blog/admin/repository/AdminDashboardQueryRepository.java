@@ -1,16 +1,12 @@
 package me.jsjlog.blog.admin.repository;
 
 import com.querydsl.core.types.Projections;
-import com.querydsl.core.types.dsl.Expressions;
-import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import me.jsjlog.blog.admin.dto.AdminCategoryShareResponse;
-import me.jsjlog.blog.admin.dto.AdminUnansweredCommentResponse;
-import me.jsjlog.blog.member.domain.MemberRole;
 import me.jsjlog.blog.post.domain.PostStatus;
 import me.jsjlog.blog.post.domain.QCategory;
-import me.jsjlog.blog.post.domain.QComment;
+import me.jsjlog.blog.post.domain.QCommentReport;
 import me.jsjlog.blog.post.domain.QPost;
 import org.springframework.stereotype.Repository;
 
@@ -97,72 +93,15 @@ public class AdminDashboardQueryRepository {
                 .fetchOne();
     }
 
-    /**
-     * 답변을 기다리는 댓글 수.
-     *
-     * "미답변"은 작성자 답글이 달리지 않은, 삭제되지 않은 최상위 댓글이다.
-     * 답글에는 답글을 달 수 없으므로 답글 자체는 대상이 아니고,
-     * 방문자끼리 주고받은 답글은 답변으로 치지 않는다 — 블로그 주인의 답글만 센다.
-     */
-    public long countUnansweredComments() {
-        QComment comment = QComment.comment;
+    /** 미처리 신고가 하나 이상 있는 댓글 수. 댓글 관리의 신고 필터와 같은 기준이다. */
+    public long countReportedComments() {
+        QCommentReport report = QCommentReport.commentReport;
 
         return orZero(jpaQueryFactory
-                .select(comment.count())
-                .from(comment)
-                .where(unanswered(comment))
+                .select(report.comment.id.countDistinct())
+                .from(report)
+                .where(report.handledAt.isNull())
                 .fetchOne());
-    }
-
-    public LocalDateTime getOldestUnansweredAt() {
-        QComment comment = QComment.comment;
-
-        return jpaQueryFactory
-                .select(comment.createdAt)
-                .from(comment)
-                .where(unanswered(comment))
-                .orderBy(comment.createdAt.asc(), comment.id.asc())
-                .limit(1)
-                .fetchOne();
-    }
-
-    /** 오래 기다린 순서로 몇 건 */
-    public List<AdminUnansweredCommentResponse> getUnansweredComments(long size) {
-        QComment comment = QComment.comment;
-
-        return jpaQueryFactory
-                .select(Projections.constructor(
-                        AdminUnansweredCommentResponse.class,
-                        comment.id,
-                        comment.post.id,
-                        comment.post.title,
-                        comment.member.nickname,
-                        comment.content,
-                        comment.createdAt
-                ))
-                .from(comment)
-                .join(comment.post)
-                .where(unanswered(comment))
-                .orderBy(comment.createdAt.asc(), comment.id.asc())
-                .limit(size)
-                .fetch();
-    }
-
-    private com.querydsl.core.types.dsl.BooleanExpression unanswered(QComment comment) {
-        QComment reply = new QComment("reply");
-
-        return comment.parent.isNull()
-                .and(comment.deleted.isFalse())
-                .and(comment.member.role.ne(MemberRole.ADMIN))
-                .and(JPAExpressions
-                        .selectOne()
-                        .from(reply)
-                        .where(
-                                reply.parent.id.eq(comment.id),
-                                reply.deleted.isFalse(),
-                                reply.member.role.eq(MemberRole.ADMIN)
-                        )
-                        .notExists());
     }
 
     private long orZero(Long value) {

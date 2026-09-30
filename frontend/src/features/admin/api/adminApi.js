@@ -371,14 +371,10 @@ function toAdminDashboard(dashboard) {
     totalViews: toNumberOrNull(dashboard?.totalViews),
     publishedPostCount: toNumberOrNull(dashboard?.publishedPostCount),
     postCountThisMonth: toNumberOrNull(dashboard?.postCountThisMonth),
-    unansweredCommentCount: toNumberOrNull(dashboard?.unansweredCommentCount),
-    oldestUnansweredAt: dashboard?.oldestUnansweredAt ?? null,
+    reportedCommentCount: toNumberOrNull(dashboard?.reportedCommentCount),
     mostViewedCategory: dashboard?.mostViewedCategory ?? null,
     categoryShares: Array.isArray(dashboard?.categoryShares)
       ? dashboard.categoryShares.map(toCategoryShare)
-      : [],
-    unansweredComments: Array.isArray(dashboard?.unansweredComments)
-      ? dashboard.unansweredComments.map(toUnansweredComment)
       : [],
   };
 }
@@ -418,17 +414,6 @@ function toCategoryShare(categoryShare) {
     categoryId: categoryShare.categoryId,
     name: categoryShare.name ?? '미분류',
     postCount: toNumber(categoryShare.postCount),
-  };
-}
-
-function toUnansweredComment(comment) {
-  return {
-    id: comment.id,
-    postId: comment.postId,
-    postTitle: comment.postTitle ?? '제목 없는 글',
-    nickname: comment.nickname ?? '알 수 없는 회원',
-    content: comment.content ?? '',
-    createdAt: comment.createdAt ?? null,
   };
 }
 
