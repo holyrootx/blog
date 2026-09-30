@@ -1,12 +1,9 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue';
-import { useRouter } from 'vue-router';
-
 import { getAdminDashboard } from '../api/adminApi';
 import AdminPageHeader from '../components/AdminPageHeader.vue';
 
 const dashboard = reactive(createEmptyDashboard());
-const router = useRouter();
 const loading = ref(true);
 const loadFailed = ref(false);
 
@@ -26,13 +23,13 @@ const summaryCards = computed(() => [
     tone: 'quiet',
   },
   {
-    id: 'comments',
-    label: '답변 대기 댓글',
-    value: formatCount(dashboard.unansweredCommentCount, '개'),
-    helper: dashboard.oldestUnansweredAt
-      ? `가장 오래된 댓글 ${formatRelativeTime(dashboard.oldestUnansweredAt)}`
-      : '답변을 기다리는 댓글이 없습니다.',
-    tone: 'accent',
+    id: 'reports',
+    label: '신고 댓글',
+    value: formatCount(dashboard.reportedCommentCount, '개'),
+    helper: dashboard.reportedCommentCount > 0
+      ? '확인이 필요한 신고 댓글'
+      : '처리할 신고 댓글이 없습니다.',
+    tone: dashboard.reportedCommentCount > 0 ? 'accent' : 'quiet',
   },
   {
     id: 'published',
@@ -51,12 +48,12 @@ const categoryTotal = computed(() => (
 
 const operationItems = computed(() => [
   {
-    id: 'comments',
-    title: '답변 기다리는 댓글',
-    value: formatCount(dashboard.unansweredCommentCount, '개'),
-    detail: dashboard.oldestUnansweredAt
-      ? `가장 오래된 댓글 ${formatRelativeTime(dashboard.oldestUnansweredAt)}`
-      : '답변을 기다리는 댓글이 없습니다.',
+    id: 'reports',
+    title: '신고 댓글',
+    value: formatCount(dashboard.reportedCommentCount, '개'),
+    detail: dashboard.reportedCommentCount > 0
+      ? '확인이 필요한 미처리 신고입니다.'
+      : '처리할 신고 댓글이 없습니다.',
   },
   {
     id: 'category',
@@ -95,11 +92,9 @@ function createEmptyDashboard() {
     totalViews: null,
     publishedPostCount: null,
     postCountThisMonth: null,
-    unansweredCommentCount: null,
-    oldestUnansweredAt: null,
+    reportedCommentCount: null,
     mostViewedCategory: null,
     categoryShares: [],
-    unansweredComments: [],
   };
 }
 
@@ -129,44 +124,6 @@ function formatPostSummary() {
   return `${new Intl.NumberFormat('ko-KR').format(dashboard.publishedPostCount)}편`;
 }
 
-function formatDateTime(value) {
-  if (!value) {
-    return '';
-  }
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return '';
-  }
-
-  return new Intl.DateTimeFormat('ko-KR', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).format(date);
-}
-
-function formatRelativeTime(value) {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return '확인 필요';
-  }
-
-  const diffMs = Date.now() - date.getTime();
-  const diffDays = Math.floor(diffMs / 1000 / 60 / 60 / 24);
-
-  if (diffDays <= 0) {
-    return '오늘';
-  }
-
-  return `${diffDays}일 전`;
-}
-
 function getCategoryPercent(category) {
   if (categoryTotal.value <= 0) {
     return 0;
@@ -175,14 +132,6 @@ function getCategoryPercent(category) {
   return Math.round((category.postCount / categoryTotal.value) * 100);
 }
 
-function goToComments(commentId = null) {
-  const query = { status: 'UNANSWERED' };
-  if (commentId !== null) {
-    query.reply = String(commentId);
-  }
-
-  return router.push({ name: 'admin-comments', query });
-}
 </script>
 
 <template>
@@ -227,7 +176,7 @@ function goToComments(commentId = null) {
             v-for="card in summaryCards"
             :key="card.id"
             class="admin-summary-card"
-            :class="`admin-summary-card--${card.tone}`"
+            :class="[`admin-summary-card--${card.tone}`, { 'admin-summary-card--views': card.id === 'views' }]"
           >
             <span class="admin-summary-card__label">{{ card.label }}</span>
             <strong class="admin-summary-card__value">{{ card.value }}</strong>
@@ -294,61 +243,6 @@ function goToComments(commentId = null) {
               <strong>카테고리 데이터 연결 전입니다.</strong>
               <p>관리자 대시보드 API에서 <code>categoryShares</code>를 내려주면 표시됩니다.</p>
             </div>
-          </article>
-
-          <article class="admin-panel admin-panel--wide">
-          <div class="admin-panel__header">
-            <div>
-              <h2>답변 기다리는 댓글</h2>
-              <p>오래 기다린 댓글부터 확인합니다.</p>
-            </div>
-            <button class="admin-panel__link" type="button" @click="goToComments()">
-              댓글 관리로
-            </button>
-          </div>
-
-          <ul v-if="loading" class="admin-comment-list admin-comment-list--skeleton" aria-hidden="true">
-            <li v-for="index in 3" :key="index" class="admin-comment-item">
-              <span class="ui-skeleton ui-skeleton--circle admin-comment-item__avatar"></span>
-              <div class="admin-comment-item__body">
-                <span class="ui-skeleton"></span>
-                <span class="ui-skeleton"></span>
-                <span class="ui-skeleton"></span>
-              </div>
-              <span class="ui-skeleton"></span>
-            </li>
-          </ul>
-          <ul v-else-if="dashboard.unansweredComments.length > 0" class="admin-comment-list">
-            <li
-              v-for="comment in dashboard.unansweredComments"
-              :key="comment.id"
-              class="admin-comment-item"
-            >
-              <span class="admin-comment-item__avatar" aria-hidden="true"></span>
-              <div class="admin-comment-item__body">
-                <div class="admin-comment-item__meta">
-                  <strong>{{ comment.nickname }}</strong>
-                  <span>{{ formatDateTime(comment.createdAt) }}</span>
-                </div>
-                <p class="admin-comment-item__content">{{ comment.content }}</p>
-                <span class="admin-comment-item__post">{{ comment.postTitle }}</span>
-              </div>
-              <button
-                class="admin-comment-item__reply"
-                type="button"
-                @click="goToComments(comment.id)"
-              >
-                답글
-              </button>
-            </li>
-          </ul>
-
-          <div v-else class="admin-empty-state">
-            <strong>확인할 댓글이 없습니다.</strong>
-            <p>
-              새 댓글이 등록되면 답변이 필요한 순서대로 이곳에 표시됩니다.
-            </p>
-          </div>
           </article>
         </section>
   </div>

@@ -17,9 +17,6 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class AdminDashboardService {
 
-    /** 답변 대기 댓글은 목록 전체가 아니라 몇 건만 보여준다 */
-    private static final long UNANSWERED_PREVIEW_SIZE = 3;
-
     private final AdminDashboardQueryRepository dashboardQueryRepository;
     private final BlogProfileService blogProfileService;
 
@@ -34,11 +31,9 @@ public class AdminDashboardService {
                 dashboardQueryRepository.sumViews(),
                 dashboardQueryRepository.countPostsByStatus(PostStatus.PUBLISHED),
                 dashboardQueryRepository.countPostsCreatedSince(monthStart),
-                dashboardQueryRepository.countUnansweredComments(),
-                dashboardQueryRepository.getOldestUnansweredAt(),
+                dashboardQueryRepository.countReportedComments(),
                 dashboardQueryRepository.getMostViewedCategoryName(),
-                dashboardQueryRepository.getCategoryShares(),
-                dashboardQueryRepository.getUnansweredComments(UNANSWERED_PREVIEW_SIZE)
+                dashboardQueryRepository.getCategoryShares()
         );
     }
 }

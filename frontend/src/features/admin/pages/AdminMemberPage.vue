@@ -23,7 +23,7 @@ const COLUMNS = [
   { key: 'status', label: '상태', width: '90px', align: 'center' },
   { key: 'commentCount', label: '댓글', width: '80px', align: 'right' },
   { key: 'createdAt', label: '가입일', width: '120px' },
-  { key: 'actions', label: '', width: '110px', align: 'right' },
+  { key: 'actions', label: '관리', width: '110px', align: 'right' },
 ];
 
 const EMPTY_CONDITION = {

@@ -30,7 +30,7 @@ const COLUMNS = [
   { key: 'date', label: '날짜', width: '150px' },
   { key: 'views', label: '조회', width: '90px', align: 'right' },
   // 액션이 셋뿐이라 더보기(⋯) 드롭다운을 두지 않는다. 한 번 더 여는 것보다 버튼 셋이 짧다
-  { key: 'actions', label: '', width: '190px', align: 'right' },
+  { key: 'actions', label: '관리', width: '190px', align: 'right' },
 ];
 
 const EMPTY_CONDITION = {

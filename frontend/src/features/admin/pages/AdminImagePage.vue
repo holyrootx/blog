@@ -197,6 +197,7 @@ function formatDate(value) {
         <AdminPageSize :model-value="pageSize" @update:model-value="changePageSize" />
         <AdminSegmented
           label="사용 여부"
+          hide-label
           :model-value="filter"
           :options="FILTERS"
           @update:model-value="changeFilter"
