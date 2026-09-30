@@ -15,6 +15,10 @@ defineProps({
     type: Array,
     required: true,
   },
+  hideLabel: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 defineEmits(['update:modelValue']);
@@ -22,7 +26,7 @@ defineEmits(['update:modelValue']);
 
 <template>
   <div class="admin-field">
-    <span class="admin-field__label">{{ label }}</span>
+    <span v-if="!hideLabel" class="admin-field__label">{{ label }}</span>
     <div class="admin-segmented" role="group" :aria-label="label">
       <button
         v-for="option in options"
