@@ -99,7 +99,7 @@
 }
 
 .member-auth__button--primary {
-  background: var(--accent);
+  background: var(--accent-strong);
   color: #fff;
 }
 
@@ -196,7 +196,7 @@
 .member-auth__provider--naver {
   border-color: #03c75a;
   background: #03c75a;
-  color: #fff;
+  color: var(--text);
 }
 
 .member-auth__back {
@@ -208,7 +208,7 @@
 }
 
 .member-auth__back:hover {
-  color: var(--accent);
+  color: var(--accent-dark);
 }
 
 @media (max-width: 480px) {
@@ -344,7 +344,7 @@
 }
 
 .member-settings__back:hover {
-  color: var(--accent);
+  color: var(--accent-dark);
 }
 
 .member-settings__section {
@@ -649,7 +649,7 @@
   min-width: 17px;
   padding: 0 4px;
   border-radius: 999px;
-  background: var(--accent);
+  background: var(--accent-strong);
   color: #fff;
   font-size: 10.5px;
   font-weight: 700;
@@ -695,7 +695,7 @@
 }
 
 .notification-bell__read-all:hover {
-  color: var(--accent);
+  color: var(--accent-dark);
 }
 
 .notification-bell__empty {

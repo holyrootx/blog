@@ -222,8 +222,8 @@
 }
 
 .post-button--accent {
-  border-color: var(--accent);
-  background: var(--accent);
+  border-color: var(--accent-strong);
+  background: var(--accent-strong);
   color: #fff;
   font-weight: 700;
 }
@@ -437,7 +437,7 @@
   font-family: ui-monospace, Menlo, monospace;
   font-size: 10.5px;
   letter-spacing: 0.1em;
-  color: #b8afa4;
+  color: var(--text-subtle);
 }
 
 .post-ad__slot {
@@ -450,7 +450,7 @@
   background: #fbf7f1;
   font-family: ui-monospace, Menlo, monospace;
   font-size: 11.5px;
-  color: #a1988f;
+  color: var(--text-subtle);
 }
 
 .post-tags {
@@ -657,7 +657,7 @@
   font-family: ui-monospace, Menlo, monospace;
   font-size: 10px;
   letter-spacing: 0.14em;
-  color: #8b8378;
+  color: var(--text-subtle);
 }
 
 .post-aside__rule {
@@ -668,7 +668,7 @@
 
 .post-aside__note {
   font-size: 11px;
-  color: #a1988f;
+  color: var(--text-subtle);
 }
 
 .post-aside__sticky {
@@ -700,7 +700,7 @@
   font-family: ui-monospace, Menlo, monospace;
   font-size: 9.5px;
   letter-spacing: 0.12em;
-  color: #a1988f;
+  color: var(--text-subtle);
 }
 
 .ad-card__close {
@@ -709,12 +709,12 @@
   background: none;
   font-size: 14px;
   line-height: 1;
-  color: #c9c0b3;
+  color: var(--text-subtle);
   cursor: pointer;
 }
 
 .ad-card__close:hover {
-  color: #8b8378;
+  color: var(--text-muted);
 }
 
 .ad-card__slot {
@@ -726,7 +726,7 @@
   background: #f7f2ea;
   font-family: ui-monospace, Menlo, monospace;
   font-size: 11.5px;
-  color: #a1988f;
+  color: var(--text-subtle);
 }
 
 .post-toc {
@@ -751,7 +751,7 @@
 
 .post-toc__hint {
   font-size: 10.5px;
-  color: #a1988f;
+  color: var(--text-subtle);
 }
 
 .post-toc__list {
@@ -767,7 +767,7 @@
   border-left: 2px solid #ece6dc;
   font-size: 12.5px;
   line-height: 1.5;
-  color: #8b8378;
+  color: var(--text-subtle);
 }
 
 .post-toc__link:hover {
@@ -804,12 +804,12 @@
 .comments__count {
   font-size: 15px;
   font-weight: 800;
-  color: #d2762f;
+  color: var(--accent-dark);
 }
 
 .comments__note {
   font-size: 12.5px;
-  color: #a1988f;
+  color: var(--text-subtle);
 }
 
 .comments__count-skeleton {
@@ -950,7 +950,7 @@
 }
 
 .comment-form__signout:hover {
-  color: var(--accent);
+  color: var(--accent-dark);
 }
 
 /* 로그인하지 않은 사람에게 쓰는 칸 대신 보여 주는 자리 */
@@ -1287,7 +1287,7 @@
     font-family: ui-monospace, Menlo, monospace;
     font-size: 10px;
     letter-spacing: 0.1em;
-    color: #b8afa4;
+    color: var(--text-subtle);
   }
 
   .anchor-ad__slot {
@@ -1300,7 +1300,7 @@
     background: #fbf7f1;
     font-family: ui-monospace, Menlo, monospace;
     font-size: 11px;
-    color: #a1988f;
+    color: var(--text-subtle);
   }
 
   /* 고정 배너에 본문 끝이 가리지 않도록 */
@@ -1502,8 +1502,8 @@
 }
 
 .post-list__filter--active {
-  border-color: var(--accent);
-  background: var(--accent);
+  border-color: var(--accent-strong);
+  background: var(--accent-strong);
   color: #fff;
 }
 
@@ -1566,8 +1566,8 @@
 }
 
 .post-pager__number--active {
-  border-color: var(--accent);
-  background: var(--accent);
+  border-color: var(--accent-strong);
+  background: var(--accent-strong);
   color: #fff;
 }
 
@@ -1589,7 +1589,7 @@
 
 .not-found__code {
   margin: 0;
-  color: var(--accent);
+  color: var(--accent-strong);
   font-size: 56px;
   font-weight: 800;
   letter-spacing: -0.03em;
