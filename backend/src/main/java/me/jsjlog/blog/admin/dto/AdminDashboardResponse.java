@@ -1,6 +1,5 @@
 package me.jsjlog.blog.admin.dto;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -15,10 +14,8 @@ public record AdminDashboardResponse(
         Long totalViews,
         Long publishedPostCount,
         Long postCountThisMonth,
-        Long unansweredCommentCount,
-        LocalDateTime oldestUnansweredAt,
+        Long reportedCommentCount,
         String mostViewedCategory,
-        List<AdminCategoryShareResponse> categoryShares,
-        List<AdminUnansweredCommentResponse> unansweredComments
+        List<AdminCategoryShareResponse> categoryShares
 ) {
 }
