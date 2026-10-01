@@ -1,3 +1,5 @@
+@use '../base/breakpoints' as bp;
+
 :root {
   /* 관리자 색상 토큰. 모달이 Teleport 로 body 아래 렌더되므로 :root 에 둔다 */
   --admin-sidebar-bg: #221f1c;
@@ -608,7 +610,7 @@
   line-height: 1.6;
 }
 
-@media (max-width: 1040px) {
+@include bp.upto(xl) {
   .admin-page {
     padding: 0;
   }
@@ -650,7 +652,7 @@
   }
 }
 
-@media (max-width: 720px) {
+@include bp.upto(md) {
   .admin-main {
     padding: 24px 14px 34px;
   }

@@ -1,5 +1,7 @@
 /* 회원 로그인·가입 — 공개 화면 쪽이라 블로그 톤을 그대로 쓴다 */
 
+@use '../base/breakpoints' as bp;
+
 .member-auth {
   display: flex;
   align-items: center;
@@ -211,7 +213,7 @@
   color: var(--accent-dark);
 }
 
-@media (max-width: 480px) {
+@include bp.upto(sm) {
   .member-auth {
     padding: 16px;
   }
@@ -600,7 +602,7 @@
   height: 14px;
 }
 
-@media (max-width: 600px) {
+@include bp.upto(sm) {
   .member-settings__profile {
     flex-wrap: wrap;
   }
@@ -863,7 +865,7 @@
  * 헤더 안의 종에만 건다. 관리자 화면의 종은 기준으로 삼을 헤더가 없어서, 그쪽까지
  * position 을 풀면 엉뚱한 조상에 붙는다.
  */
-@media (max-width: 560px) {
+@include bp.upto(sm) {
   .blog-header .notification-bell {
     position: static;
   }

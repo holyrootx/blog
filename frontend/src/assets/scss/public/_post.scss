@@ -1,4 +1,6 @@
 /* 시안 카드 배경. 광고 슬롯(#fbf7f1)이 회색으로 도드라지려면 바탕이 거의 흰색이어야 한다 */
+@use '../base/breakpoints' as bp;
+
 .post-shell {
   background: #fffefb;
 }
@@ -1230,7 +1232,7 @@
 }
 
 /* 태블릿 — 오른쪽 레일 제거 */
-@media (max-width: 1180px) {
+@include bp.upto(xl) {
   .post-shell__layout {
     padding-right: 0;
   }
@@ -1262,7 +1264,7 @@
 }
 
 /* 모바일 (390px 기준) */
-@media (max-width: 768px) {
+@include bp.upto(md) {
   /* 폰에서는 지정한 폭을 무시하고 꽉 채운다. 데스크톱에서 20% 로 줄인 사진이
      폰에서도 20% 면 손톱만 해진다. 인라인 style 을 이기려면 !important 가 필요하다 */
   .post-body__figure {
@@ -1618,7 +1620,7 @@
   text-decoration: none;
 }
 
-@media (max-width: 600px) {
+@include bp.upto(sm) {
   .post-list {
     padding: 24px 20px 48px;
   }
