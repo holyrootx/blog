@@ -1,0 +1,50 @@
+/*
+ * 공개 화면 공용 버튼.
+ *
+ * 전에는 .post-button 이라는 이름으로 public/_post.scss 안에 있었다. 그런데 글 화면만
+ * 쓰는 게 아니라 검색 상자, 내 설정, 신고 창, 404 까지 열세 곳이 같이 쓰고 있었다.
+ * 이름과 자리가 실제 쓰임과 어긋나 있어서 끄집어냈다.
+ *
+ * 관리자 쪽 .admin-button 과는 합치지 않는다. 높이(36 대 37)와 글자 굵기(700 대 600)가
+ * 다르고, 쓰는 토큰 묶음도 다르다. 억지로 합치면 둘 중 하나가 달라진다.
+ */
+.ui-button {
+  /* 공유 단추는 누르면 글자가 "복사했어요" 로 잠깐 바뀐다. 폭을 잡아 두지 않으면
+     그때마다 단추가 늘었다 줄었다 해서, 옆 글까지 밀렸다 돌아온다.
+     바뀔 수 있는 말 중 가장 긴 다섯 글자가 들어갈 폭이다 */
+  min-width: 108px;
+  padding: 9px 16px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+}
+
+.ui-button:hover,
+.ui-button:focus-visible {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.ui-button--solid {
+  border-color: var(--text);
+  background: var(--text);
+  color: var(--surface);
+  font-weight: 700;
+}
+
+.ui-button--accent {
+  border-color: var(--accent-strong);
+  background: var(--accent-strong);
+  color: var(--on-accent);
+  font-weight: 700;
+}
+
+.ui-button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}

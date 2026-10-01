@@ -189,7 +189,7 @@ onBeforeUnmount(() => clearTimeout(noticeTimer));
 
         화면 낭독기도 알아야 하므로 aria-live 로 알린다. 색과 글자만 바뀌면 안 들린다
       -->
-      <button class="post-button" type="button" @click="share">
+      <button class="ui-button" type="button" @click="share">
         <span aria-live="polite">{{ shareNotice || '공유' }}</span>
       </button>
       <span v-if="showSecondaryActions" class="post-reactions__links">저장 · 링크 복사</span>

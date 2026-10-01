@@ -176,7 +176,7 @@ async function confirmWithdraw() {
           :maxlength="NICKNAME_MAX_LENGTH"
         />
         <button
-          class="post-button post-button--accent"
+          class="ui-button ui-button--accent"
           type="button"
           :disabled="savingNickname || !nicknameChanged"
           @click="saveNickname"
@@ -244,19 +244,19 @@ async function confirmWithdraw() {
       <p v-if="withdrawError" class="member-settings__error" role="alert">{{ withdrawError }}</p>
 
       <div v-if="!withdrawConfirming" class="member-settings__actions">
-        <button class="post-button" type="button" @click="withdrawConfirming = true">탈퇴하기</button>
+        <button class="ui-button" type="button" @click="withdrawConfirming = true">탈퇴하기</button>
       </div>
 
       <div v-else class="member-settings__actions">
         <span class="member-settings__confirm">정말 탈퇴할까요?</span>
         <button
-          class="post-button"
+          class="ui-button"
           type="button"
           :disabled="withdrawing"
           @click="withdrawConfirming = false"
         >취소</button>
         <button
-          class="post-button member-settings__danger-button"
+          class="ui-button member-settings__danger-button"
           type="button"
           :disabled="withdrawing"
           @click="confirmWithdraw"

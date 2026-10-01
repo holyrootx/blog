@@ -557,7 +557,7 @@ watch(
          빈 칸을 보여 주고 누른 뒤에 막으면 쓴 글이 날아간다 -->
     <div v-else-if="!isSignedIn" ref="signinBox" class="comment-signin">
       <p class="comment-signin__text">댓글을 남기려면 로그인이 필요합니다.</p>
-      <button class="post-button post-button--accent" type="button" @click="goToLogin">
+      <button class="ui-button ui-button--accent" type="button" @click="goToLogin">
         로그인하고 댓글 쓰기
       </button>
     </div>
@@ -594,7 +594,7 @@ watch(
         <div class="comment-form__actions">
           <span class="comment-form__counter">{{ draft.length }} / {{ commentMaxLength }}</span>
           <button
-            class="post-button post-button--accent"
+            class="ui-button ui-button--accent"
             type="submit"
             :disabled="submitting"
           >
@@ -876,11 +876,11 @@ watch(
                 {{ replyDraft.length }} / {{ commentMaxLength }}
               </span>
               <div class="comment-form__actions">
-                <button class="post-button" type="button" @click="toggleReply(comment.id)">
+                <button class="ui-button" type="button" @click="toggleReply(comment.id)">
                   취소
                 </button>
                 <button
-                  class="post-button post-button--accent"
+                  class="ui-button ui-button--accent"
                   type="submit"
                   :disabled="replySubmitting"
                 >

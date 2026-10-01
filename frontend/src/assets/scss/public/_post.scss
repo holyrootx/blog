@@ -193,43 +193,6 @@
   margin-top: 18px;
 }
 
-.post-button {
-  /* 공유 단추는 누르면 글자가 "복사했어요" 로 잠깐 바뀐다. 폭을 잡아 두지 않으면
-     그때마다 단추가 늘었다 줄었다 해서, 옆 글까지 밀렸다 돌아온다.
-     바뀔 수 있는 말 중 가장 긴 다섯 글자가 들어갈 폭이다 */
-  min-width: 108px;
-  padding: 9px 16px;
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  background: var(--surface);
-  color: var(--text-muted);
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  text-align: center;
-  cursor: pointer;
-}
-
-.post-button:hover,
-.post-button:focus-visible {
-  border-color: var(--accent);
-  outline: none;
-}
-
-.post-button--solid {
-  border-color: var(--text);
-  background: var(--text);
-  color: var(--surface);
-  font-weight: 700;
-}
-
-.post-button--accent {
-  border-color: var(--accent-strong);
-  background: var(--accent-strong);
-  color: var(--on-accent);
-  font-weight: 700;
-}
-
 .post-article__cover {
   margin: 32px 0 0;
   padding: 0 88px;
@@ -1126,10 +1089,6 @@
 }
 
 .comment__action:disabled,
-.post-button:disabled {
-  cursor: wait;
-  opacity: 0.55;
-}
 
 .comment__action--strong {
   font-weight: 600;
@@ -1343,7 +1302,7 @@
     flex-wrap: wrap;
   }
 
-  .post-author .post-button:first-of-type {
+  .post-author .ui-button:first-of-type {
     margin-left: 0;
   }
 
@@ -1616,7 +1575,7 @@
   margin-top: 28px;
 }
 
-.not-found__actions .post-button {
+.not-found__actions .ui-button {
   text-decoration: none;
 }
 
@@ -1693,7 +1652,6 @@
   color: var(--accent-dark);
   font-size: 13px;
 }
-
 
 .comments__report-done {
   margin: 14px 0 0;

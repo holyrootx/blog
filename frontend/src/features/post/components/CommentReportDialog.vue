@@ -125,12 +125,12 @@ function submit() {
     <!-- 닫기·취소는 가장 오른쪽. 하려던 일이 먼저 오고 그만두는 길이 끝에 온다 -->
     <template #footer>
       <button
-        class="post-button post-button--accent"
+        class="ui-button ui-button--accent"
         type="button"
         :disabled="!canSubmit"
         @click="submit"
       >{{ pending ? '보내는 중…' : '신고' }}</button>
-      <button class="post-button" type="button" :disabled="pending" @click="emit('close')">
+      <button class="ui-button" type="button" :disabled="pending" @click="emit('close')">
         취소
       </button>
     </template>

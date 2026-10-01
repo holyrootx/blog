@@ -280,7 +280,7 @@ onBeforeUnmount(() => {
     <p v-else class="search-panel__hint">맞는 글이 없습니다.</p>
 
     <template v-if="canSearch" #footer>
-      <button class="post-button post-button--accent" type="button" @click="submit">
+      <button class="ui-button ui-button--accent" type="button" @click="submit">
         “{{ keyword.trim() }}” 전체 결과 보기
       </button>
     </template>
