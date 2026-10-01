@@ -2,6 +2,8 @@
 import { reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 
+import { applyDocumentMeta, summarize } from '../../../app/router/documentMeta';
+
 import BlogHeader from '../../home/components/BlogHeader.vue';
 import PostArticle from '../components/PostArticle.vue';
 import PostArticleSkeleton from '../components/PostArticleSkeleton.vue';
@@ -104,6 +106,15 @@ function loadPostPage(postId) {
     };
     detail.body = postDetail.body;
     detail.toc = postDetail.toc;
+
+    // 라우터는 글 번호만 알아서 제목을 못 채운다. 글이 도착한 지금 채운다
+    applyDocumentMeta({
+      title: postDetail.post.title,
+      description: postDetail.post.excerpt?.trim() || summarize(postDetail.body),
+      image: postDetail.post.coverImageUrl,
+      path: `/posts/${requestedPostId}`,
+      type: 'article',
+    });
   });
   loadPostData('adjacent', requestedPostId, () => getAdjacentPosts(postId), (adjacentPosts) => {
     detail.adjacentPosts = adjacentPosts;

@@ -20,8 +20,8 @@ import { RouterLink } from 'vue-router';
     </p>
 
     <div class="not-found__actions">
-      <RouterLink class="post-button" :to="{ name: 'home' }">블로그 홈</RouterLink>
-      <RouterLink class="post-button post-button--accent" :to="{ name: 'post-list' }">
+      <RouterLink class="ui-button" :to="{ name: 'home' }">블로그 홈</RouterLink>
+      <RouterLink class="ui-button ui-button--accent" :to="{ name: 'post-list' }">
         전체 글 보기
       </RouterLink>
     </div>

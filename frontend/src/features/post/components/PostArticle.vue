@@ -163,8 +163,8 @@ onBeforeUnmount(() => clearTimeout(noticeTimer));
 
     <div class="post-reactions">
       <button
-        class="post-reactions__button post-reactions__button--like"
-        :class="{ 'post-reactions__button--accent': post.likedByMe }"
+        class="ui-button ui-button--pill ui-button--like"
+        :class="{ 'ui-button--on': post.likedByMe }"
         type="button"
         :disabled="reactionPending"
         :aria-pressed="post.likedByMe"
@@ -175,7 +175,7 @@ onBeforeUnmount(() => clearTimeout(noticeTimer));
         <strong>{{ post.likeCount }}</strong>
       </button>
       <button
-        class="post-reactions__button"
+        class="ui-button ui-button--pill"
         type="button"
         @click="emit('focus-comments')"
       >댓글 {{ post.commentCount }}</button>
@@ -189,7 +189,7 @@ onBeforeUnmount(() => clearTimeout(noticeTimer));
 
         화면 낭독기도 알아야 하므로 aria-live 로 알린다. 색과 글자만 바뀌면 안 들린다
       -->
-      <button class="post-button" type="button" @click="share">
+      <button class="ui-button ui-button--pill ui-button--steady" type="button" @click="share">
         <span aria-live="polite">{{ shareNotice || '공유' }}</span>
       </button>
       <span v-if="showSecondaryActions" class="post-reactions__links">저장 · 링크 복사</span>

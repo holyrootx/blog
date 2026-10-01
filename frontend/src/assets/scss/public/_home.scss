@@ -1,3 +1,5 @@
+@use '../base/breakpoints' as bp;
+
 .public-shell {
   min-height: 100vh;
   padding: 0 12px 24px;
@@ -488,7 +490,7 @@
   }
 }
 
-@media (max-width: 900px) {
+@include bp.upto(lg) {
   .public-shell {
     padding: 0 10px 18px;
   }
@@ -537,7 +539,7 @@
   }
 }
 
-@media (max-width: 560px) {
+@include bp.upto(sm) {
   .public-shell {
     padding: 0;
   }
