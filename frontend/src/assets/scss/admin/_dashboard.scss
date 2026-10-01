@@ -17,7 +17,7 @@
 .admin-page {
   min-height: 100vh;
   padding: 0;
-  background: var(--admin-canvas, #fdfbf7);
+  background: var(--admin-canvas, var(--admin-canvas));
 }
 
 .admin-sidebar {
@@ -287,8 +287,8 @@
 }
 
 .admin-button--solid:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--admin-button-primary) 90%, #fff 10%);
-  background: color-mix(in srgb, var(--admin-button-primary) 90%, #fff 10%);
+  border-color: color-mix(in srgb, var(--admin-button-primary) 90%, var(--on-accent) 10%);
+  background: color-mix(in srgb, var(--admin-button-primary) 90%, var(--on-accent) 10%);
 }
 
 /* 삭제처럼 되돌릴 수 없는 동작에만 쓴다 */

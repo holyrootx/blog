@@ -102,7 +102,7 @@
 
 .member-auth__button--primary {
   background: var(--accent-strong);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .member-auth__button--primary:hover:not(:disabled) {
@@ -190,14 +190,14 @@
 
 /* 제공자 색은 각 브랜드 가이드 값이다. 토큰으로 빼지 않는다 — 우리 디자인이 아니다 */
 .member-auth__provider--kakao {
-  border-color: #fee500;
-  background: #fee500;
-  color: #191600;
+  border-color: var(--brand-kakao);
+  background: var(--brand-kakao);
+  color: var(--brand-kakao-text);
 }
 
 .member-auth__provider--naver {
-  border-color: #03c75a;
-  background: #03c75a;
+  border-color: var(--brand-naver);
+  background: var(--brand-naver);
   color: var(--text);
 }
 
@@ -358,8 +358,8 @@
 }
 
 .member-settings__section--danger {
-  border-color: #f0d5cb;
-  background: #fdf7f4;
+  border-color: var(--member-danger-line);
+  background: var(--member-danger-bg);
 }
 
 /* 제목과 사진이 한 줄. 사진은 못 바꾸는 값이라 여기 두고, 아래 줄에는 바꾸는 것만 남긴다 */
@@ -533,7 +533,7 @@
 .member-settings__danger-button {
   border-color: var(--accent-dark);
   background: var(--accent-dark);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .member-comments {
@@ -652,7 +652,7 @@
   padding: 0 4px;
   border-radius: 999px;
   background: var(--accent-strong);
-  color: #fff;
+  color: var(--on-accent);
   font-size: 10.5px;
   font-weight: 700;
   line-height: 17px;

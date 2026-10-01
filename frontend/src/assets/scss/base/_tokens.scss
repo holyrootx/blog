@@ -72,3 +72,86 @@
   /* 체크박스·포커스 등 폼 컨트롤 강조색 */
   --admin-control-accent: #d2762f;
 }
+
+/*
+ * 글 화면 · 편집기 색.
+ *
+ * SCSS 안에 hex 가 53 종 흩어져 있었다. 값은 그대로 두고 이름만 붙인다.
+ * 비슷한 베이지가 여러 개인 것은 실수가 아니다. 광고 슬롯이 바탕에서 도드라지도록
+ * 일부러 다르게 잡은 값이라, 합치면 화면이 달라진다.
+ */
+:root {
+  /* 색 배경 위에 얹는 글자 */
+  --on-accent: #fff;
+
+  /* 글 화면 바탕 */
+  --post-surface: #fffefb;
+  --post-surface-raised: #fffdf9;
+  --post-surface-related: #faf7f1;
+  --post-aside-bg: #f1ede5;
+  --post-aside-fill: #e8e2d8;
+
+  /* 글 화면 선 */
+  --post-line: #ece6dc;
+  --post-line-strong: #e2dbd0;
+  --post-aside-line: #d8d1c6;
+
+  /* 글 제목·목차 */
+  --post-heading: #1e1b18;
+  --post-toc-active: #b35f1e;
+  --post-toc-marker: #d2762f;
+
+  /* 광고 슬롯 — 바탕보다 살짝 어두워야 자리인 줄 안다 */
+  --ad-slot-bg: #fbf7f1;
+  --ad-slot-line: #ddd0bd;
+  --ad-card-slot-bg: #f7f2ea;
+
+  /* 안내 상자 세 종류. 편집기와 공개 화면이 같은 값을 쓴다 */
+  --callout-text: #332f2b;
+  --callout-tip-bg: #fbf3e8;
+  --callout-warning-bg: #fdeee9;
+  --callout-warning-icon: #f8d9cf;
+  --callout-warning-text: #9b3417;
+  --callout-note-bg: #f0efe9;
+  --callout-note-icon: #e0ded4;
+  --callout-note-text: #5a544a;
+
+  /* 댓글 */
+  --comment-author-bg: #f0d9be;
+  --comment-author-line: #e5c9a6;
+  --comment-error: #a4432f;
+  --comment-report: #c0392b;
+  --post-error: #b42318;
+
+  /* 코드 블록 색칠 */
+  --code-comment: #7e7368;
+  --code-string: #b7c39a;
+  --code-number: #d9a05e;
+  --code-keyword: #e08a68;
+  --code-type: #cfa9d8;
+  --code-tag: #7fb0c9;
+
+  /* 글 편집기(관리자) 코드 블록 */
+  --editor-code-bg: #241f1b;
+  --editor-code-text: #efe7dc;
+  --editor-lang-bg: #1b1714;
+  --editor-lang-line: #3b332c;
+  --editor-lang-text: #a79b8d;
+  --editor-selected: #2d7ecd;
+
+  /* 신고 처리 화면 — 따뜻한 톤과 섞이지 않는 중립 회색 */
+  --moderation-line: #d8d8d8;
+  --moderation-list-line: #eee;
+  --moderation-quote-bg: #f7f7f7;
+  --moderation-text: #555;
+  --moderation-meta: #888;
+  --moderation-pending-text: #a5281b;
+
+  /* 회원 */
+  --member-danger-line: #f0d5cb;
+  --member-danger-bg: #fdf7f4;
+  /* 소셜 브랜드 색. 테마를 타면 안 된다 — 각 회사가 정한 값이다 */
+  --brand-kakao: #fee500;
+  --brand-kakao-text: #191600;
+  --brand-naver: #03c75a;
+}
