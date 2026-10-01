@@ -9,6 +9,4 @@
 @use 'public/member';
 @use 'public/search';
 @use 'public/legal';
-@use 'admin/dashboard';
-@use 'admin/components';
-@use 'admin/login';
+// 관리자 스타일은 admin.scss 로 뺐다. 관리자 화면에서만 받는다

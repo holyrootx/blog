@@ -4,6 +4,9 @@ import { useRoute, useRouter } from 'vue-router';
 
 import { signInAdmin } from '../data/adminAuthStore';
 
+// 이 화면은 AdminLayout 밖에 있어서 관리자 스타일을 직접 받아야 한다
+import '../../../assets/scss/admin.scss';
+
 /**
  * 관리자 로그인.
  *
