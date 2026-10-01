@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { clearAdminSession, ensureAdminSession } from '../../features/admin/data/adminAuthStore';
 import { onUnauthorized } from '../../shared/api/blogApiClient';
+import { applyDocumentMeta } from './documentMeta';
 import { scrollToHash } from './scrollToHash';
 
 /*
@@ -61,6 +62,7 @@ const router = createRouter({
       component: PostListPage,
       meta: {
         layout: 'public',
+        title: '전체 글',
       },
     },
     {
@@ -79,6 +81,7 @@ const router = createRouter({
       component: MemberLoginPage,
       meta: {
         layout: 'public',
+        title: '로그인',
       },
     },
     // 소셜 인증을 마친 브라우저가 돌아오는 자리.
@@ -99,6 +102,7 @@ const router = createRouter({
       component: MemberSettingsPage,
       meta: {
         layout: 'public',
+        title: '내 설정',
       },
     },
     {
@@ -107,6 +111,7 @@ const router = createRouter({
       component: PrivacyPolicyPage,
       meta: {
         layout: 'public',
+        title: '개인정보 처리방침',
       },
     },
     {
@@ -115,6 +120,7 @@ const router = createRouter({
       component: TermsPage,
       meta: {
         layout: 'public',
+        title: '이용약관',
       },
     },
     // 로그인 화면은 관리자 레이아웃 밖에 둔다.
@@ -125,6 +131,7 @@ const router = createRouter({
       component: AdminLoginPage,
       meta: {
         layout: 'admin',
+        title: '관리자 로그인',
       },
     },
     {
@@ -242,6 +249,7 @@ const router = createRouter({
       component: NotFoundPage,
       meta: {
         layout: 'public',
+        title: '페이지를 찾을 수 없습니다',
       },
     },
   ],
@@ -264,6 +272,20 @@ router.beforeEach(async (to) => {
 
   // 로그인한 뒤 원래 가려던 곳으로 보내기 위해 경로를 넘긴다
   return { name: 'admin-login', query: { redirect: to.fullPath } };
+});
+
+/**
+ * 화면을 옮길 때마다 제목과 공유용 메타를 맞춘다.
+ *
+ * 글 상세는 여기서 제목을 알 수 없다. 라우트에는 글 번호만 있고 제목은 API 응답에
+ * 들어 있다. 그래서 그 화면은 글을 받은 뒤에 직접 다시 부른다.
+ */
+router.afterEach((to) => {
+  if (to.name === 'post-detail') {
+    return;
+  }
+
+  applyDocumentMeta({ title: to.meta.title, path: to.fullPath });
 });
 
 /**
