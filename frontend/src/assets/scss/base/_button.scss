@@ -9,19 +9,38 @@
  * 다르고, 쓰는 토큰 묶음도 다르다. 억지로 합치면 둘 중 하나가 달라진다.
  */
 .ui-button {
-  /* 공유 단추는 누르면 글자가 "복사했어요" 로 잠깐 바뀐다. 폭을 잡아 두지 않으면
-     그때마다 단추가 늘었다 줄었다 해서, 옆 글까지 밀렸다 돌아온다.
-     바뀔 수 있는 말 중 가장 긴 다섯 글자가 들어갈 폭이다 */
-  min-width: 108px;
-  padding: 9px 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 42px;
+  padding: 0 18px;
   border: 1px solid var(--line);
-  border-radius: 7px;
+  border-radius: var(--radius);
   background: var(--surface);
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   text-align: center;
   cursor: pointer;
+}
+
+/*
+ * 누르면 글자가 바뀌는 단추.
+ *
+ * 공유 단추는 누르면 "복사했어요" 로 잠깐 바뀐다. 폭을 잡아 두지 않으면 그때마다
+ * 늘었다 줄었다 해서 옆 글까지 밀렸다 돌아온다. 바뀔 수 있는 말 중 가장 긴 다섯 글자가
+ * 들어갈 폭이다.
+ *
+ * 전에는 이 폭이 .ui-button 에 붙어 있었다. 공유 단추 하나 때문에 "나중에" 같은 짧은
+ * 말까지 108px 로 늘어나 있었다.
+ */
+.ui-button--steady {
+  min-width: 108px;
+}
+
+/* 글 끝 반응 줄(좋아요·댓글·공유). 한 줄에 서는 것들이라 모양을 맞춘다 */
+.ui-button--pill {
+  border-radius: 999px;
 }
 
 .ui-button:hover,
@@ -30,17 +49,23 @@
   outline: none;
 }
 
-.ui-button--solid {
-  border-color: var(--text);
-  background: var(--text);
-  color: var(--surface);
-  font-weight: 700;
-}
-
 .ui-button--accent {
   border-color: var(--accent-strong);
   background: var(--accent-strong);
   color: var(--on-accent);
+  font-weight: 700;
+}
+
+.ui-button--accent:hover:not(:disabled) {
+  border-color: var(--accent-dark);
+  background: var(--accent-dark);
+}
+
+/* 눌러 둔 상태(좋아요 등). 색으로만 알리지 않도록 aria-pressed 를 같이 준다 */
+.ui-button--on {
+  border-color: var(--accent-soft);
+  background: var(--accent-soft);
+  color: var(--accent-dark);
   font-weight: 700;
 }
 

@@ -454,37 +454,13 @@
   color: var(--text-subtle);
 }
 
-.post-reactions__button {
-  padding: 8px 16px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--surface);
-  color: var(--text-muted);
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.post-reactions__button--accent {
-  border-color: var(--accent-soft);
-  background: var(--accent-soft);
-  color: var(--accent-dark);
-  font-weight: 700;
-}
-
-.post-reactions__button:disabled {
-  cursor: wait;
-  opacity: 0.65;
-}
-
-.post-reactions__button--like {
+.ui-button--like {
   display: inline-flex;
   align-items: center;
   gap: 6px;
 }
 
-.post-reactions__button--like strong {
+.ui-button--like strong {
   min-width: 1ch;
   font-variant-numeric: tabular-nums;
 }

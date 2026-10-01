@@ -90,36 +90,6 @@
   margin-top: 24px;
 }
 
-.member-auth__button {
-  height: 42px;
-  padding: 0 20px;
-  border: 1px solid transparent;
-  border-radius: var(--radius);
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.member-auth__button--primary {
-  background: var(--accent-strong);
-  color: var(--on-accent);
-}
-
-.member-auth__button--primary:hover:not(:disabled) {
-  background: var(--accent-dark);
-}
-
-.member-auth__button--ghost {
-  border-color: var(--line);
-  background: transparent;
-  color: var(--text-muted);
-}
-
-.member-auth__button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
 /* 두 선택지는 무게가 같다. 한쪽을 강조하면 되돌릴 수 없는 쪽을 눌러 버린다 */
 .member-auth__choices {
   display: flex;
@@ -226,7 +196,9 @@
     flex-direction: column-reverse;
   }
 
-  .member-auth__button {
+  /* 좁은 화면에서는 두 단추가 위아래로 서므로 폭을 꽉 채운다.
+     .ui-button 전체가 아니라 이 영역 안에서만 */
+  .member-auth__actions .ui-button {
     width: 100%;
   }
 }
