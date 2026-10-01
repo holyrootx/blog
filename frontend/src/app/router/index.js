@@ -1,27 +1,37 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import HomePage from '../../features/home/pages/HomePage.vue';
-import PostDetailPage from '../../features/post/pages/PostDetailPage.vue';
-import PostListPage from '../../features/post/pages/PostListPage.vue';
-import NotFoundPage from '../../features/post/pages/NotFoundPage.vue';
-import AdminLayout from '../../features/admin/components/AdminLayout.vue';
-import AdminDashboardPage from '../../features/admin/pages/AdminDashboardPage.vue';
-import AdminMenuPage from '../../features/admin/pages/AdminMenuPage.vue';
-import AdminCategoryPage from '../../features/admin/pages/AdminCategoryPage.vue';
-import AdminPostPage from '../../features/admin/pages/AdminPostPage.vue';
-import AdminPostEditPage from '../../features/admin/pages/AdminPostEditPage.vue';
-import AdminCommentPage from '../../features/admin/pages/AdminCommentPage.vue';
-import AdminHomeSettingsPage from '../../features/admin/pages/AdminHomeSettingsPage.vue';
-import AdminMemberPage from '../../features/admin/pages/AdminMemberPage.vue';
-import AdminImagePage from '../../features/admin/pages/AdminImagePage.vue';
-import AdminLoginPage from '../../features/admin/pages/AdminLoginPage.vue';
-import MemberLoginPage from '../../features/member/pages/MemberLoginPage.vue';
-import OAuthCallbackPage from '../../features/member/pages/OAuthCallbackPage.vue';
-import MemberSettingsPage from '../../features/member/pages/MemberSettingsPage.vue';
-import PrivacyPolicyPage from '../../features/legal/pages/PrivacyPolicyPage.vue';
-import TermsPage from '../../features/legal/pages/TermsPage.vue';
 import { clearAdminSession, ensureAdminSession } from '../../features/admin/data/adminAuthStore';
 import { onUnauthorized } from '../../shared/api/blogApiClient';
 import { scrollToHash } from './scrollToHash';
+
+/*
+ * 화면은 전부 () => import 로 받는다.
+ *
+ * 전에는 정적 import 라 파일 하나에 다 들어갔다. 관리자 화면이 소스의 절반이 넘어서,
+ * 글 하나 읽으러 온 사람이 1,500 줄짜리 블록 편집기까지 받아 갔다.
+ *
+ * 이렇게 하면 첫 화면을 그릴 때 요청이 한 번 더 간다. 대신 받는 양과 파싱할 양이
+ * 줄어서 휴대폰에서 이득이 크다.
+ */
+const HomePage = () => import('../../features/home/pages/HomePage.vue');
+const PostListPage = () => import('../../features/post/pages/PostListPage.vue');
+const PostDetailPage = () => import('../../features/post/pages/PostDetailPage.vue');
+const NotFoundPage = () => import('../../features/post/pages/NotFoundPage.vue');
+const MemberLoginPage = () => import('../../features/member/pages/MemberLoginPage.vue');
+const OAuthCallbackPage = () => import('../../features/member/pages/OAuthCallbackPage.vue');
+const MemberSettingsPage = () => import('../../features/member/pages/MemberSettingsPage.vue');
+const PrivacyPolicyPage = () => import('../../features/legal/pages/PrivacyPolicyPage.vue');
+const TermsPage = () => import('../../features/legal/pages/TermsPage.vue');
+const AdminLayout = () => import('../../features/admin/components/AdminLayout.vue');
+const AdminLoginPage = () => import('../../features/admin/pages/AdminLoginPage.vue');
+const AdminDashboardPage = () => import('../../features/admin/pages/AdminDashboardPage.vue');
+const AdminMenuPage = () => import('../../features/admin/pages/AdminMenuPage.vue');
+const AdminCategoryPage = () => import('../../features/admin/pages/AdminCategoryPage.vue');
+const AdminPostPage = () => import('../../features/admin/pages/AdminPostPage.vue');
+const AdminPostEditPage = () => import('../../features/admin/pages/AdminPostEditPage.vue');
+const AdminCommentPage = () => import('../../features/admin/pages/AdminCommentPage.vue');
+const AdminHomeSettingsPage = () => import('../../features/admin/pages/AdminHomeSettingsPage.vue');
+const AdminMemberPage = () => import('../../features/admin/pages/AdminMemberPage.vue');
+const AdminImagePage = () => import('../../features/admin/pages/AdminImagePage.vue');
 
 // 샌드박스(src/sandbox)는 gitignore 대상이라 없을 수 있다.
 // import.meta.glob은 매칭되는 파일이 없으면 빈 객체를 주므로 빌드가 깨지지 않는다.
