@@ -21,14 +21,14 @@ const emit = defineEmits(['retry', 'home']);
 
     <div class="member-auth__actions">
       <button
-        class="member-auth__button member-auth__button--ghost"
+        class="ui-button"
         type="button"
         @click="emit('home')"
       >블로그로 돌아가기</button>
 
       <button
         v-if="retryable"
-        class="member-auth__button member-auth__button--primary"
+        class="ui-button ui-button--accent"
         type="button"
         @click="emit('retry')"
       >다시 로그인</button>

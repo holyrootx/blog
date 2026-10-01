@@ -1,3 +1,5 @@
+@use '../base/breakpoints' as bp;
+
 .public-footer {
   display: flex;
   gap: 18px;
@@ -82,7 +84,7 @@
   padding-left: 22px;
 }
 
-@media (max-width: 640px) {
+@include bp.upto(md) {
   .legal-document {
     padding: 36px 20px 72px;
   }

@@ -1,6 +1,8 @@
-/* 시안 카드 배경. 광고 슬롯(#fbf7f1)이 회색으로 도드라지려면 바탕이 거의 흰색이어야 한다 */
+/* 시안 카드 배경. 광고 슬롯(--ad-slot-bg)이 회색으로 도드라지려면 바탕이 거의 흰색이어야 한다 */
+@use '../base/breakpoints' as bp;
+
 .post-shell {
-  background: #fffefb;
+  background: var(--post-surface);
 }
 
 .post-shell__layout {
@@ -191,43 +193,6 @@
   margin-top: 18px;
 }
 
-.post-button {
-  /* 공유 단추는 누르면 글자가 "복사했어요" 로 잠깐 바뀐다. 폭을 잡아 두지 않으면
-     그때마다 단추가 늘었다 줄었다 해서, 옆 글까지 밀렸다 돌아온다.
-     바뀔 수 있는 말 중 가장 긴 다섯 글자가 들어갈 폭이다 */
-  min-width: 108px;
-  padding: 9px 16px;
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  background: var(--surface);
-  color: var(--text-muted);
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  text-align: center;
-  cursor: pointer;
-}
-
-.post-button:hover,
-.post-button:focus-visible {
-  border-color: var(--accent);
-  outline: none;
-}
-
-.post-button--solid {
-  border-color: var(--text);
-  background: var(--text);
-  color: var(--surface);
-  font-weight: 700;
-}
-
-.post-button--accent {
-  border-color: var(--accent-strong);
-  background: var(--accent-strong);
-  color: #fff;
-  font-weight: 700;
-}
-
 .post-article__cover {
   margin: 32px 0 0;
   padding: 0 88px;
@@ -316,11 +281,11 @@
   margin: 0;
   font-size: 15.5px;
   line-height: 1.75;
-  color: #332f2b;
+  color: var(--callout-text);
 }
 
 .post-callout--tip {
-  background: #fbf3e8;
+  background: var(--callout-tip-bg);
 }
 
 .post-callout--tip .post-callout__label {
@@ -329,21 +294,21 @@
 }
 
 .post-callout--warning {
-  background: #fdeee9;
+  background: var(--callout-warning-bg);
 }
 
 .post-callout--warning .post-callout__label {
-  background: #f8d9cf;
-  color: #9b3417;
+  background: var(--callout-warning-icon);
+  color: var(--callout-warning-text);
 }
 
 .post-callout--note {
-  background: #f0efe9;
+  background: var(--callout-note-bg);
 }
 
 .post-callout--note .post-callout__label {
-  background: #e0ded4;
-  color: #5a544a;
+  background: var(--callout-note-icon);
+  color: var(--callout-note-text);
 }
 
 .post-body__code {
@@ -355,12 +320,12 @@
 }
 
 /* 색칠. 편집 화면도 같은 값을 쓴다 */
-.post-code__comment { color: #7e7368; font-style: italic; }
-.post-code__string { color: #b7c39a; }
-.post-code__number { color: #d9a05e; }
-.post-code__keyword { color: #e08a68; font-weight: 600; }
-.post-code__type { color: #cfa9d8; }
-.post-code__tag { color: #7fb0c9; }
+.post-code__comment { color: var(--code-comment); font-style: italic; }
+.post-code__string { color: var(--code-string); }
+.post-code__number { color: var(--code-number); }
+.post-code__keyword { color: var(--code-keyword); font-weight: 600; }
+.post-code__type { color: var(--code-type); }
+.post-code__tag { color: var(--code-tag); }
 
 /* 긴 줄은 코드 블록 안에서만 옆으로 넘긴다. 본문이 통째로 밀리면 안 된다 */
 .post-body__code pre {
@@ -445,9 +410,9 @@
   align-items: center;
   justify-content: center;
   height: 110px;
-  border: 1px dashed #ddd0bd;
+  border: 1px dashed var(--ad-slot-line);
   border-radius: 9px;
-  background: #fbf7f1;
+  background: var(--ad-slot-bg);
   font-family: ui-monospace, Menlo, monospace;
   font-size: 11.5px;
   color: var(--text-subtle);
@@ -489,37 +454,13 @@
   color: var(--text-subtle);
 }
 
-.post-reactions__button {
-  padding: 8px 16px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--surface);
-  color: var(--text-muted);
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.post-reactions__button--accent {
-  border-color: var(--accent-soft);
-  background: var(--accent-soft);
-  color: var(--accent-dark);
-  font-weight: 700;
-}
-
-.post-reactions__button:disabled {
-  cursor: wait;
-  opacity: 0.65;
-}
-
-.post-reactions__button--like {
+.ui-button--like {
   display: inline-flex;
   align-items: center;
   gap: 6px;
 }
 
-.post-reactions__button--like strong {
+.ui-button--like strong {
   min-width: 1ch;
   font-variant-numeric: tabular-nums;
 }
@@ -531,7 +472,7 @@
 
 .post-reactions__error {
   font-size: 12px;
-  color: #b42318;
+  color: var(--post-error);
 }
 
 .post-nav {
@@ -579,8 +520,8 @@
    같은 카테고리 글을 인기순으로 보여준다 */
 .post-related {
   padding: 30px 88px 44px;
-  border-top: 1px solid #ece6dc;
-  background: #faf7f1;
+  border-top: 1px solid var(--post-line);
+  background: var(--post-surface-related);
 }
 
 .post-related__header {
@@ -624,8 +565,8 @@
   gap: 24px;
   width: 340px;
   padding: 44px 20px 40px;
-  border-left: 1px solid #d8d1c6;
-  background: #f1ede5;
+  border-left: 1px solid var(--post-aside-line);
+  background: var(--post-aside-bg);
   box-shadow: inset 8px 0 12px -8px rgba(0, 0, 0, 0.1);
 }
 
@@ -653,7 +594,7 @@
 .post-aside__sponsored {
   padding: 3px 7px;
   border-radius: 4px;
-  background: #e8e2d8;
+  background: var(--post-aside-fill);
   font-family: ui-monospace, Menlo, monospace;
   font-size: 10px;
   letter-spacing: 0.14em;
@@ -663,7 +604,7 @@
 .post-aside__rule {
   flex: 1;
   height: 1px;
-  background: #e2dbd0;
+  background: var(--post-line-strong);
 }
 
 .post-aside__note {
@@ -684,9 +625,9 @@
 /* 광고 카드 — 흰 카드 안에 라벨/닫기 줄과 회색 광고 자리 */
 .ad-card {
   padding: 11px;
-  border: 1px solid #e2dbd0;
+  border: 1px solid var(--post-line-strong);
   border-radius: 10px;
-  background: #fffdf9;
+  background: var(--post-surface-raised);
 }
 
 .ad-card__head {
@@ -721,9 +662,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px dashed #ddd0bd;
+  border: 1px dashed var(--ad-slot-line);
   border-radius: 7px;
-  background: #f7f2ea;
+  background: var(--ad-card-slot-bg);
   font-family: ui-monospace, Menlo, monospace;
   font-size: 11.5px;
   color: var(--text-subtle);
@@ -731,9 +672,9 @@
 
 .post-toc {
   padding: 16px 18px;
-  border: 1px solid #e2dbd0;
+  border: 1px solid var(--post-line-strong);
   border-radius: 10px;
-  background: #fffdf9;
+  background: var(--post-surface-raised);
 }
 
 .post-toc__head {
@@ -746,7 +687,7 @@
 .post-toc__title {
   font-size: 13px;
   font-weight: 800;
-  color: #1e1b18;
+  color: var(--post-heading);
 }
 
 .post-toc__hint {
@@ -764,19 +705,19 @@
 .post-toc__link {
   display: block;
   padding-left: 10px;
-  border-left: 2px solid #ece6dc;
+  border-left: 2px solid var(--post-line);
   font-size: 12.5px;
   line-height: 1.5;
   color: var(--text-subtle);
 }
 
 .post-toc__link:hover {
-  color: #b35f1e;
+  color: var(--post-toc-active);
 }
 
 .post-toc__link--active {
-  border-left-color: #d2762f;
-  color: #b35f1e;
+  border-left-color: var(--post-toc-marker);
+  color: var(--post-toc-active);
   font-weight: 700;
 }
 
@@ -792,13 +733,13 @@
   gap: 10px;
   margin-bottom: 22px;
   padding-bottom: 14px;
-  border-bottom: 2px solid #1e1b18;
+  border-bottom: 2px solid var(--post-heading);
 }
 
 .comments__title {
   font-size: 17px;
   font-weight: 800;
-  color: #1e1b18;
+  color: var(--post-heading);
 }
 
 .comments__count {
@@ -915,8 +856,8 @@
 }
 
 .comment-avatar--author {
-  background: #f0d9be;
-  border-color: #e5c9a6;
+  background: var(--comment-author-bg);
+  border-color: var(--comment-author-line);
 }
 
 .comment-avatar--deleted {
@@ -1022,13 +963,13 @@
 
 .comment-form__error {
   margin: 10px 0 0 52px;
-  color: #a4432f;
+  color: var(--comment-error);
   font-size: 12.5px;
 }
 
 .comment-reaction__error {
   margin: 12px 0 0;
-  color: #a4432f;
+  color: var(--comment-error);
   font-size: 12.5px;
 }
 
@@ -1124,10 +1065,6 @@
 }
 
 .comment__action:disabled,
-.post-button:disabled {
-  cursor: wait;
-  opacity: 0.55;
-}
 
 .comment__action--strong {
   font-weight: 600;
@@ -1175,7 +1112,7 @@
 
 .reply-form {
   padding: 12px 14px;
-  border: 1px solid #f0d9be;
+  border: 1px solid var(--comment-author-bg);
   border-radius: 10px;
   background: var(--surface);
 }
@@ -1230,7 +1167,7 @@
 }
 
 /* 태블릿 — 오른쪽 레일 제거 */
-@media (max-width: 1180px) {
+@include bp.upto(xl) {
   .post-shell__layout {
     padding-right: 0;
   }
@@ -1262,7 +1199,7 @@
 }
 
 /* 모바일 (390px 기준) */
-@media (max-width: 768px) {
+@include bp.upto(md) {
   /* 폰에서는 지정한 폭을 무시하고 꽉 채운다. 데스크톱에서 20% 로 줄인 사진이
      폰에서도 20% 면 손톱만 해진다. 인라인 style 을 이기려면 !important 가 필요하다 */
   .post-body__figure {
@@ -1277,8 +1214,8 @@
     z-index: 20;
     display: block;
     padding: 10px 18px 14px;
-    border-top: 1px solid #ece6dc;
-    background: #fffefb;
+    border-top: 1px solid var(--post-line);
+    background: var(--post-surface);
   }
 
   .anchor-ad__label {
@@ -1295,9 +1232,9 @@
     align-items: center;
     justify-content: center;
     height: 56px;
-    border: 1px dashed #ddd0bd;
+    border: 1px dashed var(--ad-slot-line);
     border-radius: 8px;
-    background: #fbf7f1;
+    background: var(--ad-slot-bg);
     font-family: ui-monospace, Menlo, monospace;
     font-size: 11px;
     color: var(--text-subtle);
@@ -1341,7 +1278,7 @@
     flex-wrap: wrap;
   }
 
-  .post-author .post-button:first-of-type {
+  .post-author .ui-button:first-of-type {
     margin-left: 0;
   }
 
@@ -1504,11 +1441,11 @@
 .post-list__filter--active {
   border-color: var(--accent-strong);
   background: var(--accent-strong);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .post-list__filter--active:hover {
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .post-list__empty {
@@ -1568,11 +1505,11 @@
 .post-pager__number--active {
   border-color: var(--accent-strong);
   background: var(--accent-strong);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .post-pager__number--active:hover {
-  color: #fff;
+  color: var(--on-accent);
 }
 
 /* ── 404 ──────────────────────────────────── */
@@ -1614,11 +1551,11 @@
   margin-top: 28px;
 }
 
-.not-found__actions .post-button {
+.not-found__actions .ui-button {
   text-decoration: none;
 }
 
-@media (max-width: 600px) {
+@include bp.upto(sm) {
   .post-list {
     padding: 24px 20px 48px;
   }
@@ -1691,7 +1628,6 @@
   color: var(--accent-dark);
   font-size: 13px;
 }
-
 
 .comments__report-done {
   margin: 14px 0 0;
@@ -1775,7 +1711,7 @@
 /* 사이렌만 빨갛다. 평소 글자는 회색으로 두어 눈에 먼저 들어오지 않게 하고,
    그림만으로 무슨 단추인지 알아보게 한다 */
 .comment__action--report .comment-icon {
-  color: #c0392b;
+  color: var(--comment-report);
 }
 
 /* 이미 신고한 것. 눌리지 않으므로 색을 빼서 "할 일이 남지 않았다" 를 보인다 */

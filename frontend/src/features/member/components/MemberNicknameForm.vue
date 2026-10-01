@@ -57,14 +57,14 @@ function submit() {
     <div class="member-auth__actions">
       <button
         v-if="cancellable"
-        class="member-auth__button member-auth__button--ghost"
+        class="ui-button"
         type="button"
         :disabled="submitting"
         @click="emit('cancel')"
       >뒤로</button>
 
       <button
-        class="member-auth__button member-auth__button--primary"
+        class="ui-button ui-button--accent"
         type="submit"
         :disabled="submitting || nickname.trim() === ''"
       >{{ submitting ? '처리 중…' : submitLabel }}</button>

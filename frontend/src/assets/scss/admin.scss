@@ -1,0 +1,7 @@
+// 관리자 화면 전용 스타일.
+//
+// main.scss 에 두면 글 읽으러 온 사람도 같이 받는다. 관리자 CSS 가 전체의 3분의 2 라
+// 따로 떼서 관리자 화면이 뜰 때만 받도록 AdminLayout 과 로그인 화면에서 불러온다.
+@use 'admin/components';
+@use 'admin/dashboard';
+@use 'admin/login';

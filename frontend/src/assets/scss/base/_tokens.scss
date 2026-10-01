@@ -16,3 +16,142 @@
   --shadow: 0 24px 80px rgba(69, 43, 25, 0.14);
   --radius: 8px;
 }
+
+/*
+ * 관리자 토큰.
+ *
+ * 전에는 admin/_dashboard.scss 에 있었다. 그 파일을 관리자 전용 묶음으로 떼어내자
+ * 공개 화면의 토스트와 모달이 색을 잃었다. 두 컴포넌트가 여기 값을 쓴다.
+ * 토큰은 몇백 바이트라 같이 받아도 손해가 없으니 항상 받는 쪽에 둔다.
+ */
+:root {
+  /* 관리자 색상 토큰. 모달이 Teleport 로 body 아래 렌더되므로 :root 에 둔다 */
+  --admin-sidebar-bg: #221f1c;
+  --admin-sidebar-line: #37322d;
+  --admin-sidebar-avatar: #4a433d;
+  --admin-sidebar-active-text: #fffdf9;
+  --admin-sidebar-menu: #c4bcb0;
+  --admin-sidebar-label: #b0a69b;
+  --admin-sidebar-group: #ada397;
+  --admin-canvas: #fdfbf7;
+  --admin-card: #fff;
+  --admin-card-line: #e6e0d6;
+  --admin-list-line: #f0ebe3;
+  --admin-accent: #d2762f;
+  --admin-accent-strong: #a84f1b;
+  --admin-accent-dark: #8a4c1e;
+  --admin-accent-muted: var(--admin-accent-dark);
+  --admin-accent-soft: var(--accent-soft);
+  --admin-accent-line: #f0d9be;
+  --admin-chart-1: #d2762f;
+  --admin-chart-2: #e0a067;
+  --admin-chart-3: #e8c9a4;
+  --admin-chart-4: #efe0cb;
+  --admin-chart-5: #f0e3d3;
+  --admin-chart-track: #f4f0e9;
+  /* 표·입력처럼 넓은 면에 쓰는 중립 톤. accent 계열은 강조에만 쓴다 */
+  --admin-surface-subtle: #faf9f7;
+  --admin-surface-hover: #f5f3f0;
+  --admin-surface-selected: #fdf4ea;
+  --admin-title: #1e1b18;
+  --admin-text-strong: #4a433d;
+  --admin-text: #6f6862;
+  --admin-text-muted: var(--text-subtle);
+  --admin-meta: var(--text-subtle);
+  --admin-dot: #d8d1c6;
+  --admin-button-primary: #1e1b18;
+  --admin-button-primary-text: #fff;
+  --admin-button-secondary: #fff;
+  --admin-button-secondary-line: #ddd4c6;
+  --admin-button-secondary-text: #57504a;
+  --admin-shadow: 0 14px 34px rgba(30, 27, 24, 0.07);
+  /* 오류는 브랜드 주황과 분리한다. 주황이 강조·오류 둘 다 맡으면 구분이 안 된다 */
+  --admin-danger: #c0392b;
+  --admin-danger-soft: #fdecea;
+  --admin-danger-line: #f3c9c3;
+  /* 체크박스·포커스 등 폼 컨트롤 강조색 */
+  --admin-control-accent: #d2762f;
+}
+
+/*
+ * 글 화면 · 편집기 색.
+ *
+ * SCSS 안에 hex 가 53 종 흩어져 있었다. 값은 그대로 두고 이름만 붙인다.
+ * 비슷한 베이지가 여러 개인 것은 실수가 아니다. 광고 슬롯이 바탕에서 도드라지도록
+ * 일부러 다르게 잡은 값이라, 합치면 화면이 달라진다.
+ */
+:root {
+  /* 색 배경 위에 얹는 글자 */
+  --on-accent: #fff;
+
+  /* 글 화면 바탕 */
+  --post-surface: #fffefb;
+  --post-surface-raised: #fffdf9;
+  --post-surface-related: #faf7f1;
+  --post-aside-bg: #f1ede5;
+  --post-aside-fill: #e8e2d8;
+
+  /* 글 화면 선 */
+  --post-line: #ece6dc;
+  --post-line-strong: #e2dbd0;
+  --post-aside-line: #d8d1c6;
+
+  /* 글 제목·목차 */
+  --post-heading: #1e1b18;
+  --post-toc-active: #b35f1e;
+  --post-toc-marker: #d2762f;
+
+  /* 광고 슬롯 — 바탕보다 살짝 어두워야 자리인 줄 안다 */
+  --ad-slot-bg: #fbf7f1;
+  --ad-slot-line: #ddd0bd;
+  --ad-card-slot-bg: #f7f2ea;
+
+  /* 안내 상자 세 종류. 편집기와 공개 화면이 같은 값을 쓴다 */
+  --callout-text: #332f2b;
+  --callout-tip-bg: #fbf3e8;
+  --callout-warning-bg: #fdeee9;
+  --callout-warning-icon: #f8d9cf;
+  --callout-warning-text: #9b3417;
+  --callout-note-bg: #f0efe9;
+  --callout-note-icon: #e0ded4;
+  --callout-note-text: #5a544a;
+
+  /* 댓글 */
+  --comment-author-bg: #f0d9be;
+  --comment-author-line: #e5c9a6;
+  --comment-error: #a4432f;
+  --comment-report: #c0392b;
+  --post-error: #b42318;
+
+  /* 코드 블록 색칠 */
+  --code-comment: #7e7368;
+  --code-string: #b7c39a;
+  --code-number: #d9a05e;
+  --code-keyword: #e08a68;
+  --code-type: #cfa9d8;
+  --code-tag: #7fb0c9;
+
+  /* 글 편집기(관리자) 코드 블록 */
+  --editor-code-bg: #241f1b;
+  --editor-code-text: #efe7dc;
+  --editor-lang-bg: #1b1714;
+  --editor-lang-line: #3b332c;
+  --editor-lang-text: #a79b8d;
+  --editor-selected: #2d7ecd;
+
+  /* 신고 처리 화면 — 따뜻한 톤과 섞이지 않는 중립 회색 */
+  --moderation-line: #d8d8d8;
+  --moderation-list-line: #eee;
+  --moderation-quote-bg: #f7f7f7;
+  --moderation-text: #555;
+  --moderation-meta: #888;
+  --moderation-pending-text: #a5281b;
+
+  /* 회원 */
+  --member-danger-line: #f0d5cb;
+  --member-danger-bg: #fdf7f4;
+  /* 소셜 브랜드 색. 테마를 타면 안 된다 — 각 회사가 정한 값이다 */
+  --brand-kakao: #fee500;
+  --brand-kakao-text: #191600;
+  --brand-naver: #03c75a;
+}

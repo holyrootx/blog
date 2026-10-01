@@ -1,6 +1,8 @@
 /* 관리자 공통 컴포넌트 — 조회조건 · 표 · 페이징 */
 
 /* 폼 컨트롤 강조색 통일. 체크박스만 브라우저 기본 파란색이 되는 것을 막는다 */
+@use '../base/breakpoints' as bp;
+
 .admin-search,
 .admin-grid,
 .admin-modal,
@@ -328,7 +330,7 @@
   text-align: center;
 }
 
-@media (max-width: 1100px) {
+@include bp.upto(xl) {
   .admin-settings__columns {
     grid-template-columns: 1fr;
   }
@@ -338,7 +340,7 @@
   }
 }
 
-@media (max-width: 768px) {
+@include bp.upto(md) {
   .admin-settings__topic-copy,
   .admin-settings__topic-fields {
     grid-template-columns: 1fr;
@@ -869,13 +871,13 @@
 
 /* ── 좁은 화면 ─────────────────────────────── */
 
-@media (max-width: 1100px) {
+@include bp.upto(xl) {
   .admin-search__fields {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 720px) {
+@include bp.upto(md) {
   .admin-search__fields {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -1148,7 +1150,7 @@
   background: var(--admin-card);
 }
 
-@media (max-width: 900px) {
+@include bp.upto(lg) {
   .admin-tree__item {
     grid-template-columns: 22px minmax(0, 1fr) 52px;
     padding-left: 28px;
@@ -1208,7 +1210,7 @@
   gap: 8px;
 }
 
-@media (max-width: 720px) {
+@include bp.upto(md) {
   .admin-page-header {
     flex-direction: column;
     align-items: stretch;
@@ -1282,7 +1284,6 @@
   font-size: 12px;
 }
 
-
 .admin-editor-skeleton .admin-editor__bar > .ui-skeleton {
   width: 74px;
   height: 28px;
@@ -1319,7 +1320,6 @@
 .admin-editor-skeleton__body {
   height: 420px;
 }
-
 
 .admin-post__actions {
   display: inline-flex;
@@ -1443,21 +1443,14 @@
   font-weight: 700;
 }
 
-.admin-editor__textarea,
-.admin-editor__content {
+.admin-editor__textarea {
   height: auto;
   padding: 10px 11px;
   line-height: 1.7;
   resize: vertical;
 }
 
-/* 본문은 마크다운 원문이라 고정폭이 읽기 편하다 */
-.admin-editor__content {
-  font-family: ui-monospace, Menlo, monospace;
-  font-size: 13px;
-}
-
-@media (max-width: 720px) {
+@include bp.upto(md) {
   .admin-editor__bar {
     flex-direction: column;
     align-items: stretch;
@@ -1471,10 +1464,6 @@
 }
 
 /* ── 슬래시 메뉴 ───────────────────────────── */
-
-.admin-markdown {
-  position: relative;
-}
 
 /* 커서 자리에 붙는다. textarea 위에 겹치므로 z-index 가 필요하다 */
 .admin-slash {
@@ -1672,7 +1661,7 @@
   margin-top: 18px;
   padding: 12px 16px;
   border-radius: 9px;
-  background: #241f1b;
+  background: var(--editor-code-bg);
 }
 
 /* 언어 선택. 코드 박스 안이라 어두운 배경에 맞춘다 */
@@ -1680,10 +1669,10 @@
   align-self: flex-start;
   margin-bottom: 6px;
   padding: 2px 6px;
-  border: 1px solid #3b332c;
+  border: 1px solid var(--editor-lang-line);
   border-radius: 5px;
-  background: #1b1714;
-  color: #a79b8d;
+  background: var(--editor-lang-bg);
+  color: var(--editor-lang-text);
   font-family: ui-monospace, Menlo, monospace;
   font-size: 11px;
 }
@@ -1693,7 +1682,7 @@
 }
 
 .block-editor__input--code {
-  color: #efe7dc;
+  color: var(--editor-code-text);
   font-family: ui-monospace, Menlo, monospace;
   font-size: 13px;
   line-height: 1.85;
@@ -1705,7 +1694,7 @@
   margin-top: 18px;
   padding: 14px 18px;
   border-radius: 10px;
-  background: #fbf3e8;
+  background: var(--callout-tip-bg);
 }
 
 .block-editor__row--callout .post-callout__label {
@@ -1715,7 +1704,7 @@
 
 .block-editor__text--callout {
   font-size: 15px;
-  color: #332f2b;
+  color: var(--callout-text);
 }
 
 .block-editor__row--divider {
@@ -1773,7 +1762,7 @@
 .block-editor__highlight {
   position: absolute;
   inset: 0;
-  color: #efe7dc;
+  color: var(--editor-code-text);
   pointer-events: none;
   overflow: hidden;
 }
@@ -1782,7 +1771,7 @@
 .block-editor__input--code {
   position: relative;
   color: transparent;
-  caret-color: #efe7dc;
+  caret-color: var(--editor-code-text);
   background: transparent;
 }
 
@@ -1852,7 +1841,7 @@
 
 .block-editor__row--selected .block-editor__handle {
   opacity: 1;
-  color: #2d7ecd;
+  color: var(--editor-selected);
 }
 
 /* 놓을 자리 */
@@ -2056,7 +2045,7 @@
 }
 
 .block-editor__image-align:focus-visible {
-  outline: 2px solid #fff;
+  outline: 2px solid var(--on-accent);
   outline-offset: -2px;
 }
 
@@ -2115,7 +2104,7 @@
 }
 
 .block-editor__image-captionbutton:focus-visible {
-  outline: 2px solid #fff;
+  outline: 2px solid var(--on-accent);
   outline-offset: -2px;
 }
 
@@ -2151,7 +2140,7 @@
   padding: 2px 8px;
   border-radius: 999px;
   background: rgba(0, 0, 0, 0.6);
-  color: #fff;
+  color: var(--on-accent);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
   line-height: 1.6;
@@ -2259,7 +2248,7 @@
    신고 주장과 지금까지의 판단을 한 화면에 같이 놓는다 */
 
 .admin-badge--report {
-  border: 1px solid var(--admin-line, #d8d8d8);
+  border: 1px solid var(--admin-line, var(--moderation-line));
   background: transparent;
   font-family: inherit;
   cursor: pointer;
@@ -2267,17 +2256,17 @@
 
 /* 아직 안 본 신고만 눈에 띄게. 처리한 것까지 붉으면 목록이 늘 빨갛다 */
 .admin-badge--report-pending {
-  border-color: #c0392b;
-  background: #fdecea;
-  color: #a5281b;
+  border-color: var(--admin-danger);
+  background: var(--admin-danger-soft);
+  color: var(--moderation-pending-text);
   font-weight: 700;
 }
 
 .admin-moderation__quote {
   margin: 0 0 16px;
   padding: 12px 14px;
-  border-left: 3px solid var(--admin-line, #d8d8d8);
-  background: #f7f7f7;
+  border-left: 3px solid var(--admin-line, var(--moderation-line));
+  background: var(--moderation-quote-bg);
   font-size: 14px;
   line-height: 1.7;
 }
@@ -2300,7 +2289,7 @@
   gap: 8px;
   align-items: baseline;
   padding: 9px 0;
-  border-bottom: 1px solid var(--admin-line, #eee);
+  border-bottom: 1px solid var(--admin-line, var(--moderation-list-line));
   font-size: 13px;
 }
 
@@ -2310,19 +2299,19 @@
 
 .admin-moderation__detail {
   flex: 1 1 100%;
-  color: #555;
+  color: var(--moderation-text);
   line-height: 1.6;
 }
 
 .admin-moderation__time {
   margin-left: auto;
-  color: #888;
+  color: var(--moderation-meta);
   font-size: 12px;
 }
 
 .admin-moderation__empty {
   margin: 0;
-  color: #888;
+  color: var(--moderation-meta);
   font-size: 13px;
 }
 
