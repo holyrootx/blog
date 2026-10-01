@@ -1284,7 +1284,6 @@
   font-size: 12px;
 }
 
-
 .admin-editor-skeleton .admin-editor__bar > .ui-skeleton {
   width: 74px;
   height: 28px;
@@ -1321,7 +1320,6 @@
 .admin-editor-skeleton__body {
   height: 420px;
 }
-
 
 .admin-post__actions {
   display: inline-flex;
@@ -1445,18 +1443,11 @@
   font-weight: 700;
 }
 
-.admin-editor__textarea,
-.admin-editor__content {
+.admin-editor__textarea {
   height: auto;
   padding: 10px 11px;
   line-height: 1.7;
   resize: vertical;
-}
-
-/* 본문은 마크다운 원문이라 고정폭이 읽기 편하다 */
-.admin-editor__content {
-  font-family: ui-monospace, Menlo, monospace;
-  font-size: 13px;
 }
 
 @include bp.upto(md) {
@@ -1473,10 +1464,6 @@
 }
 
 /* ── 슬래시 메뉴 ───────────────────────────── */
-
-.admin-markdown {
-  position: relative;
-}
 
 /* 커서 자리에 붙는다. textarea 위에 겹치므로 z-index 가 필요하다 */
 .admin-slash {
