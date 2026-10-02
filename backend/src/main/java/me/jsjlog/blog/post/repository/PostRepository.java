@@ -29,6 +29,13 @@ public interface PostRepository extends JpaRepository<Post,Long>, PostRepository
      */
     boolean existsByCategoryId(Long categoryId);
 
+    @Query("select post.id from Post post where post.status = :status"
+            + " and post.publishedAt <= :now order by post.id")
+    List<Long> findPublicPostIdsForSitemap(
+            @Param("status") PostStatus status,
+            @Param("now") LocalDateTime now
+    );
+
     /**
      * 조회수를 DB에서 직접 증가시킨다.
      *
