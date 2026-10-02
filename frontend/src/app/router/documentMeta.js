@@ -19,6 +19,7 @@ export function applyDocumentMeta({
   image = DEFAULT_IMAGE,
   path,
   type = 'website',
+  robots = 'index,follow',
 } = {}) {
   const fullTitle = title ? `${title} · ${SITE_NAME}` : SITE_NAME;
   const url = absolute(path ?? location.pathname);
@@ -26,6 +27,7 @@ export function applyDocumentMeta({
   document.title = fullTitle;
 
   meta('name', 'description', description);
+  meta('name', 'robots', robots);
 
   meta('property', 'og:type', type);
   meta('property', 'og:site_name', SITE_NAME);
@@ -40,7 +42,7 @@ export function applyDocumentMeta({
   meta('name', 'twitter:description', description);
   meta('name', 'twitter:image', absolute(image));
 
-  canonical(url);
+  canonical(robots.startsWith('noindex') ? null : url);
 }
 
 /**
@@ -82,6 +84,11 @@ function meta(keyName, keyValue, content) {
 
 function canonical(url) {
   let tag = document.head.querySelector('link[rel="canonical"]');
+
+  if (!url) {
+    tag?.remove();
+    return;
+  }
 
   if (!tag) {
     tag = document.createElement('link');

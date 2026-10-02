@@ -1,6 +1,6 @@
 const KEY_PREFIX = 'admin:post-draft:';
 
-// 7일 지난 스냅샷은 앱 시작 시 정리한다
+// 7일 지난 스냅샷은 글 편집 화면 진입 시 정리한다
 const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
@@ -38,7 +38,7 @@ export function clearPostDraft(key) {
   }
 }
 
-/** 오래된 스냅샷 정리. 앱 시작 시 한 번 부른다 */
+/** 오래된 스냅샷 정리. 글 편집 화면 진입 시 부른다 */
 export function cleanUpPostDrafts() {
   try {
     const now = Date.now();

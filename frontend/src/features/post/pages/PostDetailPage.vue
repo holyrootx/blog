@@ -10,6 +10,7 @@ import PostArticleSkeleton from '../components/PostArticleSkeleton.vue';
 import PostAside from '../components/PostAside.vue';
 import CommentSection from '../components/CommentSection.vue';
 import PostRelated from '../components/PostRelated.vue';
+import NotFoundPage from './NotFoundPage.vue';
 import { getBlogProfile } from '../../home/api/homeApi';
 import {
   getAdjacentPosts,
@@ -75,6 +76,8 @@ const loading = reactive({
   related: true,
   comments: true,
 });
+const notFound = ref(false);
+const postLoadError = ref(false);
 const showAds = false;
 
 watch(
@@ -88,6 +91,8 @@ watch(
 function loadPostPage(postId) {
   const requestedPostId = String(postId);
 
+  notFound.value = false;
+  postLoadError.value = false;
   Object.assign(detail, structuredClone({
     ...EMPTY_DETAIL,
     comments: EMPTY_COMMENTS,
@@ -95,6 +100,13 @@ function loadPostPage(postId) {
   Object.keys(loading).forEach((key) => {
     loading[key] = true;
   });
+
+  if (!/^[1-9]\d*$/.test(requestedPostId)) {
+    notFound.value = true;
+    loading.post = false;
+    applyDocumentMeta({ title: '찾는 글이 없습니다', robots: 'noindex,follow' });
+    return;
+  }
 
   loadPostData('author', requestedPostId, getBlogProfile, (profile) => {
     detail.author = mergeDefined(detail.author, profile);
@@ -115,6 +127,15 @@ function loadPostPage(postId) {
       path: `/posts/${requestedPostId}`,
       type: 'article',
     });
+  }, (error) => {
+    if (error.status === 404) {
+      notFound.value = true;
+      applyDocumentMeta({ title: '찾는 글이 없습니다', robots: 'noindex,follow' });
+      return;
+    }
+
+    postLoadError.value = true;
+    console.error(error);
   });
   loadPostData('adjacent', requestedPostId, () => getAdjacentPosts(postId), (adjacentPosts) => {
     detail.adjacentPosts = adjacentPosts;
@@ -131,14 +152,18 @@ function loadPostPage(postId) {
   });
 }
 
-function loadPostData(key, requestedPostId, request, apply) {
+function loadPostData(key, requestedPostId, request, apply, onError = console.error) {
   request()
     .then((value) => {
       if (String(route.params.id) === requestedPostId) {
         apply(value);
       }
     })
-    .catch((error) => console.error(error))
+    .catch((error) => {
+      if (String(route.params.id) === requestedPostId) {
+        onError(error);
+      }
+    })
     .finally(() => {
       if (String(route.params.id) === requestedPostId) {
         loading[key] = false;
@@ -171,10 +196,20 @@ function applyPostReaction(reaction) {
 </script>
 
 <template>
-  <div class="public-shell">
+  <NotFoundPage v-if="notFound" />
+  <div v-else class="public-shell">
     <BlogHeader :title="detail.author.name || 'JSJ.log'" />
 
-    <main class="public-shell__main post-shell">
+    <main v-if="postLoadError" class="not-found">
+      <h1 class="not-found__title">글을 불러오지 못했습니다</h1>
+      <p class="not-found__text">잠시 후 다시 시도해 주세요.</p>
+      <div class="not-found__actions">
+        <button type="button" class="ui-button ui-button--accent" @click="loadPostPage(route.params.id)">
+          다시 시도
+        </button>
+      </div>
+    </main>
+    <main v-else class="public-shell__main post-shell">
       <div class="post-shell__layout">
         <!-- 본문·댓글·관련글이 한 컬럼. 오른쪽 레일은 그 옆으로 계속 내려온다 -->
         <div class="post-shell__column">
