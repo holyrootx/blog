@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /login
+Disallow: /oauth/
+Disallow: /settings
+
+Sitemap: https://jsjlog.me/sitemap.xml

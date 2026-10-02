@@ -13,6 +13,7 @@ import {
   uploadAdminImage,
 } from '../api/adminApi';
 import {
+  cleanUpPostDrafts,
   clearPostDraft,
   loadPostDraft,
   savePostDraft,
@@ -655,6 +656,8 @@ function onBeforeUnload() {
 }
 
 onMounted(async () => {
+  cleanUpPostDrafts();
+
   try {
     categories.value = await getAdminCategories();
   } catch (error) {

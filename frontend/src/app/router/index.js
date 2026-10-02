@@ -82,6 +82,7 @@ const router = createRouter({
       meta: {
         layout: 'public',
         title: '로그인',
+        robots: 'noindex,follow',
       },
     },
     // 소셜 인증을 마친 브라우저가 돌아오는 자리.
@@ -92,6 +93,7 @@ const router = createRouter({
       component: OAuthCallbackPage,
       meta: {
         layout: 'public',
+        robots: 'noindex,follow',
       },
     },
     // 내 계정 설정. 로그인 확인은 화면이 직접 한다 — 앱이 뜰 때 시작한 /me 응답을
@@ -103,6 +105,7 @@ const router = createRouter({
       meta: {
         layout: 'public',
         title: '내 설정',
+        robots: 'noindex,follow',
       },
     },
     {
@@ -132,6 +135,7 @@ const router = createRouter({
       meta: {
         layout: 'admin',
         title: '관리자 로그인',
+        robots: 'noindex,follow',
       },
     },
     {
@@ -139,6 +143,7 @@ const router = createRouter({
       component: AdminLayout,
       meta: {
         layout: 'admin',
+        robots: 'noindex,follow',
         // 이 아래 화면은 전부 로그인이 필요하다
         requiresAdmin: true,
       },
@@ -250,6 +255,7 @@ const router = createRouter({
       meta: {
         layout: 'public',
         title: '페이지를 찾을 수 없습니다',
+        robots: 'noindex,follow',
       },
     },
   ],
@@ -282,10 +288,11 @@ router.beforeEach(async (to) => {
  */
 router.afterEach((to) => {
   if (to.name === 'post-detail') {
+    applyDocumentMeta({ title: '글 불러오는 중', path: to.fullPath, robots: 'noindex,follow' });
     return;
   }
 
-  applyDocumentMeta({ title: to.meta.title, path: to.fullPath });
+  applyDocumentMeta({ title: to.meta.title, path: to.fullPath, robots: to.meta.robots });
 });
 
 /**
