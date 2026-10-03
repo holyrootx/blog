@@ -1,5 +1,5 @@
 <script setup>
-import { nextTick, onBeforeUnmount, ref, watch } from 'vue';
+import { nextTick, ref, watch } from 'vue';
 
 import {
   createBlock,
@@ -8,23 +8,14 @@ import {
   toEditorBlocks,
   toMarkdown,
 } from '../data/postEditorBlocks';
-import {
-  hasHeldBlocks,
-  heldBlocks,
-  holdBlocks,
-  readClipboardBlocks,
-} from '../data/postEditorClipboard';
+import { hasHeldBlocks } from '../data/postEditorClipboard';
+import { useBlockSelection } from '../composables/useBlockSelection';
+import { useEditorImages } from '../composables/useEditorImages';
 import { createEditorHistory } from '../data/postEditorHistory';
 import { filterSlashCommands } from '../data/postSlashCommands';
-import { uploadAdminImage } from '../api/adminApi';
 import { CODE_LANGUAGES, toCodeTokens } from '../../../shared/post/codeHighlight';
-import {
-  DEFAULT_IMAGE_ALIGN,
-  MAX_IMAGE_WIDTH,
-  MIN_IMAGE_WIDTH,
-  clampImageWidth,
-} from '../../../shared/post/postImageMarkdown';
 import AdminBlockText from './AdminBlockText.vue';
+import AdminBlockImage from './AdminBlockImage.vue';
 
 /**
  * 쓰는 자리가 곧 결과인 블록 에디터.
@@ -48,26 +39,49 @@ const blocks = ref(toEditorBlocks(props.modelValue));
 const editorRef = ref(null);
 const textRefs = new Map();
 const codeRefs = new Map();
-const captionRefs = new Map();
 
 const menuOpenId = ref('');
 const menuQuery = ref('');
 const menuIndex = ref(0);
 
-// 드래그로 옮기는 중인 블록과 놓을 자리
-const draggingId = ref('');
-const dropIndex = ref(-1);
-// 여러 블록 선택 (핸들 클릭, Shift+클릭)
-const selectedIds = ref([]);
-const selectionAnchorId = ref('');
-const selectionCursorId = ref('');
-// 잘라낸 뒤 화살표로 옮기는 삽입선. 0은 첫 블록 위, length는 마지막 블록 아래다
-const keyboardInsertIndex = ref(-1);
-
-// 폭을 끌고 있는 이미지 블록. 끄는 동안 글자가 선택되지 않게 하는 데 쓴다
-const resizingId = ref('');
-// 끌던 중에 화면을 벗어나면 창에 걸어 둔 이벤트를 걷어내야 한다
-let stopResize = null;
+const {
+  uploadErrors,
+  resizingId,
+  isUploading,
+  pickImageFor,
+  onPaste,
+  imageFilesOf,
+  insertImage,
+  setImageAlign,
+  onResizeStart,
+  onResizeKeydown,
+} = useEditorImages({ blocks, sync });
+const {
+  draggingId,
+  dropIndex,
+  selectedIds,
+  keyboardInsertIndex,
+  selectOnly,
+  selectAllBlocks,
+  toggleSelect,
+  clearSelection,
+  focusEditor,
+  selectImageBlock,
+  moveSelectionCursor,
+  extendSelection,
+  moveInsertCursor,
+  copySelected,
+  onBlockCopy,
+  onBlockCut,
+  onBlockPaste,
+  removeSelectedBlocks,
+  pasteBlocks,
+  moveSelectedBlocks,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  resetDrag,
+} = useBlockSelection({ blocks, editorRef, sync, isUploading });
 
 const CALLOUT_LABELS = { tip: '팁', warning: '주의', note: '참고' };
 
@@ -292,14 +306,6 @@ function setCodeRef(id, element) {
     nextTick(() => autoGrow(element));
   } else {
     codeRefs.delete(id);
-  }
-}
-
-function setCaptionRef(id, element) {
-  if (element) {
-    captionRefs.set(id, element);
-  } else {
-    captionRefs.delete(id);
   }
 }
 
@@ -662,125 +668,6 @@ function runCommand(block, command) {
 
 /* ── 이미지 ───────────────────────────────── */
 
-// 올리는 중인 블록 id 와 실패 메시지. 블록마다 따로 둔다 — 여러 장을 한꺼번에 놓을 수 있다
-const uploadingIds = ref([]);
-const uploadErrors = ref({});
-
-// 만들어 둔 임시 주소. 화면을 떠날 때 돌려주지 않으면 그림이 메모리에 계속 남는다
-const objectUrls = [];
-
-onBeforeUnmount(() => {
-  objectUrls.forEach((url) => URL.revokeObjectURL(url));
-  stopResize?.();
-});
-
-function isUploading(block) {
-  return uploadingIds.value.includes(block.id);
-}
-
-/** 파일 고르기 창을 띄우고, 고른 파일을 그 블록에 올린다 */
-function pickImageFor(block) {
-  const picker = document.createElement('input');
-  picker.type = 'file';
-  picker.accept = 'image/*';
-
-  picker.addEventListener('change', () => {
-    const [file] = picker.files ?? [];
-
-    if (file) {
-      uploadInto(block, file);
-    }
-  });
-
-  picker.click();
-}
-
-async function uploadInto(block, file) {
-  if (isUploading(block)) {
-    return;
-  }
-
-  // 고른 파일을 먼저 보여준다. 올리는 데 걸리는 시간만큼 빈 자리를 보고 있을 이유가 없다 —
-  // 같은 그림이 이미 이 컴퓨터에 있는데 올렸다가 다시 받아오면 그만큼 더 기다린다
-  block.previewUrl = URL.createObjectURL(file);
-  objectUrls.push(block.previewUrl);
-
-  // 원본 크기는 파일에만 달린 값이라 업로드 응답을 기다릴 이유가 없다.
-  // 서버는 이 값을 모른다 — 알아내게 하려면 이미지를 통째로 메모리에 펼쳐야 한다
-  readNaturalSize(block, block.previewUrl);
-
-  uploadingIds.value = [...uploadingIds.value, block.id];
-  delete uploadErrors.value[block.id];
-
-  try {
-    const image = await uploadAdminImage(file);
-
-    block.url = image.url;
-    // 대체 텍스트 기본값을 파일 이름으로 둔다. 비워 두면 화면 낭독기가 읽을 것이 없다
-    block.alt = block.alt || image.originalName.replace(/\.[^.]+$/, '');
-
-    sync();
-  } catch (error) {
-    // 올라가지 않은 그림을 올라간 것처럼 보여주면 안 된다
-    block.previewUrl = '';
-
-    // 실패한 블록은 지우지 않는다. 지우면 어디에 무엇을 넣으려 했는지 사라진다
-    uploadErrors.value = { ...uploadErrors.value, [block.id]: error.message };
-  } finally {
-    uploadingIds.value = uploadingIds.value.filter((id) => id !== block.id);
-  }
-}
-
-/**
- * 원본 픽셀 크기를 읽어 블록에 적어 둔다.
- *
- * 저장 형식에 실려 공개 화면이 비율을 미리 알게 되고, 그래야 이미지가 도착할 때
- * 아래 글이 밀리지 않는다. 못 읽으면 값을 비워 둔다 — 크기 정보가 없던
- * 예전 글과 같은 상태이고, 글이 밀릴 뿐 깨지지는 않는다.
- */
-function readNaturalSize(block, source) {
-  const probe = new Image();
-
-  probe.addEventListener('load', () => {
-    block.naturalWidth = probe.naturalWidth;
-    block.naturalHeight = probe.naturalHeight;
-
-    sync();
-  });
-
-  probe.src = source;
-}
-
-/** 이미지 파일 하나를 새 블록으로 만들어 올린다 */
-function insertImage(file, afterIndex) {
-  const block = createBlock('image');
-
-  blocks.value.splice(afterIndex + 1, 0, block);
-  sync();
-  uploadInto(block, file);
-}
-
-function imageFilesOf(dataTransfer) {
-  return [...(dataTransfer?.files ?? [])].filter((file) => file.type.startsWith('image/'));
-}
-
-/**
- * 붙여넣기로 들어온 이미지.
- *
- * 스크린샷은 대부분 이 경로로 들어온다. 글자 붙여넣기는 건드리지 않는다 —
- * 이미지가 들어 있을 때만 가로챈다.
- */
-function onPaste(block, index, event) {
-  const files = imageFilesOf(event.clipboardData);
-
-  if (files.length === 0) {
-    return;
-  }
-
-  event.preventDefault();
-  files.forEach((file, offset) => insertImage(file, index + offset));
-}
-
 function onDropFiles(index, event) {
   event.preventDefault();
   const files = imageFilesOf(event.dataTransfer);
@@ -793,145 +680,6 @@ function onDropFiles(index, event) {
 
   files.forEach((file, offset) => insertImage(file, index + offset));
   resetDrag();
-}
-
-/* ── 이미지 폭 ────────────────────────────── */
-
-// 이 자리들에는 손이 정확히 멈추지 않아도 붙는다. 눈으로 맞추기 어려운 값들이다
-const SNAP_WIDTHS = [25, 50, 75, MAX_IMAGE_WIDTH];
-const SNAP_RANGE = 3;
-const KEY_STEP = 5;
-
-// 사진 오른쪽 위에 뜨는 정렬 버튼
-const ALIGN_OPTIONS = [
-  { value: 'left', label: '왼쪽 정렬' },
-  { value: 'center', label: '가운데 정렬' },
-  { value: 'right', label: '오른쪽 정렬' },
-];
-
-/** 0(지정 없음)은 100% 로 그린다 */
-function imageWidthOf(block) {
-  return block.width || MAX_IMAGE_WIDTH;
-}
-
-function imageAlignOf(block) {
-  return block.align || DEFAULT_IMAGE_ALIGN;
-}
-
-/**
- * 사진 오른쪽 위 캡션 단추.
- *
- * 캡션 칸은 평소에 보이지 않아서, 어디를 눌러야 쓸 수 있는지 알려면
- * 사진 아래로 마우스를 정확히 가져가 봐야 했다. 정렬 단추 옆에 두면
- * 손이 이미 가 있는 자리에서 바로 쓰기 시작할 수 있다.
- */
-function focusCaption(block) {
-  captionRefs.get(block.id)?.focus();
-}
-
-function setImageAlign(block, align) {
-  if (imageAlignOf(block) === align) {
-    return;
-  }
-
-  block.align = align;
-  sync();
-}
-
-function setImageWidth(block, value) {
-  const snapped = SNAP_WIDTHS.find((target) => Math.abs(target - value) <= SNAP_RANGE) ?? value;
-  const next = clampImageWidth(snapped);
-
-  if (next === block.width) {
-    return;
-  }
-
-  block.width = next;
-
-  // 끄는 동안 수십 번 불리지만 같은 키라 되돌리기 한 칸으로 묶인다
-  sync(`width:${block.id}`);
-}
-
-/**
- * 손잡이를 잡고 끄는 동안 폭을 바꾼다.
- *
- * 가운데 정렬이라 한쪽을 당기면 반대쪽도 같이 좁아진다. 그래서 폭 변화는
- * 커서가 움직인 거리의 두 배다.
- *
- * pointer 이벤트로 처리하고 전파를 끊는다. 블록 순서 바꾸기가 같은 몸짓(누르고 끌기)을
- * 쓰기 때문에, 안 끊으면 손잡이를 당길 때 블록이 통째로 옮겨진다.
- */
-function onResizeStart(block, side, event) {
-  event.preventDefault();
-  event.stopPropagation();
-
-  const track = event.currentTarget.closest('.block-editor__image');
-
-  if (!track) {
-    return;
-  }
-
-  const trackWidth = track.getBoundingClientRect().width;
-
-  if (trackWidth <= 0) {
-    return;
-  }
-
-  const startX = event.clientX;
-  const startWidth = imageWidthOf(block);
-  const direction = side === 'left' ? -1 : 1;
-
-  resizingId.value = block.id;
-
-  const onMove = (moveEvent) => {
-    const moved = (moveEvent.clientX - startX) * direction;
-
-    setImageWidth(block, startWidth + (moved / trackWidth) * 200);
-  };
-
-  const onEnd = () => {
-    resizingId.value = '';
-    stopResize = null;
-
-    window.removeEventListener('pointermove', onMove);
-    window.removeEventListener('pointerup', onEnd);
-    window.removeEventListener('pointercancel', onEnd);
-  };
-
-  // 화면을 떠나는 중에 끌고 있었으면 붙은 채로 남는다
-  stopResize = onEnd;
-
-  window.addEventListener('pointermove', onMove);
-  window.addEventListener('pointerup', onEnd);
-  window.addEventListener('pointercancel', onEnd);
-}
-
-/**
- * 마우스 없이도 폭을 바꿀 수 있어야 한다. 손잡이는 버튼이라 키가 바로 들어온다.
- *
- * 어느 쪽 손잡이를 잡았든 → 가 크게, ← 가 작게다. 왼쪽 손잡이에서 방향을
- * 뒤집으면 "물리적으로는" 맞지만 누르는 사람은 매번 헷갈린다.
- */
-function onResizeKeydown(block, event) {
-  if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
-    event.preventDefault();
-
-    const step = event.key === 'ArrowRight' ? KEY_STEP : -KEY_STEP;
-
-    setImageWidth(block, imageWidthOf(block) + step);
-    return;
-  }
-
-  if (event.key === 'Home') {
-    event.preventDefault();
-    setImageWidth(block, MIN_IMAGE_WIDTH);
-    return;
-  }
-
-  if (event.key === 'End') {
-    event.preventDefault();
-    setImageWidth(block, MAX_IMAGE_WIDTH);
-  }
 }
 
 function addBlockAtEnd() {
@@ -949,335 +697,6 @@ function addBlockAtEnd() {
   insertAfter(blocks.value.length - 1, createBlock('paragraph'));
 }
 
-/* ── 블록 선택·이동 ───────────────────────── */
-
-function blockIndex(id) {
-  return blocks.value.findIndex((block) => block.id === id);
-}
-
-function selectOnly(id) {
-  if (blockIndex(id) < 0) {
-    return;
-  }
-
-  selectedIds.value = [id];
-  selectionAnchorId.value = id;
-  selectionCursorId.value = id;
-  keyboardInsertIndex.value = -1;
-}
-
-function selectAllBlocks() {
-  selectedIds.value = blocks.value.map((block) => block.id);
-  selectionAnchorId.value = blocks.value[0]?.id ?? '';
-  selectionCursorId.value = blocks.value[blocks.value.length - 1]?.id ?? '';
-  keyboardInsertIndex.value = -1;
-}
-
-function toggleSelect(block, event) {
-  keyboardInsertIndex.value = -1;
-
-  // Shift 로 범위 선택. 노션에서 여러 블록을 한꺼번에 옮길 때 쓰는 방식이다
-  if (event.shiftKey && selectionAnchorId.value) {
-    const anchor = blockIndex(selectionAnchorId.value);
-    const target = blockIndex(block.id);
-    const [from, to] = anchor < target ? [anchor, target] : [target, anchor];
-
-    selectedIds.value = blocks.value.slice(from, to + 1).map((item) => item.id);
-    selectionCursorId.value = block.id;
-  } else if (event.metaKey || event.ctrlKey) {
-    const selected = new Set(selectedIds.value);
-
-    if (selected.has(block.id)) {
-      selected.delete(block.id);
-    } else {
-      selected.add(block.id);
-    }
-
-    selectedIds.value = blocks.value.filter((item) => selected.has(item.id)).map((item) => item.id);
-    selectionAnchorId.value = selectionAnchorId.value || block.id;
-    selectionCursorId.value = block.id;
-  } else {
-    selectOnly(block.id);
-  }
-
-  event.currentTarget.blur();
-  focusEditor();
-}
-
-function clearSelection() {
-  selectedIds.value = [];
-  selectionAnchorId.value = '';
-  selectionCursorId.value = '';
-}
-
-async function focusEditor() {
-  await nextTick();
-  editorRef.value?.focus({ preventScroll: true });
-}
-
-function selectImageBlock(block, event) {
-  event.preventDefault();
-  selectOnly(block.id);
-  focusEditor();
-}
-
-function moveSelectionCursor(direction) {
-  const current = blockIndex(selectionCursorId.value || selectedIds.value[0]);
-  const target = Math.min(Math.max(current + direction, 0), blocks.value.length - 1);
-
-  if (target >= 0) {
-    selectOnly(blocks.value[target].id);
-  }
-}
-
-function extendSelection(direction) {
-  const anchor = blockIndex(selectionAnchorId.value || selectedIds.value[0]);
-  const cursor = blockIndex(selectionCursorId.value || selectedIds.value[selectedIds.value.length - 1]);
-  const target = Math.min(Math.max(cursor + direction, 0), blocks.value.length - 1);
-
-  if (anchor < 0 || target < 0) {
-    return;
-  }
-
-  const [from, to] = anchor < target ? [anchor, target] : [target, anchor];
-  selectedIds.value = blocks.value.slice(from, to + 1).map((block) => block.id);
-  selectionCursorId.value = blocks.value[target].id;
-}
-
-function moveInsertCursor(direction) {
-  keyboardInsertIndex.value = Math.min(
-    Math.max(keyboardInsertIndex.value + direction, 0),
-    blocks.value.length,
-  );
-}
-
-function selectedBlocks() {
-  const selected = new Set(selectedIds.value);
-
-  return blocks.value.filter((block) => selected.has(block.id));
-}
-
-function cloneBlock(block) {
-  const content = { ...block, previewUrl: '' };
-  delete content.id;
-
-  return createBlock(block.type, content);
-}
-
-function copySelected(cut = false, clipboardEvent = null) {
-  const selected = selectedBlocks();
-
-  if (selected.length === 0 || selected.some((block) => isUploading(block))) {
-    return;
-  }
-
-  holdBlocks(selected);
-
-  // 편집기 밖에 붙여 넣어도 최소한 마크다운 내용은 남는다
-  const markdown = toMarkdown(heldBlocks());
-
-  if (clipboardEvent?.clipboardData) {
-    clipboardEvent.clipboardData.setData('text/plain', markdown);
-  } else {
-    navigator.clipboard?.writeText(markdown).catch(() => {});
-  }
-
-  if (cut) {
-    removeSelectedBlocks(true);
-  }
-}
-
-function onBlockCopy(event) {
-  if (selectedIds.value.length === 0) {
-    return;
-  }
-
-  event.preventDefault();
-  copySelected(false, event);
-}
-
-function onBlockCut(event) {
-  if (selectedIds.value.length === 0) {
-    return;
-  }
-
-  event.preventDefault();
-  copySelected(true, event);
-}
-
-/**
- * 붙여넣기.
- *
- * <p>담아 둔 블록이 있으면 그것을 쓴다. 없으면 시스템 클립보드의 글을 블록으로
- * 되돌려 본다 — 새로고침한 뒤나 편집기 밖에서 복사해 온 경우다. 둘 다 안 되면
- * 막지 않고 브라우저에 맡긴다. 글자를 붙여 넣으려던 것일 수 있어서다.</p>
- */
-function onBlockPaste(event) {
-  const pasting = hasHeldBlocks()
-    ? heldBlocks()
-    : readClipboardBlocks(event.clipboardData?.getData('text/plain'));
-
-  // 블록으로 볼 것이 아니면 막지 않는다. 글자를 붙여 넣으려던 것일 수 있다
-  if (pasting.length === 0) {
-    return;
-  }
-
-  event.preventDefault();
-  insertBlocks(pasting, caretBlockIndex(event.target));
-}
-
-/**
- * 커서가 놓인 블록의 다음 자리.
- *
- * <p>붙여넣을 자리를 <b>클릭하면</b> 블록 선택이 풀린다. 그것을 "붙여넣을 대상이 없다"
- * 로 보고 물러나면 브라우저 기본 동작이 일어나 마크다운이 글자로 박힌다 — 복사하고
- * 자리를 고른 다음 붙여넣는, 가장 흔한 순서가 그래서 망가졌다.</p>
- *
- * <p>글자 한가운데에 커서가 있어도 문단을 쪼개지 않고 그 블록 뒤에 넣는다. 쪼개는 쪽이
- * 더 똑똑해 보이지만, 어디서 끊길지 예측이 안 돼서 되돌리기가 잦아진다.</p>
- *
- * @returns 넣을 자리. 커서가 어느 블록에도 없으면 -1 (선택·삽입선을 따른다)
- */
-function caretBlockIndex(target) {
-  const row = target instanceof Element ? target.closest('[data-block-id]') : null;
-
-  if (!row) {
-    return -1;
-  }
-
-  const index = blockIndex(row.dataset.blockId);
-
-  return index < 0 ? -1 : index + 1;
-}
-
-function removeSelectedBlocks(keepInsertCursor = false) {
-  const selected = new Set(selectedIds.value);
-  const indexes = blocks.value
-    .map((block, index) => (selected.has(block.id) ? index : -1))
-    .filter((index) => index >= 0);
-
-  if (indexes.length === 0 || selectedBlocks().some((block) => isUploading(block))) {
-    return;
-  }
-
-  const first = indexes[0];
-  blocks.value = blocks.value.filter((block) => !selected.has(block.id));
-
-  if (blocks.value.length === 0) {
-    blocks.value = [createBlock('paragraph')];
-  }
-
-  clearSelection();
-  sync();
-
-  if (keepInsertCursor) {
-    keyboardInsertIndex.value = Math.min(first, blocks.value.length);
-  } else {
-    selectOnly(blocks.value[Math.min(first, blocks.value.length - 1)].id);
-  }
-
-  focusEditor();
-}
-
-function pasteBlocks() {
-  insertBlocks(heldBlocks());
-}
-
-function insertBlocks(source, preferredIndex = -1) {
-  if (source.length === 0) {
-    return;
-  }
-
-  let at = keyboardInsertIndex.value;
-
-  if (at < 0) {
-    const indexes = selectedIds.value.map(blockIndex).filter((index) => index >= 0);
-
-    // 고른 블록도 삽입선도 없으면 커서가 있던 자리를 쓴다
-    at = indexes.length > 0
-      ? Math.max(...indexes) + 1
-      : (preferredIndex >= 0 ? preferredIndex : blocks.value.length);
-  }
-
-  const pasted = source.map(cloneBlock);
-  blocks.value.splice(at, 0, ...pasted);
-  keyboardInsertIndex.value = -1;
-  selectedIds.value = pasted.map((block) => block.id);
-  selectionAnchorId.value = pasted[0]?.id ?? '';
-  selectionCursorId.value = pasted[pasted.length - 1]?.id ?? '';
-
-  sync();
-  focusEditor();
-}
-
-function moveSelectedBlocks(direction) {
-  const moving = selectedBlocks();
-
-  if (moving.length === 0) {
-    return;
-  }
-
-  const selected = new Set(moving.map((block) => block.id));
-  const first = blocks.value.findIndex((block) => selected.has(block.id));
-  const rest = blocks.value.filter((block) => !selected.has(block.id));
-  const at = Math.min(Math.max(first + direction, 0), rest.length);
-  const next = [...rest.slice(0, at), ...moving, ...rest.slice(at)];
-
-  if (next.every((block, index) => block.id === blocks.value[index]?.id)) {
-    return;
-  }
-
-  blocks.value = next;
-  sync();
-  focusEditor();
-}
-
-function onDragStart(block, event) {
-  draggingId.value = block.id;
-  keyboardInsertIndex.value = -1;
-
-  // 고른 묶음을 잡으면 묶음째 옮긴다
-  if (!selectedIds.value.includes(block.id)) {
-    selectOnly(block.id);
-  }
-
-  event.dataTransfer.effectAllowed = 'move';
-  // 데이터가 없으면 드래그를 시작하지 않는 브라우저가 있다
-  event.dataTransfer.setData('text/plain', block.id);
-}
-
-function onDragOver(index, event) {
-  event.preventDefault();
-  const bounds = event.currentTarget.getBoundingClientRect();
-  dropIndex.value = event.clientY < bounds.top + bounds.height / 2 ? index : index + 1;
-}
-
-function onDrop() {
-  if (!draggingId.value || dropIndex.value < 0) {
-    return;
-  }
-
-  const selected = new Set(selectedIds.value);
-  const moving = blocks.value.filter((block) => selected.has(block.id));
-  const selectedBefore = blocks.value
-    .slice(0, dropIndex.value)
-    .filter((block) => selected.has(block.id)).length;
-  const rest = blocks.value.filter((block) => !selected.has(block.id));
-  const at = Math.min(Math.max(dropIndex.value - selectedBefore, 0), rest.length);
-  const next = [...rest.slice(0, at), ...moving, ...rest.slice(at)];
-
-  if (!next.every((block, index) => block.id === blocks.value[index]?.id)) {
-    blocks.value = next;
-    sync();
-  }
-
-  resetDrag();
-}
-
-function resetDrag() {
-  draggingId.value = '';
-  dropIndex.value = -1;
-}
 </script>
 
 <template>
@@ -1324,114 +743,19 @@ function resetDrag() {
 
       <!-- 이미지는 글자를 치는 블록이 아니라서 입력칸을 두지 않는다.
            대체 텍스트만 고칠 수 있게 하고, 주소는 업로드가 채운다 -->
-      <div v-else-if="block.type === 'image'" class="block-editor__image">
-        <template v-if="block.previewUrl || block.url">
-          <!-- 폭을 가진 틀. 공개 화면의 figure 와 같은 자리를 차지해서
-               여기서 보이는 크기가 곧 발행 결과다 -->
-          <div
-            class="block-editor__image-frame"
-            :class="[
-              `block-editor__image-frame--${imageAlignOf(block)}`,
-              { 'block-editor__image-frame--resizing': resizingId === block.id },
-            ]"
-            :style="{ width: `${imageWidthOf(block)}%` }"
-          >
-            <!-- 손잡이를 이미지에만 맞춰 놓기 위한 칸. 캡션까지 묶으면
-                 손잡이가 캡션 높이만큼 아래로 내려간다 -->
-            <div class="block-editor__image-canvas">
-              <img
-                class="block-editor__image-preview"
-                :class="{ 'block-editor__image-preview--uploading': isUploading(block) }"
-                :src="block.previewUrl || block.url"
-                :alt="block.alt"
-                draggable="false"
-                @click="selectImageBlock(block, $event)"
-              />
-
-              <!-- 좌우 손잡이. draggable=false 가 없으면 블록 순서 바꾸기가 먼저 물린다 -->
-              <button
-                v-for="side in ['left', 'right']"
-                :key="side"
-                class="block-editor__image-grip"
-                :class="`block-editor__image-grip--${side}`"
-                type="button"
-                draggable="false"
-                :aria-label="`이미지 폭 조절, 현재 ${imageWidthOf(block)}%`"
-                @pointerdown="onResizeStart(block, side, $event)"
-                @keydown="onResizeKeydown(block, $event)"
-              ></button>
-
-              <!-- 사진 오른쪽 위 단추들. 정렬 셋과 캡션 하나 -->
-              <div class="block-editor__image-tools">
-                <div class="block-editor__image-toolgroup" role="group" aria-label="이미지 정렬">
-                  <button
-                    v-for="option in ALIGN_OPTIONS"
-                    :key="option.value"
-                    class="block-editor__image-align"
-                    :class="`block-editor__image-align--${option.value}`"
-                    type="button"
-                    draggable="false"
-                    :title="option.label"
-                    :aria-label="option.label"
-                    :aria-pressed="imageAlignOf(block) === option.value"
-                    @click="setImageAlign(block, option.value)"
-                  ></button>
-                </div>
-
-                <span class="block-editor__image-tooldivider" aria-hidden="true"></span>
-
-                <button
-                  class="block-editor__image-captionbutton"
-                  type="button"
-                  draggable="false"
-                  :title="block.alt ? '캡션 고치기' : '캡션 쓰기'"
-                  :aria-label="block.alt ? '캡션 고치기' : '캡션 쓰기'"
-                  @click="focusCaption(block)"
-                ></button>
-              </div>
-
-              <!-- 끄는 동안에만 숫자를 띄운다. 항상 떠 있으면 사진을 가린다.
-                   정렬 버튼이 오른쪽 위에 있어서 왼쪽으로 비켜 둔다 -->
-              <span v-if="resizingId === block.id" class="block-editor__image-size">
-                {{ imageWidthOf(block) }}%
-              </span>
-            </div>
-
-            <!-- 캡션은 평소에 숨어 있다가 이미지에 마우스를 올리면 나타난다.
-                 항상 떠 있으면 사진마다 빈 입력칸이 한 줄씩 따라다닌다.
-                 여기 적은 값이 공개 화면의 캡션이자 대체 텍스트가 된다 -->
-            <input
-              :ref="(element) => setCaptionRef(block.id, element)"
-              class="block-editor__image-caption"
-              :class="{ 'block-editor__image-caption--filled': block.alt }"
-              type="text"
-              :value="block.alt"
-              placeholder="캡션 추가"
-              aria-label="이미지 캡션"
-              @input="block.alt = $event.target.value; sync(`alt:${block.id}`)"
-            />
-          </div>
-        </template>
-
-        <p v-if="isUploading(block)" class="block-editor__image-status">올리는 중…</p>
-
-        <button
-          v-if="!block.previewUrl && !block.url && !isUploading(block)"
-          class="block-editor__image-placeholder block-editor__image-placeholder--button"
-          type="button"
-          @click="pickImageFor(block)"
-        >
-          <span class="block-editor__image-icon" aria-hidden="true"></span>
-          이미지 추가
-        </button>
-
-        <p v-if="uploadErrors[block.id]" class="block-editor__image-error" role="alert">
-          {{ uploadErrors[block.id] }}
-          <button class="block-editor__image-retry" type="button" @click="pickImageFor(block)">
-            다시 고르기
-          </button>
-        </p>
-      </div>
+      <AdminBlockImage
+        v-else-if="block.type === 'image'"
+        :block="block"
+        :uploading="isUploading(block)"
+        :resizing="resizingId === block.id"
+        :error="uploadErrors[block.id]"
+        @select="selectImageBlock(block, $event)"
+        @resize-start="(side, event) => onResizeStart(block, side, event)"
+        @resize-keydown="onResizeKeydown(block, $event)"
+        @align="setImageAlign(block, $event)"
+        @caption="block.alt = $event; sync(`alt:${block.id}`)"
+        @pick="pickImageFor(block)"
+      />
 
       <template v-else>
         <span v-if="block.type === 'bullet'" class="block-editor__marker">•</span>
