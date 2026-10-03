@@ -1,0 +1,61 @@
+name: Checks
+
+on:
+  pull_request:
+    branches: [develop, release]
+  push:
+    branches: [develop, 'feature/**', 'fix/**', 'hotfix/**']
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Test and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Test deployment recovery without a server
+        run: python3 -m unittest discover -s scripts/tests -p '*_test.py'
+      - name: Test and package backend
+        working-directory: backend
+        run: ./gradlew --no-daemon clean test bootJar
+      - name: Install frontend dependencies and browser
+        working-directory: frontend
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Test and build frontend
+        working-directory: frontend
+        run: |
+          npm test
+          npm run test:browser
+          npm run build
+      - name: Retain test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: backend/build/reports/tests/test
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Retain verified build
+        uses: actions/upload-artifact@v4
+        with:
+          name: verified-build
+          path: |
+            backend/build/libs/*.jar
+            frontend/dist/
+          if-no-files-found: error
+          retention-days: 14

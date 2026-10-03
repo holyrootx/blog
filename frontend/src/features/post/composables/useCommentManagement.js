@@ -1,8 +1,8 @@
-import { ref } from 'vue';
+import { onBeforeUnmount, ref, watch } from 'vue';
 import { updatePostComment, deletePostComment } from '../api/postApi';
 import { notifyError } from '../../../shared/toast/toastStore';
 
-export function useCommentManagement({ items, total }) {
+export function useCommentManagement({ postId, items, total }) {
   const editingId = ref(null);
   const editDraft = ref('');
   const editPending = ref(false);
@@ -11,7 +11,21 @@ export function useCommentManagement({ items, total }) {
   const deletePending = ref(false);
   const deleteError = ref('');
 
+  let revision = 0;
+  let editRevision = 0;
+  let deleteRevision = 0;
+  watch(postId, () => {
+    revision += 1;
+    cancelEdit();
+    cancelDelete();
+    editPending.value = false;
+    deletePending.value = false;
+    deleteError.value = '';
+  }, { flush: 'sync' });
+  onBeforeUnmount(() => { revision += 1; });
+
   function startEdit(comment) {
+    editRevision += 1;
     editError.value = '';
     deletingId.value = null;
     editingId.value = comment.id;
@@ -19,6 +33,7 @@ export function useCommentManagement({ items, total }) {
   }
 
   function cancelEdit() {
+    editRevision += 1;
     editingId.value = null;
     editDraft.value = '';
     editError.value = '';
@@ -31,30 +46,36 @@ export function useCommentManagement({ items, total }) {
       return;
     }
 
+    const requestedRevision = revision;
+    const requestedEditRevision = editRevision;
     editPending.value = true;
     editError.value = '';
 
     try {
       await updatePostComment(comment.id, content);
+      if (requestedRevision !== revision) return;
 
       // 목록을 다시 받지 않고 자리에서 바꾼다. 다시 받으면 읽던 위치가 위로 튄다
       comment.content = content;
       comment.edited = true;
-      cancelEdit();
+      if (requestedEditRevision === editRevision && editDraft.value.trim() === content) cancelEdit();
     } catch (error) {
+      if (requestedRevision !== revision || requestedEditRevision !== editRevision) return;
       editError.value = error.message ?? '고치지 못했습니다. 잠시 뒤에 다시 시도해 주세요.';
       notifyError(editError.value);
     } finally {
-      editPending.value = false;
+      if (requestedRevision === revision) editPending.value = false;
     }
   }
 
   function askDelete(comment) {
+    deleteRevision += 1;
     cancelEdit();
     deletingId.value = comment.id;
   }
 
   function cancelDelete() {
+    deleteRevision += 1;
     deletingId.value = null;
   }
 
@@ -63,15 +84,18 @@ export function useCommentManagement({ items, total }) {
       return;
     }
 
+    const requestedRevision = revision;
+    const requestedDeleteRevision = deleteRevision;
     deletePending.value = true;
     deleteError.value = '';
 
     try {
       await deletePostComment(target.id);
+      if (requestedRevision !== revision) return;
 
       if (parent) {
         parent.replies = parent.replies.filter((reply) => reply.id !== target.id);
-      } else if (target.replies.length > 0) {
+      } else if (target.replies.length > 0 || target.replyHasNext) {
         target.deleted = true;
         target.content = '';
         target.author = '';
@@ -83,13 +107,14 @@ export function useCommentManagement({ items, total }) {
       }
 
       total.value = Math.max(0, total.value - 1);
-      deletingId.value = null;
+      if (requestedDeleteRevision === deleteRevision) deletingId.value = null;
     } catch (error) {
+      if (requestedRevision !== revision || requestedDeleteRevision !== deleteRevision) return;
       deleteError.value = error.message ?? '지우지 못했습니다. 잠시 뒤에 다시 시도해 주세요.';
       notifyError(deleteError.value);
-      deletingId.value = null;
+      if (requestedDeleteRevision === deleteRevision) deletingId.value = null;
     } finally {
-      deletePending.value = false;
+      if (requestedRevision === revision) deletePending.value = false;
     }
   }
 

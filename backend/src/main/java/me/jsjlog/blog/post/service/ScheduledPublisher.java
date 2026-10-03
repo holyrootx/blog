@@ -2,6 +2,7 @@ package me.jsjlog.blog.post.service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.ArrayList;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import me.jsjlog.blog.post.domain.Post;
+import me.jsjlog.blog.common.exception.BlogException;
 import me.jsjlog.blog.post.repository.PostRepository;
 import me.jsjlog.blog.history.domain.ContentHistory.Action;
 import me.jsjlog.blog.history.domain.PostSnapshot;
@@ -41,13 +43,23 @@ public class ScheduledPublisher {
             return;
         }
 
-        due.forEach(post -> {
+        List<Long> publishedIds = new ArrayList<>();
+        for (Post post : due) {
+            try {
+                PostPublicationPolicy.checkPublishable(post.getContent(), post.getExcerpt());
+            } catch (BlogException invalid) {
+                // 이전 버전이나 직접 데이터 수정으로 생긴 불완전한 예약은 공개하지 않는다.
+                // 다른 정상 예약의 발행은 계속하고, 관리자가 수정하거나 취소할 수 있게 남긴다.
+                log.warn("[예약 발행] 글 {} 공개 조건 미충족: {}", post.getId(), invalid.getMessage());
+                continue;
+            }
             PostSnapshot before = PostSnapshot.from(post);
             post.publish(post.getPublishedAt());
             historyService.recordPost(post, Action.PUBLISH, before);
-        });
+            publishedIds.add(post.getId());
+        }
 
         // 예약한 글이 실제로 나갔다는 사실은 남겨 둔다. 안 나갔을 때 되짚을 곳이 필요하다
-        log.info("[예약 발행] {}건 공개 전환: {}", due.size(), due.stream().map(Post::getId).toList());
+        log.info("[예약 발행] {}건 공개 전환: {}", publishedIds.size(), publishedIds);
     }
 }

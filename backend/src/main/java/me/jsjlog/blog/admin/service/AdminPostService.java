@@ -18,6 +18,7 @@ import me.jsjlog.blog.post.domain.Post;
 import me.jsjlog.blog.post.repository.CategoryRepository;
 import me.jsjlog.blog.post.repository.PostRepository;
 import me.jsjlog.blog.post.service.PostAccess;
+import me.jsjlog.blog.post.service.PostPublicationPolicy;
 import me.jsjlog.blog.history.domain.ContentHistory.Action;
 import me.jsjlog.blog.history.domain.PostSnapshot;
 import me.jsjlog.blog.history.service.ContentHistoryService;
@@ -136,8 +137,8 @@ public class AdminPostService {
         String title = requireTitle(request.title());
         checkLengths(request);
 
-        if (post.isPublished()) {
-            checkPublishable(request.content(), request.excerpt());
+        if (post.isPublished() || post.isScheduled()) {
+            PostPublicationPolicy.checkPublishable(request.content(), request.excerpt());
         }
 
         // 글쓴이는 여기서 건드리지 않는다. 생성할 때 한 번 정해지는 값이고,
@@ -152,17 +153,6 @@ public class AdminPostService {
 
         // Removed images remain referenced by the saved history.
         historyService.recordPost(post, Action.UPDATE, before);
-    }
-
-    /** 발행 상태를 유지하려면 본문과 요약이 있어야 한다 */
-    private void checkPublishable(String content, String excerpt) {
-        if (!StringUtils.hasText(content)) {
-            throw new BlogException(ErrorCode.POST_CONTENT_REQUIRED);
-        }
-
-        if (!StringUtils.hasText(excerpt)) {
-            throw new BlogException(ErrorCode.POST_EXCERPT_REQUIRED);
-        }
     }
 
     private String requireTitle(String title) {
@@ -231,7 +221,7 @@ public class AdminPostService {
             throw new BlogException(ErrorCode.POST_ALREADY_PUBLISHED);
         }
 
-        checkPublishable(post.getContent(), post.getExcerpt());
+        PostPublicationPolicy.checkPublishable(post.getContent(), post.getExcerpt());
 
         LocalDateTime publishedAt = publishAt(requestedAt, post);
 
@@ -265,11 +255,17 @@ public class AdminPostService {
         return post.getPublishedAt() == null ? LocalDateTime.now() : post.getPublishedAt();
     }
 
-    /** 내리기. PRIVATE 이 되고 publishedAt 은 지우지 않는다 */
+    /** 공개 글은 비공개로 내리고, 예약 글은 시각을 지운 초안으로 되돌린다. */
     @Transactional
     public void unpublishPost(Long postId) {
         Post post = postAccess.lockActive(postId);
         PostSnapshot before = PostSnapshot.from(post);
+
+        if (post.isScheduled()) {
+            post.cancelSchedule();
+            historyService.recordPost(post, Action.UNPUBLISH, before);
+            return;
+        }
 
         if (!post.isPublished()) {
             throw new BlogException(ErrorCode.POST_NOT_PUBLISHED_YET);

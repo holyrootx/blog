@@ -89,6 +89,7 @@ public enum ErrorCode {
     POST_SIZE_LIMIT_EXCEEDED(HttpStatus.BAD_REQUEST, "POST_SIZE_LIMIT_EXCEEDED", "게시글 조회 개수는 최대 50개까지 가능합니다."),
     POST_REACTION_REQUIRED(HttpStatus.BAD_REQUEST, "POST_REACTION_REQUIRED", "좋아요 또는 싫어요를 선택해 주세요."),
     COMMENT_SIZE_LIMIT_EXCEEDED(HttpStatus.BAD_REQUEST, "COMMENT_SIZE_LIMIT_EXCEEDED", "댓글 조회 개수는 최대 50개까지 가능합니다."),
+    COMMENT_RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS, "COMMENT_RATE_LIMITED", "댓글을 너무 빠르게 등록하고 있습니다. 잠시 후 다시 시도해 주세요."),
     COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "COMMENT_NOT_FOUND", "댓글을 찾을 수 없습니다."),
     COMMENT_CONTENT_REQUIRED(HttpStatus.BAD_REQUEST, "COMMENT_CONTENT_REQUIRED", "댓글 내용을 입력해 주세요."),
     COMMENT_CONTENT_TOO_LONG(HttpStatus.BAD_REQUEST, "COMMENT_CONTENT_TOO_LONG", "댓글은 1000자까지 입력할 수 있습니다."),

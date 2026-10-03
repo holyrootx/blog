@@ -1,4 +1,4 @@
-import { nextTick, ref } from 'vue';
+import { nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { createPostComment } from '../api/postApi';
 import { notifyError } from '../../../shared/toast/toastStore';
 
@@ -11,7 +11,23 @@ export function useCommentComposer({ postId, items, total, member, replyInput })
   const formError = ref('');
   const replyError = ref('');
 
+  let revision = 0;
+  let replyRevision = 0;
+  watch(postId, () => {
+    revision += 1;
+    replyRevision += 1;
+    submitting.value = false;
+    replySubmitting.value = false;
+    draft.value = '';
+    replyDraft.value = '';
+    replyTargetId.value = null;
+    formError.value = '';
+    replyError.value = '';
+  }, { flush: 'sync' });
+  onBeforeUnmount(() => { revision += 1; });
+
   function toggleReply(commentId) {
+    replyRevision += 1;
     replyTargetId.value = replyTargetId.value === commentId ? null : commentId;
     replyDraft.value = '';
     replyError.value = '';
@@ -37,19 +53,23 @@ export function useCommentComposer({ postId, items, total, member, replyInput })
       return;
     }
 
+    const requestedRevision = revision;
+    const requestedPostId = postId.value;
     submitting.value = true;
     formError.value = '';
 
     try {
-      const created = await createPostComment(postId.value, { content });
+      const created = await createPostComment(requestedPostId, { content });
+      if (requestedRevision !== revision) return;
       items.value = [toCreatedComment(created?.id, content), ...items.value];
       total.value += 1;
-      draft.value = '';
+      if (draft.value.trim() === content) draft.value = '';
     } catch (error) {
+      if (requestedRevision !== revision) return;
       formError.value = error?.message ?? '댓글을 등록하지 못했습니다.';
       notifyError(formError.value);
     } finally {
-      submitting.value = false;
+      if (requestedRevision === revision) submitting.value = false;
     }
   }
 
@@ -61,11 +81,15 @@ export function useCommentComposer({ postId, items, total, member, replyInput })
       return;
     }
 
+    const requestedRevision = revision;
+    const requestedReplyRevision = replyRevision;
+    const requestedPostId = postId.value;
     replySubmitting.value = true;
     replyError.value = '';
 
     try {
-      const created = await createPostComment(postId.value, { content, parentId });
+      const created = await createPostComment(requestedPostId, { content, parentId });
+      if (requestedRevision !== revision) return;
       const parent = items.value.find((comment) => comment.id === parentId);
 
       if (parent) {
@@ -73,13 +97,16 @@ export function useCommentComposer({ postId, items, total, member, replyInput })
       }
 
       total.value += 1;
-      replyDraft.value = '';
-      replyTargetId.value = null;
+      if (requestedReplyRevision === replyRevision && replyDraft.value.trim() === content) {
+        replyDraft.value = '';
+        replyTargetId.value = null;
+      }
     } catch (error) {
+      if (requestedRevision !== revision || requestedReplyRevision !== replyRevision) return;
       replyError.value = error?.message ?? '답글을 등록하지 못했습니다.';
       notifyError(replyError.value);
     } finally {
-      replySubmitting.value = false;
+      if (requestedRevision === revision) replySubmitting.value = false;
     }
   }
 

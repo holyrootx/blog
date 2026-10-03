@@ -49,6 +49,7 @@ replay_pid*
 !*.sample.yml
 !*.sample.yaml
 !backend/src/main/resources/application.yaml
+!backend/src/test/resources/application.yaml
 
 # Gradle / Java build outputs
 .gradle/
@@ -90,6 +91,7 @@ uploads/
 backend/build/uploads/
 
 # Temporary files
+__pycache__/
 *.tmp
 *.temp
 *.swp

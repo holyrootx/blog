@@ -30,6 +30,7 @@ public interface CommentRepository extends JpaRepository<Comment, Long>, Comment
      * 순서가 흔들리지 않게 하기 위해서다.</p>
      */
     @Query("select c from Comment c join fetch c.post p where c.member.id = :memberId"
-            + " and p.deletedAt is null order by c.id desc")
+            + " and p.deletedAt is null and p.status = me.jsjlog.blog.post.domain.PostStatus.PUBLISHED"
+            + " order by c.id desc")
     List<Comment> findMyComments(@Param("memberId") Long memberId, Pageable pageable);
 }

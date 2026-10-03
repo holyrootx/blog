@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import { useAdminSidebarMenus } from '../data/adminSidebarMenuStore';
+import { notifyError } from '../../../shared/toast/toastStore';
 import { signOutAdmin, useAdminAuth } from '../data/adminAuthStore';
 
 const route = useRoute();
@@ -22,6 +23,8 @@ async function signOut() {
   try {
     await signOutAdmin();
     await router.replace({ name: 'admin-login' });
+  } catch {
+    notifyError('로그아웃을 확인하지 못했습니다. 다시 시도해 주세요.');
   } finally {
     signingOut.value = false;
   }
