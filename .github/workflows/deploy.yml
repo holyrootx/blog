@@ -2,66 +2,83 @@ name: Deploy Blog
 
 on:
   push:
-    branches:
-      - release
+    branches: [release]
+
+permissions:
+  contents: read
+
+# Do not interrupt an active deployment during file replacement or rollback.
+concurrency:
+  group: blog-production-deploy
+  cancel-in-progress: false
 
 jobs:
+  checks:
+    uses: ./.github/workflows/checks.yml
+
   deploy:
+    needs: checks
     runs-on: ubuntu-latest
-
+    timeout-minutes: 15
+    env:
+      DEPLOY_HOST: ${{ secrets.LIGHTSAIL_HOST }}
+      DEPLOY_USER: ${{ secrets.LIGHTSAIL_USER }}
+      RELEASE_ID: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+      PUBLIC_BASE_URL: ${{ vars.BLOG_PUBLIC_BASE_URL }}
+      SCHEMA_REVISION: ${{ vars.BLOG_SCHEMA_REVISION }}
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v4
-
-      - name: Set up Java 21
-        uses: actions/setup-java@v4
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
         with:
-          distribution: temurin
-          java-version: '21'
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Build backend
-        working-directory: backend
-        run: ./gradlew clean bootJar
-
-      - name: Build frontend
-        working-directory: frontend
+          name: verified-build
+          path: verified-build
+      - name: Prepare verified SSH identity
+        env:
+          DEPLOY_KEY: ${{ secrets.LIGHTSAIL_SSH_KEY }}
+          TRUSTED_HOST_KEYS: ${{ secrets.LIGHTSAIL_KNOWN_HOSTS }}
         run: |
-          npm ci
-          npm run build
-
-      - name: Prepare SSH key
+          set -euo pipefail
+          test -n "$DEPLOY_KEY"
+          test -n "$TRUSTED_HOST_KEYS"
+          # Set once after the required MySQL schema upgrade is verified.
+          test "$SCHEMA_REVISION" = '2026-020'
+          [[ "$DEPLOY_HOST" =~ ^[A-Za-z0-9][A-Za-z0-9.-]*$ ]]
+          [[ "$DEPLOY_USER" =~ ^[a-z_][a-z0-9_-]*$ ]]
+          [[ "$PUBLIC_BASE_URL" =~ ^https://[A-Za-z0-9][A-Za-z0-9.-]*(:[0-9]+)?$ ]]
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/lightsail_key
+          printf '%s\n' "$TRUSTED_HOST_KEYS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/lightsail_key ~/.ssh/known_hosts
+          ssh-keygen -F "$DEPLOY_HOST" -f ~/.ssh/known_hosts >/dev/null
+      - name: Prepare versioned release
         run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.LIGHTSAIL_SSH_KEY }}" > ~/.ssh/lightsail_key
-          chmod 600 ~/.ssh/lightsail_key
-          ssh-keyscan -H "${{ secrets.LIGHTSAIL_HOST }}" >> ~/.ssh/known_hosts
-
-      - name: Upload backend jar
+          set -euo pipefail
+          mkdir -p bundle/frontend bundle/scripts
+          mapfile -t jars < <(find verified-build/backend/build/libs -name '*.jar' ! -name '*plain*')
+          test "${#jars[@]}" -eq 1
+          cp "${jars[0]}" bundle/app.jar
+          cp -a verified-build/frontend/dist/. bundle/frontend/
+          printf '{"revision":"%s"}\n' "$RELEASE_ID" > bundle/frontend/deployment.json
+          cp scripts/deploy-release.sh scripts/check-deployment.py bundle/scripts/
+          (cd bundle && find . -type f -print0 | sort -z | xargs -0 sha256sum > ../SHA256SUMS)
+          mv SHA256SUMS bundle/
+          tar -czf "$RELEASE_ID.tar.gz" -C bundle .
+      - name: Upload and activate release
         run: |
-          JAR_FILE=$(find backend/build/libs -name "*.jar" ! -name "*plain*" | head -n 1)
-          scp -i ~/.ssh/lightsail_key "$JAR_FILE" \
-            ${{ secrets.LIGHTSAIL_USER }}@${{ secrets.LIGHTSAIL_HOST }}:/home/ubuntu/apps/blog/backend/app.jar
-
-      - name: Upload frontend dist
-        run: |
-          rsync -avz --delete \
-            -e "ssh -i ~/.ssh/lightsail_key" \
-            frontend/dist/ \
-            ${{ secrets.LIGHTSAIL_USER }}@${{ secrets.LIGHTSAIL_HOST }}:/tmp/blog-dist/
-
-      - name: Restart backend and apply frontend
-        run: |
-          ssh -i ~/.ssh/lightsail_key \
-            ${{ secrets.LIGHTSAIL_USER }}@${{ secrets.LIGHTSAIL_HOST }} << 'EOF'
-              set -e
-              sudo rsync -av --delete /tmp/blog-dist/ /var/www/blog/
-              sudo systemctl restart blog-backend
-              sudo systemctl status blog-backend --no-pager
-          EOF
+          set -euo pipefail
+          ssh_options=(-i "$HOME/.ssh/lightsail_key" -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts" -o ConnectTimeout=15)
+          target="$DEPLOY_USER@$DEPLOY_HOST"
+          ssh "${ssh_options[@]}" "$target" 'mkdir -p /home/ubuntu/apps/blog/releases/incoming'
+          scp "${ssh_options[@]}" "$RELEASE_ID.tar.gz" "$target:/home/ubuntu/apps/blog/releases/incoming/$RELEASE_ID.tar.gz"
+          ssh "${ssh_options[@]}" "$target" bash -s -- "$RELEASE_ID" "$PUBLIC_BASE_URL" <<'REMOTE'
+          set -euo pipefail
+          release_id=$1
+          public_base_url=$2
+          release_root=/home/ubuntu/apps/blog/releases
+          mkdir "$release_root/$release_id"
+          tar -xzf "$release_root/incoming/$release_id.tar.gz" -C "$release_root/$release_id"
+          PUBLIC_BASE_URL="$public_base_url" bash "$release_root/$release_id/scripts/deploy-release.sh" "$release_id"
+          REMOTE
+      - name: Remove runner SSH identity
+        if: always()
+        run: rm -f ~/.ssh/lightsail_key ~/.ssh/known_hosts

@@ -1,5 +1,6 @@
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { getPostComments } from '../api/postApi';
+import { getCommentReplies, getPostComments } from '../api/postApi';
+import { notifyError } from '../../../shared/toast/toastStore';
 
 export function useCommentFeed({ postId, comments }) {
   const total = ref(0);
@@ -8,6 +9,7 @@ export function useCommentFeed({ postId, comments }) {
   const hasNext = ref(false);
   const loading = ref(false);
   const sentinel = ref(null);
+  const replyLoadingIds = ref(new Set());
   let observer = null;
   let revision = 0;
 
@@ -29,8 +31,32 @@ export function useCommentFeed({ postId, comments }) {
     }
   }
 
+  async function loadReplies(comment) {
+    if (!comment.replyHasNext || replyLoadingIds.value.has(comment.id)) return;
+    const requestedRevision = revision;
+    replyLoadingIds.value = new Set([...replyLoadingIds.value, comment.id]);
+    try {
+      const page = await getCommentReplies(postId.value, comment.id, { cursor: comment.replyNextCursor });
+      if (requestedRevision !== revision) return;
+      const ids = new Set(comment.replies.map((reply) => reply.id));
+      comment.replies = [...comment.replies, ...page.items.filter((reply) => !ids.has(reply.id))]
+        .sort((a, b) => a.id - b.id);
+      comment.replyHasNext = page.hasNext;
+      comment.replyNextCursor = page.nextCursor;
+    } catch (error) {
+      if (requestedRevision === revision) notifyError(error?.message ?? '답글을 불러오지 못했습니다. 다시 시도해 주세요.');
+    } finally {
+      if (requestedRevision === revision) {
+        const ids = new Set(replyLoadingIds.value);
+        ids.delete(comment.id);
+        replyLoadingIds.value = ids;
+      }
+    }
+  }
+
   watch([postId, comments], ([, page]) => {
     revision += 1;
+    replyLoadingIds.value = new Set();
     total.value = page.total ?? 0;
     items.value = [...(page.items ?? [])];
     nextCursor.value = page.nextCursor ?? null;
@@ -55,5 +81,5 @@ export function useCommentFeed({ postId, comments }) {
     observer?.disconnect();
   });
 
-  return { total, items, hasNext, loading, sentinel, loadMore };
+  return { total, items, hasNext, loading, sentinel, loadMore, loadReplies, replyLoadingIds };
 }

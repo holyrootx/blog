@@ -132,6 +132,15 @@ public class Post extends BaseEntity {
         this.publishedAt = publishedAt;
     }
 
+    public boolean isScheduled() {
+        return !isDeleted() && this.status == PostStatus.SCHEDULED;
+    }
+
+    public void cancelSchedule() {
+        this.status = PostStatus.DRAFT;
+        this.publishedAt = null;
+    }
+
     /**
      * 발행한 글을 비공개로 되돌립니다.
      *

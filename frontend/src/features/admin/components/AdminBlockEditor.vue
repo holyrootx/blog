@@ -8,7 +8,6 @@ import {
   toEditorBlocks,
   toMarkdown,
 } from '../data/postEditorBlocks';
-import { hasHeldBlocks } from '../data/postEditorClipboard';
 import { useBlockSelection } from '../composables/useBlockSelection';
 import { useEditorImages } from '../composables/useEditorImages';
 import { createEditorHistory } from '../data/postEditorHistory';
@@ -71,11 +70,11 @@ const {
   extendSelection,
   moveInsertCursor,
   copySelected,
+  pasteBlocks,
   onBlockCopy,
   onBlockCut,
   onBlockPaste,
   removeSelectedBlocks,
-  pasteBlocks,
   moveSelectedBlocks,
   onDragStart,
   onDragOver,
@@ -210,7 +209,7 @@ function onEditorKeydown(event) {
       return;
     }
 
-    if (command && key === 'v' && hasHeldBlocks()) {
+    if (command && key === 'v') {
       event.preventDefault();
       pasteBlocks();
       return;

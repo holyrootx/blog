@@ -84,6 +84,7 @@ public class AdminCommentService {
         ));
 
         historyService.recordComment(reply, Action.CREATE, null);
+        notificationService.notifyCommentCreated(reply);
         return reply.getId();
     }
 

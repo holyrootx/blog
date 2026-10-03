@@ -244,6 +244,19 @@ public class PostService {
         return postRepository.getRelatedPosts(postId, categoryId);
     }
 
+    @Transactional(readOnly = true)
+    public CommentReplyListResponse getCommentReplies(Long postId, Long parentId, Long cursor, Long size, Long memberId) {
+        findReadablePost(postId);
+        var parent = commentRepository.findById(parentId)
+                .orElseThrow(() -> new BlogException(ErrorCode.COMMENT_NOT_FOUND));
+        if (!parent.getPost().getId().equals(postId) || parent.getParent() != null) {
+            throw new BlogException(ErrorCode.COMMENT_NOT_FOUND);
+        }
+        long limit = size == null || size <= 0 ? DEFAULT_COMMENT_PAGE_SIZE : size;
+        if (limit > MAX_COMMENT_PAGE_SIZE) throw new BlogException(ErrorCode.COMMENT_SIZE_LIMIT_EXCEEDED);
+        return commentRepository.getReplyPage(postId, parentId, cursor, limit, memberId);
+    }
+
     public CommentListResponse getCommentInPostDetail(
             Long postId,
             Long cursor,

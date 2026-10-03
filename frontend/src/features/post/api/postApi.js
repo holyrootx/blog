@@ -122,6 +122,17 @@ export async function getPostComments(
   return toCommentPage(comments);
 }
 
+export async function getCommentReplies(postId, commentId, { cursor, size = 20 } = {}) {
+  const query = new URLSearchParams({ size: String(size) });
+  if (cursor !== null && cursor !== undefined) query.set('cursor', String(cursor));
+  const page = await getApiData(`/api/v1/blog/posts/${postId}/comments/${commentId}/replies?${query}`);
+  return {
+    items: Array.isArray(page?.items) ? page.items.map(toCommentReply) : [],
+    nextCursor: page?.nextCursor ?? null,
+    hasNext: Boolean(page?.hasNext),
+  };
+}
+
 export function createPostComment(postId, { content, parentId = null }) {
   return sendApiData(`/api/v1/blog/posts/${postId}/comments`, {
     method: 'POST',
@@ -231,7 +242,8 @@ function toCommentItem(comment) {
     edited: Boolean(comment.edited),
     hiddenByAdmin: Boolean(comment.hiddenByAdmin),
     reportedByMe: Boolean(comment.reportedByMe),
-    hiddenReplyCount: 0,
+    replyHasNext: Boolean(comment.replyHasNext),
+    replyNextCursor: comment.replyNextCursor ?? null,
     replies: Array.isArray(comment.replies) ? comment.replies.map(toCommentReply) : [],
   };
 }

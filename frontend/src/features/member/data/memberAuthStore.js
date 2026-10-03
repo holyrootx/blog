@@ -119,27 +119,32 @@ export async function changeNickname(nickname) {
  * 것처럼 보이고, 다음 요청에서 401 이 나서야 알게 된다.
  */
 export async function withdraw() {
-  try {
-    await withdrawMember();
-  } finally {
-    clearMemberSession();
-
-    // 세션이 끊겼으니 토큰도 새로 받아야 한다. 안 받으면 다시 로그인할 때 첫 요청이 403 이 된다
-    await refreshCsrfToken().catch(() => null);
-  }
+  // 탈퇴 실패는 로그아웃 성공을 뜻하지 않는다. 서버가 성공한 뒤에만 상태를 비운다.
+  await withdrawMember();
+  clearMemberSession();
+  await refreshCsrfToken().catch(() => null);
 }
 
 export async function signOutMember() {
   try {
     await logoutMember();
-  } finally {
-    // 서버 응답이 실패해도 화면에서는 로그아웃으로 친다.
-    // 눌렀는데 로그인 상태로 남아 있는 것이 더 나쁘다
-    clearMemberSession();
-
-    // 로그아웃하면 세션이 바뀌어 토큰도 새로 받아야 한다
-    await refreshCsrfToken().catch(() => null);
+  } catch (error) {
+    // 응답을 잃었어도 서버에서 종료됐을 수 있다. 실패를 비로그인으로 바꾸는
+    // ensureMemberSession 대신 원래 API로 실제 비로그인을 확인한다.
+    let session;
+    try {
+      session = await getMemberSession();
+    } catch {
+      throw error;
+    }
+    if (session !== null) {
+      member.value = session;
+      sessionCheck = Promise.resolve(session);
+      throw error;
+    }
   }
+  clearMemberSession();
+  await refreshCsrfToken().catch(() => null);
 }
 
 export function clearMemberSession() {
