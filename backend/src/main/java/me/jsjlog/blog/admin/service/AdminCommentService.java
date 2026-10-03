@@ -22,6 +22,10 @@ import me.jsjlog.blog.post.domain.CommentReport;
 import me.jsjlog.blog.post.repository.CommentModerationRepository;
 import me.jsjlog.blog.post.repository.CommentReportRepository;
 import me.jsjlog.blog.post.repository.CommentRepository;
+import me.jsjlog.blog.post.service.PostAccess;
+import me.jsjlog.blog.history.domain.CommentSnapshot;
+import me.jsjlog.blog.history.domain.ContentHistory.Action;
+import me.jsjlog.blog.history.service.ContentHistoryService;
 
 import java.util.List;
 import org.springframework.stereotype.Service;
@@ -40,6 +44,8 @@ public class AdminCommentService {
     private final CommentModerationRepository commentModerationRepository;
     private final MemberRepository memberRepository;
     private final NotificationService notificationService;
+    private final PostAccess postAccess;
+    private final ContentHistoryService historyService;
 
     @Transactional(readOnly = true)
     public AdminCommentListResponse getComments(AdminCommentSearchCondition condition) {
@@ -59,7 +65,7 @@ public class AdminCommentService {
 
     @Transactional
     public Long reply(Long commentId, AdminCommentReplyRequest request, Long memberId) {
-        Comment parent = findComment(commentId);
+        Comment parent = lockComment(commentId);
         if (parent.isReply()) {
             throw new BlogException(ErrorCode.COMMENT_REPLY_DEPTH_EXCEEDED);
         }
@@ -77,6 +83,7 @@ public class AdminCommentService {
                 content
         ));
 
+        historyService.recordComment(reply, Action.CREATE, null);
         return reply.getId();
     }
 
@@ -90,7 +97,8 @@ public class AdminCommentService {
             throw new BlogException(ErrorCode.COMMENT_VISIBILITY_REQUIRED);
         }
 
-        Comment comment = findComment(commentId);
+        Comment comment = lockComment(commentId);
+        CommentSnapshot before = CommentSnapshot.from(comment);
 
         // delete() 가 아니다. 그건 글쓴이가 지울 때 쓰는 자리라, 여기서 부르면
         // 가려진 사람이 자기가 지운 줄 알게 된다
@@ -108,6 +116,7 @@ public class AdminCommentService {
         record(comment, adminId, request.hidden()
                 ? CommentModerationAction.HIDE
                 : CommentModerationAction.RESTORE, request.reason());
+        historyService.recordComment(comment, request.hidden() ? Action.HIDE : Action.RESTORE, before);
     }
 
     /**
@@ -118,7 +127,7 @@ public class AdminCommentService {
      */
     @Transactional
     public void dismissReports(Long commentId, String reason, Long adminId) {
-        record(findComment(commentId), adminId, CommentModerationAction.DISMISS, reason);
+        record(lockComment(commentId), adminId, CommentModerationAction.DISMISS, reason);
     }
 
     /**
@@ -173,7 +182,17 @@ public class AdminCommentService {
     }
 
     private Comment findComment(Long commentId) {
-        return commentRepository.findById(commentId)
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new BlogException(ErrorCode.COMMENT_NOT_FOUND));
+        postAccess.findActive(comment.getPost().getId());
+        return comment;
+    }
+
+    private Comment lockComment(Long commentId) {
+        Long postId = commentRepository.findPostId(commentId)
+                .orElseThrow(() -> new BlogException(ErrorCode.COMMENT_NOT_FOUND));
+        postAccess.lockActive(postId);
+        return commentRepository.findLockedById(commentId)
                 .orElseThrow(() -> new BlogException(ErrorCode.COMMENT_NOT_FOUND));
     }
 

@@ -23,6 +23,7 @@ import org.springframework.web.multipart.MultipartFile;
 import me.jsjlog.blog.admin.domain.UploadImage;
 import me.jsjlog.blog.admin.dto.UploadImageResponse;
 import me.jsjlog.blog.admin.repository.UploadImageRepository;
+import me.jsjlog.blog.admin.repository.ImageUsageRepository;
 import me.jsjlog.blog.common.config.UploadProperties;
 import me.jsjlog.blog.common.exception.BlogException;
 import me.jsjlog.blog.common.exception.ErrorCode;
@@ -66,6 +67,7 @@ public class AdminImageService {
     private final UploadProperties uploadProperties;
     private final ThumbnailGenerator thumbnailGenerator;
     private final PlatformTransactionManager transactionManager;
+    private final ImageUsageRepository imageUsageRepository;
 
     /**
      * 원본은 그대로 두고, 화면에 내보낼 썸네일을 따로 만들어 올린다.
@@ -125,6 +127,9 @@ public class AdminImageService {
     public void delete(Long imageId) {
         UploadImage image = uploadImageRepository.findById(imageId)
                 .orElseThrow(() -> new BlogException(ErrorCode.IMAGE_NOT_FOUND));
+        if (!imageUsageRepository.findStillUsed(List.of(image.getUrl())).isEmpty()) {
+            throw new BlogException(ErrorCode.IMAGE_IN_USE);
+        }
         String originalKey = image.getStorageKey();
         String actualThumbnailKey = storageKeyFromUrl(image.getUrl());
 

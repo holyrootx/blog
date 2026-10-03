@@ -169,7 +169,7 @@ public class AdminCommentQueryRepository {
             AdminCommentFilter filter
     ) {
         QComment comment = QComment.comment;
-        BooleanBuilder builder = new BooleanBuilder();
+        BooleanBuilder builder = new BooleanBuilder(comment.post.deletedAt.isNull());
 
         if (StringUtils.hasText(condition.keyword())) {
             String keyword = condition.keyword().trim();

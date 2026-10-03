@@ -43,6 +43,7 @@ public class CommentRepositoryCustomImpl implements CommentRepositoryCustom {
 
         BooleanBuilder builder = new BooleanBuilder();
         builder.and(comment.post.id.eq(postId));
+        builder.and(comment.post.deletedAt.isNull());
         builder.and(comment.parent.isNull());
 
         if (cursor != null) {
@@ -160,6 +161,7 @@ public class CommentRepositoryCustomImpl implements CommentRepositoryCustom {
                 ).from(reply)
                 .where(
                         reply.parent.id.in(parentIds),
+                        reply.post.deletedAt.isNull(),
                         reply.deleted.isFalse()
                 )
                 .orderBy(reply.parent.id.desc(), reply.id.asc())
@@ -307,6 +309,7 @@ public class CommentRepositoryCustomImpl implements CommentRepositoryCustom {
                 .from(comment)
                 .where(
                         comment.post.id.eq(postId),
+                        comment.post.deletedAt.isNull(),
                         comment.deleted.isFalse()
                 )
                 .fetchOne();

@@ -98,6 +98,7 @@ public class ImageCleanupService {
         return Stream.of(
                         imageUsageRepository.findContentUsages(urls),
                         imageUsageRepository.findThumbnailUsages(urls),
+                        imageUsageRepository.findHistoryUsages(urls),
                         imageUsageRepository.findHeroUsages(urls),
                         imageUsageRepository.findProfileUsages(urls))
                 .flatMap(List::stream)

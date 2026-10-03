@@ -31,6 +31,7 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
             join fetch c.post
             join fetch c.member
             where n.recipient.id = :memberId
+              and c.post.deletedAt is null
               and (c.deleted = false or n.type = me.jsjlog.blog.notification.domain.NotificationType.COMMENT_HIDDEN)
             order by n.id desc
             """)
@@ -42,13 +43,16 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
             join n.comment c
             where n.recipient.id = :memberId
               and n.readAt is null
+              and c.post.deletedAt is null
               and (c.deleted = false or n.type = me.jsjlog.blog.notification.domain.NotificationType.COMMENT_HIDDEN)
             """)
     long countUnread(@Param("memberId") Long memberId);
 
-    Optional<Notification> findByIdAndRecipientId(Long id, Long recipientId);
+    @Query("select n from Notification n where n.id = :id and n.recipient.id = :recipientId"
+            + " and n.comment.post.deletedAt is null")
+    Optional<Notification> findByIdAndRecipientId(@Param("id") Long id, @Param("recipientId") Long recipientId);
 
-    @Query("select n from Notification n where n.recipient.id = :memberId and n.readAt is null")
+    @Query("select n from Notification n where n.recipient.id = :memberId and n.readAt is null and n.comment.post.deletedAt is null")
     List<Notification> findUnread(@Param("memberId") Long memberId);
 
     /**

@@ -556,7 +556,7 @@ async function runDelete() {
     confirmAction.value = '';
 
     // 목록으로 옮겨 가므로 알림이 그 화면에서 보인다
-    notifySuccess('글을 삭제했습니다.');
+    notifySuccess('휴지통으로 이동했습니다.');
     await router.push({ name: 'admin-posts' });
   } catch (error) {
     confirmAction.value = '';
@@ -577,7 +577,7 @@ const CONFIRM_TEXTS = {
   },
   delete: {
     title: '이 글을 삭제할까요?',
-    description: '글과 달린 댓글이 함께 지워집니다. 되돌릴 수 없습니다.',
+    description: '휴지통으로 이동합니다. 댓글과 이미지는 보관하며 30일 이내에 복구할 수 있습니다.',
   },
 };
 

@@ -32,11 +32,11 @@ public class AdminDashboardQueryRepository {
         return orZero(jpaQueryFactory
                 .select(post.count())
                 .from(post)
-                .where(post.status.eq(status))
+                .where(post.status.eq(status), post.deletedAt.isNull())
                 .fetchOne());
     }
 
-    /** 글별 조회수 합계. 발행 여부를 가리지 않는다 */
+    /** 누적 조회수는 과거 방문 기록이므로 휴지통 이동 여부와 관계없이 유지한다. */
     public long sumViews() {
         QPost post = QPost.post;
 
@@ -53,7 +53,7 @@ public class AdminDashboardQueryRepository {
         return orZero(jpaQueryFactory
                 .select(post.count())
                 .from(post)
-                .where(post.createdAt.goe(from))
+                .where(post.createdAt.goe(from), post.deletedAt.isNull())
                 .fetchOne());
     }
 
@@ -72,7 +72,7 @@ public class AdminDashboardQueryRepository {
                 .from(category)
                 // 글이 0개인 카테고리도 나와야 하므로 LEFT JOIN,
                 // 발행 조건은 where 가 아니라 on 에 둔다
-                .leftJoin(post).on(post.category.id.eq(category.id), post.status.eq(PostStatus.PUBLISHED))
+                .leftJoin(post).on(post.category.id.eq(category.id), post.status.eq(PostStatus.PUBLISHED), post.deletedAt.isNull())
                 .groupBy(category.id, category.name)
                 .orderBy(post.id.count().desc(), category.id.asc())
                 .fetch();
@@ -86,7 +86,7 @@ public class AdminDashboardQueryRepository {
         return jpaQueryFactory
                 .select(category.name)
                 .from(category)
-                .join(post).on(post.category.id.eq(category.id))
+                .join(post).on(post.category.id.eq(category.id), post.deletedAt.isNull())
                 .groupBy(category.id, category.name)
                 .orderBy(post.views.sum().desc(), category.id.asc())
                 .limit(1)
@@ -100,7 +100,7 @@ public class AdminDashboardQueryRepository {
         return orZero(jpaQueryFactory
                 .select(report.comment.id.countDistinct())
                 .from(report)
-                .where(report.handledAt.isNull())
+                .where(report.handledAt.isNull(), report.comment.post.deletedAt.isNull())
                 .fetchOne());
     }
 

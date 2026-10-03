@@ -29,6 +29,8 @@ public interface ImageUsageRepository extends JpaRepository<UploadImage, Long> {
               and (
                    exists (select 1 from Post p where p.content like concat('%', u.url, '%'))
                 or exists (select 1 from Post p where p.thumbnailImageUrl = u.url)
+                or exists (select 1 from ContentHistory h where
+                    locate(u.url, h.beforeSnapshot) > 0 or locate(u.url, h.afterSnapshot) > 0)
                 or exists (select 1 from HomePageHero h where h.heroImageUrl = u.url)
                 or exists (select 1 from BlogProfile b where b.avatarImageUrl = u.url)
               )
@@ -53,6 +55,8 @@ public interface ImageUsageRepository extends JpaRepository<UploadImage, Long> {
             where u.createdAt < :uploadedBefore
               and not exists (select 1 from Post p where p.content like concat('%', u.url, '%'))
               and not exists (select 1 from Post p where p.thumbnailImageUrl = u.url)
+              and not exists (select 1 from ContentHistory h where
+                  locate(u.url, h.beforeSnapshot) > 0 or locate(u.url, h.afterSnapshot) > 0)
               and not exists (select 1 from HomePageHero h where h.heroImageUrl = u.url)
               and not exists (select 1 from BlogProfile b where b.avatarImageUrl = u.url)
             """)
@@ -79,6 +83,15 @@ public interface ImageUsageRepository extends JpaRepository<UploadImage, Long> {
             where u.url in :urls and p.thumbnailImageUrl = u.url
             """)
     List<AdminImageUsage> findThumbnailUsages(@Param("urls") Collection<String> urls);
+
+    @Query("""
+            select distinct new me.jsjlog.blog.admin.dto.AdminImageUsage(
+                u.url, me.jsjlog.blog.admin.dto.AdminImageUsage$Where.CONTENT_HISTORY, null)
+            from UploadImage u, ContentHistory h
+            where u.url in :urls
+              and (locate(u.url, h.beforeSnapshot) > 0 or locate(u.url, h.afterSnapshot) > 0)
+            """)
+    List<AdminImageUsage> findHistoryUsages(@Param("urls") Collection<String> urls);
 
     @Query("""
             select new me.jsjlog.blog.admin.dto.AdminImageUsage(
