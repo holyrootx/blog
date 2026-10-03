@@ -129,6 +129,7 @@ export async function getAdminPosts(condition = {}) {
       scheduled: toNumber(result?.statusCounts?.scheduled),
       private: toNumber(result?.statusCounts?.private),
       draft: toNumber(result?.statusCounts?.draft),
+      trash: toNumber(result?.statusCounts?.trash),
     },
     page: toNumber(result?.page),
     size: toNumber(result?.size),
@@ -146,6 +147,9 @@ function toAdminPost(post) {
     status: post.status ?? 'DRAFT',
     publishedAt: post.publishedAt ?? null,
     createdAt: post.createdAt ?? null,
+    deletedAt: post.deletedAt ?? null,
+    restoreUntil: post.restoreUntil ?? null,
+    restorable: post.restorable === true,
     views: toNumber(post.views),
   };
 }
@@ -195,6 +199,10 @@ export function publishAdminPost(postId, publishedAt = null) {
 
 export function unpublishAdminPost(postId) {
   return sendApiData(`${ADMIN_BLOG_API_BASE}/posts/${postId}/unpublish`, { method: 'POST' });
+}
+
+export function restoreAdminPost(postId) {
+  return sendApiData(`${ADMIN_BLOG_API_BASE}/posts/${postId}/restore`, { method: 'POST' });
 }
 
 export function deleteAdminPost(postId) {
