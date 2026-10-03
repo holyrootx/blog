@@ -27,6 +27,8 @@ import java.time.LocalDateTime;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Post extends BaseEntity {
 
+    public static final int RESTORE_DAYS = 30;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -66,6 +68,9 @@ public class Post extends BaseEntity {
 
     @Column(name = "published_at")
     private LocalDateTime publishedAt;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
 
     @Column(name = "views", nullable = false)
     private long views;
@@ -148,6 +153,29 @@ public class Post extends BaseEntity {
     }
 
     public boolean isPublished() {
-        return this.status == PostStatus.PUBLISHED;
+        return !isDeleted() && this.status == PostStatus.PUBLISHED;
+    }
+
+    public boolean isDeleted() {
+        return deletedAt != null;
+    }
+
+    public void delete(LocalDateTime now) {
+        if (!isDeleted()) {
+            deletedAt = now;
+        }
+    }
+
+    public boolean canRestore(LocalDateTime now) {
+        return isDeleted() && now.isBefore(deletedAt.plusDays(RESTORE_DAYS));
+    }
+
+    public void restore(LocalDateTime now) {
+        if (!canRestore(now)) {
+            throw new IllegalStateException("Post is outside the restore window");
+        }
+        deletedAt = null;
+        status = PostStatus.DRAFT;
+        publishedAt = null;
     }
 }

@@ -1,6 +1,8 @@
 package me.jsjlog.blog.admin.dto;
 
 import me.jsjlog.blog.post.domain.PostStatus;
+import me.jsjlog.blog.post.domain.Post;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.time.LocalDateTime;
 
@@ -21,6 +23,16 @@ public record AdminPostSummaryResponse(
         PostStatus status,
         LocalDateTime publishedAt,
         LocalDateTime createdAt,
-        long views
+        long views,
+        LocalDateTime deletedAt
 ) {
+    @JsonProperty
+    public LocalDateTime restoreUntil() {
+        return deletedAt == null ? null : deletedAt.plusDays(Post.RESTORE_DAYS);
+    }
+
+    @JsonProperty
+    public boolean restorable() {
+        return deletedAt != null && LocalDateTime.now().isBefore(restoreUntil());
+    }
 }

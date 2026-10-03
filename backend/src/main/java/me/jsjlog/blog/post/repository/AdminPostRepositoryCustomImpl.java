@@ -34,14 +34,14 @@ public class AdminPostRepositoryCustomImpl implements AdminPostRepositoryCustom 
                         post.status,
                         post.publishedAt,
                         post.createdAt,
-                        post.views
+                        post.views,
+                        post.deletedAt
                 ))
                 .from(post)
                 .join(post.category)
                 .where(toPredicate(condition, true))
-                // 발행일이 있으면 그것으로, 없으면(임시저장) 작성일로 줄을 세운다.
-                // coalesce 를 쓰면 임시저장 글이 목록 맨 뒤로 밀려서 찾기 어렵다
-                .orderBy(post.createdAt.desc(), post.id.desc())
+                // 휴지통은 최근 삭제순, 일반 목록은 최근 작성순이다.
+                .orderBy(condition.trashOrDefault() ? post.deletedAt.desc() : post.createdAt.desc(), post.id.desc())
                 .offset((long) condition.pageOrDefault() * condition.sizeOrDefault())
                 .limit(condition.sizeOrDefault())
                 .fetch();
@@ -73,13 +73,19 @@ public class AdminPostRepositoryCustomImpl implements AdminPostRepositoryCustom 
         long scheduled = countWithStatus(builder, PostStatus.SCHEDULED);
         long privateCount = countWithStatus(builder, PostStatus.PRIVATE);
         long draft = countWithStatus(builder, PostStatus.DRAFT);
+        long trash = Objects.requireNonNullElse(jpaQueryFactory
+                .select(post.count())
+                .from(post)
+                .where(builder, post.deletedAt.isNotNull())
+                .fetchOne(), 0L);
 
         return new AdminPostStatusCounts(
                 published + scheduled + privateCount + draft,
                 published,
                 scheduled,
                 privateCount,
-                draft
+                draft,
+                trash
         );
     }
 
@@ -90,6 +96,7 @@ public class AdminPostRepositoryCustomImpl implements AdminPostRepositoryCustom 
         // 원본을 건드리지 않도록 복사해서 상태 조건만 덧붙인다
         BooleanBuilder builder = new BooleanBuilder(baseBuilder.getValue());
         builder.and(post.status.eq(status));
+        builder.and(post.deletedAt.isNull());
 
         Long count = jpaQueryFactory
                 .select(post.count())
@@ -109,7 +116,11 @@ public class AdminPostRepositoryCustomImpl implements AdminPostRepositoryCustom 
 
         BooleanBuilder builder = new BooleanBuilder();
 
-        if (withStatus && condition.status() != null) {
+        if (withStatus) {
+            builder.and(condition.trashOrDefault() ? post.deletedAt.isNotNull() : post.deletedAt.isNull());
+        }
+
+        if (withStatus && !condition.trashOrDefault() && condition.status() != null) {
             builder.and(post.status.eq(condition.status()));
         }
 

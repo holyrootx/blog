@@ -85,4 +85,10 @@ public class AdminPostController {
         adminPostService.deletePost(postId);
         return ApiResponse.ok();
     }
+
+    @PostMapping("/posts/{postId}/restore")
+    public ApiResponse<Void> restorePost(@PathVariable Long postId) {
+        adminPostService.restorePost(postId);
+        return ApiResponse.ok();
+    }
 }

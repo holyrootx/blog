@@ -14,6 +14,7 @@ public record AdminPostStatusCounts(
         long published,
         long scheduled,
         @JsonProperty("private") long privateCount,
-        long draft
+        long draft,
+        long trash
 ) {
 }

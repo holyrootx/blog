@@ -19,7 +19,9 @@ import me.jsjlog.blog.post.dto.CommentReportResponse;
 import me.jsjlog.blog.post.repository.CommentReactionRepository;
 import me.jsjlog.blog.post.repository.CommentReportRepository;
 import me.jsjlog.blog.post.repository.CommentRepository;
-import me.jsjlog.blog.post.repository.PostRepository;
+import me.jsjlog.blog.history.domain.CommentSnapshot;
+import me.jsjlog.blog.history.domain.ContentHistory.Action;
+import me.jsjlog.blog.history.service.ContentHistoryService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -33,18 +35,20 @@ public class CommentService {
     private final CommentRepository commentRepository;
     private final CommentReactionRepository commentReactionRepository;
     private final CommentReportRepository commentReportRepository;
-    private final PostRepository postRepository;
+    private final PostAccess postAccess;
+    private final ContentHistoryService historyService;
     private final MemberRepository memberRepository;
     private final NotificationService notificationService;
 
     @Transactional
     public CommentCreateResponse createComment(Long postId, CommentCreateRequest request, Long memberId) {
         String content = requireContent(request == null ? null : request.content());
-        Post post = findPublishedPost(postId);
+        Post post = postAccess.lockPublished(postId);
         Member member = findActiveMember(memberId);
         Comment parent = findParent(request == null ? null : request.parentId(), postId);
 
         Comment comment = commentRepository.save(new Comment(post, parent, member, content));
+        historyService.recordComment(comment, Action.CREATE, null);
 
         // 답글이면 부모 댓글을 쓴 사람에게, 최상위 댓글이면 글쓴이에게 간다.
         // 자기 자신에게는 가지 않는다 — 그 판단은 알림 쪽이 한다
@@ -63,8 +67,9 @@ public class CommentService {
     public void updateComment(Long commentId, String content, Long memberId) {
         String text = requireContent(content);
         Comment comment = findMyUsableComment(commentId, memberId);
-
+        CommentSnapshot before = CommentSnapshot.from(comment);
         comment.updateContent(text);
+        historyService.recordComment(comment, Action.UPDATE, before);
     }
 
     /**
@@ -78,7 +83,10 @@ public class CommentService {
      */
     @Transactional
     public void deleteComment(Long commentId, Long memberId) {
-        findMyUsableComment(commentId, memberId).delete();
+        Comment comment = findMyUsableComment(commentId, memberId);
+        CommentSnapshot before = CommentSnapshot.from(comment);
+        comment.delete();
+        historyService.recordComment(comment, Action.DELETE, before);
     }
 
     /**
@@ -88,7 +96,8 @@ public class CommentService {
      * 있다는 사실이 새어 나갈 것이 없고, 화면은 왜 안 되는지 말해 줄 수 있어야 한다.
      */
     private Comment findMyUsableComment(Long commentId, Long memberId) {
-        Comment comment = commentRepository.findById(commentId)
+        lockParentPost(commentId);
+        Comment comment = commentRepository.findLockedById(commentId)
                 .orElseThrow(() -> new BlogException(ErrorCode.COMMENT_NOT_FOUND));
 
         // 가려진 댓글과 지운 댓글에 다른 말을 준다. 둘 다 "삭제된 댓글" 이라고 하면
@@ -188,15 +197,10 @@ public class CommentService {
         return reactionResponse(commentId, memberId);
     }
 
-    private Post findPublishedPost(Long postId) {
-        Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new BlogException(ErrorCode.POST_NOT_FOUND));
-
-        if (!post.isPublished()) {
-            throw new BlogException(ErrorCode.POST_NOT_FOUND);
-        }
-
-        return post;
+    private void lockParentPost(Long commentId) {
+        Long postId = commentRepository.findPostId(commentId)
+                .orElseThrow(() -> new BlogException(ErrorCode.COMMENT_NOT_FOUND));
+        postAccess.lockPublished(postId);
     }
 
     private Member findActiveMember(Long memberId) {
@@ -236,7 +240,8 @@ public class CommentService {
     }
 
     private Comment findUsableComment(Long commentId) {
-        Comment comment = commentRepository.findById(commentId)
+        lockParentPost(commentId);
+        Comment comment = commentRepository.findLockedById(commentId)
                 .orElseThrow(() -> new BlogException(ErrorCode.COMMENT_NOT_FOUND));
 
         if (comment.isDeleted()) {

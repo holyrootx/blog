@@ -11,6 +11,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import me.jsjlog.blog.post.domain.Post;
 import me.jsjlog.blog.post.repository.PostRepository;
+import me.jsjlog.blog.history.domain.ContentHistory.Action;
+import me.jsjlog.blog.history.domain.PostSnapshot;
+import me.jsjlog.blog.history.service.ContentHistoryService;
 
 /**
  * 예약한 글을 시각이 되면 공개로 바꾼다.
@@ -27,6 +30,7 @@ import me.jsjlog.blog.post.repository.PostRepository;
 public class ScheduledPublisher {
 
     private final PostRepository postRepository;
+    private final ContentHistoryService historyService;
 
     @Transactional
     @Scheduled(fixedDelayString = "${blog.scheduled-publish.interval-ms:60000}")
@@ -37,7 +41,11 @@ public class ScheduledPublisher {
             return;
         }
 
-        due.forEach((post) -> post.publish(post.getPublishedAt()));
+        due.forEach(post -> {
+            PostSnapshot before = PostSnapshot.from(post);
+            post.publish(post.getPublishedAt());
+            historyService.recordPost(post, Action.PUBLISH, before);
+        });
 
         // 예약한 글이 실제로 나갔다는 사실은 남겨 둔다. 안 나갔을 때 되짚을 곳이 필요하다
         log.info("[예약 발행] {}건 공개 전환: {}", due.size(), due.stream().map(Post::getId).toList());

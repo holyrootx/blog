@@ -7,6 +7,7 @@ import {
   getAdminCategories,
   getAdminPosts,
   publishAdminPost,
+  restoreAdminPost,
   unpublishAdminPost,
 } from '../api/adminApi';
 import { notifySuccess } from '../../../shared/toast/toastStore';
@@ -44,7 +45,13 @@ const condition = reactive({ ...EMPTY_CONDITION });
 const applied = ref({ ...EMPTY_CONDITION });
 
 const posts = ref([]);
-const statusCounts = ref({ all: 0, published: 0, scheduled: 0, private: 0, draft: 0 });
+const statusCounts = ref({ all: 0, published: 0, scheduled: 0, private: 0, draft: 0, trash: 0 });
+const isTrash = computed(() => applied.value.status === 'TRASH');
+const columns = computed(() => isTrash.value
+  ? COLUMNS.map((column) => column.key === 'views'
+    ? { key: 'restoreUntil', label: '복구 기한', width: '185px' }
+    : column)
+  : COLUMNS);
 const totalElements = ref(0);
 const totalPages = ref(0);
 const loading = ref(false);
@@ -78,6 +85,7 @@ const statusOptions = computed(() => [
   { value: 'SCHEDULED', label: `예약 ${formatCount(statusCounts.value.scheduled)}` },
   { value: 'PRIVATE', label: `비공개 ${formatCount(statusCounts.value.private)}` },
   { value: 'DRAFT', label: `임시저장 ${formatCount(statusCounts.value.draft)}` },
+  { value: 'TRASH', label: `휴지통 ${formatCount(statusCounts.value.trash)}` },
 ]);
 
 function formatCount(count) {
@@ -96,6 +104,8 @@ async function loadPosts(searchCondition) {
   try {
     const result = await getAdminPosts({
       ...searchCondition,
+      status: searchCondition.status === 'TRASH' ? '' : searchCondition.status,
+      trash: searchCondition.status === 'TRASH',
       // 화면은 1쪽부터, 서버는 0쪽부터 센다
       page: page.value - 1,
       size: pageSize.value,
@@ -144,6 +154,9 @@ function reset() {
 
 /** 발행된 글은 발행일, 그 밖에는 작성일. 어느 쪽인지 셀 안에 적어준다 */
 function toDateCell(post) {
+  if (post.deletedAt) {
+    return { label: '삭제', value: formatDate(post.deletedAt) };
+  }
   const isPublished = post.status === 'PUBLISHED' && post.publishedAt;
 
   return {
@@ -170,6 +183,7 @@ const STATUS_LABELS = {
   PUBLISHED: '발행',
   PRIVATE: '비공개',
   DRAFT: '임시저장',
+  SCHEDULED: '예약',
 };
 
 const CONFIRM_TEXTS = {
@@ -183,13 +197,18 @@ const CONFIRM_TEXTS = {
   },
   delete: {
     title: '이 글을 삭제할까요?',
-    description: '글과 달린 댓글이 함께 지워집니다. 되돌릴 수 없습니다.',
+    description: '휴지통으로 이동합니다. 댓글과 이미지는 보관하며 30일 이내에 복구할 수 있습니다.',
+  },
+  restore: {
+    title: '이 글을 복구할까요?',
+    description: '임시저장 상태로 복구합니다. 내용을 확인한 뒤 직접 발행해 주세요.',
   },
 };
 
 const confirmText = computed(() => CONFIRM_TEXTS[confirmAction.value] ?? { title: '', description: '' });
 
 function openPost(post) {
+  if (post.deletedAt) return;
   router.push({ name: 'admin-post-edit', params: { postId: post.id } });
 }
 
@@ -218,13 +237,20 @@ async function runAction() {
     } else if (confirmAction.value === 'unpublish') {
       await unpublishAdminPost(postId);
       done = '글을 내렸습니다.';
+    } else if (confirmAction.value === 'restore') {
+      await restoreAdminPost(postId);
+      done = '임시저장으로 복구했습니다.';
     } else {
       await deleteAdminPost(postId);
-      done = '글을 삭제했습니다.';
+      done = '휴지통으로 이동했습니다.';
     }
 
     confirmTarget.value = null;
     await reload();
+    if (!loadError.value && page.value > Math.max(1, totalPages.value)) {
+      page.value = Math.max(1, totalPages.value);
+      await reload();
+    }
 
     // 목록이 새로 그려지는 것만으로는 무엇이 바뀌었는지 알기 어렵다
     notifySuccess(done);
@@ -284,23 +310,23 @@ onMounted(() => {
     </AdminGridToolbar>
 
     <AdminDataGrid
-      :columns="COLUMNS"
+      :columns="columns"
       :rows="posts"
       :loading="loading"
       :error-text="loadError"
       :empty-text="isEmptyBeforeFirstPost
         ? '아직 쓴 글이 없습니다.'
         : '조회조건에 맞는 글이 없습니다.'"
-      row-clickable
+      :row-clickable="!isTrash"
       @row-click="openPost"
       @retry="reload"
     >
-      <template #cell-status="{ value }">
+      <template #cell-status="{ value, row }">
         <span
           class="admin-badge"
-          :class="value === 'PUBLISHED' ? 'admin-badge--on' : 'admin-badge--off'"
+          :class="!row.deletedAt && value === 'PUBLISHED' ? 'admin-badge--on' : 'admin-badge--off'"
         >
-          {{ STATUS_LABELS[value] ?? value }}
+          {{ row.deletedAt ? '삭제됨' : (STATUS_LABELS[value] ?? value) }}
         </span>
       </template>
 
@@ -316,10 +342,27 @@ onMounted(() => {
         {{ value.toLocaleString('ko-KR') }}
       </template>
 
+      <template #cell-restoreUntil="{ row }">
+        <span :title="row.restoreUntil">
+          {{ row.restorable
+            ? new Date(row.restoreUntil).toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' })
+            : '복구 기한 만료' }}
+        </span>
+      </template>
+
       <template #cell-actions="{ row }">
         <span class="admin-post__actions" @click.stop>
           <button
-            v-if="row.status !== 'PUBLISHED'"
+            v-if="row.deletedAt"
+            class="admin-button admin-button--ghost admin-button--small"
+            type="button"
+            :disabled="!row.restorable || working"
+            @click="askAction('restore', row)"
+          >
+            복구
+          </button>
+          <button
+            v-else-if="row.status !== 'PUBLISHED'"
             class="admin-button admin-button--ghost admin-button--small"
             type="button"
             @click="askAction('publish', row)"
@@ -335,6 +378,7 @@ onMounted(() => {
             내리기
           </button>
           <button
+            v-if="!row.deletedAt"
             class="admin-button admin-button--danger admin-button--small"
             type="button"
             @click="askAction('delete', row)"
@@ -353,7 +397,7 @@ onMounted(() => {
       :title="confirmText.title"
       :description="confirmText.description"
       size="small"
-      @close="confirmTarget = null"
+      @close="!working && (confirmTarget = null)"
     >
       <p class="admin-post__confirm">{{ confirmTarget?.title }}</p>
 
@@ -369,7 +413,7 @@ onMounted(() => {
           {{ working ? '처리 중…' : confirmText.title.includes('삭제') ? '삭제' : '확인' }}
         </button>
       
-        <button class="admin-button admin-button--ghost" type="button" @click="confirmTarget = null">
+        <button class="admin-button admin-button--ghost" type="button" :disabled="working" @click="confirmTarget = null">
           취소
         </button>
         </template>

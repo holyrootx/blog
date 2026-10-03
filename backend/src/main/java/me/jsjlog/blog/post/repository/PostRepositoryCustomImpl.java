@@ -34,6 +34,7 @@ public class PostRepositoryCustomImpl implements PostRepositoryCustom{
         BooleanBuilder builder = new BooleanBuilder();
 
         builder.and(post.status.eq(PostStatus.PUBLISHED));
+        builder.and(post.deletedAt.isNull());
 
         builder.and(post.publishedAt.loe(LocalDateTime.now()));
 
@@ -61,6 +62,7 @@ public class PostRepositoryCustomImpl implements PostRepositoryCustom{
         BooleanBuilder builder = new BooleanBuilder();
 
         builder.and(post.status.eq(PostStatus.PUBLISHED));
+        builder.and(post.deletedAt.isNull());
 
         builder.and(post.publishedAt.loe(LocalDateTime.now()));
 
@@ -91,6 +93,7 @@ public class PostRepositoryCustomImpl implements PostRepositoryCustom{
 
         BooleanBuilder builder = new BooleanBuilder();
         builder.and(post.status.eq(PostStatus.PUBLISHED));
+        builder.and(post.deletedAt.isNull());
         builder.and(post.publishedAt.loe(LocalDateTime.now()));
 
         OrderSpecifier<?>[] orderSpecifier = POPULAR_PARAM.equals(sort) ?
@@ -122,6 +125,8 @@ public class PostRepositoryCustomImpl implements PostRepositoryCustom{
 
         BooleanBuilder builder = new BooleanBuilder();
         builder.and(post.id.eq(postId));
+        builder.and(post.deletedAt.isNull());
+        builder.and(post.status.eq(PostStatus.PUBLISHED));
 
 
         PostDetailResponse postDetailResponse = jpaQueryFactory.select(Projections.constructor(
@@ -152,9 +157,12 @@ public class PostRepositoryCustomImpl implements PostRepositoryCustom{
 
         Post currentPost = jpaQueryFactory
                 .selectFrom(post)
-                .where(post.id.eq(postId))
+                .where(post.id.eq(postId), post.deletedAt.isNull(), post.status.eq(PostStatus.PUBLISHED))
                 .fetchOne();
 
+        if (currentPost == null) {
+            return new AdjacentPostResponse(null, null);
+        }
         LocalDateTime publishedAt = currentPost.getPublishedAt();
 
         AdjacentPostSummary previousPost = jpaQueryFactory
@@ -171,6 +179,7 @@ public class PostRepositoryCustomImpl implements PostRepositoryCustom{
                                                 .and(post.id.lt(postId))
                                 ),
                         post.status.eq(PostStatus.PUBLISHED),
+                        post.deletedAt.isNull(),
                         post.publishedAt.loe(LocalDateTime.now())
                 )
                 .orderBy(
@@ -193,6 +202,7 @@ public class PostRepositoryCustomImpl implements PostRepositoryCustom{
                                                 .and(post.id.gt(postId))
                                 ),
                         post.status.eq(PostStatus.PUBLISHED),
+                        post.deletedAt.isNull(),
                         post.publishedAt.loe(LocalDateTime.now())
                 )
                 .orderBy(
@@ -211,6 +221,7 @@ public class PostRepositoryCustomImpl implements PostRepositoryCustom{
 
         BooleanBuilder builder = new BooleanBuilder();
         builder.and(post.status.eq(PostStatus.PUBLISHED));
+        builder.and(post.deletedAt.isNull());
         builder.and(post.publishedAt.loe(LocalDateTime.now()));
         builder.and(post.category.id.eq(categoryId));
         builder.and(post.id.ne(postId)); // 자기자신은 포함되지 않도록
@@ -289,6 +300,7 @@ public class PostRepositoryCustomImpl implements PostRepositoryCustom{
 
         BooleanBuilder builder = new BooleanBuilder();
         builder.and(post.status.eq(PostStatus.PUBLISHED));
+        builder.and(post.deletedAt.isNull());
         builder.and(post.publishedAt.loe(LocalDateTime.now()));
         builder.and(keywordPredicate(post, pattern));
 
@@ -312,6 +324,7 @@ public class PostRepositoryCustomImpl implements PostRepositoryCustom{
         BooleanBuilder builder = new BooleanBuilder();
 
         builder.and(post.status.eq(PostStatus.PUBLISHED));
+        builder.and(post.deletedAt.isNull());
         builder.and(post.publishedAt.loe(LocalDateTime.now()));
 
         if (condition.categoryId() != null) {
