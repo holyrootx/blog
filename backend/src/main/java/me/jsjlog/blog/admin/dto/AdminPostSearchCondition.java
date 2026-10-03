@@ -11,12 +11,17 @@ public record AdminPostSearchCondition(
         Integer size,
         PostStatus status,
         Long categoryId,
-        String keyword
+        String keyword,
+        Boolean trash
 ) {
 
     private static final int DEFAULT_PAGE = 0;
     private static final int DEFAULT_SIZE = 20;
     private static final int MAX_SIZE = 100;
+
+    public boolean trashOrDefault() {
+        return Boolean.TRUE.equals(trash);
+    }
 
     public int pageOrDefault() {
         return page == null || page < 0 ? DEFAULT_PAGE : page;

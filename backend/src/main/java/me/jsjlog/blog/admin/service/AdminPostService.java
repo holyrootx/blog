@@ -16,20 +16,18 @@ import me.jsjlog.blog.member.repository.MemberRepository;
 import me.jsjlog.blog.post.domain.Category;
 import me.jsjlog.blog.post.domain.Post;
 import me.jsjlog.blog.post.repository.CategoryRepository;
-import me.jsjlog.blog.post.repository.CommentReactionRepository;
-import me.jsjlog.blog.post.repository.CommentRepository;
 import me.jsjlog.blog.post.repository.PostRepository;
-import me.jsjlog.blog.post.repository.PostReactionRepository;
-import org.springframework.context.ApplicationEventPublisher;
+import me.jsjlog.blog.post.service.PostAccess;
+import me.jsjlog.blog.history.domain.ContentHistory.Action;
+import me.jsjlog.blog.history.domain.PostSnapshot;
+import me.jsjlog.blog.history.service.ContentHistoryService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.HashSet;
 import java.util.Objects;
-import java.util.Set;
 
 /**
  * 관리자 글 관리.
@@ -46,11 +44,8 @@ public class AdminPostService {
     private static final int THUMBNAIL_MAX = 500;
 
     private final PostRepository postRepository;
-    private final CommentRepository commentRepository;
-    private final ApplicationEventPublisher eventPublisher;
-    private final ImageCleanupService imageCleanupService;
-    private final CommentReactionRepository commentReactionRepository;
-    private final PostReactionRepository postReactionRepository;
+    private final PostAccess postAccess;
+    private final ContentHistoryService historyService;
     private final CategoryRepository categoryRepository;
     private final MemberRepository memberRepository;
 
@@ -80,7 +75,7 @@ public class AdminPostService {
      */
     @Transactional(readOnly = true)
     public AdminPostDetailResponse getPost(Long postId) {
-        Post post = findPost(postId);
+        Post post = postAccess.findActive(postId);
 
         return new AdminPostDetailResponse(
                 post.getId(),
@@ -119,7 +114,9 @@ public class AdminPostService {
                 findAuthor(authorId)
         );
 
-        return postRepository.save(post).getId();
+        postRepository.save(post);
+        historyService.recordPost(post, Action.CREATE, null);
+        return post.getId();
     }
 
     /**
@@ -130,11 +127,8 @@ public class AdminPostService {
      */
     @Transactional
     public void updatePost(Long postId, AdminPostRequest request) {
-        Post post = findPost(postId);
-
-        // 저장하고 나면 뭐가 빠졌는지 알 수 없다
-        Set<String> before =
-                imageCleanupService.collectUsedUrls(post.getContent(), post.getThumbnailImageUrl());
+        Post post = postAccess.lockActive(postId);
+        PostSnapshot before = PostSnapshot.from(post);
 
         // 화면이 불러온 뒤 다른 곳에서 바뀌었으면 덮어쓰지 않는다
         ConcurrencyGuard.check(request.updatedAt(), post.getUpdatedAt());
@@ -156,14 +150,8 @@ public class AdminPostService {
                 request.thumbnailImageUrl()
         );
 
-        // 본문에서 뺐어도 대표 이미지로 걸려 있으면 살아 있다.
-        // 실제 판정은 커밋 뒤에 DB 를 보고 한 번 더 한다
-        Set<String> after =
-                imageCleanupService.collectUsedUrls(post.getContent(), post.getThumbnailImageUrl());
-        Set<String> released = new HashSet<>(before);
-        released.removeAll(after);
-
-        eventPublisher.publishEvent(new ImageCleanupService.PostImagesReleasedEvent(released));
+        // Removed images remain referenced by the saved history.
+        historyService.recordPost(post, Action.UPDATE, before);
     }
 
     /** 발행 상태를 유지하려면 본문과 요약이 있어야 한다 */
@@ -236,7 +224,8 @@ public class AdminPostService {
      */
     @Transactional
     public void publishPost(Long postId, LocalDateTime requestedAt) {
-        Post post = findPost(postId);
+        Post post = postAccess.lockActive(postId);
+        PostSnapshot before = PostSnapshot.from(post);
 
         if (post.isPublished()) {
             throw new BlogException(ErrorCode.POST_ALREADY_PUBLISHED);
@@ -249,10 +238,12 @@ public class AdminPostService {
         // 아직 오지 않은 시각이면 예약이다. 상태를 나눠 두면 공개 조회가 시각을 따지지 않아도 된다
         if (publishedAt.isAfter(LocalDateTime.now())) {
             post.schedule(publishedAt);
+            historyService.recordPost(post, Action.SCHEDULE, before);
             return;
         }
 
         post.publish(publishedAt);
+        historyService.recordPost(post, Action.PUBLISH, before);
     }
 
     /**
@@ -277,35 +268,39 @@ public class AdminPostService {
     /** 내리기. PRIVATE 이 되고 publishedAt 은 지우지 않는다 */
     @Transactional
     public void unpublishPost(Long postId) {
-        Post post = findPost(postId);
+        Post post = postAccess.lockActive(postId);
+        PostSnapshot before = PostSnapshot.from(post);
 
         if (!post.isPublished()) {
             throw new BlogException(ErrorCode.POST_NOT_PUBLISHED_YET);
         }
 
         post.unpublish();
+        historyService.recordPost(post, Action.UNPUBLISH, before);
     }
 
-    /** 삭제. 댓글을 먼저 지워야 FK 제약에 걸리지 않는다 */
+    /** 휴지통으로 이동한다. 댓글, 신고, 반응, 알림과 이미지는 보존한다. */
     @Transactional
     public void deletePost(Long postId) {
-        Post post = findPost(postId);
-
-        // 지운 뒤에는 이 글이 쓰던 이미지를 알 수 없다
-        Set<String> released =
-                imageCleanupService.collectUsedUrls(post.getContent(), post.getThumbnailImageUrl());
-
-        commentReactionRepository.deleteByPostId(postId);
-        postReactionRepository.deleteByPostId(postId);
-        commentRepository.deleteByPostId(postId);
-        postRepository.delete(post);
-
-        // 커밋 뒤에 지운다. 여기서 바로 지우면 롤백됐을 때 파일만 없어진다
-        eventPublisher.publishEvent(new ImageCleanupService.PostImagesReleasedEvent(released));
+        Post post = postAccess.lockActive(postId);
+        PostSnapshot before = PostSnapshot.from(post);
+        post.delete(LocalDateTime.now());
+        historyService.recordPost(post, Action.DELETE, before);
     }
 
-    private Post findPost(Long postId) {
-        return postRepository.findById(postId)
+    @Transactional
+    public void restorePost(Long postId) {
+        Post post = postRepository.findLockedById(postId)
                 .orElseThrow(() -> new BlogException(ErrorCode.POST_NOT_FOUND));
+        if (!post.isDeleted()) {
+            throw new BlogException(ErrorCode.POST_NOT_DELETED);
+        }
+        LocalDateTime now = LocalDateTime.now();
+        if (!post.canRestore(now)) {
+            throw new BlogException(ErrorCode.POST_RESTORE_EXPIRED);
+        }
+        PostSnapshot before = PostSnapshot.from(post);
+        post.restore(now);
+        historyService.recordPost(post, Action.RESTORE, before);
     }
 }

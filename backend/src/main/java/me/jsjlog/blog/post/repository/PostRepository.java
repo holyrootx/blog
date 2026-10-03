@@ -2,6 +2,9 @@ package me.jsjlog.blog.post.repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
 
 import me.jsjlog.blog.post.domain.Post;
 import me.jsjlog.blog.post.domain.PostStatus;
@@ -12,14 +15,19 @@ import org.springframework.data.repository.query.Param;
 
 public interface PostRepository extends JpaRepository<Post,Long>, PostRepositoryCustom, AdminPostRepositoryCustom {
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select post from Post post where post.id = :postId")
+    Optional<Post> findLockedById(@Param("postId") Long postId);
+
     /**
      * 공개할 때가 된 예약 글.
      *
      * 서버가 꺼져 있던 동안 지나간 시각도 여기서 함께 잡힌다 — 시각을 저장해 두고 매번 비교하므로
      * 놓친 예약이 생기지 않는다.
      */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select post from Post post where post.status = me.jsjlog.blog.post.domain.PostStatus.SCHEDULED"
-            + " and post.publishedAt <= :now")
+            + " and post.deletedAt is null and post.publishedAt <= :now order by post.id")
     List<Post> findDueScheduledPosts(@Param("now") LocalDateTime now);
 
     /**
@@ -30,7 +38,7 @@ public interface PostRepository extends JpaRepository<Post,Long>, PostRepository
     boolean existsByCategoryId(Long categoryId);
 
     @Query("select post.id from Post post where post.status = :status"
-            + " and post.publishedAt <= :now order by post.id")
+            + " and post.deletedAt is null and post.publishedAt <= :now order by post.id")
     List<Long> findPublicPostIdsForSitemap(
             @Param("status") PostStatus status,
             @Param("now") LocalDateTime now
@@ -44,7 +52,7 @@ public interface PostRepository extends JpaRepository<Post,Long>, PostRepository
      */
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("update Post post set post.views = post.views + 1 "
-            + "where post.id = :postId and post.status = :status")
+            + "where post.id = :postId and post.status = :status and post.deletedAt is null")
     int increaseViewCount(
             @Param("postId") Long postId,
             @Param("status") PostStatus status

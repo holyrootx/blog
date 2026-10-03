@@ -20,7 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.time.LocalDateTime;
-import java.util.Optional;
 
 @Service
 @Slf4j
@@ -34,6 +33,7 @@ public class PostService {
     private static final int MAX_SUGGEST_SIZE = 10;
 
     private final PostRepository postRepository;
+    private final PostAccess postAccess;
     private final CommentRepository commentRepository;
     private final PostReactionRepository postReactionRepository;
     private final MemberRepository memberRepository;
@@ -73,8 +73,8 @@ public class PostService {
     /**
      * 지금 독자에게 보여도 되는 글인지.
      *
-     * 상태 하나만 본다. 예약한 글은 시각이 될 때까지 SCHEDULED 로 남아 있고,
-     * DRAFT·PRIVATE 와 마찬가지로 여기서 걸린다.
+     * 휴지통에 없고 발행된 글만 허용한다. 예약 글은 시각이 될 때까지
+     * SCHEDULED 로 남아 있고 DRAFT·PRIVATE 와 마찬가지로 여기서 걸린다.
      *
      * 없는 글과 공개되지 않은 글에 같은 응답을 주는 이유는, 응답이 갈리면
      * 아직 공개하지 않은 글의 존재를 알려주는 꼴이 되기 때문이다.
@@ -83,7 +83,7 @@ public class PostService {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new BlogException(ErrorCode.POST_NOT_FOUND));
 
-        if (post.getStatus() != PostStatus.PUBLISHED) {
+        if (!post.isPublished()) {
             throw new BlogException(ErrorCode.POST_NOT_FOUND);
         }
 
@@ -153,9 +153,11 @@ public class PostService {
             }
         }
 
-        return postRepository
-                .getPostDetail(postId)
-                .withReactions(reactionResponse(postId, memberId));
+        PostDetailResponse detail = postRepository.getPostDetail(postId);
+        if (detail == null) {
+            throw new BlogException(ErrorCode.POST_NOT_FOUND);
+        }
+        return detail.withReactions(reactionResponse(postId, memberId));
     }
 
     @Transactional
@@ -168,7 +170,7 @@ public class PostService {
             throw new BlogException(ErrorCode.POST_REACTION_REQUIRED);
         }
 
-        Post post = findReadablePost(postId);
+        Post post = postAccess.lockPublished(postId);
         Member member = findActiveMember(memberId);
 
         postReactionRepository
@@ -188,7 +190,7 @@ public class PostService {
             throw new BlogException(ErrorCode.POST_REACTION_REQUIRED);
         }
 
-        findReadablePost(postId);
+        postAccess.lockPublished(postId);
         findActiveMember(memberId);
 
         postReactionRepository.findByPostIdAndMemberIdAndType(postId, memberId, type)
@@ -237,15 +239,7 @@ public class PostService {
 
     public List<PostSummaryResponse> getRelatedPosts(Long postId) {
 
-        Optional<Post> byId = postRepository.findById(postId);
-        if (byId.isEmpty()) {
-            throw new BlogException(ErrorCode.POST_NOT_FOUND);
-        }
-
-        Post post = byId.get();
-        if (post.getStatus() == PostStatus.PRIVATE || post.getStatus() == PostStatus.DRAFT){
-            throw new BlogException(ErrorCode.POST_NOT_FOUND);
-        }
+        Post post = findReadablePost(postId);
         Long categoryId = post.getCategory().getId();
         return postRepository.getRelatedPosts(postId, categoryId);
     }
