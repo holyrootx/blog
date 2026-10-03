@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 
 import BlogHeader from '../../home/components/BlogHeader.vue';
@@ -124,7 +124,12 @@ function queryFor(changes) {
   return next;
 }
 
+let revision = 0;
+onBeforeUnmount(() => { revision += 1; });
+
 async function load() {
+  const requestedRevision = ++revision;
+  const requestedKeyword = keyword.value;
   loading.value = true;
   failed.value = false;
 
@@ -137,17 +142,22 @@ async function load() {
       keyword: keyword.value,
     });
 
+    if (requestedRevision !== revision) return;
     posts.value = result.items;
     totalElements.value = result.totalElements;
     totalPages.value = result.totalPages;
 
-    await loadFallbackIfEmpty();
+    await loadFallbackIfEmpty(requestedRevision, requestedKeyword);
   } catch (error) {
+    if (requestedRevision !== revision) return;
     console.error(error);
     failed.value = true;
     posts.value = [];
+    fallbackPosts.value = [];
+    totalElements.value = 0;
+    totalPages.value = 0;
   } finally {
-    loading.value = false;
+    if (requestedRevision === revision) loading.value = false;
   }
 }
 
@@ -157,14 +167,15 @@ async function load() {
  * <p>"없습니다" 만 있는 화면은 막다른 길이다. 찾던 것이 없다는 사실은 알려야 하지만,
  * 거기서 나갈 길도 같이 줘야 뒤로가기 말고 할 일이 생긴다.</p>
  */
-async function loadFallbackIfEmpty() {
-  if (posts.value.length > 0 || !keyword.value) {
+async function loadFallbackIfEmpty(requestedRevision, requestedKeyword) {
+  if (posts.value.length > 0 || !requestedKeyword) {
     fallbackPosts.value = [];
     return;
   }
 
   // 여기서 실패해도 검색 결과 화면 자체는 이미 멀쩡하다. 덤이 빠질 뿐이다
-  fallbackPosts.value = await getHomePosts('latest').catch(() => []);
+  const fallback = await getHomePosts('latest').catch(() => []);
+  if (requestedRevision === revision) fallbackPosts.value = fallback;
 }
 
 function clearKeyword() {

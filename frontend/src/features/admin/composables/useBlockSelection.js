@@ -1,4 +1,5 @@
 import { nextTick, ref } from 'vue';
+import { notifyError } from '../../../shared/toast/toastStore';
 import { createBlock, toMarkdown } from '../data/postEditorBlocks';
 import { hasHeldBlocks, heldBlocks, holdBlocks, readClipboardBlocks } from '../data/postEditorClipboard';
 
@@ -171,14 +172,15 @@ export function useBlockSelection({ blocks, editorRef, sync, isUploading }) {
   /**
    * 붙여넣기.
    *
-   * <p>담아 둔 블록이 있으면 그것을 쓴다. 없으면 시스템 클립보드의 글을 블록으로
+   * <p>현재 클립보드가 내부 복사 내용과 같을 때만 담아 둔 블록을 쓴다. 그 외에는 글을 블록으로
    * 되돌려 본다 — 새로고침한 뒤나 편집기 밖에서 복사해 온 경우다. 둘 다 안 되면
    * 막지 않고 브라우저에 맡긴다. 글자를 붙여 넣으려던 것일 수 있어서다.</p>
    */
   function onBlockPaste(event) {
-    const pasting = hasHeldBlocks()
+    const text = event.clipboardData?.getData('text/plain') ?? '';
+    const pasting = hasHeldBlocks() && text === toMarkdown(heldBlocks())
       ? heldBlocks()
-      : readClipboardBlocks(event.clipboardData?.getData('text/plain'));
+      : readClipboardBlocks(text);
 
     // 블록으로 볼 것이 아니면 막지 않는다. 글자를 붙여 넣으려던 것일 수 있다
     if (pasting.length === 0) {
@@ -242,8 +244,17 @@ export function useBlockSelection({ blocks, editorRef, sync, isUploading }) {
     focusEditor();
   }
 
-  function pasteBlocks() {
-    insertBlocks(heldBlocks());
+  async function pasteBlocks() {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (!text) return;
+      const source = hasHeldBlocks() && text === toMarkdown(heldBlocks())
+        ? heldBlocks()
+        : readClipboardBlocks(text);
+      insertBlocks(source.length ? source : [createBlock('paragraph', { text })]);
+    } catch {
+      notifyError('클립보드를 읽지 못했습니다. 본문을 클릭한 뒤 다시 붙여 넣어 주세요.');
+    }
   }
 
   function insertBlocks(source, preferredIndex = -1) {

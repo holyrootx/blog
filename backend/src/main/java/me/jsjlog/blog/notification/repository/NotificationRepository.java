@@ -12,6 +12,17 @@ import org.springframework.data.repository.query.Param;
 
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
 
+    // 일반 회원의 알림은 공개 글만 가리킨다. 신고 업무 알림은 관리자에게만
+    // 비공개 글도 허용하며, 목록·개수·읽음 처리가 동일한 범위를 사용한다.
+    String VISIBLE_TO_RECIPIENT = """
+             and n.comment.post.deletedAt is null
+             and (n.comment.post.status = me.jsjlog.blog.post.domain.PostStatus.PUBLISHED
+                  or (n.type = me.jsjlog.blog.notification.domain.NotificationType.REPORT_RECEIVED
+                      and n.recipient.role = me.jsjlog.blog.member.domain.MemberRole.ADMIN))
+             and (n.comment.deleted = false
+                  or n.type = me.jsjlog.blog.notification.domain.NotificationType.COMMENT_HIDDEN)
+            """;
+
     /**
      * 내 알림 목록.
      *
@@ -31,10 +42,7 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
             join fetch c.post
             join fetch c.member
             where n.recipient.id = :memberId
-              and c.post.deletedAt is null
-              and (c.deleted = false or n.type = me.jsjlog.blog.notification.domain.NotificationType.COMMENT_HIDDEN)
-            order by n.id desc
-            """)
+            """ + VISIBLE_TO_RECIPIENT + " order by n.id desc")
     List<Notification> findMine(@Param("memberId") Long memberId, Pageable pageable);
 
     /** 종에 붙는 숫자. 목록과 같은 조건이어야 눌렀을 때 개수가 맞는다 */
@@ -43,16 +51,15 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
             join n.comment c
             where n.recipient.id = :memberId
               and n.readAt is null
-              and c.post.deletedAt is null
-              and (c.deleted = false or n.type = me.jsjlog.blog.notification.domain.NotificationType.COMMENT_HIDDEN)
-            """)
+            """ + VISIBLE_TO_RECIPIENT)
     long countUnread(@Param("memberId") Long memberId);
 
     @Query("select n from Notification n where n.id = :id and n.recipient.id = :recipientId"
-            + " and n.comment.post.deletedAt is null")
+            + VISIBLE_TO_RECIPIENT)
     Optional<Notification> findByIdAndRecipientId(@Param("id") Long id, @Param("recipientId") Long recipientId);
 
-    @Query("select n from Notification n where n.recipient.id = :memberId and n.readAt is null and n.comment.post.deletedAt is null")
+    @Query("select n from Notification n where n.recipient.id = :memberId and n.readAt is null"
+            + VISIBLE_TO_RECIPIENT)
     List<Notification> findUnread(@Param("memberId") Long memberId);
 
     /**

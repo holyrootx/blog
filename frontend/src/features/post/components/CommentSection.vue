@@ -10,6 +10,7 @@ import { useCommentComposer } from '../composables/useCommentComposer';
 import { useCommentManagement } from '../composables/useCommentManagement';
 import { useCommentFeedback } from '../composables/useCommentFeedback';
 import { signOutMember, useMemberAuth } from '../../member/data/memberAuthStore';
+import { notifyError } from '../../../shared/toast/toastStore';
 import { rememberReturnPath } from '../../member/data/memberReturnPath';
 
 const props = defineProps({
@@ -36,7 +37,7 @@ const signinBox = ref(null);
 const showBottomAd = false;
 const commentPlaceholder = computed(() => props.comments.placeholder ?? '');
 const commentMaxLength = computed(() => props.comments.maxLength ?? 1000);
-const { total, items, hasNext, loading, sentinel, loadMore } = useCommentFeed({
+const { total, items, hasNext, loading, sentinel, loadMore, loadReplies, replyLoadingIds } = useCommentFeed({
   postId: toRef(props, 'postId'), comments: toRef(props, 'comments'),
 });
 const {
@@ -62,7 +63,7 @@ const {
   closeReport,
   submitReport,
   reactToComment,
-} = useCommentFeedback({ isSignedIn, goToLogin });
+} = useCommentFeedback({ postId: toRef(props, 'postId'), isSignedIn, goToLogin });
 const {
   editingId,
   editDraft,
@@ -77,19 +78,29 @@ const {
   askDelete,
   cancelDelete,
   confirmDelete,
-} = useCommentManagement({ items, total });
+} = useCommentManagement({ postId: toRef(props, 'postId'), items, total });
 
 function avatarInitial(name) {
   return Array.from(name ?? '')[0] ?? '';
 }
 
+const signingOut = ref(false);
 async function signOut() {
+  if (signingOut.value) return;
+  signingOut.value = true;
+  try {
+    await signOutMember();
+  } catch {
+    notifyError('로그아웃을 확인하지 못했습니다. 다시 시도해 주세요.');
+    return;
+  } finally {
+    signingOut.value = false;
+  }
   // 쓰던 내용은 지운다. 로그아웃한 사람의 이름으로 올라갈 글이 칸에 남아 있으면 안 된다
   draft.value = '';
   replyDraft.value = '';
   replyTargetId.value = null;
 
-  await signOutMember();
   items.value.forEach((comment) => {
     comment.likedByMe = false;
     comment.dislikedByMe = false;
@@ -233,13 +244,11 @@ watch(() => props.comments, () => { replyTargetId.value = null; });
               @cancel-delete="cancelDelete"
             />
 
-            <button v-if="comment.hiddenReplyCount" class="comment__more" type="button">
-              답글 {{ comment.hiddenReplyCount }}개 더 보기 ⌄
-            </button>
+
           </div>
         </div>
 
-        <div v-if="comment.replies.length || replyTargetId === comment.id" class="comment__replies">
+        <div v-if="comment.replies.length || comment.replyHasNext || replyTargetId === comment.id" class="comment__replies">
           <div
             v-for="reply in comment.replies"
             :id="`comment-${reply.id}`"
@@ -290,6 +299,13 @@ watch(() => props.comments, () => { replyTargetId.value = null; });
             </div>
           </div>
 
+          <button
+            v-if="comment.replyHasNext"
+            class="comment__more"
+            type="button"
+            :disabled="replyLoadingIds.has(comment.id)"
+            @click="loadReplies(comment)"
+          >{{ replyLoadingIds.has(comment.id) ? '답글 불러오는 중…' : '답글 더 보기' }}</button>
           <form
             v-if="replyTargetId === comment.id"
             class="reply-form"

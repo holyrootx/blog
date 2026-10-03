@@ -97,7 +97,7 @@ const isPublished = computed(() => !isNew.value && status.value === 'PUBLISHED')
 
 // 발행된 글에 "임시저장"이라 써 있으면 "저장하면 임시저장으로 내려가나?"로 읽힌다.
 // 실제로는 PUT 이 status 를 건드리지 않아 발행 상태 그대로 내용만 바뀐다
-const saveLabel = computed(() => (isPublished.value ? '저장' : '임시저장'));
+const saveLabel = computed(() => (isPublished.value || isScheduled.value ? '저장' : '임시저장'));
 
 const categoryOptions = computed(() => categories.value.map((category) => ({
   value: String(category.id),
@@ -139,9 +139,9 @@ const publishBlockReason = computed(() => {
 
 // 발행된 글은 발행 조건을 계속 만족해야 한다.
 // 공개된 글에서 요약을 지우면 공개 화면 카드가 빈다
-const canSave = computed(() => (isPublished.value ? canPublish.value : canSaveDraft.value));
+const canSave = computed(() => (isPublished.value || isScheduled.value ? canPublish.value : canSaveDraft.value));
 
-const saveBlockReason = computed(() => (isPublished.value ? publishBlockReason.value : draftBlockReason.value));
+const saveBlockReason = computed(() => (isPublished.value || isScheduled.value ? publishBlockReason.value : draftBlockReason.value));
 
 /**
  * 지금 막혀 있는 이유 한 줄.
@@ -330,13 +330,7 @@ async function save() {
 
   try {
     if (isNew.value) {
-      clearTimeout(draftTimer);
-      lastSavedForm.value = JSON.stringify({ ...form });
-
-      const newId = await createAdminPost(buildRequest());
-      clearPostDraft('new');
-      // 저장했으니 이제 수정 화면이다. 주소도 그 글을 가리켜야 한다
-      await router.replace({ name: 'admin-post-edit', params: { postId: newId } });
+      await createFromForm();
 
       notifySuccess(`${saveLabel.value}했습니다.`);
     } else {
@@ -349,6 +343,7 @@ async function save() {
       savedMessage.value = '저장했습니다.';
     }
   } catch (error) {
+    saveDraftNow();
     failWith(error.message);
   } finally {
     saving.value = false;
@@ -374,19 +369,20 @@ function buildRequest() {
  * 서버에 있던 예전 본문이 공개된다.
  */
 async function persistForm() {
-  // 저장 성공 뒤에 디바운스 타이머가 돌아 옛 내용을 다시 남기는 것을 막는다
-  clearTimeout(draftTimer);
-  lastSavedForm.value = JSON.stringify({ ...form });
+  const snapshot = JSON.stringify({ ...form });
+  saveDraftNow();
+  await updateAdminPost(postId.value, buildRequest());
+  acknowledgeSavedForm(snapshot);
+  return postId.value;
+}
 
-  try {
-    await updateAdminPost(postId.value, buildRequest());
+function acknowledgeSavedForm(snapshot) {
+  lastSavedForm.value = snapshot;
+  if (JSON.stringify({ ...form }) === snapshot) {
+    clearTimeout(draftTimer);
     clearPostDraft(draftKey.value);
-
-    return postId.value;
-  } catch (error) {
-    // 저장에 실패했으면 스냅샷은 계속 남겨야 한다
-    lastSavedForm.value = null;
-    throw error;
+  } else {
+    saveDraftNow();
   }
 }
 
@@ -426,13 +422,18 @@ async function runConfirmedAction() {
 
   const action = confirmAction.value;
 
+  if (action === 'cancelSchedule') {
+    await cancelSchedule();
+    return;
+  }
+
   if (action === 'delete') {
     await runDelete();
     return;
   }
 
   // 발행·내리기는 저장 → 상태 변경 두 단계다. 저장을 건너뛰면 지금 쓴 내용이 아니라
-  // 서버에 있던 예전 내용이 공개되고, 이어지는 loadPost 가 화면의 내용까지 덮는다
+  // 서버에 있던 예전 내용이 공개된다. 성공 뒤에는 상태만 다시 읽어 추가 입력을 보존한다
   applyAutomaticThumbnail();
   const blockReason = action === 'publish' ? publishBlockReason.value : saveBlockReason.value;
 
@@ -458,8 +459,7 @@ async function runConfirmedAction() {
     await changeStatus(action, targetId);
 
     confirmAction.value = '';
-    await loadPost();
-    lastSavedForm.value = JSON.stringify({ ...form });
+    await refreshServerState();
 
     notifySuccess(publishedMessage(action));
   } catch (error) {
@@ -471,6 +471,7 @@ async function runConfirmedAction() {
       retryAction.value = action;
       failWith(`내용은 저장되었지만 ${ACTION_LABELS[action]}하지 못했습니다. ${error.message}`);
     } else {
+      saveDraftNow();
       failWith(error.message);
     }
   } finally {
@@ -504,20 +505,41 @@ function changeStatus(action, targetId = postId.value) {
 }
 
 /** 새 글을 만들고 그 id 를 돌려준다. 주소도 그 글을 가리키게 바꾼다 */
+let createdPostId = null;
 async function createFromForm() {
-  clearTimeout(draftTimer);
-  lastSavedForm.value = JSON.stringify({ ...form });
+  const snapshot = JSON.stringify({ ...form });
+  saveDraftNow();
+  const newId = await createAdminPost(buildRequest());
+  acknowledgeSavedForm(snapshot);
+  // 요청 중 추가한 입력도 수정 화면에서 복구할 수 있게 새 글의 키로 옮긴다.
+  if (JSON.stringify({ ...form }) !== snapshot) {
+    savePostDraft(String(newId), { ...form }, null);
+  }
+  clearPostDraft('new');
+  createdPostId = Number(newId);
+  await router.replace({ name: 'admin-post-edit', params: { postId: newId } });
+  // 이동 직전 이탈 가드가 new 보관본을 다시 남길 수 있다. 해당 글로 이동한 뒤에
+  // 정리해야 다음 새 글에 섞이지 않고, 이동이 취소됐을 때는 복구본을 유지한다.
+  if (postId.value === Number(newId)) clearPostDraft('new');
+  await refreshServerState();
+  return newId;
+}
 
+async function cancelSchedule() {
+  saving.value = true;
+  formError.value = '';
+  saveDraftNow();
   try {
-    const newId = await createAdminPost(buildRequest());
-    clearPostDraft('new');
-
-    await router.replace({ name: 'admin-post-edit', params: { postId: newId } });
-
-    return newId;
+    await unpublishAdminPost(postId.value);
+    status.value = 'DRAFT';
+    publishedAt.value = null;
+    await refreshServerState();
+    notifySuccess('예약을 취소했습니다. 작성 중인 내용은 유지됩니다.');
   } catch (error) {
-    lastSavedForm.value = null;
-    throw error;
+    failWith(error.message);
+  } finally {
+    confirmAction.value = '';
+    saving.value = false;
   }
 }
 
@@ -535,8 +557,7 @@ async function retryStatusChange() {
     await changeStatus(action);
     retryAction.value = '';
 
-    await loadPost();
-    lastSavedForm.value = JSON.stringify({ ...form });
+    await refreshServerState();
 
     notifySuccess(publishedMessage(action));
   } catch (error) {
@@ -574,6 +595,10 @@ const CONFIRM_TEXTS = {
   unpublish: {
     title: '이 글을 내릴까요?',
     description: '공개 화면에서 사라집니다. 발행일은 그대로 남습니다.',
+  },
+  cancelSchedule: {
+    title: '발행 예약을 취소할까요?',
+    description: '임시저장 상태로 돌아가고 예약 시각을 지웁니다. 작성 중인 내용은 유지됩니다.',
   },
   delete: {
     title: '이 글을 삭제할까요?',
@@ -680,7 +705,13 @@ onBeforeRouteLeave(() => {
 });
 
 // 같은 화면에서 대상이 바뀌는 경우 (새 글 저장 후 수정 화면이 되는 등)
-watch(postId, enter);
+watch(postId, (id) => {
+  if (id === createdPostId) {
+    createdPostId = null;
+    return;
+  }
+  enter();
+});
 </script>
 
 <template>
@@ -753,6 +784,13 @@ watch(postId, enter);
             {{ saving ? '저장 중…' : saveLabel }}
           </button>
 
+          <button
+            v-if="isScheduled"
+            class="admin-button admin-button--ghost"
+            type="button"
+            :disabled="saving"
+            @click="confirmAction = 'cancelSchedule'"
+          >예약 취소</button>
           <button
             v-if="!isNew && status === 'PUBLISHED'"
             class="admin-button admin-button--solid"

@@ -45,6 +45,8 @@ public record CommentItemResponse(
          */
         boolean reportedByMe,
 
-        List<CommentReplyResponse> replies
+        List<CommentReplyResponse> replies,
+        Long replyNextCursor,
+        boolean replyHasNext
 ) {
 }

@@ -70,18 +70,23 @@ export async function signInAdmin(username, password) {
 export async function signOutAdmin() {
   try {
     await logoutAdmin();
-  } finally {
-    // 서버 응답이 실패해도 화면에서는 로그아웃으로 친다.
-    // 로그아웃을 눌렀는데 로그인 상태로 남아 있는 것이 더 나쁘다
-    clearAdminSession();
-
-    // 회원 세션도 같이 끊긴다. 안 비우면 로그아웃한 뒤 공개 화면으로 갔을 때
-    // 종이 그대로 떠 있고, 누르면 401 이 난다
-    clearMemberSession();
-
-    // 로그아웃 때도 토큰이 바뀐다. 다시 로그인하려면 새 토큰이 있어야 한다
-    await refreshCsrfToken().catch(() => null);
+  } catch (error) {
+    try {
+      const session = await getAdminSession();
+      admin.value = session;
+    } catch (checkError) {
+      // 재조회에서 명확한 401을 받은 경우에만 종료로 확인한다.
+      if (checkError?.status !== 401) throw error;
+      clearAdminSession();
+      clearMemberSession();
+      await refreshCsrfToken().catch(() => null);
+      return;
+    }
+    throw error;
   }
+  clearAdminSession();
+  clearMemberSession();
+  await refreshCsrfToken().catch(() => null);
 }
 
 /** 세션이 끊겼다고 알려졌을 때. 다음 진입에서 서버에 다시 물어본다 */

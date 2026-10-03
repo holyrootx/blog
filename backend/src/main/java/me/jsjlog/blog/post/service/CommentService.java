@@ -39,12 +39,15 @@ public class CommentService {
     private final ContentHistoryService historyService;
     private final MemberRepository memberRepository;
     private final NotificationService notificationService;
+    private final CommentWriteGuard commentWriteGuard;
 
     @Transactional
     public CommentCreateResponse createComment(Long postId, CommentCreateRequest request, Long memberId) {
         String content = requireContent(request == null ? null : request.content());
-        Post post = postAccess.lockPublished(postId);
         Member member = findActiveMember(memberId);
+        // 제한된 요청은 글 잠금을 기다리기 전에 거절한다. 실패한 등록 시도도 횟수에 포함한다.
+        commentWriteGuard.check(memberId);
+        Post post = postAccess.lockPublished(postId);
         Comment parent = findParent(request == null ? null : request.parentId(), postId);
 
         Comment comment = commentRepository.save(new Comment(post, parent, member, content));
@@ -223,7 +226,9 @@ public class CommentService {
             return null;
         }
 
-        Comment parent = commentRepository.findById(parentId)
+        // 회원 조회가 만든 REPEATABLE READ 스냅샷 대신 잠금 뒤의 최신 삭제 상태를 읽는다.
+        // 모든 댓글 변경과 동일하게 글 → 댓글 순서로 잠근다.
+        Comment parent = commentRepository.findLockedById(parentId)
                 .orElseThrow(() -> new BlogException(ErrorCode.COMMENT_NOT_FOUND));
 
         if (!parent.getPost().getId().equals(postId)) {

@@ -14,6 +14,8 @@ import me.jsjlog.blog.post.domain.QCommentReport;
 import me.jsjlog.blog.post.dto.CommentItemResponse;
 import me.jsjlog.blog.post.dto.CommentListResponse;
 import me.jsjlog.blog.post.dto.CommentReplyResponse;
+import me.jsjlog.blog.post.dto.CommentReplyListResponse;
+import me.jsjlog.blog.post.domain.PostStatus;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -28,9 +30,11 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class CommentRepositoryCustomImpl implements CommentRepositoryCustom {
 
+    private static final int INITIAL_REPLY_SIZE = 10;
+
     private final JPAQueryFactory jpaQueryFactory;
 
-    /** 최상위 댓글 한 페이지와 그 답글·반응을 고정된 수의 쿼리로 조회한다. */
+    /** 각 부모에서 처음 답글 10개만 읽고, 반응은 반환할 댓글에 대해서만 모은다. */
     @Override
     public CommentListResponse getCommentPageByPostId(
             Long postId,
@@ -44,6 +48,7 @@ public class CommentRepositoryCustomImpl implements CommentRepositoryCustom {
         BooleanBuilder builder = new BooleanBuilder();
         builder.and(comment.post.id.eq(postId));
         builder.and(comment.post.deletedAt.isNull());
+        builder.and(comment.post.status.eq(PostStatus.PUBLISHED));
         builder.and(comment.parent.isNull());
 
         if (cursor != null) {
@@ -89,7 +94,16 @@ public class CommentRepositoryCustomImpl implements CommentRepositoryCustom {
                 .map(row -> row.get(comment.id))
                 .toList();
 
-        Map<Long, List<ReplyRow>> repliesByParentId = getReplyRowsByParentId(parentIds);
+        Map<Long, List<ReplyRow>> repliesByParentId = new HashMap<>();
+        Set<Long> parentsWithMoreReplies = new HashSet<>();
+        for (Long parentId : parentIds) {
+            List<ReplyRow> rows = getReplyRows(postId, parentId, null, INITIAL_REPLY_SIZE + 1);
+            if (rows.size() > INITIAL_REPLY_SIZE) {
+                parentsWithMoreReplies.add(parentId);
+                rows = rows.subList(0, INITIAL_REPLY_SIZE);
+            }
+            repliesByParentId.put(parentId, rows);
+        }
         List<Long> visibleCommentIds = collectVisibleCommentIds(parentIds, repliesByParentId);
         ReactionData reactionData = getReactionData(visibleCommentIds, memberId);
         Set<Long> reportedByMe = getReportedCommentIds(visibleCommentIds, memberId);
@@ -128,7 +142,9 @@ public class CommentRepositoryCustomImpl implements CommentRepositoryCustom {
                     !deleted && Boolean.TRUE.equals(commentRow.get(comment.edited)),
                     deleted && Boolean.TRUE.equals(commentRow.get(comment.hiddenByAdmin)),
                     !deleted && reportedByMe.contains(commentId),
-                    replies
+                    replies,
+                    parentsWithMoreReplies.contains(commentId) ? replies.getLast().id() : null,
+                    parentsWithMoreReplies.contains(commentId)
             ));
         }
 
@@ -140,50 +156,37 @@ public class CommentRepositoryCustomImpl implements CommentRepositoryCustom {
         return new CommentListResponse(countVisibleComments(postId), items, nextCursor, hasNext);
     }
 
-    private Map<Long, List<ReplyRow>> getReplyRowsByParentId(List<Long> parentIds) {
-        Map<Long, List<ReplyRow>> repliesByParentId = new HashMap<>();
-        if (parentIds.isEmpty()) {
-            return repliesByParentId;
-        }
+    @Override
+    public CommentReplyListResponse getReplyPage(Long postId, Long parentId, Long cursor, long size, Long memberId) {
+        List<ReplyRow> rows = getReplyRows(postId, parentId, cursor, size + 1);
+        boolean hasNext = rows.size() > size;
+        if (hasNext) rows = rows.subList(0, (int) size);
+        List<Long> ids = rows.stream().map(ReplyRow::id).toList();
+        ReactionData reactions = getReactionData(ids, memberId);
+        Set<Long> reported = getReportedCommentIds(ids, memberId);
+        List<CommentReplyResponse> replies = rows.stream()
+                .map(row -> toReplyResponse(row, reactions.summary(row.id()), memberId, reported.contains(row.id())))
+                .toList();
+        return new CommentReplyListResponse(replies, hasNext ? replies.getLast().id() : null, hasNext);
+    }
 
+    private List<ReplyRow> getReplyRows(Long postId, Long parentId, Long cursor, long limit) {
         QComment reply = new QComment("reply");
-
-        List<Tuple> replyRows = jpaQueryFactory.select(
-                        reply.parent.id,
-                        reply.id,
-                        reply.member.id,
-                        reply.member.nickname,
-                        reply.content,
-                        reply.createdAt,
-                        reply.member.role,
-                        reply.deleted,
-                        reply.edited
-                ).from(reply)
-                .where(
-                        reply.parent.id.in(parentIds),
-                        reply.post.deletedAt.isNull(),
-                        reply.deleted.isFalse()
-                )
-                .orderBy(reply.parent.id.desc(), reply.id.asc())
+        List<Tuple> rows = jpaQueryFactory.select(
+                        reply.id, reply.member.id, reply.member.nickname, reply.content,
+                        reply.createdAt, reply.member.role, reply.deleted, reply.edited)
+                .from(reply)
+                .where(reply.post.id.eq(postId), reply.parent.id.eq(parentId),
+                        reply.post.deletedAt.isNull(), reply.post.status.eq(PostStatus.PUBLISHED),
+                        reply.deleted.isFalse(), cursor == null ? null : reply.id.gt(cursor))
+                .orderBy(reply.id.asc())
+                .limit(limit)
                 .fetch();
-
-        for (Tuple row : replyRows) {
-            Long parentId = row.get(reply.parent.id);
-            ReplyRow replyRow = new ReplyRow(
-                    row.get(reply.id),
-                    row.get(reply.member.id),
-                    row.get(reply.member.nickname),
-                    row.get(reply.content),
-                    row.get(reply.createdAt),
-                    row.get(reply.member.role),
-                    Boolean.TRUE.equals(row.get(reply.deleted)),
-                    Boolean.TRUE.equals(row.get(reply.edited))
-            );
-
-            repliesByParentId.computeIfAbsent(parentId, ignored -> new ArrayList<>()).add(replyRow);
-        }
-
-        return repliesByParentId;
+        return rows.stream().map(row -> new ReplyRow(
+                row.get(reply.id), row.get(reply.member.id), row.get(reply.member.nickname),
+                row.get(reply.content), row.get(reply.createdAt), row.get(reply.member.role),
+                Boolean.TRUE.equals(row.get(reply.deleted)), Boolean.TRUE.equals(row.get(reply.edited))))
+                .toList();
     }
 
     private List<Long> collectVisibleCommentIds(
@@ -310,6 +313,7 @@ public class CommentRepositoryCustomImpl implements CommentRepositoryCustom {
                 .where(
                         comment.post.id.eq(postId),
                         comment.post.deletedAt.isNull(),
+                        comment.post.status.eq(PostStatus.PUBLISHED),
                         comment.deleted.isFalse()
                 )
                 .fetchOne();

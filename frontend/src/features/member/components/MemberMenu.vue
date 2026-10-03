@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 
 import { signOutMember, useMemberAuth } from '../data/memberAuthStore';
+import { notifyError } from '../../../shared/toast/toastStore';
 import { rememberReturnPath } from '../data/memberReturnPath';
 
 /**
@@ -25,6 +26,7 @@ const router = useRouter();
 const { member, sessionResolved, isSignedIn } = useMemberAuth();
 
 const open = ref(false);
+const signingOut = ref(false);
 const root = ref(null);
 
 const isAdmin = computed(() => member.value?.role === 'ROLE_ADMIN');
@@ -66,13 +68,16 @@ function goToLogin() {
 }
 
 async function signOut() {
-  open.value = false;
-
-  await signOutMember();
-
-  // 로그인해야 볼 수 있는 화면에서 로그아웃했으면 그 자리에 남을 수 없다
-  if (route.name === 'member-settings') {
-    await router.replace({ name: 'home' });
+  if (signingOut.value) return;
+  signingOut.value = true;
+  try {
+    await signOutMember();
+    open.value = false;
+    if (route.name === 'member-settings') await router.replace({ name: 'home' });
+  } catch {
+    notifyError('로그아웃을 확인하지 못했습니다. 다시 시도해 주세요.');
+  } finally {
+    signingOut.value = false;
   }
 }
 </script>
@@ -116,7 +121,7 @@ async function signOut() {
       >
         관리자
       </RouterLink>
-      <button class="member-menu__item" type="button" role="menuitem" @click="signOut">
+      <button class="member-menu__item" type="button" role="menuitem" :disabled="signingOut" @click="signOut">
         로그아웃
       </button>
     </div>
