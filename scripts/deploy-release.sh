@@ -33,12 +33,8 @@ check_release() {
   python3 "$checker" --backend "$backend_url" --public "$public_url" "$@"
 }
 
-index_digest() {
-  python3 -c 'import hashlib,sys; print(hashlib.sha256(open(sys.argv[1], "rb").read()).hexdigest())' "$1"
-}
-
 # Do not replace an installation that cannot first be identified as healthy.
-check_release
+check_release --index-file "$web_root/index.html"
 mkdir -p "$backup_dir/frontend"
 cp -p "$app_root/backend/app.jar" "$backup_dir/app.jar"
 sudo -n rsync -a "$web_root/" "$backup_dir/frontend/"
@@ -58,9 +54,9 @@ recover() {
   sudo -n systemctl restart "$service" || restore_failed=1
   previous_revision=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["revision"])' "$backup_dir/frontend/deployment.json" 2>/dev/null)
   if [[ -n "$previous_revision" ]]; then
-    check_release --revision "$previous_revision" --index-sha256 "$(index_digest "$backup_dir/frontend/index.html")" || restore_failed=1
+    check_release --revision "$previous_revision" --index-file "$backup_dir/frontend/index.html" || restore_failed=1
   else
-    check_release --index-sha256 "$(index_digest "$backup_dir/frontend/index.html")" || restore_failed=1
+    check_release --index-file "$backup_dir/frontend/index.html" || restore_failed=1
   fi
   if [[ "$restore_failed" -eq 0 ]]; then
     printf 'ROLLED_BACK\n' > "$release_dir/status"
@@ -79,7 +75,7 @@ install -m 644 "$release_dir/app.jar" "$app_root/backend/.app.jar.next"
 mv -f "$app_root/backend/.app.jar.next" "$app_root/backend/app.jar"
 sudo -n rsync -a --delete "$release_dir/frontend/" "$web_root/"
 sudo -n systemctl restart "$service"
-check_release --revision "$release_id" --index-sha256 "$(index_digest "$release_dir/frontend/index.html")"
+check_release --revision "$release_id" --index-file "$release_dir/frontend/index.html"
 printf 'ACTIVE\n' > "$release_dir/status"
 printf '%s\n' "$release_id" > "$app_root/releases/current-release"
 trap - ERR INT TERM

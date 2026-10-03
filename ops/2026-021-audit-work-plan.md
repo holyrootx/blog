@@ -17,8 +17,8 @@
 | 4 | 이전 게시글 댓글·신고·검색 응답이 현재 화면 오염 | 요청 대상·순서 확인, 결과·오류·loading 반영 범위 제한 | 응답 순서 역전, 팝업/화면 전환 시 현재 상태 유지 | 코드 수정 및 회귀 검사 통과 |
 | 5 | 관리자 답글 수신자 알림 누락 | 기존 알림 서비스 연결, 답글·알림·이력 트랜잭션 유지 | 올바른 수신자에게 한 건, 자기 알림 제외, 실패 동시 롤백 | 코드 수정 및 회귀 검사 통과 |
 | 6 | 답글 무제한 반환 및 작성 빈도 제한 없음 | 부모당 초기 10개, 커서 추가 조회 기본 20개/최대 50개, 회원별 분당 10회 제한 | 답글 누락·중복·삭제·반응 일치, 초과 시 429와 추가 저장 방지 | 코드 수정 및 회귀 검사 통과 |
-| 7 | 로컬 테스트·설정·의존성의 CI 재현 불가, 의존성 취약점 | 테스트 명령·Playwright·H2 설정·CI 연결, nanoid/postcss 갱신 | 로컬 비밀 설정 없는 복사본에서 전체 테스트·빌드·audit 성공 | 로컬 검증 완료, 원격 Actions/required checks 미적용 |
-| 8 | DB 변경 이력·준비 확인·복구·동시 배포·SSH 신뢰 키 절차 부족 | 버전별 산출물, HTTP/DB조회/정적파일 검증, 실패 복구, 직렬화, 키 고정, DB 전환 문서·조사 스크립트 | 로컬 복구 검증 및 운영 조사·복원·업그레이드 증거 | 코드·절차·오프라인 검사 완료, 실제 운영 검증 대기 |
+| 7 | 로컬 테스트·설정·의존성의 CI 재현 불가, 의존성 취약점 | 테스트 명령·Playwright·H2 설정·CI 연결, nanoid/postcss 갱신 | 로컬 비밀 설정 없는 복사본에서 전체 테스트·빌드·audit 성공 | 로컬 검증 및 95b2986 원격 CI 통과, required checks 설정 별도 |
+| 8 | DB 변경 이력·준비 확인·복구·동시 배포·SSH 신뢰 키 절차 부족 | 버전별 산출물, HTTP/DB조회/정적파일 검증, 실패 복구, 직렬화, 키 고정, DB 전환 문서·조사 스크립트 | 로컬 복구 검증 및 운영 조사·복원·업그레이드 증거 | 코드·절차·오프라인 검사와 현재 운영 버전 읽기 전용 검사 완료, 신규 배포·복구 검증 대기 |
 
 ## 구현 판단
 
@@ -36,9 +36,9 @@
 - Java 21: `./gradlew clean test bootJar --offline --no-daemon` — 192건, 실패/오류/건너뜀 0, JAR 생성 성공.
 - 프런트엔드: `npm ci`, `npm test` — 31건 통과, `npm run build` 성공.
 - 브라우저: `npm run test:browser` — Playwright Chromium에서 22건 통과.
-- 배포: `python3 -m unittest discover -s scripts/tests -p '*_test.py'` — 9건 통과.
+- 배포: `python3 -m unittest discover -s scripts/tests -p '*_test.py'` — 21건 통과.
 - 의존성: `npm audit --ignore-scripts` — 0건. 잠금 버전 nanoid 3.3.19, postcss 8.5.28.
-- 셸 구문·workflow YAML 파싱 검증 완료. GitHub Actions의 실제 실행 결과는 아니다.
+- 셸 구문·workflow YAML 파싱 검증 완료. 95b2986을 작업 브랜치에 푸시한 원격 GitHub Actions의 전체 테스트·빌드도 통과했다.
 
 브라우저 검사는 실제 컴포넌트와 모의 API를 사용한다. 댓글/신고/클립보드/회원 메뉴 경로는 Chromium에서 검증했다. 관리자 글 저장·발행 초안, 예약 취소, 목록 응답 역전, 인증 스토어의 세부 분기는 실제 소스와 Vue ref/watch를 실행하는 Node VM 검사이며 관리자 전체 화면과 실서버를 연결한 종단 간 검증은 아니다. 백엔드는 H2이며 운영 MySQL의 DDL·복원·동시성 검증을 대신하지 않는다.
 
@@ -51,11 +51,11 @@
 
 ## 남은 운영 작업
 
-1. 실제 운영 실행 SHA, MySQL 버전·schema·기존 이력, `ddl-auto` 유효값을 읽기 전용으로 확인한다.
+1. 읽기 전용으로 MySQL 8.0.46, post.deleted_at 및 content_history 컬럼·ENUM·인덱스를 확인했다. 후보 생성 SQL은 재실행하지 않는다. Flyway/Liquibase 이력 테이블은 없었다. 환경 파일은 prod이고 ddl-auto override는 없었으며, 실제 실행 JAR의 Git SHA와 전체 런타임 override는 추가 확인 대상이다.
 2. [DB 전환안](database/README.md)에 따라 별도 MySQL에 백업 복원 및 업그레이드, 새/이전 JAR 호환성을 검증한 뒤 Flyway 기준점과 `validate` 전환을 확정한다. 현재 자동 마이그레이션 또는 운영 `ddl-auto` 전환은 적용하지 않았다.
 3. 배포에 필요한 신뢰 키 `LIGHTSAIL_KNOWN_HOSTS`, 공개 주소 `BLOG_PUBLIC_BASE_URL`, 실제 스키마 확인 후 `BLOG_SCHEMA_REVISION=2026-020`을 설정한다. 준비 변수 자체가 DB를 자동 검사한다는 의미는 아니다.
 4. develop/release의 required checks와 실제 GitHub Actions 실행을 확인한다. workflow가 테스트 실패 시 배포를 막더라도 직접 push/merge를 막는 브랜치 보호는 별도 설정이다.
-5. systemd/Nginx 권한·경로, CDN HTML 변형, 파일 복구 및 기존 백업 체계를 확인한다. 현재 공개 HTML을 원본 SHA와 비교하므로 HTML을 변형하는 CDN 설정을 확인해야 한다. 파일 복구는 DB 복구를 수행하지 않는다.
+5. 필수 명령·비대화형 sudo·기존 JAR/정적 파일 경로와 현재 서비스 상태는 읽기 전용으로 확인했다. 식별 User-Agent와 앱 JS/CSS/modulepreload 참조 비교를 적용한 검사기가 현재 운영 버전의 DB 조회·공개 HTML·JS 검사에 통과했다. Cloudflare 외부 분석 script 삽입은 허용하며 이전 앱 자산 참조는 거절한다. 신규 버전 실제 배포·파일 복구 및 기존 백업 체계는 추가 검증 대상이다. 파일 복구는 DB 복구를 수행하지 않는다.
 6. `X-Real-IP` 신뢰 경계(방화벽·Nginx 덮어쓰기), CSP/HSTS 정책, 관리자 자격 증명 변경 시 세션 폐기 절차는 운영 확인 항목으로 남긴다. 이 정보가 확인되지 않은 상태를 확정 취약점 또는 조치 완료로 표현하지 않는다.
 
-사용자 요청에 따라 애플리케이션·테스트·CI·배포·DB 조사 도구 전체를 재검토하고 하나의 커밋으로 묶는 범위를 확정했다. 커밋 대상에서 만든 깨끗한 복사본으로 최종 테스트와 빌드를 확인했다. 운영 DB·서버·배포·GitHub 설정 변경, 푸시·release 병합은 이 작업에 포함하지 않는다.
+사용자 요청에 따라 애플리케이션·테스트·CI·배포·DB 조사 도구 전체를 재검토하고 하나의 커밋으로 묶는 범위를 확정했다. 커밋 대상에서 만든 깨끗한 복사본으로 최종 테스트와 빌드를 확인했다. 후속 요청에 따라 작업 브랜치를 원격에 푸시하고 원격 CI를 확인했다. 운영 DB·서버 파일·GitHub Secrets/Variables 변경, release 병합 및 실제 배포는 수행하지 않았다.
