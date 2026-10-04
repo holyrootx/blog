@@ -1,6 +1,10 @@
-# MySQL 이력 관리와 validate 전환안
+# MySQL 운영과 오픈 전 validate 전환
 
-현재 소스의 `application.yaml`은 `ddl-auto:update`를 공통 설정으로 두며 prod도 상속한다. 서버 환경변수 override, 운영 스키마 및 적용 이력은 아직 확인하지 않았다. 이 변경은 Flyway를 런타임에 추가하거나 현재 ddl-auto를 변경하지 않는다. 검증되지 않은 기준점으로 운영에 자동 DDL을 실행하지 않기 위해 후보 SQL은 `ops/database/candidates`에 두고 애플리케이션 classpath/배포 스크립트에서는 읽지 않는다.
+현재 공통 `application.yaml`은 `ddl-auto: update`이며 `prod`도 상속합니다. **2026-10-04 운영 프로세스에서도 `prod` 활성화와 DDL 설정 재정의가 없는 것을 확인했습니다.** 확인 범위와 런타임 버전은 [운영 환경 기록](../runtime-2026-10-04.md)에 있습니다. 이 설정 확인은 스키마 전체 대조나 백업 복원 검증의 완료를 뜻하지 않습니다.
+
+현재 개발 단계에서는 `update`를 유지합니다. 블로그 오픈 전에 **스키마 확정 → DB 초기화 → DDL만으로 테이블 생성 → 데이터 재삽입 → 검증 → `validate` 전환**을 별도 작업으로 진행합니다. Flyway 도입은 이 전환의 필수 조건이 아니며, 필요하면 복원 검증 이후 별도 변경으로 결정합니다.
+
+검토용 SQL은 `ops/database/candidates`에 두며 애플리케이션 classpath와 배포 스크립트에서 자동 실행하지 않습니다. 이 문서 변경은 운영 DB나 애플리케이션 설정을 변경하지 않습니다.
 
 ## 현재 준비된 변경
 
@@ -87,22 +91,24 @@ bash scripts/inspect-database.sh blog-clone blog_upgrade_check /private-secure-p
 
 이후 **직전 배포 JAR도 동일 업그레이드 DB에 연결**해 조회·이력 역직렬화·시작 시 DDL 동작을 확인한다. 이전 코드의 엔티티/enum과 `ddl-auto:update`가 새 데이터·스키마를 호환하는지 함께 본다. 실패하면 기존 JAR를 자동 복구 대상에 두지 말고 호환 가능한 이전 산출물을 먼저 준비한다. 자동 파일 복구는 스키마나 신규 행을 삭제하지 않는다.
 
-## 4. Flyway 기준점 확정 및 버전 관리 전환
+## 4. 블로그 오픈 전 DB 재구성과 validate 전환
 
-운영 조사와 복원 실험이 통과한 다음 별도 변경으로 다음을 구현한다.
+이 절은 앞으로 수행할 작업입니다. 현재 서버의 `update`를 바로 바꾸거나 운영 데이터를 초기화하는 실행 명령은 아닙니다.
 
-1. 실제 schema dump에서 비밀/환경 의존 사항을 정리한 초기 스키마를 버전 파일로 작성한다. baseline 버전은 **실제로 이미 적용된 변경까지만** 포함해야 한다. 적용하지 않은 2026-020을 baseline 처리해 누락시키지 않는다.
-2. 기존 DB에는 명시적 Flyway `baseline`을 한 번 실행한다. 비어 있는 검증 DB는 전체 초기 스키마부터 `migrate`하도록 별도로 검증한다. `baselineOnMigrate=false`를 유지하여 잘못 연결한 비어 있지 않은 DB를 자동 승인하지 않는다. [Flyway baselineOnMigrate 문서](https://documentation.red-gate.com/flyway/reference/configuration/flyway-namespace/flyway-baseline-on-migrate-setting)
-3. Spring Boot 4.1에 맞춰 `spring-boot-starter-flyway`와 `org.flywaydb:flyway-mysql`을 추가하고 검증된 SQL만 `src/main/resources/db/migration/V...__....sql`에 둔다. 이후 적용된 파일은 수정하지 않고 추가 버전을 만든다. Spring은 기본적으로 startup에서 migrate를 수행하므로 의존성 추가 자체도 운영 동작 변경이다. [Spring Boot DB 초기화 문서](https://docs.spring.io/spring-boot/how-to/data-initialization.html)
-4. 준비된 migration이 먼저 실행되고 JPA가 `validate`하도록 prod 설정을 바꾼다. migration 계정과 애플리케이션 계정 권한 분리를 검토한다. Flyway와 Hibernate `update`를 동시에 스키마 작성자로 두지 않는다.
-5. CI에 같은 MySQL 버전으로 빈 DB 생성 → 전체 migrate → validate, 이전 baseline 복원 → migrate → validate, 재실행 무변경, checksum 변조 실패를 추가한다. H2 단위/통합 테스트는 계속 실행하되 MySQL 검증과 구분한다.
-6. 운영 실행 창에서 백업/복원 지점, 쓰기 중지 필요 여부, DB lock 예상 시간을 정하고 실제 대상 확인 → migration 적용 → 이력/스키마 확인 → 새 앱 기동 → HTTP smoke를 순서대로 수행한다.
+1. **스키마 확정:** 실제 MySQL 스키마, 현재 엔티티, 필요한 제약조건·인덱스를 대조하고 검토한 DDL 파일을 확정합니다. 남길 데이터와 다시 넣을 초기 데이터를 구분하고, FK 의존 순서에 맞는 재삽입 절차를 준비합니다.
+2. **복원 리허설:** 위 백업·복원 절차를 별도 MySQL 인스턴스에서 통과시킵니다. 빈 DB에 확정 DDL만으로 테이블을 만들고 데이터를 재삽입합니다. Hibernate `update`로 빠진 테이블이나 컬럼을 보완하지 않습니다.
+3. **검증 환경 기동:** `SPRING_JPA_HIBERNATE_DDL_AUTO=validate`로 실행해 엔티티와 테이블의 호환성을 확인합니다. 행 수·PK·FK·인덱스·데이터 무결성은 별도로 비교하고, 글·댓글·회원·이력·업로드 등 주요 기능을 확인합니다.
+4. **오픈 전 실행 계획 확정:** 백업 위치·복구 지점, 유지할 데이터, 쓰기 중지 시간, 사용할 DDL·데이터 파일의 checksum, 작업 대상 DB를 확인합니다. DB 초기화는 이 계획에 따라 별도 작업으로 실행합니다.
+5. **DB 재구성:** 쓰기를 중지하고 최종 백업을 확보한 뒤, 확정 대상 DB를 초기화합니다. 검토된 DDL로 테이블을 생성하고 준비한 데이터를 의존 순서에 따라 재삽입합니다.
+6. **최종 검증과 설정 전환:** 데이터·스키마·업무 기능 검증을 마치고 운영 설정을 `validate`로 전환합니다. 재시작 후 상태 API와 DB 조회를 함께 검사하고, 실행 SHA·DDL·데이터 파일 checksum·유효 설정·검증 결과를 기록합니다.
 
-MySQL의 ALTER TABLE 등 DDL은 일반 트랜잭션 rollback으로 되돌리는 작업이 아니다. 실패 시 부분 적용 여부를 실제 스키마로 확인하고, 검토된 전진 수정 또는 검증된 백업 복원 절차를 따른다. 데이터가 있는 ENUM을 축소하거나 이력 행을 삭제하는 자동 down migration은 제공하지 않는다. [MySQL implicit commit 문서](https://dev.mysql.com/doc/refman/8.4/en/implicit-commit.html)
+MySQL DDL은 일반 트랜잭션 rollback만으로 되돌릴 수 없습니다. 실패 시 부분 적용 여부를 확인하고 리허설에서 검증한 복원 절차를 따릅니다. 애플리케이션 JAR만 이전 버전으로 바꾸는 작업은 DB 복원을 대신하지 않습니다. [MySQL implicit commit 문서](https://dev.mysql.com/doc/refman/8.0/en/implicit-commit.html)
 
-## 완료 증거와 배포 준비 상태
+Flyway를 도입한다면 이 작업과 분리해 SQL 이력 관리, 빈 DB 생성, 기존 DB 기준점, 재실행 검증을 설계합니다. 현재 저장소에 Flyway를 추가하거나 자동 migration을 활성화하지 않습니다.
 
-다음 항목이 채워져야 `BLOG_SCHEMA_REVISION=2026-020`을 설정하고 이 배포 경로를 사용한다.
+## 검증 기록 체크리스트
+
+DB 변경·복원 검증과 오픈 전 전환의 결과는 다음 증거로 기록합니다. 배포에서 사용하는 `BLOG_SCHEMA_REVISION=2026-020` 값만으로 아래 검증을 모두 완료했다고 판단하지 않습니다.
 
 | 증거 | 필요한 기록 |
 | --- | --- |
@@ -112,4 +118,4 @@ MySQL의 ALTER TABLE 등 DDL은 일반 트랜잭션 rollback으로 되돌리는 
 | 복구 호환성 | 새 글·댓글·예약 취소 이력 행을 포함한 DB에서 복구 대상 JAR 조회·기동 성공 |
 | 운영 적용 | 대상 재확인, 실제 적용 이력/결과, HTTP/DB smoke, 복구 위치 |
 
-현재 이 문서와 후보 SQL·조사 스크립트만 준비되었다. 실제 운영 schema, 복원/업그레이드, Flyway 이력 생성, validate 전환은 수행하지 않았다.
+2026-10-04 README 보완에서는 운영 런타임 버전과 DDL 설정만 읽기 전용으로 확인했습니다. 이 작업에서 DB 초기화·재삽입·복원·Flyway 적용·`validate` 전환은 실행하지 않았습니다. 기존 복원·배포 검증 결과는 해당 작업 기록과 대조하고, 이 문서의 절차를 검증 완료 기록으로 대신하지 않습니다.

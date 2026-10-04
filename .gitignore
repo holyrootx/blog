@@ -28,6 +28,7 @@ replay_pid*
 .env.*
 !.env.example
 !.env.example.local
+backend/application-local.properties
 
 # Secrets / credentials
 *.pem

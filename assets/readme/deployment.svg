@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="555" viewBox="0 0 1440 555" role="img" aria-labelledby="title desc"><title id="title">JSJ.log 개발·배포 흐름</title><desc id="desc">작업 브랜치를 develop으로 PR 병합하고, develop을 release로 PR 병합합니다. release push는 GitHub Actions의 테스트와 빌드를 실행하고 검증 산출물을 Lightsail에 배포합니다.</desc><defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#52779b"/></marker><style>text{font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif}</style></defs>
+<rect x="0" y="0" width="1440" height="555" rx="20" fill="#f7f9fc" stroke="#dbe5ee" stroke-width="1.5"/>
+<text x="42" y="53" font-size="29" fill="#243e55" font-weight="700">JSJ.log 개발·배포 흐름</text>
+<text x="42" y="87" font-size="23" fill="#6a7f90" font-weight="400">작업 단위 PR → 통합 → 릴리즈 → 자동 검증과 배포</text>
+<rect x="42" y="126" width="330" height="103" rx="20" fill="#fff" stroke="#dbe5ee" stroke-width="1.5"/>
+<text x="64" y="165" font-size="26" fill="#243e55" font-weight="700">1. 작업 브랜치</text>
+<text x="64" y="204" font-size="23" fill="#647b8e" font-weight="400">기능·수정 단위 구현</text>
+<rect x="453" y="126" width="330" height="103" rx="20" fill="#fff" stroke="#dbe5ee" stroke-width="1.5"/>
+<text x="475" y="165" font-size="26" fill="#243e55" font-weight="700">2. develop</text>
+<text x="475" y="204" font-size="23" fill="#647b8e" font-weight="400">PR 검토 후 통합</text>
+<rect x="864" y="126" width="330" height="103" rx="20" fill="#fff" stroke="#dbe5ee" stroke-width="1.5"/>
+<text x="886" y="165" font-size="26" fill="#243e55" font-weight="700">3. release</text>
+<text x="886" y="204" font-size="23" fill="#647b8e" font-weight="400">배포 범위 검토 후 PR 병합</text>
+<path d="M372 179 H453" fill="none" stroke="#52779b" stroke-width="3" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<text x="389" y="161" font-size="23" fill="#557997" font-weight="600">PR</text>
+<path d="M783 179 H864" fill="none" stroke="#52779b" stroke-width="3" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<text x="800" y="161" font-size="23" fill="#557997" font-weight="600">PR</text>
+<path d="M1029 229 V267 H342 V308" fill="none" stroke="#52779b" stroke-width="3" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<text x="610" y="256" font-size="23" fill="#557997" font-weight="600">release push → 자동 실행</text>
+<rect x="42" y="308" width="600" height="161" rx="20" fill="#eef4fb" stroke="#dbe5ee" stroke-width="1.5"/>
+<text x="65" y="347" font-size="26" fill="#243e55" font-weight="700">4. GitHub Actions</text>
+<ns0:svg xmlns:ns0="http://www.w3.org/2000/svg" viewBox="0 0 128 128" x="69" y="365" width="36" height="36"><ns0:defs><ns0:linearGradient id="a" x1="6" x2="235" y1="33" y2="344" gradientTransform="translate(0 .937) scale(.3122)" gradientUnits="userSpaceOnUse"><ns0:stop offset="0" stop-color="#41d1ff" /><ns0:stop offset="1" stop-color="#bd34fe" /></ns0:linearGradient><ns0:linearGradient id="b" x1="194.651" x2="236.076" y1="8.818" y2="292.989" gradientTransform="translate(0 .937) scale(.3122)" gradientUnits="userSpaceOnUse"><ns0:stop offset="0" stop-color="#ffea83" /><ns0:stop offset=".083" stop-color="#ffdd35" /><ns0:stop offset="1" stop-color="#ffa800" /></ns0:linearGradient></ns0:defs><ns0:path fill="url(#a)" d="M124.766 19.52 67.324 122.238c-1.187 2.121-4.234 2.133-5.437.024L3.305 19.532c-1.313-2.302.652-5.087 3.261-4.622L64.07 25.187a3.09 3.09 0 0 0 1.11 0l56.3-10.261c2.598-.473 4.575 2.289 3.286 4.594Zm0 0" /><ns0:path fill="url(#b)" d="M91.46 1.43 48.954 9.758a1.56 1.56 0 0 0-1.258 1.437l-2.617 44.168a1.563 1.563 0 0 0 1.91 1.614l11.836-2.735a1.562 1.562 0 0 1 1.88 1.836l-3.517 17.219a1.562 1.562 0 0 0 1.985 1.805l7.308-2.223c1.133-.344 2.223.652 1.985 1.812l-5.59 27.047c-.348 1.692 1.902 2.614 2.84 1.164l.625-.968 34.64-69.13c.582-1.16-.421-2.48-1.69-2.234l-12.185 2.352a1.558 1.558 0 0 1-1.793-1.965l7.95-27.562A1.56 1.56 0 0 0 91.46 1.43Zm0 0" /></ns0:svg>
+<ns0:svg xmlns:ns0="http://www.w3.org/2000/svg" viewBox="0 0 128 128" x="118" y="359" width="43" height="43"><ns0:path fill="#0074BD" d="M47.617 98.12s-4.767 2.774 3.397 3.71c9.892 1.13 14.947.968 25.845-1.092 0 0 2.871 1.795 6.873 3.351-24.439 10.47-55.308-.607-36.115-5.969zm-2.988-13.665s-5.348 3.959 2.823 4.805c10.567 1.091 18.91 1.18 33.354-1.6 0 0 1.993 2.025 5.132 3.131-29.542 8.64-62.446.68-41.309-6.336z" /><ns0:path fill="#EA2D2E" d="M69.802 61.271c6.025 6.935-1.58 13.17-1.58 13.17s15.289-7.891 8.269-17.777c-6.559-9.215-11.587-13.792 15.635-29.58 0 .001-42.731 10.67-22.324 34.187z" /><ns0:path fill="#0074BD" d="M102.123 108.229s3.529 2.91-3.888 5.159c-14.102 4.272-58.706 5.56-71.094.171-4.451-1.938 3.899-4.625 6.526-5.192 2.739-.593 4.303-.485 4.303-.485-4.953-3.487-32.013 6.85-13.743 9.815 49.821 8.076 90.817-3.637 77.896-9.468zM49.912 70.294s-22.686 5.389-8.033 7.348c6.188.828 18.518.638 30.011-.326 9.39-.789 18.813-2.474 18.813-2.474s-3.308 1.419-5.704 3.053c-23.042 6.061-67.544 3.238-54.731-2.958 10.832-5.239 19.644-4.643 19.644-4.643zm40.697 22.747c23.421-12.167 12.591-23.86 5.032-22.285-1.848.385-2.677.72-2.677.72s.688-1.079 2-1.543c14.953-5.255 26.451 15.503-4.823 23.725 0-.002.359-.327.468-.617z" /><ns0:path fill="#EA2D2E" d="M76.491 1.587S89.459 14.563 64.188 34.51c-20.266 16.006-4.621 25.13-.007 35.559-11.831-10.673-20.509-20.07-14.688-28.815C58.041 28.42 81.722 22.195 76.491 1.587z" /><ns0:path fill="#0074BD" d="M52.214 126.021c22.476 1.437 57-.8 57.817-11.436 0 0-1.571 4.032-18.577 7.231-19.186 3.612-42.854 3.191-56.887.874 0 .001 2.875 2.381 17.647 3.331z" /></ns0:svg>
+<text x="180" y="389" font-size="23" fill="#243e55" font-weight="400">테스트 → JAR·정적 파일 빌드</text>
+<text x="180" y="426" font-size="23" fill="#647b8e" font-weight="400">검증된 산출물을 배포 작업에서 재사용</text>
+<path d="M642 389 H800" fill="none" stroke="#52779b" stroke-width="3" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<text x="661" y="372" font-size="23" fill="#557997" font-weight="600">SSH / SCP</text>
+<rect x="800" y="308" width="595" height="161" rx="20" fill="#eef7f2" stroke="#dbe5ee" stroke-width="1.5"/>
+<text x="823" y="347" font-size="26" fill="#243e55" font-weight="700">5. AWS Lightsail</text>
+<text x="823" y="387" font-size="23" fill="#243e55" font-weight="400">파일 백업·교체 → systemd 재시작</text>
+<text x="823" y="420" font-size="23" fill="#647b8e" font-weight="400">상태 · DB · 공개 자산 · 배포 버전 검증</text>
+<text x="823" y="449" font-size="23" fill="#647b8e" font-weight="400">적용 후 실패 시 이전 앱 파일 복구·재검증</text>
+<text x="42" y="512" font-size="23" fill="#718697" font-weight="400">애플리케이션 파일 복구와 데이터베이스 복원은 별도 절차입니다.</text>
+<text x="1170" y="537" font-size="13" fill="#8b9ba8" font-weight="400">Icons: Devicon (MIT)</text>
+<metadata>The MIT License (MIT)
+
+Copyright (c) 2015 konpa
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the &quot;Software&quot;), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software is furnished to do so,
+subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+</metadata></svg>
