@@ -1,6 +1,9 @@
 package me.jsjlog.blog.common.config;
 
 import me.jsjlog.blog.common.security.AdminLoginConfigurer;
+import me.jsjlog.blog.common.security.MemberSessionFilter;
+import me.jsjlog.blog.common.security.MemberSessionManager;
+import me.jsjlog.blog.common.security.SecurityResponseWriter;
 import me.jsjlog.blog.common.security.ClientIpResolver;
 import me.jsjlog.blog.common.security.LoginAttemptGuard;
 import me.jsjlog.blog.common.security.AdminLoginFailureHandler;
@@ -29,6 +32,7 @@ import org.springframework.security.oauth2.client.registration.ClientRegistratio
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.context.SecurityContextHolderFilter;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import tools.jackson.databind.ObjectMapper;
@@ -52,6 +56,8 @@ public class SecurityConfig {
             OAuth2LoginFailureHandler oauth2LoginFailureHandler,
             CustomOAuth2UserService customOAuth2UserService,
             ObjectProvider<ClientRegistrationRepository> clientRegistrationRepositoryProvider,
+            MemberSessionManager memberSessions,
+            SecurityResponseWriter responseWriter,
             AuthenticationManager authenticationManager,
             ObjectMapper objectMapper
     ) throws Exception {
@@ -62,27 +68,8 @@ public class SecurityConfig {
                         ApiPaths.Auth.OAUTH2_CALLBACK_ALL
                 )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                HttpMethod.GET,
-                                ApiPaths.Public.HEALTH,
-                                ApiPaths.Public.BLOG_ALL,
-                                ApiPaths.Auth.CSRF
-                        ).permitAll()
-                        .requestMatchers(
-                                ApiPaths.Auth.OAUTH2_AUTHORIZATION_ALL,
-                                ApiPaths.Auth.OAUTH2_CALLBACK_ALL
-                        ).permitAll()
-                        .requestMatchers(HttpMethod.POST, ApiPaths.Auth.LOGIN).permitAll()
-                        // 로그인하지 않은 방문자가 공개 화면을 볼 때마다 부르는 자리다.
-                        // 인증을 걸면 "아무도 아님" 이 401 로 나가서 글 한 번 읽을 때마다 오류가 쌓인다
-                        .requestMatchers(HttpMethod.GET, ApiPaths.Auth.MEMBER_ME).permitAll()
-                        .requestMatchers(HttpMethod.GET, ApiPaths.Auth.OAUTH_PENDING).permitAll()
-                        .requestMatchers(
-                                HttpMethod.POST,
-                                ApiPaths.Auth.OAUTH_SIGNUP,
-                                ApiPaths.Auth.OAUTH_REACTIVATE,
-                                ApiPaths.Auth.OAUTH_REJOIN
-                        ).permitAll()
+                        // 인증 만료 필터와 같은 목록을 써서 공개 API가 먼저 401로 막히지 않게 한다.
+                        .requestMatchers(MemberSessionFilter.publicRequests()).permitAll()
                         // 자기 계정을 고치는 자리. 관리자도 회원이라 같이 들어온다.
                         // 관리자 탈퇴는 여기서 막지 않고 서비스가 사유를 붙여 거절한다 —
                         // 403 만 주면 왜 안 되는지 화면이 설명할 수 없다
@@ -171,6 +158,9 @@ public class SecurityConfig {
             );
         }
 
+        // 컨텍스트가 복원된 뒤, CSRF 검사 전에 만료 인증을 제거한다.
+        httpSecurity.addFilterAfter(new MemberSessionFilter(memberSessions, responseWriter),
+                SecurityContextHolderFilter.class);
         return httpSecurity.build();
     }
 

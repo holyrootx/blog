@@ -1,11 +1,14 @@
 package me.jsjlog.blog.common.security.oauth;
 
+import java.time.LocalDateTime;
+
 import me.jsjlog.blog.common.security.MemberPrincipal;
 import me.jsjlog.blog.member.domain.Member;
 import me.jsjlog.blog.member.domain.MemberStatus;
 import me.jsjlog.blog.member.domain.NicknameGenerator;
 import me.jsjlog.blog.member.repository.MemberRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.AuditorAware;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
@@ -31,26 +34,30 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
     private final OAuthAttributeReaders attributeReaders;
     private final MemberRepository memberRepository;
     private final NicknameGenerator nicknameGenerator;
+    private final AuditorAware<String> auditorProvider;
 
     @Autowired
     public CustomOAuth2UserService(
             OAuthAttributeReaders attributeReaders,
             MemberRepository memberRepository,
-            NicknameGenerator nicknameGenerator
+            NicknameGenerator nicknameGenerator,
+            AuditorAware<String> auditorProvider
     ) {
-        this(new DefaultOAuth2UserService(), attributeReaders, memberRepository, nicknameGenerator);
+        this(new DefaultOAuth2UserService(), attributeReaders, memberRepository, nicknameGenerator, auditorProvider);
     }
 
     CustomOAuth2UserService(
             OAuth2UserService<OAuth2UserRequest, OAuth2User> delegate,
             OAuthAttributeReaders attributeReaders,
             MemberRepository memberRepository,
-            NicknameGenerator nicknameGenerator
+            NicknameGenerator nicknameGenerator,
+            AuditorAware<String> auditorProvider
     ) {
         this.delegate = delegate;
         this.attributeReaders = attributeReaders;
         this.memberRepository = memberRepository;
         this.nicknameGenerator = nicknameGenerator;
+        this.auditorProvider = auditorProvider;
     }
 
     @Override
@@ -59,13 +66,14 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
         String registrationId = userRequest.getClientRegistration().getRegistrationId();
         OAuthUserInfo userInfo = attributeReaders.read(registrationId, providerUser.getAttributes());
 
+        long authenticationStartedAtNanos = System.nanoTime();
         return memberRepository
                 .findByProviderAndProviderUserId(userInfo.provider(), userInfo.providerUserId())
-                .map(member -> resolveExistingMember(member, userInfo))
+                .map(member -> resolveExistingMember(member, userInfo, authenticationStartedAtNanos))
                 .orElseGet(() -> PendingOAuthPrincipal.signup(userInfo, suggestedNickname(userInfo)));
     }
 
-    private OAuth2User resolveExistingMember(Member member, OAuthUserInfo userInfo) {
+    private OAuth2User resolveExistingMember(Member member, OAuthUserInfo userInfo, long authenticationStartedAtNanos) {
         if (member.getStatus() == MemberStatus.SUSPENDED) {
             throw new OAuth2AuthenticationException(
                     new OAuth2Error(ACCOUNT_SUSPENDED),
@@ -77,8 +85,14 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
             return PendingOAuthPrincipal.reactivation(userInfo, member.getNickname());
         }
 
+        if (memberRepository.updateActiveProfile(member.getId(), userInfo.email(), userInfo.profileImageUrl(),
+                LocalDateTime.now(), auditorProvider.getCurrentAuditor().orElse("system")) != 1) {
+            throw new OAuth2AuthenticationException(new OAuth2Error("account_changed"),
+                    "계정 정보가 변경되었습니다. 다시 로그인해 주세요.");
+        }
+        // 부분 갱신이 영속성 컨텍스트를 비웠으므로 응답용 객체만 최신 프로필로 맞춘다.
         member.syncProfile(userInfo.email(), userInfo.profileImageUrl());
-        return MemberPrincipal.ofSocial(member);
+        return MemberPrincipal.ofSocial(member, authenticationStartedAtNanos);
     }
 
     private String suggestedNickname(OAuthUserInfo userInfo) {

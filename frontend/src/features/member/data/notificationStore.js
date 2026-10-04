@@ -20,6 +20,7 @@ import {
 const unreadCount = ref(0);
 const notifications = ref([]);
 const loading = ref(false);
+let sessionGeneration = 0;
 
 export function useNotifications() {
   return { unreadCount, notifications, loading };
@@ -31,23 +32,28 @@ export function useNotifications() {
  * 로그인하지 않았으면 서버가 401 을 준다. 그건 오류가 아니라 정상이라 조용히 0 으로 둔다.
  */
 export async function refreshUnreadCount() {
+  const generation = sessionGeneration;
   try {
-    unreadCount.value = await getUnreadCount();
+    const count = await getUnreadCount();
+    if (generation === sessionGeneration) unreadCount.value = count;
   } catch {
-    unreadCount.value = 0;
+    if (generation === sessionGeneration) unreadCount.value = 0;
   }
 }
 
 export async function loadNotifications() {
+  const generation = sessionGeneration;
   loading.value = true;
 
   try {
-    notifications.value = await getNotifications();
+    const items = await getNotifications();
+    if (generation !== sessionGeneration) return;
+    notifications.value = items;
     unreadCount.value = notifications.value.filter((item) => item.unread).length;
   } catch {
-    notifications.value = [];
+    if (generation === sessionGeneration) notifications.value = [];
   } finally {
-    loading.value = false;
+    if (generation === sessionGeneration) loading.value = false;
   }
 }
 
@@ -76,6 +82,8 @@ export async function readAllNotifications() {
 }
 
 export function clearNotifications() {
+  sessionGeneration += 1;
   unreadCount.value = 0;
   notifications.value = [];
+  loading.value = false;
 }

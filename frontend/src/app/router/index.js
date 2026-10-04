@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { clearAdminSession, ensureAdminSession } from '../../features/admin/data/adminAuthStore';
+import { clearMemberSession } from '../../features/member/data/memberAuthStore';
 import { onUnauthorized } from '../../shared/api/blogApiClient';
 import { applyDocumentMeta } from './documentMeta';
 import { scrollToHash } from './scrollToHash';
@@ -301,6 +302,7 @@ router.afterEach((to) => {
  */
 onUnauthorized(() => {
   clearAdminSession();
+  clearMemberSession();
 
   const current = router.currentRoute.value;
 

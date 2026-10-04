@@ -15,7 +15,8 @@ import org.springframework.util.StringUtils;
  * 것인데, Cloudflare 를 거치지 않고 서버 주소를 직접 때리면 아무 값이나 적어 보낼 수 있다.
  * 시도할 때마다 다른 주소인 척하면 횟수를 세는 장치가 통째로 무력해진다.</p>
  *
- * <p>그래서 <b>Nginx 가 걸러 준 {@code X-Real-IP} 를 읽는다.</b> Nginx 쪽에 이렇게 둔다.</p>
+ * <p>그래서 <b>같은 호스트의 Nginx 가 걸러 준 {@code X-Real-IP} 만 읽는다.</b>
+ * 직접 접속한 클라이언트의 헤더는 무시한다. Nginx 쪽에 이렇게 둔다.</p>
  *
  * <pre>
  * set_real_ip_from  &lt;Cloudflare 대역&gt;;
@@ -36,13 +37,20 @@ public class ClientIpResolver {
     private static final String NGINX_HEADER = "X-Real-IP";
 
     public String resolve(HttpServletRequest request) {
+        String remoteAddress = request.getRemoteAddr();
         String realIp = request.getHeader(NGINX_HEADER);
 
-        if (StringUtils.hasText(realIp)) {
+        if (isLocalProxy(remoteAddress) && StringUtils.hasText(realIp)) {
             return realIp.trim();
         }
 
-        // 프록시 없이 직접 띄운 개발 환경. 그때는 이 값이 진짜 접속 주소다
-        return request.getRemoteAddr();
+        // 운영 방화벽과 별개로, 직접 요청의 헤더로 로그인 제한 기준을 바꿀 수 없게 한다.
+        return remoteAddress;
+    }
+
+    private boolean isLocalProxy(String address) {
+        return "127.0.0.1".equals(address)
+                || "::1".equals(address)
+                || "0:0:0:0:0:0:0:1".equals(address);
     }
 }
