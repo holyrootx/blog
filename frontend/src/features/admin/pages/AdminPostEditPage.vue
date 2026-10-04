@@ -680,18 +680,22 @@ function onBeforeUnload() {
   saveDraftNow();
 }
 
-onMounted(async () => {
-  cleanUpPostDrafts();
-
+async function loadCategories() {
   try {
     categories.value = await getAdminCategories();
   } catch (error) {
     console.warn(error);
     categories.value = [];
   }
+}
 
-  await enter();
+onMounted(() => {
+  cleanUpPostDrafts();
   window.addEventListener('beforeunload', onBeforeUnload);
+
+  // 분류 응답을 기다렸다가 폼을 초기화하면 그동안 작성한 입력을 지우게 된다.
+  enter();
+  loadCategories();
 });
 
 onBeforeUnmount(() => {
