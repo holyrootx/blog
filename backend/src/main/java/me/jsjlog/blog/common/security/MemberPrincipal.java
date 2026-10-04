@@ -3,6 +3,7 @@ package me.jsjlog.blog.common.security;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import me.jsjlog.blog.member.domain.Member;
 import me.jsjlog.blog.member.domain.MemberRole;
@@ -29,6 +30,9 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
  */
 public class MemberPrincipal implements UserDetails, OAuth2User {
 
+    // 회원 조회 시작 시점이다. 조회 뒤 멈춘 로그인도 폐기 이후 새 인증으로 취급하지 않는다.
+    private final long issuedAtNanos;
+
     private final Long id;
     private final String username;
     private final String passwordHash;
@@ -46,8 +50,10 @@ public class MemberPrincipal implements UserDetails, OAuth2User {
             String profileImageUrl,
             MemberRole role,
             MemberStatus status,
-            Map<String, Object> attributes
+            Map<String, Object> attributes,
+            long authenticationStartedAtNanos
     ) {
+        this.issuedAtNanos = authenticationStartedAtNanos;
         this.id = id;
         this.username = username;
         this.passwordHash = passwordHash;
@@ -60,6 +66,10 @@ public class MemberPrincipal implements UserDetails, OAuth2User {
 
     /** 아이디·비밀번호로 로그인한 경우 */
     public static MemberPrincipal ofLocal(Member member) {
+        return ofLocal(member, System.nanoTime());
+    }
+
+    public static MemberPrincipal ofLocal(Member member, long authenticationStartedAtNanos) {
         return new MemberPrincipal(
                 member.getId(),
                 member.getUsername(),
@@ -68,7 +78,8 @@ public class MemberPrincipal implements UserDetails, OAuth2User {
                 member.getProfileImageUrl(),
                 member.getRole(),
                 member.getStatus(),
-                Map.of()
+                Map.of(),
+                authenticationStartedAtNanos
         );
     }
 
@@ -81,6 +92,10 @@ public class MemberPrincipal implements UserDetails, OAuth2User {
      * 세션마다 이메일과 제공자 식별자가 같이 보관된다.</p>
      */
     public static MemberPrincipal ofSocial(Member member) {
+        return ofSocial(member, System.nanoTime());
+    }
+
+    public static MemberPrincipal ofSocial(Member member, long authenticationStartedAtNanos) {
         return new MemberPrincipal(
                 member.getId(),
                 member.getUsername(),
@@ -93,7 +108,8 @@ public class MemberPrincipal implements UserDetails, OAuth2User {
                         "memberId", member.getId(),
                         "nickname", member.getNickname(),
                         "role", member.getRole().name()
-                )
+                ),
+                authenticationStartedAtNanos
         );
     }
 
@@ -120,6 +136,18 @@ public class MemberPrincipal implements UserDetails, OAuth2User {
 
     public boolean isAdmin() {
         return role.isAdmin();
+    }
+
+    long issuedAtNanos() {
+        return issuedAtNanos;
+    }
+
+    boolean matchesCurrentAccount(Member member) {
+        return member != null && Objects.equals(id, member.getId())
+                && status.isActive() && member.getStatus().isActive()
+                && role == member.getRole()
+                && (!isAdmin() || (Objects.equals(username, member.getUsername())
+                    && Objects.equals(passwordHash, member.getPasswordHash())));
     }
 
     /**

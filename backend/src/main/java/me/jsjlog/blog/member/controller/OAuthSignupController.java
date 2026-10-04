@@ -1,6 +1,7 @@
 package me.jsjlog.blog.member.controller;
 
 import java.util.Locale;
+import java.util.List;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -11,6 +12,7 @@ import me.jsjlog.blog.common.exception.BlogException;
 import me.jsjlog.blog.common.exception.ErrorCode;
 import me.jsjlog.blog.common.response.ApiResponse;
 import me.jsjlog.blog.common.security.MemberPrincipal;
+import me.jsjlog.blog.common.security.MemberSessionManager;
 import me.jsjlog.blog.common.security.oauth.PendingOAuthSession;
 import me.jsjlog.blog.member.domain.Member;
 import me.jsjlog.blog.member.dto.MemberSessionResponse;
@@ -21,6 +23,12 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.authentication.session.ChangeSessionIdAuthenticationStrategy;
+import org.springframework.security.web.authentication.session.CompositeSessionAuthenticationStrategy;
+import org.springframework.security.web.authentication.session.SessionAuthenticationException;
+import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;
+import org.springframework.security.web.csrf.CsrfAuthenticationStrategy;
+import org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -33,6 +41,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class OAuthSignupController {
 
     private final OAuthSignupService signupService;
+    private final MemberSessionManager memberSessions;
+    // 가입 대기 상태에서 정식 인증으로 넘어가는 경계도 필터 로그인과 같은 보호를 적용한다.
+    private final SessionAuthenticationStrategy completionStrategy = new CompositeSessionAuthenticationStrategy(List.of(
+            new ChangeSessionIdAuthenticationStrategy(),
+            new CsrfAuthenticationStrategy(new HttpSessionCsrfTokenRepository())));
 
     private final HttpSessionSecurityContextRepository securityContextRepository =
             new HttpSessionSecurityContextRepository();
@@ -49,8 +62,9 @@ public class OAuthSignupController {
             HttpServletResponse response
     ) {
         PendingOAuthSession pendingSession = requiredPendingSession(request);
+        long authenticationStartedAtNanos = System.nanoTime();
         Member member = signupService.signup(pendingSession, signupRequest.nickname());
-        MemberPrincipal principal = MemberPrincipal.ofSocial(member);
+        MemberPrincipal principal = MemberPrincipal.ofSocial(member, authenticationStartedAtNanos);
 
         completeLogin(request, response, pendingSession, principal);
 
@@ -63,6 +77,7 @@ public class OAuthSignupController {
             HttpServletResponse response
     ) {
         PendingOAuthSession pendingSession = requiredPendingSession(request);
+        long authenticationStartedAtNanos = System.nanoTime();
         Member member = signupService.reactivate(pendingSession);
 
         return loginCompletedMember(
@@ -70,6 +85,7 @@ public class OAuthSignupController {
                 response,
                 pendingSession,
                 member,
+                authenticationStartedAtNanos,
                 "기존 계정이 복구되었습니다."
         );
     }
@@ -81,6 +97,7 @@ public class OAuthSignupController {
             HttpServletResponse response
     ) {
         PendingOAuthSession pendingSession = requiredPendingSession(request);
+        long authenticationStartedAtNanos = System.nanoTime();
         Member member = signupService.rejoin(pendingSession, signupRequest.nickname());
 
         return loginCompletedMember(
@@ -88,6 +105,7 @@ public class OAuthSignupController {
                 response,
                 pendingSession,
                 member,
+                authenticationStartedAtNanos,
                 "새 계정으로 가입되었습니다."
         );
     }
@@ -97,9 +115,10 @@ public class OAuthSignupController {
             HttpServletResponse response,
             PendingOAuthSession pendingSession,
             Member member,
+            long authenticationStartedAtNanos,
             String message
     ) {
-        MemberPrincipal principal = MemberPrincipal.ofSocial(member);
+        MemberPrincipal principal = MemberPrincipal.ofSocial(member, authenticationStartedAtNanos);
         completeLogin(request, response, pendingSession, principal);
 
         return ApiResponse.ok(message, MemberSessionResponse.from(principal));
@@ -132,6 +151,13 @@ public class OAuthSignupController {
                 principal.getAuthorities(),
                 pendingSession.provider().name().toLowerCase(Locale.ROOT)
         );
+
+        try {
+            completionStrategy.onAuthentication(authentication, request, response);
+            memberSessions.onAuthentication(request, principal);
+        } catch (SessionAuthenticationException changedAccount) {
+            throw new BlogException(ErrorCode.UNAUTHORIZED);
+        }
 
         SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
         securityContext.setAuthentication(authentication);
