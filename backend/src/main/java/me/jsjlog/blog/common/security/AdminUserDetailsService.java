@@ -27,8 +27,9 @@ public class AdminUserDetailsService implements UserDetailsService {
     @Override
     @Transactional(readOnly = true)
     public MemberPrincipal loadUserByUsername(String username) {
+        long authenticationStartedAtNanos = System.nanoTime();
         return memberRepository.findByUsernameAndRole(username, MemberRole.ADMIN)
-                .map(MemberPrincipal::ofLocal)
+                .map(member -> MemberPrincipal.ofLocal(member, authenticationStartedAtNanos))
                 .orElseThrow(() -> new UsernameNotFoundException("관리자를 찾을 수 없습니다."));
     }
 }

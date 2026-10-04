@@ -1,5 +1,6 @@
 package me.jsjlog.blog.member.repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -7,6 +8,9 @@ import me.jsjlog.blog.member.domain.AuthProvider;
 import me.jsjlog.blog.member.domain.Member;
 import me.jsjlog.blog.member.domain.MemberRole;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 /**
  * 회원 조회.
@@ -28,6 +32,26 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
      * 그 확인을 빠뜨린 경로가 하나 생기는 순간 일반 회원이 관리자 자리에 앉는다.
      */
     Optional<Member> findByUsernameAndRole(String username, MemberRole role);
+
+    /** 상태 검사를 UPDATE와 함께 한다. 조회 이후 정지·탈퇴한 계정에는 프로필을 다시 쓰지 않는다. */
+    @Modifying(clearAutomatically = true)
+    @Query("""
+            update Member m set m.email = :email, m.profileImageUrl = :profileImageUrl,
+                m.updatedAt = :updatedAt, m.updatedBy = :updatedBy
+            where m.id = :id and m.status = me.jsjlog.blog.member.domain.MemberStatus.ACTIVE
+            """)
+    int updateActiveProfile(@Param("id") Long id, @Param("email") String email,
+                            @Param("profileImageUrl") String profileImageUrl,
+                            @Param("updatedAt") LocalDateTime updatedAt, @Param("updatedBy") String updatedBy);
+
+    /** 개인정보와 상태를 포함한 오래된 엔티티 전체를 덮어쓰지 않는다. */
+    @Modifying(clearAutomatically = true)
+    @Query("""
+            update Member m set m.nickname = :nickname, m.updatedAt = :updatedAt, m.updatedBy = :updatedBy
+            where m.id = :id and m.status = me.jsjlog.blog.member.domain.MemberStatus.ACTIVE
+            """)
+    int updateActiveNickname(@Param("id") Long id, @Param("nickname") String nickname,
+                             @Param("updatedAt") LocalDateTime updatedAt, @Param("updatedBy") String updatedBy);
 
     /**
      * 그 권한을 가진 회원 전부.

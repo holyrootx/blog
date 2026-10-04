@@ -5,6 +5,7 @@ import me.jsjlog.blog.admin.dto.AdminMemberListResponse;
 import me.jsjlog.blog.admin.dto.AdminMemberSearchCondition;
 import me.jsjlog.blog.admin.repository.AdminMemberQueryRepository;
 import me.jsjlog.blog.common.exception.BlogException;
+import me.jsjlog.blog.common.security.MemberSessionManager;
 import me.jsjlog.blog.common.exception.ErrorCode;
 import me.jsjlog.blog.member.domain.Member;
 import me.jsjlog.blog.member.domain.MemberStatus;
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AdminMemberService {
 
     private final MemberRepository memberRepository;
+    private final MemberSessionManager memberSessions;
     private final AdminMemberQueryRepository memberQueryRepository;
 
     @Transactional(readOnly = true)
@@ -47,6 +49,7 @@ public class AdminMemberService {
         }
 
         member.suspend();
+        memberSessions.revokeAfterCommit(memberId);
     }
 
     @Transactional

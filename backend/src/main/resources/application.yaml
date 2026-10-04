@@ -130,6 +130,10 @@ spring:
             user-name-attribute: response
 
 server:
+  # 운영 API는 같은 호스트의 Nginx를 통해서만 받는다.
+  address: 127.0.0.1
+  # ClientIpResolver가 프록시 peer를 검사하도록 실제 접속 주소를 유지한다.
+  forward-headers-strategy: none
   servlet:
     session:
       cookie:

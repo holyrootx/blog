@@ -1,4 +1,4 @@
-import { getApiData, onCsrfRejected, setCsrfToken } from './blogApiClient';
+import { getApiData, getAuthenticationGeneration, onCsrfRejected, setCsrfToken } from './blogApiClient';
 
 // 관리자와 회원이 같은 세션 기반 CSRF 정책을 사용한다.
 const CSRF_PATH = '/api/v1/auth/csrf';
@@ -12,9 +12,10 @@ const CSRF_PATH = '/api/v1/auth/csrf';
  * 관리자 화면만 쓰던 코드인데 회원 가입 화면이 두 번째 사용처가 되어 여기로 옮겼다.
  */
 export async function refreshCsrfToken() {
+  const generation = getAuthenticationGeneration();
   const token = await getApiData(CSRF_PATH);
 
-  setCsrfToken(token);
+  if (generation === getAuthenticationGeneration()) setCsrfToken(token);
 
   return token;
 }

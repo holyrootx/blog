@@ -6,6 +6,180 @@ import { ref, computed, reactive, watch, nextTick } from 'vue';
 import { createMemoryHistory, createRouter } from 'vue-router';
 
 const deferred = () => { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; };
+
+for (const reject of [false, true]) test(`late member session response cannot replace a new session after invalidation (failure=${reject})`, async () => {
+  const pending = deferred(); let calls = 0;
+  const m = await load('features/member/data/memberAuthStore.js', ['ensureMemberSession', 'clearMemberSession', 'useMemberAuth'], {
+    getMemberSession: () => ++calls === 1 ? pending.promise : Promise.resolve({ id: 22 }),
+    refreshCsrfToken: async () => {}, clearNotifications() {},
+  });
+  const oldRequest = m.ensureMemberSession();
+  m.clearMemberSession();
+  await m.ensureMemberSession();
+  reject ? pending.reject(new Error('old failure')) : pending.resolve({ id: 11 });
+  await oldRequest;
+  assert.equal(m.useMemberAuth().member.value.id, 22);
+});
+
+test('late admin session response cannot restore a cleared session', async () => {
+  const pending = deferred();
+  const m = await load('features/admin/data/adminAuthStore.js', ['ensureAdminSession', 'clearAdminSession', 'useAdminAuth'], {
+    getAdminSession: () => pending.promise, refreshCsrfToken: async () => {},
+  });
+  const request = m.ensureAdminSession();
+  await Promise.resolve(); await Promise.resolve();
+  m.clearAdminSession();
+  pending.resolve({ username: 'old-admin' });
+  assert.equal(await request, false);
+  assert.equal(m.useAdminAuth().admin.value, null);
+});
+
+test('late notification responses cannot restore a previous member information', async () => {
+  const count = deferred(), items = deferred();
+  const n = await load('features/member/data/notificationStore.js', ['refreshUnreadCount', 'loadNotifications', 'clearNotifications', 'useNotifications'], {
+    getUnreadCount: () => count.promise, getNotifications: () => items.promise,
+  });
+  const reads = [n.refreshUnreadCount(), n.loadNotifications()];
+  n.clearNotifications();
+  count.resolve(7); items.resolve([{ id: 9, unread: true }]);
+  await Promise.all(reads);
+  assert.equal(n.useNotifications().unreadCount.value, 0);
+  assert.equal(n.useNotifications().notifications.value.length, 0);
+  assert.equal(n.useNotifications().loading.value, false);
+});
+
+for (const method of ['getApiData', 'sendApiData', 'sendApiFile']) test(`late unauthorized ${method} cannot clear a newer login`, async () => {
+  const pending = deferred(); let expired = 0;
+  const c = await load('shared/api/blogApiClient.js', [method, 'onUnauthorized', 'advanceAuthenticationGeneration'], {
+    fetch: () => pending.promise,
+  });
+  c.onUnauthorized(() => expired++);
+  const request = c[method]('/test', { method: 'POST' });
+  c.advanceAuthenticationGeneration();
+  pending.resolve({ ok: false, status: 401, json: async () => ({ success: false, code: 'UNAUTHORIZED' }) });
+  await assert.rejects(request);
+  assert.equal(expired, 0);
+  await assert.rejects(c[method]('/test', { method: 'POST' }));
+  assert.equal(expired, 1);
+});
+
+test('a stale mutation is not retried with a newer login after CSRF refresh', async () => {
+  const refreshing = deferred(), started = deferred(); let calls = 0;
+  const c = await load('shared/api/blogApiClient.js', ['sendApiData', 'setCsrfToken', 'onCsrfRejected', 'advanceAuthenticationGeneration'], {
+    fetch: async () => { calls++; return { ok: false, status: 403, json: async () => ({ success: false, code: 'FORBIDDEN' }) }; },
+  });
+  c.setCsrfToken({ headerName: 'X-CSRF-TOKEN', token: 'old' });
+  c.onCsrfRejected(() => { started.resolve(); return refreshing.promise; });
+  const request = c.sendApiData('/write', { method: 'POST', body: {} });
+  await started.promise;
+  c.advanceAuthenticationGeneration(); refreshing.resolve();
+  await assert.rejects(request);
+  assert.equal(calls, 1);
+});
+
+test('late CSRF response does not replace the current login token', async () => {
+  const pending = deferred(); let generation = 0, token = 'new';
+  const c = await load('shared/api/csrfApi.js', ['refreshCsrfToken'], {
+    getApiData: () => pending.promise, getAuthenticationGeneration: () => generation,
+    setCsrfToken: value => { token = value; }, onCsrfRejected() {},
+  });
+  const request = c.refreshCsrfToken(); generation++;
+  pending.resolve('old'); await request;
+  assert.equal(token, 'new');
+});
+
+test('late nickname change cannot restore invalidated member state', async () => {
+  const pending = deferred();
+  const m = await load('features/member/data/memberAuthStore.js', ['changeNickname', 'clearMemberSession', 'useMemberAuth'], {
+    changeMemberNickname: () => pending.promise, clearNotifications() {},
+  });
+  const request = m.changeNickname('old'); m.clearMemberSession();
+  pending.resolve({ id: 11, nickname: 'old' }); await request;
+  assert.equal(m.useMemberAuth().member.value, null);
+});
+
+for (const admin of [false, true]) test(`late logout verification cannot overwrite a newer session (admin=${admin})`, async () => {
+  const pending = deferred(), started = deferred();
+  const recheck = () => { started.resolve(); return pending.promise; };
+  const path = admin ? 'features/admin/data/adminAuthStore.js' : 'features/member/data/memberAuthStore.js';
+  const names = admin ? ['signOutAdmin', 'clearAdminSession', 'useAdminAuth'] : ['signOutMember', 'clearMemberSession', 'useMemberAuth'];
+  const m = await load(path, names, {
+    logoutAdmin: async () => { throw new Error('lost response'); }, logoutMember: async () => { throw new Error('lost response'); },
+    getAdminSession: recheck, getMemberSession: recheck, clearNotifications() {}, refreshCsrfToken: async () => {},
+  });
+  const request = admin ? m.signOutAdmin() : m.signOutMember();
+  await started.promise;
+  admin ? m.clearAdminSession() : m.clearMemberSession();
+  const current = admin ? m.useAdminAuth().admin : m.useMemberAuth().member;
+  current.value = { id: 22 };
+  pending.resolve({ id: 11 }); await assert.rejects(request);
+  assert.equal(current.value.id, 22);
+});
+for (const operation of ['signInAdmin', 'completeSignUp', 'completeReactivation', 'completeRejoin']) {
+  const admin = operation === 'signInAdmin';
+  const path = admin ? 'features/admin/data/adminAuthStore.js' : 'features/member/data/memberAuthStore.js';
+  const clear = admin ? 'clearAdminSession' : 'clearMemberSession';
+  const useAuth = admin ? 'useAdminAuth' : 'useMemberAuth';
+
+  test(`invalidated ${operation} does not send authentication after waiting for CSRF`, async () => {
+    const csrf = deferred(); let authenticationCalls = 0;
+    const authenticate = async () => { authenticationCalls++; return { id: 22 }; };
+    const m = await load(path, [operation, clear], {
+      refreshCsrfToken: () => csrf.promise, clearNotifications() {},
+      loginAdmin: authenticate, signUpMember: authenticate, reactivateMember: authenticate, rejoinMember: authenticate,
+    });
+    const authentication = m[operation]('name', 'password');
+    m[clear](); csrf.resolve();
+    await assert.rejects(authentication);
+    assert.equal(authenticationCalls, 0);
+  });
+
+  test(`request begun during ${operation} cannot expire the completed login`, async () => {
+    const login = deferred(), started = deferred(), oldResponse = deferred(); let expired = 0;
+    const c = await load('shared/api/blogApiClient.js', ['getApiData', 'onUnauthorized', 'advanceAuthenticationGeneration'], {
+      fetch: () => oldResponse.promise,
+    });
+    const authenticate = () => { started.resolve(); return login.promise; };
+    const m = await load(path, [operation, clear, useAuth], {
+      advanceAuthenticationGeneration: c.advanceAuthenticationGeneration,
+      refreshCsrfToken: async () => {}, refreshMemberSession: async () => {}, clearNotifications() {},
+      loginAdmin: authenticate, signUpMember: authenticate, reactivateMember: authenticate, rejoinMember: authenticate,
+    });
+    c.onUnauthorized(() => { expired++; m[clear](); });
+    const authentication = m[operation]('name', 'password');
+    await started.promise;
+    const oldRequest = c.getApiData('/protected');
+    login.resolve({ id: 22 }); await authentication;
+    oldResponse.resolve({ ok: false, status: 401, json: async () => ({ success: false, code: 'UNAUTHORIZED' }) });
+    await assert.rejects(oldRequest);
+    assert.equal(expired, 0);
+    assert.equal((admin ? m[useAuth]().admin : m[useAuth]().member).value.id, 22);
+  });
+}
+
+for (const result of ['success', 'lost-signedout', 'lost-signedin', 'lost-unavailable']) {
+  test(`public member logout synchronizes the admin cache only when confirmed (${result})`, async () => {
+    const m = await load('features/member/data/memberAuthStore.js', ['onMemberSessionCleared', 'signOutMember', 'useMemberAuth'], {
+      logoutMember: async () => { if (result !== 'success') throw new Error('lost response'); },
+      getMemberSession: async () => {
+        if (result === 'lost-unavailable') throw new Error('offline');
+        return result === 'lost-signedout' ? null : { id: 22 };
+      },
+      refreshCsrfToken: async () => {}, clearNotifications() {},
+    });
+    const a = await load('features/admin/data/adminAuthStore.js', ['ensureAdminSession', 'useAdminAuth'], {
+      onMemberSessionCleared: m.onMemberSessionCleared,
+      getAdminSession: async () => ({ id: 22 }), refreshCsrfToken: async () => {},
+    });
+    m.useMemberAuth().member.value = { id: 22 };
+    await a.ensureAdminSession();
+    const confirmed = ['success', 'lost-signedout'].includes(result);
+    if (confirmed) await m.signOutMember(); else await assert.rejects(m.signOutMember());
+    assert.equal(a.useAdminAuth().admin.value === null, confirmed);
+    assert.equal(m.useMemberAuth().member.value === null, confirmed);
+  });
+}
+
 // Execute the actual module/script with boundary APIs injected. Vue refs/watchers remain real.
 async function load(path, names, injected = {}) {
   let source = await readFile(new URL(`../src/${path}`, import.meta.url), 'utf8');
@@ -13,7 +187,7 @@ async function load(path, names, injected = {}) {
   source = source.replace(/^import[\s\S]*?from ['"][^'"]+['"];\s*/gm, '').replace(/\bexport (?=(async )?function|const|class)/g, '');
   const context = vm.createContext({ ref, computed, reactive, watch, nextTick, console,
     setTimeout, clearTimeout, onBeforeUnmount() {}, onMounted() {}, onBeforeRouteLeave() {},
-    notifyError() {}, notifySuccess() {}, ...injected });
+    notifyError() {}, notifySuccess() {}, advanceAuthenticationGeneration() {}, onMemberSessionCleared() {}, ...injected });
   return vm.runInContext(`"use strict";\n${source}\n;({${names.join(',')}})`, context);
 }
 

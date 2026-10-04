@@ -36,6 +36,7 @@ beforeEach(async () => {
     const path = new URL(route.request().url()).pathname;
     if (path.endsWith('/categories')) { categoriesRequest = route; return; }
     if (path === '/api/v1/admin/auth/me') return ok(route, { username: 'test', role: 'ADMIN' });
+    if (path === '/api/v1/admin/auth/login') return ok(route, { username: 'test', role: 'ADMIN' });
     if (path === '/api/v1/auth/me') return ok(route, null);
     if (path.endsWith('/csrf')) return ok(route, { headerName: 'X-CSRF-TOKEN', token: 'test' });
     if (path.endsWith('/sidebar/menus')) return ok(route, []);
@@ -102,4 +103,68 @@ test('existing post loads independently of a pending category request', async ()
   await ok(categoriesRequest, categories);
   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   assert.equal(await titleInput().inputValue(), '분류 도착 전 수정한 제목');
+});
+
+for (const postId of ['new', '9001']) {
+  test(`session expiry preserves immediate editor input and restores it after login (${postId})`, async () => {
+    await page.goto(`${server.resolvedUrls.local[0]}admin/posts/${postId}`);
+    if (postId !== 'new') {
+      await page.waitForFunction(() => document.querySelector('input[placeholder="글 제목"]')?.value === '저장된 제목');
+    }
+    await page.evaluate(async () => {
+      const { useMemberAuth } = await import('/src/features/member/data/memberAuthStore.js');
+      const { useNotifications } = await import('/src/features/member/data/notificationStore.js');
+      useMemberAuth().member.value = { id: 99, nickname: '이전 회원' };
+      useNotifications().unreadCount.value = 3;
+    });
+    await titleInput().fill('만료 직전에 입력한 제목');
+    await bodyInput().fill('자동 보관을 기다리지 않은 본문');
+    await categoriesRequest.fulfill({ status: 401, json: { success: false, code: 'UNAUTHORIZED' } });
+    await page.waitForURL('**/admin/login?**');
+    const saved = await page.evaluate(key => JSON.parse(localStorage.getItem(`admin:post-draft:${key}`)), postId);
+    assert.equal(saved.form.title, '만료 직전에 입력한 제목');
+    assert.equal(saved.form.content, '자동 보관을 기다리지 않은 본문');
+    const cleared = await page.evaluate(async () => {
+      const { useMemberAuth } = await import('/src/features/member/data/memberAuthStore.js');
+      const { useNotifications } = await import('/src/features/member/data/notificationStore.js');
+      return { member: useMemberAuth().member.value, unread: useNotifications().unreadCount.value };
+    });
+    assert.deepEqual(cleared, { member: null, unread: 0 });
+    await page.getByLabel('아이디', { exact: true }).fill('test');
+    await page.getByLabel('비밀번호', { exact: true }).fill('test-password');
+    await page.getByRole('button', { name: '로그인', exact: true }).click();
+    await page.waitForURL(`**/admin/posts/${postId}`);
+    await page.getByRole('button', { name: '불러오기', exact: true }).click();
+    assert.equal(await titleInput().inputValue(), '만료 직전에 입력한 제목');
+    assert.equal(await bodyInput().textContent(), '자동 보관을 기다리지 않은 본문');
+  });
+}
+
+test('administrator logging out from the public member menu clears the admin cache too', async () => {
+  await openNewAndType();
+  await ok(categoriesRequest, categories);
+  await page.evaluate(async () => {
+    const { useMemberAuth } = await import('/src/features/member/data/memberAuthStore.js');
+    const { default: router } = await import('/src/app/router/index.js');
+    useMemberAuth().member.value = { id: 99, nickname: '공개 관리자', role: 'ROLE_ADMIN' };
+    await router.push({ name: 'post-list' });
+  });
+  await page.locator('.member-menu__trigger').click();
+  await page.getByRole('menuitem', { name: '로그아웃', exact: true }).click();
+  await page.waitForFunction(async () => {
+    const { useMemberAuth } = await import('/src/features/member/data/memberAuthStore.js');
+    return useMemberAuth().member.value === null;
+  });
+  const administrator = await page.evaluate(async () => {
+    const { useAdminAuth } = await import('/src/features/admin/data/adminAuthStore.js');
+    return useAdminAuth().admin.value;
+  });
+  assert.equal(administrator, null);
+  await page.route('**/api/v1/admin/auth/me', route => route.fulfill({
+    status: 401, json: { success: false, code: 'UNAUTHORIZED' },
+  }));
+  assert.equal(await page.evaluate(async () => {
+    const { ensureAdminSession } = await import('/src/features/admin/data/adminAuthStore.js');
+    return ensureAdminSession();
+  }), false);
 });

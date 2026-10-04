@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import me.jsjlog.blog.common.security.MemberPrincipal;
+import me.jsjlog.blog.common.security.MemberSessionManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -25,6 +26,7 @@ import org.springframework.stereotype.Component;
 public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
     private final OAuth2FrontendRedirectUriFactory redirectUriFactory;
+    private final MemberSessionManager memberSessions;
 
     @Override
     public void onAuthenticationSuccess(
@@ -34,7 +36,8 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     ) throws IOException {
         Object principal = authentication.getPrincipal();
 
-        if (principal instanceof MemberPrincipal) {
+        if (principal instanceof MemberPrincipal memberPrincipal) {
+            memberSessions.onAuthentication(request, memberPrincipal);
             clearPendingSession(request);
             redirect(response, "success");
             return;
@@ -55,6 +58,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
             HttpServletRequest request,
             PendingOAuthPrincipal pendingPrincipal
     ) {
+        memberSessions.removeRegistration(request);
         HttpSession session = request.getSession();
         session.setAttribute(PendingOAuthSession.ATTRIBUTE_NAME, PendingOAuthSession.from(pendingPrincipal));
 

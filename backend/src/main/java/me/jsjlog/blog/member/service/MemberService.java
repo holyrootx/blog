@@ -1,9 +1,11 @@
 package me.jsjlog.blog.member.service;
 
 import java.util.List;
+import java.time.LocalDateTime;
 
 import lombok.RequiredArgsConstructor;
 import me.jsjlog.blog.common.exception.BlogException;
+import me.jsjlog.blog.common.security.MemberSessionManager;
 import me.jsjlog.blog.common.exception.ErrorCode;
 import me.jsjlog.blog.member.domain.Member;
 import me.jsjlog.blog.member.dto.MyCommentResponse;
@@ -11,6 +13,7 @@ import me.jsjlog.blog.member.repository.MemberRepository;
 import me.jsjlog.blog.post.repository.CommentRepository;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.AuditorAware;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -32,13 +35,20 @@ public class MemberService {
     private static final int MY_COMMENT_LIMIT = 100;
 
     private final MemberRepository memberRepository;
+    private final MemberSessionManager memberSessions;
     private final CommentRepository commentRepository;
+    private final AuditorAware<String> auditorProvider;
 
     @Transactional
     public Member changeNickname(Long memberId, String nickname) {
         Member member = requiredActiveMember(memberId);
-
-        member.changeNickname(nickname.trim());
+        String trimmedNickname = nickname.trim();
+        if (memberRepository.updateActiveNickname(memberId, trimmedNickname, LocalDateTime.now(),
+                auditorProvider.getCurrentAuditor().orElse("system")) != 1) {
+            throw new BlogException(ErrorCode.FORBIDDEN);
+        }
+        // 조건부 부분 갱신 이후 분리된 객체다. 응답 값만 맞추고 오래된 상태는 저장하지 않는다.
+        member.changeNickname(trimmedNickname);
 
         return member;
     }
@@ -49,7 +59,7 @@ public class MemberService {
      * <p>행을 지우지 않는다. 댓글이 이 행을 가리키고 있어서 지우면 댓글이 사라지고
      * 답글이 부모를 잃는다. 무엇을 남기고 무엇을 지우는지는 {@link Member#withdraw()} 에 있다.</p>
      *
-     * <p>세션을 끊는 일은 여기서 하지 않는다. 컨트롤러가 요청을 들고 있으니 거기서 한다.</p>
+     * <p>탈퇴가 커밋된 뒤 다른 브라우저의 인증도 함께 폐기한다.</p>
      */
     @Transactional
     public void withdraw(Long memberId) {
@@ -65,6 +75,7 @@ public class MemberService {
         }
 
         member.withdraw();
+        memberSessions.revokeAfterCommit(memberId);
     }
 
     @Transactional(readOnly = true)
