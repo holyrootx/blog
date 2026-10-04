@@ -17,6 +17,16 @@ export class ApiError extends Error {
  * 화면마다 401 을 처리하면 빠뜨리는 곳이 반드시 생긴다. 한 곳에서 받는다.
  */
 let unauthorizedHandler = null;
+let authenticationGeneration = 0;
+
+export function getAuthenticationGeneration() {
+  return authenticationGeneration;
+}
+
+export function advanceAuthenticationGeneration() {
+  authenticationGeneration += 1;
+  csrf = null;
+}
 
 export function onUnauthorized(handler) {
   unauthorizedHandler = handler;
@@ -26,8 +36,8 @@ export function onUnauthorized(handler) {
  * 로그인 실패(ADMIN_LOGIN_FAILED)는 같은 401 이지만 세션이 끊긴 것이 아니다.
  * 이걸 구분하지 않으면 비밀번호를 틀릴 때마다 로그인 화면으로 다시 튕긴다.
  */
-function notifyIfSessionExpired(code) {
-  if (code === 'UNAUTHORIZED') {
+function notifyIfSessionExpired(code, generation) {
+  if (code === 'UNAUTHORIZED' && generation === authenticationGeneration) {
     unauthorizedHandler?.();
   }
 }
@@ -40,6 +50,7 @@ function notifyIfSessionExpired(code) {
  * 한 글자 전으로 되돌아간다.</p>
  */
 export async function getApiData(path, { signal } = {}) {
+  const generation = authenticationGeneration;
   const response = await fetch(path, {
     headers: {
       Accept: 'application/json',
@@ -53,7 +64,7 @@ export async function getApiData(path, { signal } = {}) {
   // 서버가 준 code·message 를 버리지 않는다.
   // 버리면 화면은 "불러오지 못했습니다"만 알고 왜 실패했는지 알 수 없다
   if (!response.ok || body?.success === false) {
-    notifyIfSessionExpired(body?.code);
+    notifyIfSessionExpired(body?.code, generation);
 
     throw new ApiError(
       body?.message ?? `요청에 실패했습니다. (status=${response.status})`,
@@ -112,6 +123,7 @@ function looksLikeStaleCsrf(status) {
  * 헤더를 만드는데, 우리가 먼저 적으면 그 경계가 빠져 서버가 본문을 못 읽는다.
  */
 export async function sendApiFile(path, formData) {
+  const generation = authenticationGeneration;
   const response = await fetch(path, {
     method: 'POST',
     headers: {
@@ -124,7 +136,7 @@ export async function sendApiFile(path, formData) {
   const payload = await response.json().catch(() => null);
 
   if (!response.ok || payload?.success === false) {
-    notifyIfSessionExpired(payload?.code);
+    notifyIfSessionExpired(payload?.code, generation);
 
     throw new ApiError(
       payload?.message ?? `업로드에 실패했습니다. (status=${response.status})`,
@@ -153,21 +165,23 @@ function sendOnce(path, method, body) {
  * 실패하면 서버가 준 메시지를 그대로 던진다 — 화면에서 왜 실패했는지 보여줘야 하기 때문.
  */
 export async function sendApiData(path, { method, body } = {}) {
+  const generation = authenticationGeneration;
   let response = await sendOnce(path, method, body);
 
   // 서버가 재시작되거나 로그인·로그아웃으로 토큰이 새로 발급되면 화면이 든 값이 낡는다.
   // 그대로 두면 새로고침 전까지 저장·등록이 전부 막히므로, 한 번만 다시 받아 재시도한다
-  if (looksLikeStaleCsrf(response.status)) {
+  if (generation === authenticationGeneration && looksLikeStaleCsrf(response.status)) {
     await refreshCsrf().catch(() => null);
 
-    response = await sendOnce(path, method, body);
+    // 재인증 중 끝난 이전 요청을 새 계정의 세션으로 재실행하지 않는다.
+    if (generation === authenticationGeneration) response = await sendOnce(path, method, body);
   }
 
   // 에러 응답도 본문이 있으므로 먼저 읽는다. 본문이 없을 수도 있어 실패는 삼킨다
   const payload = await response.json().catch(() => null);
 
   if (!response.ok || payload?.success === false) {
-    notifyIfSessionExpired(payload?.code);
+    notifyIfSessionExpired(payload?.code, generation);
 
     throw new ApiError(
       payload?.message ?? `요청에 실패했습니다. (status=${response.status})`,
