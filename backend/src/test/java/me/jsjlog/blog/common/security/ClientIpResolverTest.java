@@ -55,4 +55,51 @@ class ClientIpResolverTest {
 
         assertThat(resolver.resolve(request)).isEqualTo("192.168.0.11");
     }
+
+    @Test
+    @DisplayName("직접 접속한 클라이언트가 보낸 X-Real-IP 는 신뢰하지 않는다")
+    void ignoresRealIpFromDirectClient() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRemoteAddr("203.0.113.5");
+        request.addHeader("X-Real-IP", "198.51.100.9");
+
+        assertThat(resolver.resolve(request)).isEqualTo("203.0.113.5");
+    }
+
+    @Test
+    @DisplayName("같은 사설망이라는 이유로 프록시 헤더를 신뢰하지 않는다")
+    void ignoresRealIpFromPrivateNetwork() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRemoteAddr("10.0.0.2");
+        request.addHeader("X-Real-IP", "198.51.100.9");
+
+        assertThat(resolver.resolve(request)).isEqualTo("10.0.0.2");
+    }
+
+    @Test
+    @DisplayName("IPv6 루프백 프록시도 방문자 IP 를 전달한다")
+    void acceptsIpv6LoopbackProxy() {
+        for (String remote : new String[]{"::1", "0:0:0:0:0:0:0:1"}) {
+            MockHttpServletRequest request = new MockHttpServletRequest();
+            request.setRemoteAddr(remote);
+            request.addHeader("X-Real-IP", "2001:db8::5");
+
+            assertThat(resolver.resolve(request)).isEqualTo("2001:db8::5");
+        }
+    }
+
+    @Test
+    @DisplayName("직접 접속하며 헤더를 바꿔도 로그인 실패 횟수는 같은 IP 에 누적된다")
+    void changingForgedHeaderDoesNotResetLoginLimit() {
+        LoginAttemptGuard guard = new LoginAttemptGuard();
+        for (int i = 1; i <= 5; i++) {
+            MockHttpServletRequest request = new MockHttpServletRequest();
+            request.setRemoteAddr("203.0.113.5");
+            request.addHeader("X-Real-IP", "198.51.100." + i);
+            guard.recordFailure(resolver.resolve(request));
+        }
+
+        assertThat(guard.isBlocked("203.0.113.5")).isTrue();
+        assertThat(guard.isBlocked("203.0.113.6")).isFalse();
+    }
 }
