@@ -1,6 +1,8 @@
 package me.jsjlog.blog.post.service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 import jakarta.persistence.EntityManager;
 import me.jsjlog.blog.common.exception.BlogException;
@@ -12,8 +14,11 @@ import me.jsjlog.blog.post.domain.Category;
 import me.jsjlog.blog.post.domain.Comment;
 import me.jsjlog.blog.post.domain.Post;
 import me.jsjlog.blog.post.domain.PostStatus;
+import me.jsjlog.blog.post.dto.AdjacentPostResponse;
+import me.jsjlog.blog.post.dto.AdjacentPostSummary;
 import me.jsjlog.blog.post.dto.CommentCreateRequest;
 import me.jsjlog.blog.post.dto.PostListCondition;
+import me.jsjlog.blog.post.dto.PostSuggestResponse;
 import me.jsjlog.blog.post.dto.PostSummaryResponse;
 import me.jsjlog.blog.post.repository.CategoryRepository;
 import me.jsjlog.blog.post.repository.CommentRepository;
@@ -36,6 +41,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * <p>발행 상태인데 발행 시각이 아직 오지 않은 글을 만든다. 예약은 SCHEDULED 로 따로 두므로
  * 정상 경로로는 생기지 않지만, 기준이 입구마다 달랐을 때 상세 화면만 이런 글을 보여 줬다.
  * 한쪽만 고쳐 다시 갈라지면 여기서 걸린다.</p>
+ *
+ * <p>테스트 DB 는 다른 테스트와 같이 쓴다. 다른 테스트가 남긴 공개 글이 있을 수 있으므로
+ * "결과가 비었다" 가 아니라 "이 글이 없다" 를 본다.</p>
  */
 @SpringBootTest
 @Transactional
@@ -91,9 +99,15 @@ class PublicPostVisibilityTest {
         assertThat(postRepository.countPublicPosts(condition)).isEqualTo(1);
         assertThat(postRepository.getPostsForHomePage("latest", 50L)).extracting(PostSummaryResponse::id)
                 .doesNotContain(notYet.getId());
-        assertThat(postRepository.getPublicPostSuggestions("아직 시각", 10)).isEmpty();
-        assertThat(postRepository.getAdjacentPost(visible.getId()).nextPost()).isNull();
-        assertThat(postRepository.getAdjacentPost(notYet.getId()).previousPost()).isNull();
+        assertThat(postRepository.getPublicPostSuggestions("아직 시각", 10)).extracting(PostSuggestResponse::id)
+                .doesNotContain(notYet.getId());
+
+        // 공개 글에서 다음 글을 끝까지 따라가도 시각이 안 된 글로는 넘어가지 않는다
+        assertThat(nextPostIdsFrom(visible.getId())).doesNotContain(notYet.getId());
+
+        AdjacentPostResponse aroundHidden = postRepository.getAdjacentPost(notYet.getId());
+        assertThat(aroundHidden.previousPost()).isNull();
+        assertThat(aroundHidden.nextPost()).isNull();
     }
 
     @Test
@@ -101,6 +115,18 @@ class PublicPostVisibilityTest {
     void publishedPostStaysVisible() {
         assertThat(postService.getPostDetail(visible.getId(), true, null).id()).isEqualTo(visible.getId());
         assertThat(postPageService.render(String.valueOf(visible.getId())).found()).isTrue();
+    }
+
+    private List<Long> nextPostIdsFrom(Long postId) {
+        List<Long> ids = new ArrayList<>();
+        AdjacentPostSummary next = postRepository.getAdjacentPost(postId).nextPost();
+
+        // 다른 테스트가 남긴 글이 많아도 끝이 있게 한도를 둔다
+        while (next != null && ids.size() < 1000) {
+            ids.add(next.id());
+            next = postRepository.getAdjacentPost(next.id()).nextPost();
+        }
+        return ids;
     }
 
     private Post publish(String title, LocalDateTime publishedAt) {
