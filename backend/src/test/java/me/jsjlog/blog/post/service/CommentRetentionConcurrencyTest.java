@@ -24,6 +24,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
@@ -129,7 +130,8 @@ class CommentRetentionConcurrencyTest {
     @DisplayName("정리가 두 번 겹쳐 돌아도 한 번만 파기한다")
     void concurrentPurgesPurgeOnce() throws Exception {
         CyclicBarrier start = new CyclicBarrier(2);
-        LocalDateTime now = LocalDateTime.now();
+        // DB에 저장되는 마이크로초 정밀도에 맞춰 비교한다.
+        LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.MICROS);
 
         CompletableFuture<CommentRetention.Result> first = CompletableFuture.supplyAsync(() -> {
             await(start);
