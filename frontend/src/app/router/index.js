@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router';
+import { START_LOCATION, createRouter, createWebHistory } from 'vue-router';
 import { clearAdminSession, ensureAdminSession } from '../../features/admin/data/adminAuthStore';
 import { clearMemberSession } from '../../features/member/data/memberAuthStore';
 import { onUnauthorized } from '../../shared/api/blogApiClient';
@@ -279,10 +279,16 @@ router.beforeEach(async (to) => {
  *
  * 글 상세는 여기서 제목을 알 수 없다. 라우트에는 글 번호만 있고 제목은 API 응답에
  * 들어 있다. 그래서 그 화면은 글을 받은 뒤에 직접 다시 부른다.
+ *
+ * 글 주소로 처음 들어온 경우에는 서버가 첫 HTML에 이미 그 글의 메타를 넣었다. 여기서 덮으면
+ * 글 API 가 늦거나 실패했을 때 검색엔진이 보는 화면에 엉뚱한 제목이 남는다.
+ * 앱 안에서 옮겨 온 경우에도 불러오는 동안 noindex 를 넣지 않는다 — 실패하면 그대로 남는다.
  */
-router.afterEach((to) => {
+router.afterEach((to, from) => {
   if (to.name === 'post-detail') {
-    applyDocumentMeta({ title: '글 불러오는 중', path: to.fullPath, robots: 'noindex,follow' });
+    if (from !== START_LOCATION) {
+      applyDocumentMeta({ title: '글 불러오는 중', path: `/posts/${to.params.id}` });
+    }
     return;
   }
 
