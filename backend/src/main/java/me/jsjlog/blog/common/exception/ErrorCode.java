@@ -30,6 +30,7 @@ public enum ErrorCode {
     NOT_FOUND(HttpStatus.NOT_FOUND, "NOT_FOUND", "요청한 리소스를 찾을 수 없습니다."),
     DATA_CONSTRAINT_VIOLATED(HttpStatus.CONFLICT, "DATA_CONSTRAINT_VIOLATED", "데이터 규칙에 맞지 않아 처리하지 못했습니다."),
     MODIFIED_BY_OTHERS(HttpStatus.CONFLICT, "MODIFIED_BY_OTHERS", "다른 곳에서 먼저 수정되었습니다. 최신 내용을 다시 불러온 뒤 저장해 주세요."),
+    RESOURCE_BUSY(HttpStatus.CONFLICT, "RESOURCE_BUSY", "같은 내용을 다른 요청이 처리하고 있습니다. 잠시 후 다시 시도해 주세요."),
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_SERVER_ERROR", "서버 오류가 발생했습니다."),
 
     // 소셜 로그인 도중의 실패다. 사용자가 고칠 수 있는 게 없어서 메시지는 다시 시도하라는 쪽으로 둔다
