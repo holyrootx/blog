@@ -121,7 +121,7 @@ async function confirmWithdraw() {
 </script>
 
 <template>
-  <main v-if="pageLoading" class="member-settings member-settings--skeleton" aria-busy="true">
+  <main v-if="pageLoading" class="public-shell__main member-settings member-settings--skeleton" aria-busy="true">
     <header class="member-settings__head" aria-hidden="true">
       <span class="ui-skeleton member-settings-skeleton__title"></span>
       <span class="ui-skeleton member-settings-skeleton__back"></span>
@@ -140,7 +140,7 @@ async function confirmWithdraw() {
     </section>
   </main>
 
-  <main v-else-if="isSignedIn" class="member-settings">
+  <main v-else-if="isSignedIn" class="public-shell__main member-settings">
     <header class="member-settings__head">
       <h1 class="member-settings__title">내 설정</h1>
       <RouterLink class="member-settings__back" to="/">블로그로 돌아가기</RouterLink>

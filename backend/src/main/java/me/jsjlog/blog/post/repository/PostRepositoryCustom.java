@@ -6,8 +6,6 @@ import java.util.List;
 
 public interface PostRepositoryCustom {
 
-    List<PostSummaryResponse> getLatestPostsForHomePage();
-    List<PostSummaryResponse> getPopularPostsForHomePage();
     List<PostSummaryResponse> getPostsForHomePage(String sort, Long size);
     PostDetailResponse getPostDetail(Long postId);
     AdjacentPostResponse getAdjacentPost(Long postId);

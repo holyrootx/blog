@@ -189,7 +189,7 @@ class CommentServiceTest {
         CommentReaction dislike = new CommentReaction(comment, member, CommentReactionType.DISLIKE);
         when(commentRepository.findPostId(20L)).thenReturn(Optional.of(POST_ID));
         when(postRepository.findLockedById(POST_ID)).thenReturn(Optional.of(post));
-        when(post.isPublished()).thenReturn(true);
+        when(post.isPubliclyVisible(any())).thenReturn(true);
         when(commentRepository.findLockedById(20L)).thenReturn(Optional.of(comment));
         when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(member));
         when(member.getStatus()).thenReturn(MemberStatus.ACTIVE);
@@ -237,7 +237,7 @@ class CommentServiceTest {
 
     private void givenPublishedPostAndActiveMember() {
         when(postRepository.findLockedById(POST_ID)).thenReturn(Optional.of(post));
-        when(post.isPublished()).thenReturn(true);
+        when(post.isPubliclyVisible(any())).thenReturn(true);
         when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(member));
         when(member.getStatus()).thenReturn(MemberStatus.ACTIVE);
     }

@@ -2,13 +2,13 @@
 
 @use '../base/breakpoints' as bp;
 
+/* 공개 화면 공통 카드(.public-shell__main) 안에 들어간다. 헤더 아래 남은 자리 가운데에 판을 둔다 */
 .member-auth {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
+  min-height: 70vh;
   padding: 24px;
-  background: var(--page-bg);
 }
 
 .member-auth__panel {

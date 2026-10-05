@@ -93,9 +93,7 @@ public class PostPageService {
         }
         try {
             return postRepository.findById(Long.parseLong(id))
-                    .filter(Post::isPublished)
-                    .filter(post -> post.getPublishedAt() != null
-                            && !post.getPublishedAt().isAfter(LocalDateTime.now()))
+                    .filter(post -> post.isPubliclyVisible(LocalDateTime.now()))
                     .orElse(null);
         } catch (NumberFormatException exception) {
             return null;

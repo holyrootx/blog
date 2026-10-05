@@ -108,7 +108,7 @@ class NotificationVisibilityTest {
         adminPosts.publishPost(post.getId(), null);
         assertThat(notifications.findMine(reader.getId())).hasSize(1);
         assertThat(notifications.countUnread(reader.getId())).isEqualTo(1);
-        assertThat(comments.findMyComments(reader.getId(), PageRequest.of(0, 20))).hasSize(1);
+        assertThat(comments.findMyComments(reader.getId(), LocalDateTime.now(), PageRequest.of(0, 20))).hasSize(1);
     }
 
     @Test
