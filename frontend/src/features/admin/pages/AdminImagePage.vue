@@ -38,7 +38,6 @@ const FILTERS = [
 const WHERE_LABELS = {
   POST_CONTENT: '본문',
   POST_THUMBNAIL: '대표 이미지',
-  CONTENT_HISTORY: '변경 이력',
   HOME_HERO: '대문 그림',
   PROFILE: '프로필 사진',
 };

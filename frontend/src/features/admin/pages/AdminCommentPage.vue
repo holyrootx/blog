@@ -3,12 +3,11 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import {
-  dismissAdminCommentReports,
-  getAdminCommentModeration,
   getAdminComments,
   replyAdminComment,
   updateAdminCommentVisibility,
 } from '../api/adminApi';
+import AdminCommentDetailModal from '../components/AdminCommentDetailModal.vue';
 import AdminGridToolbar from '../components/AdminGridToolbar.vue';
 import BaseModal from '../../../shared/components/BaseModal.vue';
 import AdminPageHeader from '../components/AdminPageHeader.vue';
@@ -29,6 +28,10 @@ const condition = reactive({
   status: FILTERS.includes(String(route.query.status)) ? String(route.query.status) : 'ALL',
 });
 const applied = ref({ ...condition });
+
+// 회원 관리에서 댓글 수를 눌러 들어오면 그 회원 댓글만 본다. 검색 칸과 따로 둔다 —
+// 초기화를 눌러도 풀리면 왜 목록이 바뀌었는지 모른다
+const memberFilter = ref(toId(route.query.member));
 const comments = ref([]);
 const statusCounts = ref({ all: 0, unanswered: 0, hidden: 0, reported: 0 });
 const totalElements = ref(0);
@@ -50,17 +53,13 @@ const visibilitySubmitting = ref(false);
 /** 가릴 때 남기는 메모. 조치 이력에 함께 쌓인다 */
 const visibilityReason = ref('');
 
-/**
- * 신고 내역과 조치 이력을 펼쳐 볼 댓글.
- *
- * 둘을 함께 본다. 이미 가린 댓글인 줄 모르고 또 가리는 일을 막으려면
- * 신고만 봐서는 안 된다.
- */
-const moderationTarget = ref(null);
-const moderationDetail = ref({ reports: [], moderations: [] });
-const moderationLoading = ref(false);
-const moderationError = ref('');
-const dismissSubmitting = ref(false);
+/** 상세 창에 띄운 댓글 번호. 신고 배지를 눌러도 같은 창이 열린다 */
+const detailId = ref(null);
+
+const memberLabel = computed(() => {
+  const nickname = comments.value[0]?.nickname;
+  return nickname ? `${nickname} 회원` : `회원 #${memberFilter.value}`;
+});
 
 const statusOptions = computed(() => [
   { value: 'ALL', label: `전체 ${formatCount(statusCounts.value.all)}` },
@@ -103,13 +102,11 @@ onMounted(async () => {
   }
 
   // 신고 알림에서 눌러 들어온 경우다. 목록만 열어 주면 어느 댓글이었는지 다시 찾아야
-  // 하고, 신고 건수와 사유는 이 창을 열어야 보인다
-  const requestedReportId = Number(route.query.report);
-  if (Number.isFinite(requestedReportId)) {
-    const target = comments.value.find((comment) => comment.id === requestedReportId);
-    if (target) {
-      await openModeration(target);
-    }
+  // 하고, 신고 건수와 사유는 이 창을 열어야 보인다. 상세는 번호로 불러오므로
+  // 지금 페이지 목록에 없어도 열린다
+  const requestedReportId = toId(route.query.report);
+  if (requestedReportId !== null) {
+    openDetail(requestedReportId);
 
     const query = { ...route.query };
     delete query.report;
@@ -124,6 +121,7 @@ async function loadComments(searchCondition) {
   try {
     const result = await getAdminComments({
       ...searchCondition,
+      memberId: memberFilter.value,
       page: page.value - 1,
       size: pageSize.value,
     });
@@ -153,6 +151,16 @@ function reload() {
 
 function reset() {
   Object.assign(condition, EMPTY_CONDITION);
+}
+
+async function clearMemberFilter() {
+  const query = { ...route.query };
+  delete query.member;
+  await router.replace({ query });
+
+  memberFilter.value = null;
+  page.value = 1;
+  await reload();
 }
 
 function changePage(nextPage) {
@@ -256,57 +264,18 @@ async function changeVisibility() {
   }
 }
 
-async function openModeration(comment) {
-  moderationTarget.value = comment;
-  moderationError.value = '';
-  moderationLoading.value = true;
-  moderationDetail.value = { reports: [], moderations: [] };
-
-  try {
-    moderationDetail.value = await getAdminCommentModeration(comment.id);
-  } catch (error) {
-    moderationError.value = error?.message ?? '신고 내역을 불러오지 못했습니다.';
-  } finally {
-    moderationLoading.value = false;
-  }
+function openDetail(commentId) {
+  detailId.value = commentId;
 }
 
-function closeModeration() {
-  if (dismissSubmitting.value) {
-    return;
-  }
-
-  moderationTarget.value = null;
-  moderationError.value = '';
+function closeDetail() {
+  detailId.value = null;
 }
 
-/**
- * 신고를 봤지만 댓글은 그대로 둔다.
- *
- * 이게 없으면 "문제 없음" 이라는 판단을 남길 자리가 없어서, 같은 신고를 볼 때마다
- * 처음부터 다시 읽게 된다.
- */
-async function dismissReports() {
-  if (!moderationTarget.value || dismissSubmitting.value) {
-    return;
-  }
-
-  dismissSubmitting.value = true;
-  moderationError.value = '';
-
-  try {
-    await dismissAdminCommentReports(moderationTarget.value.id, visibilityReason.value || null);
-
-    moderationTarget.value = null;
-    visibilityReason.value = '';
-    await load();
-    notifySuccess('신고를 처리했습니다. 댓글은 그대로 둡니다.');
-  } catch (error) {
-    moderationError.value = error?.message ?? '신고를 처리하지 못했습니다.';
-    notifyError(moderationError.value);
-  } finally {
-    dismissSubmitting.value = false;
-  }
+// 가리기 확인창을 상세 창 위에 겹치지 않는다. 상세를 닫고 확인창만 띄운다
+function hideFromDetail(target) {
+  closeDetail();
+  askVisibility(target);
 }
 
 function commentState(comment) {
@@ -314,6 +283,11 @@ function commentState(comment) {
   if (comment.parentId !== null) return '답글';
   if (comment.memberRole === 'ADMIN') return '관리자 댓글';
   return comment.answered ? '답변 완료' : '미답변';
+}
+
+function toId(value) {
+  const id = Number(value);
+  return Number.isInteger(id) && id > 0 ? id : null;
 }
 
 function formatCount(value) {
@@ -361,6 +335,10 @@ function formatDateTime(value) {
     <AdminGridToolbar :total-count="totalElements">
       <template #left>
         <AdminPageSize :model-value="pageSize" @update:model-value="changePageSize" />
+        <span v-if="memberFilter !== null" class="admin-comment-member-filter">
+          {{ memberLabel }}의 댓글만 보는 중
+          <button type="button" @click="clearMemberFilter">전체 보기</button>
+        </span>
       </template>
       <template #right>
         <button class="admin-button" type="button" @click="reset">초기화</button>
@@ -398,8 +376,11 @@ function formatDateTime(value) {
         v-for="comment in comments"
         v-else
         :key="comment.id"
-        class="admin-comment-row"
+        class="admin-comment-row admin-comment-row--clickable"
         :class="{ 'admin-comment-row--hidden': comment.hidden }"
+        tabindex="0"
+        @click="openDetail(comment.id)"
+        @keydown.enter.self="openDetail(comment.id)"
       >
         <div class="admin-comment-row__identity">
           <span class="admin-comment-row__avatar" aria-hidden="true">
@@ -428,14 +409,14 @@ function formatDateTime(value) {
               class="admin-badge admin-badge--report"
               :class="{ 'admin-badge--report-pending': comment.unhandledReportCount > 0 }"
               type="button"
-              @click="openModeration(comment)"
+              @click.stop="openDetail(comment.id)"
             >
               신고 {{ comment.unhandledReportCount > 0
                 ? `${comment.unhandledReportCount}건 대기`
                 : `${comment.reportCount}건 처리됨` }}
             </button>
             <span>{{ formatDateTime(comment.createdAt) }}</span>
-            <a :href="`/posts/${comment.postId}`" target="_blank" rel="noopener noreferrer">
+            <a :href="`/posts/${comment.postId}`" target="_blank" rel="noopener noreferrer" @click.stop>
               {{ comment.postTitle }}
             </a>
           </div>
@@ -445,7 +426,7 @@ function formatDateTime(value) {
           </span>
         </div>
 
-        <div class="admin-comment-row__actions">
+        <div class="admin-comment-row__actions" @click.stop>
           <button
             v-if="canReply(comment)"
             class="admin-button admin-button--small"
@@ -544,86 +525,50 @@ function formatDateTime(value) {
         </template>
     </BaseModal>
 
-    <BaseModal variant="admin"
-      :open="Boolean(moderationTarget)"
-      title="신고 내역과 조치"
-      description="신고가 쌓여도 댓글이 저절로 숨겨지지는 않습니다. 읽어 보고 정하세요."
-      @close="closeModeration"
-    >
-      <div v-if="moderationLoading" class="admin-moderation__skeleton" aria-hidden="true">
-        <span class="ui-skeleton"></span>
-        <span class="ui-skeleton"></span>
-        <span class="ui-skeleton"></span>
-        <span class="ui-skeleton"></span>
-      </div>
-      <p v-else-if="moderationError" class="admin-comment-reply-form__error" role="alert">
-        {{ moderationError }}
-      </p>
-
-      <template v-else>
-        <p class="admin-moderation__quote">{{ moderationTarget?.content }}</p>
-
-        <h3 class="admin-moderation__title">신고 {{ moderationDetail.reports.length }}건</h3>
-        <ul class="admin-moderation__list">
-          <li v-for="report in moderationDetail.reports" :key="report.id">
-            <span class="admin-moderation__reason">{{ report.reasonLabel }}</span>
-            <span v-if="report.detail" class="admin-moderation__detail">{{ report.detail }}</span>
-            <span class="admin-moderation__time">
-              {{ formatDateTime(report.reportedAt) }} · {{ report.handled ? '처리됨' : '대기' }}
-            </span>
-          </li>
-        </ul>
-
-        <h3 class="admin-moderation__title">지금까지의 조치</h3>
-        <p v-if="moderationDetail.moderations.length === 0" class="admin-moderation__empty">
-          아직 없습니다.
-        </p>
-        <ul v-else class="admin-moderation__list">
-          <li v-for="item in moderationDetail.moderations" :key="item.id">
-            <span class="admin-moderation__reason">{{ item.actionLabel }}</span>
-            <span v-if="item.reason" class="admin-moderation__detail">{{ item.reason }}</span>
-            <span class="admin-moderation__time">
-              {{ formatDateTime(item.actedAt) }} · {{ item.adminNickname }}
-            </span>
-          </li>
-        </ul>
-
-        <AdminTextInput
-          v-model="visibilityReason"
-          label="메모 (선택)"
-          placeholder="판단한 이유를 남겨 두면 다음에 다시 읽지 않아도 됩니다"
-          :maxlength="200"
-        />
-      </template>
-
-      <template #footer><button
-          class="admin-button"
-          type="button"
-          :disabled="dismissSubmitting || moderationLoading"
-          @click="dismissReports"
-        >
-          {{ dismissSubmitting ? '처리 중' : '문제 없음' }}
-        </button>
-        <button
-          v-if="moderationTarget && !moderationTarget.hidden"
-          class="admin-button admin-button--danger"
-          type="button"
-          :disabled="dismissSubmitting"
-          @click="askVisibility(moderationTarget); closeModeration()"
-        >
-          가리기
-        </button>
-      
-        <button class="admin-button" type="button" :disabled="dismissSubmitting" @click="closeModeration">
-          닫기
-        </button>
-        </template>
-    </BaseModal>
+    <AdminCommentDetailModal
+      :comment-id="detailId"
+      @close="closeDetail"
+      @hide="hideFromDetail"
+      @changed="reload"
+    />
   </div>
 </template>
 
 <style scoped>
 /* ── 댓글 관리 ─────────────────────────────── */
+
+/* 줄을 누르면 상세 창이 열린다. 줄 안의 단추와 글 제목 링크는 제 일만 한다 */
+.admin-comment-row--clickable {
+  cursor: pointer;
+}
+
+.admin-comment-row--clickable:hover {
+  background: var(--admin-surface-hover);
+}
+
+.admin-comment-row--clickable:focus-visible {
+  outline: 2px solid var(--admin-control-accent);
+  outline-offset: -2px;
+}
+
+.admin-comment-member-filter {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--admin-meta);
+  font-size: 13px;
+}
+
+.admin-comment-member-filter button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--admin-title);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
 
 .admin-comment-page {
   width: 100%;
