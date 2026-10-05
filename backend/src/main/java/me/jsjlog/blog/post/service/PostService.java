@@ -135,8 +135,16 @@ public class PostService {
      * 뽑을 때 페이지를 많이 넘긴 검색어가 인기 있는 것처럼 보인다.
      */
     private void recordSearch(PostListCondition condition, long total) {
-        if (condition.hasKeyword() && condition.pageOrDefault() == 0) {
+        if (!condition.hasKeyword() || condition.pageOrDefault() != 0) {
+            return;
+        }
+
+        // 기록은 나중에 보려고 쌓는 덤이다. 이것 때문에 검색 결과가 안 나오면 본말이 뒤집힌다.
+        // 기록은 따로 연 트랜잭션이라 실패해도 이 조회는 영향받지 않는다. 로그로 남겨 조용히 비어 가는 일은 막는다
+        try {
             searchLogService.record(condition.keywordOrNull(), total);
+        } catch (RuntimeException e) {
+            log.warn("[recordSearch] 검색 기록 실패. keyword={}, resultCount={}", condition.keywordOrNull(), total, e);
         }
     }
 

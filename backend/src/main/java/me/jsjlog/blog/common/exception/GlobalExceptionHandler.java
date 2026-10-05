@@ -9,13 +9,16 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import lombok.extern.slf4j.Slf4j;
@@ -162,6 +165,65 @@ public class GlobalExceptionHandler {
 			exception.getValue(),
 			request.getRequestURI()
 		);
+
+		return ResponseEntity
+			.status(errorCode.getHttpStatus())
+			.body(ErrorResponse.of(errorCode, errorCode.getMessage(), request.getRequestURI()));
+	}
+
+	/**
+	 * 꼭 필요한 쿼리 파라미터가 빠졌을 때입니다. 예를 들어 반응을 지우면서 {@code type} 을 안 보낸 경우.
+	 *
+	 * <p>보낸 쪽 잘못인데 처리기가 없으면 500 과 ERROR 로그가 남아, 진짜 서버 오류를 찾기 어려워집니다.</p>
+	 */
+	@ExceptionHandler(MissingServletRequestParameterException.class)
+	public ResponseEntity<ErrorResponse> handleMissingParameter(
+		MissingServletRequestParameterException exception,
+		HttpServletRequest request
+	) {
+		ErrorCode errorCode = ErrorCode.INVALID_INPUT;
+		log.warn("Missing request parameter. name={}, path={}", exception.getParameterName(), request.getRequestURI());
+
+		return ResponseEntity
+			.status(errorCode.getHttpStatus())
+			.body(ErrorResponse.of(errorCode, errorCode.getMessage(), request.getRequestURI()));
+	}
+
+	/**
+	 * 업로드 요청 전체가 multipart 한도({@code spring.servlet.multipart})를 넘었을 때입니다.
+	 *
+	 * <p>이미지 용량 검사는 서비스가 하지만, 그보다 큰 파일은 서비스에 닿기 전에 여기서 막힙니다.
+	 * 서비스와 같은 오류 코드를 주어 화면이 같은 안내를 보이게 합니다.</p>
+	 */
+	@ExceptionHandler(MaxUploadSizeExceededException.class)
+	public ResponseEntity<ErrorResponse> handleMaxUploadSize(
+		MaxUploadSizeExceededException exception,
+		HttpServletRequest request
+	) {
+		ErrorCode errorCode = ErrorCode.IMAGE_TOO_LARGE;
+		log.warn("Upload exceeds multipart limit. maxUploadSize={}, path={}",
+			exception.getMaxUploadSize(),
+			request.getRequestURI()
+		);
+
+		return ResponseEntity
+			.status(errorCode.getHttpStatus())
+			.body(ErrorResponse.of(errorCode, errorCode.getMessage(), request.getRequestURI()));
+	}
+
+	/**
+	 * 같은 행의 잠금을 기다리다 시간이 다 됐거나 교착으로 밀려났을 때입니다.
+	 *
+	 * <p>서버 고장이 아니라 잠깐 겹친 것이라 다시 시도하면 대개 됩니다. 500 대신 409 를 주어 그렇게 안내합니다.
+	 * 자주 보이면 잠금 범위를 다시 봐야 하므로 로그는 남깁니다.</p>
+	 */
+	@ExceptionHandler(PessimisticLockingFailureException.class)
+	public ResponseEntity<ErrorResponse> handleLockFailure(
+		PessimisticLockingFailureException exception,
+		HttpServletRequest request
+	) {
+		ErrorCode errorCode = ErrorCode.RESOURCE_BUSY;
+		log.warn("Lock not acquired. path={}, message={}", request.getRequestURI(), exception.getMessage());
 
 		return ResponseEntity
 			.status(errorCode.getHttpStatus())
