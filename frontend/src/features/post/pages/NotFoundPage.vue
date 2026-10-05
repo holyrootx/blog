@@ -12,7 +12,7 @@ import { RouterLink } from 'vue-router';
 </script>
 
 <template>
-  <main class="not-found">
+  <main class="public-shell__main not-found">
     <p class="not-found__code">404</p>
     <h1 class="not-found__title">찾는 글이 없습니다</h1>
     <p class="not-found__text">

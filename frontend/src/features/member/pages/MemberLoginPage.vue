@@ -15,7 +15,7 @@ import SocialLoginButtons from '../components/SocialLoginButtons.vue';
 </script>
 
 <template>
-  <main class="member-auth">
+  <main class="public-shell__main member-auth">
     <div class="member-auth__panel">
       <h1 class="member-auth__title">로그인</h1>
       <p class="member-auth__description">

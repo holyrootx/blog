@@ -8,13 +8,16 @@ import {
   toEditorBlocks,
   toMarkdown,
 } from '../data/postEditorBlocks';
+import { applyMarkdownShortcut, orderedNumberAt } from '../data/postEditorShortcuts';
 import { useBlockSelection } from '../composables/useBlockSelection';
 import { useEditorImages } from '../composables/useEditorImages';
+import { useEditorKeyboard } from '../composables/useEditorKeyboard';
+import { useSlashMenu } from '../composables/useSlashMenu';
 import { createEditorHistory } from '../data/postEditorHistory';
-import { filterSlashCommands } from '../data/postSlashCommands';
 import { CODE_LANGUAGES, toCodeTokens } from '../../../shared/post/codeHighlight';
 import AdminBlockText from './AdminBlockText.vue';
 import AdminBlockImage from './AdminBlockImage.vue';
+import AdminSlashMenu from './AdminSlashMenu.vue';
 
 /**
  * 쓰는 자리가 곧 결과인 블록 에디터.
@@ -39,10 +42,6 @@ const editorRef = ref(null);
 const textRefs = new Map();
 const codeRefs = new Map();
 
-const menuOpenId = ref('');
-const menuQuery = ref('');
-const menuIndex = ref(0);
-
 const {
   uploadErrors,
   resizingId,
@@ -55,32 +54,32 @@ const {
   onResizeStart,
   onResizeKeydown,
 } = useEditorImages({ blocks, sync });
+const selection = useBlockSelection({ blocks, editorRef, sync, isUploading });
 const {
   draggingId,
   dropIndex,
   selectedIds,
   keyboardInsertIndex,
-  selectOnly,
-  selectAllBlocks,
   toggleSelect,
   clearSelection,
-  focusEditor,
   selectImageBlock,
-  moveSelectionCursor,
-  extendSelection,
-  moveInsertCursor,
-  copySelected,
-  pasteBlocks,
   onBlockCopy,
   onBlockCut,
   onBlockPaste,
-  removeSelectedBlocks,
-  moveSelectedBlocks,
   onDragStart,
   onDragOver,
   onDrop,
   resetDrag,
-} = useBlockSelection({ blocks, editorRef, sync, isUploading });
+} = selection;
+const {
+  menuOpenId,
+  menuIndex,
+  detectSlash,
+  closeMenu,
+  commandsFor,
+  handleMenuKey,
+} = useSlashMenu({ textRefs, runCommand });
+const { onEditorKeydown } = useEditorKeyboard({ editorRef, selection, undo, redo, focusBlock });
 
 const CALLOUT_LABELS = { tip: '팁', warning: '주의', note: '참고' };
 
@@ -165,110 +164,6 @@ function apply(entry) {
   // 사라졌던 블록이 돌아온 경우처럼, 그 블록이 지금 없으면 커서는 그대로 둔다
   if (blocks.value.some((block) => block.id === entry.focusId)) {
     focusBlock(entry.focusId, entry.caret);
-  }
-}
-
-function onEditorKeydown(event) {
-  if (event.isComposing || event.keyCode === 229) {
-    return;
-  }
-
-  const key = event.key.toLowerCase();
-  const command = event.metaKey || event.ctrlKey;
-
-  if (event.key === 'Escape') {
-    event.preventDefault();
-
-    const row = event.target.closest?.('[data-block-id]');
-
-    // 글자 커서에서 한 번 누르면 그 블록을 고른다. 블록 모드에서 다시 누르면 빠져나온다
-    if (row && selectedIds.value.length === 0 && keyboardInsertIndex.value < 0) {
-      selectOnly(row.dataset.blockId);
-      focusEditor();
-    } else {
-      clearSelection();
-      keyboardInsertIndex.value = -1;
-      editorRef.value?.blur();
-    }
-
-    return;
-  }
-
-  const inBlockMode = selectedIds.value.length > 0 || keyboardInsertIndex.value >= 0;
-
-  if (inBlockMode) {
-    if (command && key === 'a') {
-      event.preventDefault();
-      selectAllBlocks();
-      return;
-    }
-
-    if (command && (key === 'c' || key === 'x')) {
-      event.preventDefault();
-      copySelected(key === 'x');
-      return;
-    }
-
-    if (command && key === 'v') {
-      event.preventDefault();
-      pasteBlocks();
-      return;
-    }
-
-    if ((event.key === 'Delete' || event.key === 'Backspace') && selectedIds.value.length > 0) {
-      event.preventDefault();
-      removeSelectedBlocks();
-      return;
-    }
-
-    if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
-      event.preventDefault();
-      const direction = event.key === 'ArrowUp' ? -1 : 1;
-
-      if (keyboardInsertIndex.value >= 0) {
-        moveInsertCursor(direction);
-      } else if (event.altKey) {
-        moveSelectedBlocks(direction);
-      } else if (event.shiftKey) {
-        extendSelection(direction);
-      } else {
-        moveSelectionCursor(direction);
-      }
-
-      return;
-    }
-
-    if (event.key === 'Enter' && selectedIds.value.length === 1) {
-      event.preventDefault();
-      const [id] = selectedIds.value;
-
-      clearSelection();
-      focusBlock(id, 'start');
-      return;
-    }
-  }
-
-  if (!command) {
-    return;
-  }
-
-  // 브라우저 기본 되돌리기는 글자만 되돌려 블록 배열과 어긋난다. 막고 우리가 받는다
-  if (key === 'z') {
-    event.preventDefault();
-
-    if (event.shiftKey) {
-      redo();
-      return;
-    }
-
-    undo();
-    return;
-  }
-
-  // 윈도우에서 앞으로 가기로 쓰는 조합
-  if (key === 'y') {
-    event.preventDefault();
-    redo();
   }
 }
 
@@ -382,7 +277,7 @@ function onCodeInput(block, event) {
 
 function onTextInput(block) {
   // 마크다운을 직접 쳐도 같은 결과가 되게 한다
-  if (applyBlockShortcut(block)) {
+  if (applyMarkdownShortcut(block)) {
     sync();
     finishShortcut(block);
     return;
@@ -404,76 +299,6 @@ async function finishShortcut(block) {
   textRefs.get(block.id)?.redraw();
 
   focusBlock(block.id, 'start');
-}
-
-function applyBlockShortcut(block) {
-  const heading = block.text.match(/^(#{1,6})\s(.*)$/);
-  if (heading) {
-    block.type = 'heading';
-    block.level = heading[1].length;
-    block.text = heading[2];
-    return true;
-  }
-
-  const bullet = block.text.match(/^[-*+]\s(.*)$/);
-  if (bullet && block.type !== 'bullet') {
-    block.type = 'bullet';
-    block.text = bullet[1];
-    return true;
-  }
-
-  const ordered = block.text.match(/^\d+\.\s(.*)$/);
-  if (ordered && block.type !== 'ordered') {
-    block.type = 'ordered';
-    block.text = ordered[1];
-    return true;
-  }
-
-  const quote = block.text.match(/^>\s(.*)$/);
-  if (quote && block.type !== 'quote') {
-    block.type = 'quote';
-    block.text = quote[1];
-    return true;
-  }
-
-  if (block.text === '```') {
-    block.type = 'code';
-    block.text = '';
-    return true;
-  }
-
-  if (block.text === '---') {
-    block.type = 'divider';
-    block.text = '';
-    return true;
-  }
-
-  return false;
-}
-
-function detectSlash(block) {
-  const element = textRefs.get(block.id);
-  const before = element ? element.textBeforeCaret() : '';
-  const match = before.match(/(?:^|\s)\/(\S*)$/);
-
-  if (!match || filterSlashCommands(match[1]).length === 0) {
-    closeMenu();
-    return;
-  }
-
-  menuOpenId.value = block.id;
-  menuQuery.value = match[1];
-  menuIndex.value = 0;
-}
-
-function closeMenu() {
-  menuOpenId.value = '';
-  menuQuery.value = '';
-  menuIndex.value = 0;
-}
-
-function commandsFor() {
-  return filterSlashCommands(menuQuery.value);
 }
 
 /* ── 키보드 ───────────────────────────────── */
@@ -539,37 +364,6 @@ function onKeydown(block, index, event) {
   }
 }
 
-function handleMenuKey(block, event) {
-  const commands = commandsFor();
-
-  if (event.key === 'ArrowDown') {
-    event.preventDefault();
-    menuIndex.value = (menuIndex.value + 1) % commands.length;
-    return true;
-  }
-
-  if (event.key === 'ArrowUp') {
-    event.preventDefault();
-    menuIndex.value = (menuIndex.value - 1 + commands.length) % commands.length;
-    return true;
-  }
-
-  if (event.key === 'Enter' || event.key === 'Tab') {
-    event.preventDefault();
-    runCommand(block, commands[menuIndex.value]);
-    return true;
-  }
-
-  if (event.key === 'Escape') {
-    event.preventDefault();
-    event.stopPropagation();
-    closeMenu();
-    return true;
-  }
-
-  return false;
-}
-
 /**
  * Enter 를 누른 자리에서 블록을 나눈다.
  * 문단 중간에서 눌러도 앞뒤가 갈라져야 한다 — 뒤에 빈 블록만 붙으면
@@ -597,17 +391,6 @@ function splitBlock(block, index) {
   blocks.value.splice(index + 1, 0, next);
   sync();
   focusBlock(next.id, 'start');
-}
-
-/** 이어진 번호 목록 안에서 몇 번째인지. 문서 전체 순번이 아니다 */
-function orderedNumber(index) {
-  let number = 1;
-
-  for (let cursor = index - 1; cursor >= 0 && blocks.value[cursor].type === 'ordered'; cursor -= 1) {
-    number += 1;
-  }
-
-  return number;
 }
 
 function insertAfter(index, block) {
@@ -759,7 +542,7 @@ function addBlockAtEnd() {
       <template v-else>
         <span v-if="block.type === 'bullet'" class="block-editor__marker">•</span>
         <span v-else-if="block.type === 'ordered'" class="block-editor__marker">
-          {{ orderedNumber(index) }}.
+          {{ orderedNumberAt(blocks, index) }}.
         </span>
         <span v-else-if="block.type === 'callout'" class="post-callout__label">
           {{ CALLOUT_LABELS[block.variant] }}
@@ -783,7 +566,7 @@ function addBlockAtEnd() {
                 v-for="(token, tokenIndex) in codeTokens(block)"
                 :key="tokenIndex"
                 :class="`post-code__${token.kind}`"
-              >{{ token.text }}</span>{{ '​' }}</pre>
+              >{{ token.text }}</span>{{ '\u200b' }}</pre>
 
               <textarea
                 :ref="(element) => setCodeRef(block.id, element)"
@@ -815,22 +598,13 @@ function addBlockAtEnd() {
         </div>
       </template>
 
-      <ul v-if="menuOpenId === block.id" class="admin-slash block-editor__menu">
-        <li
-          v-for="(command, commandIndex) in commandsFor()"
-          :key="command.id"
-          class="admin-slash__item"
-          :class="{ 'admin-slash__item--active': commandIndex === menuIndex }"
-          @mousedown.prevent="runCommand(block, command)"
-          @mouseenter="menuIndex = commandIndex"
-        >
-          <span class="admin-slash__main">
-            <span class="admin-slash__label">{{ command.label }}</span>
-            <kbd class="admin-slash__key">/{{ command.shortcut }}</kbd>
-          </span>
-          <span class="admin-slash__hint">{{ command.hint }}</span>
-        </li>
-      </ul>
+      <AdminSlashMenu
+        v-if="menuOpenId === block.id"
+        :commands="commandsFor()"
+        :active-index="menuIndex"
+        @run="runCommand(block, $event)"
+        @hover="menuIndex = $event"
+      />
     </div>
 
     <button
