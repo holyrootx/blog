@@ -37,8 +37,10 @@ public interface CommentRepository extends JpaRepository<Comment, Long>, Comment
             + " order by c.id desc")
     List<Comment> findMyComments(@Param("memberId") Long memberId, Pageable pageable);
 
-    /** 원문 보관 기간이 지난, 글쓴이가 지운 댓글 */
-    @Query("select c.id from Comment c where c.deleted = true and c.deletedAt < :cutoff and c.contentPurgedAt is null")
+    /** 댓글 삭제 또는 원글 영구 삭제 중 먼저 도래한 기한으로 원문을 파기한다. */
+    @Query("select c.id from Comment c where c.contentPurgedAt is null"
+            + " and ((c.deleted = true and c.deletedAt < :cutoff)"
+            + " or c.post.id in (select p.id from Post p where p.contentPurgedAt < :cutoff))")
     List<Long> findExpiredDeletedIds(@Param("cutoff") LocalDateTime cutoff);
 
     /**
@@ -49,8 +51,10 @@ public interface CommentRepository extends JpaRepository<Comment, Long>, Comment
      * 잠금을 기다리는 사이 읽은 옛 값으로 되살린 결과를 덮어쓸 수 있다.
      */
     @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query("update Comment c set c.content = '', c.contentPurgedAt = :now"
-            + " where c.id in :ids and c.deleted = true and c.deletedAt < :cutoff and c.contentPurgedAt is null")
+    @Query("update Comment c set c.content = '', c.contentPurgedAt = :now, c.deleted = true"
+            + " where c.id in :ids and c.contentPurgedAt is null"
+            + " and ((c.deleted = true and c.deletedAt < :cutoff)"
+            + " or c.post.id in (select p.id from Post p where p.contentPurgedAt < :cutoff))")
     int purgeContent(
             @Param("ids") Collection<Long> ids,
             @Param("cutoff") LocalDateTime cutoff,

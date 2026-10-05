@@ -24,9 +24,10 @@ public record AdminCommentDetail(
         boolean edited,
         // 글쓴이가 지운 시각. 운영자가 가린 것만으로는 비어 있다
         LocalDateTime deletedAt,
-        // 지운 원문을 언제까지 보관하는가. 파기했거나 지우지 않았으면 비어 있다
+        // 댓글 삭제 또는 원글 영구 삭제에 따른 원문 보관 기한. 파기 후에는 비어 있다.
         LocalDateTime contentRetainedUntil,
         boolean contentPurged,
+        boolean postPurged,
         List<AdminCommentReportResponse> reports,
         List<AdminCommentModerationResponse> moderations,
         List<AdminCommentHistoryResponse> histories

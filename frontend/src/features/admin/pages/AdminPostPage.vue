@@ -7,6 +7,7 @@ import {
   getAdminCategories,
   getAdminPosts,
   publishAdminPost,
+  purgeAdminPost,
   restoreAdminPost,
   unpublishAdminPost,
 } from '../api/adminApi';
@@ -68,6 +69,9 @@ const confirmTarget = ref(null);
 const confirmAction = ref('');
 const working = ref(false);
 const actionError = ref('');
+const purgeTitle = ref('');
+const canConfirm = computed(() => !working.value && confirmTarget.value !== null
+  && (confirmAction.value !== 'purge' || purgeTitle.value === confirmTarget.value.title));
 
 const categoryOptions = computed(() => [
   { value: '', label: '전체' },
@@ -203,6 +207,10 @@ const CONFIRM_TEXTS = {
     title: '이 글을 복구할까요?',
     description: '임시저장 상태로 복구합니다. 내용을 확인한 뒤 직접 발행해 주세요.',
   },
+  purge: {
+    title: '이 글을 영구 삭제할까요?',
+    description: '제목·요약·본문과 남아 있는 글 변경 기록을 삭제합니다. 다른 곳에서 쓰지 않는 첨부 이미지도 정리하며, 삭제한 글은 복구할 수 없습니다.',
+  },
 };
 
 const confirmText = computed(() => CONFIRM_TEXTS[confirmAction.value] ?? { title: '', description: '' });
@@ -216,10 +224,11 @@ function askAction(action, post) {
   confirmAction.value = action;
   confirmTarget.value = post;
   actionError.value = '';
+  purgeTitle.value = '';
 }
 
 async function runAction() {
-  if (working.value) {
+  if (!canConfirm.value) {
     return;
   }
 
@@ -240,6 +249,12 @@ async function runAction() {
     } else if (confirmAction.value === 'restore') {
       await restoreAdminPost(postId);
       done = '임시저장으로 복구했습니다.';
+    } else if (confirmAction.value === 'purge') {
+      await purgeAdminPost(postId, {
+        title: purgeTitle.value,
+        deletedAt: confirmTarget.value.deletedAt,
+      });
+      done = '글을 영구 삭제했습니다.';
     } else {
       await deleteAdminPost(postId);
       done = '휴지통으로 이동했습니다.';
@@ -385,6 +400,16 @@ onMounted(() => {
           >
             삭제
           </button>
+          <button
+            v-else
+            class="admin-button admin-button--danger admin-button--small"
+            type="button"
+            :disabled="!row.purgeable || working"
+            :title="row.purgeable ? undefined : '삭제 후 30일이 지나면 영구 삭제할 수 있습니다'"
+            @click="askAction('purge', row)"
+          >
+            영구 삭제
+          </button>
         </span>
       </template>
     </AdminDataGrid>
@@ -401,16 +426,27 @@ onMounted(() => {
     >
       <p class="admin-post__confirm">{{ confirmTarget?.title }}</p>
 
+      <template v-if="confirmAction === 'purge'">
+        <p>
+          연결된 댓글 원문은 신고 확인을 위해 6개월 보관한 뒤 정리합니다.
+          이미 삭제된 댓글의 파기 기한은 늦추지 않습니다. 신고·조치 기록은 남습니다.
+        </p>
+        <label class="admin-field">
+          <span class="admin-field__label">삭제할 글 제목을 그대로 입력해 주세요</span>
+          <input v-model="purgeTitle" class="admin-field__input" type="text" autocomplete="off" :disabled="working" />
+        </label>
+      </template>
+
       <p v-if="actionError" class="admin-form-error">{{ actionError }}</p>
 
       <template #footer><button
           class="admin-button"
-          :class="confirmAction === 'delete' ? 'admin-button--danger' : 'admin-button--solid'"
+          :class="['delete', 'purge'].includes(confirmAction) ? 'admin-button--danger' : 'admin-button--solid'"
           type="button"
-          :disabled="working"
+          :disabled="!canConfirm"
           @click="runAction"
         >
-          {{ working ? '처리 중…' : confirmText.title.includes('삭제') ? '삭제' : '확인' }}
+          {{ working ? '처리 중…' : confirmAction === 'purge' ? '영구 삭제' : confirmAction === 'delete' ? '삭제' : '확인' }}
         </button>
       
         <button class="admin-button admin-button--ghost" type="button" :disabled="working" @click="confirmTarget = null">

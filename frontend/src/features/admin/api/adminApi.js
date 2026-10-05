@@ -150,6 +150,7 @@ function toAdminPost(post) {
     deletedAt: post.deletedAt ?? null,
     restoreUntil: post.restoreUntil ?? null,
     restorable: post.restorable === true,
+    purgeable: post.purgeable === true,
     views: toNumber(post.views),
   };
 }
@@ -207,6 +208,13 @@ export function restoreAdminPost(postId) {
 
 export function deleteAdminPost(postId) {
   return sendApiData(`${ADMIN_BLOG_API_BASE}/posts/${postId}`, { method: 'DELETE' });
+}
+
+export function purgeAdminPost(postId, confirmation) {
+  return sendApiData(`${ADMIN_BLOG_API_BASE}/posts/${postId}/permanent`, {
+    method: 'DELETE',
+    body: confirmation,
+  });
 }
 
 export async function getAdminComments(condition = {}) {
@@ -304,6 +312,7 @@ export async function getAdminCommentDetail(commentId) {
     deletedAt: detail?.deletedAt ?? null,
     contentRetainedUntil: detail?.contentRetainedUntil ?? null,
     contentPurged: Boolean(detail?.contentPurged),
+    postPurged: Boolean(detail?.postPurged),
     reports: Array.isArray(detail?.reports) ? detail.reports : [],
     moderations: Array.isArray(detail?.moderations) ? detail.moderations : [],
     histories: Array.isArray(detail?.histories) ? detail.histories : [],
@@ -333,6 +342,7 @@ function toAdminComment(comment) {
     reportCount: Number(comment.reportCount ?? 0),
     unhandledReportCount: Number(comment.unhandledReportCount ?? 0),
     contentPurged: Boolean(comment.contentPurged),
+    postPurged: Boolean(comment.postPurged),
   };
 }
 

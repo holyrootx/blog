@@ -42,8 +42,9 @@ public class Post extends BaseEntity {
     @Column(name = "content", nullable = false, columnDefinition = "TEXT")
     private String content;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "category_id", nullable = false)
+    // 영구 삭제 후에는 댓글·신고 연결에 필요한 글 번호만 남기므로 카테고리를 해제한다.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
     private Category category;
 
     /**
@@ -71,6 +72,9 @@ public class Post extends BaseEntity {
 
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
+
+    @Column(name = "content_purged_at")
+    private LocalDateTime contentPurgedAt;
 
     @Column(name = "views", nullable = false)
     private long views;
@@ -176,7 +180,33 @@ public class Post extends BaseEntity {
     }
 
     public boolean canRestore(LocalDateTime now) {
-        return isDeleted() && now.isBefore(deletedAt.plusDays(RESTORE_DAYS));
+        return isDeleted() && !isContentPurged() && now.isBefore(deletedAt.plusDays(RESTORE_DAYS));
+    }
+
+    public boolean isContentPurged() {
+        return contentPurgedAt != null;
+    }
+
+    public boolean canPurge(LocalDateTime now) {
+        return isDeleted() && !isContentPurged() && !now.isBefore(deletedAt.plusDays(RESTORE_DAYS));
+    }
+
+    /** 원문을 없애고 댓글·신고가 참조하는 번호와 파기 시각은 남긴다. 복구할 수 없다. */
+    public void purgeContent(LocalDateTime now) {
+        if (!canPurge(now)) {
+            throw new IllegalStateException("Post is not eligible for permanent deletion");
+        }
+        title = "영구 삭제된 글";
+        excerpt = null;
+        content = "";
+        thumbnailImageUrl = null;
+        category = null;
+        author = null;
+        publishedAt = null;
+        status = PostStatus.DRAFT;
+        views = 0;
+        likeCount = 0;
+        contentPurgedAt = now;
     }
 
     public void restore(LocalDateTime now) {

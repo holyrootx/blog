@@ -43,6 +43,7 @@ const states = computed(() => {
   if (detail.value.hiddenByAdmin) list.push('가림');
   else if (detail.value.deleted) list.push('삭제됨');
   if (detail.value.contentPurged) list.push('원문 파기');
+  if (detail.value.postPurged) list.push('원글 영구 삭제');
   if (detail.value.edited) list.push('수정됨');
   return list;
 });
@@ -140,7 +141,7 @@ function isUpdate(item) {
             <span>{{ detail.memberRole === 'ADMIN' ? '관리자' : '회원' }}</span>
             <span v-for="state in states" :key="state" class="admin-badge admin-badge--off">{{ state }}</span>
             <span>{{ formatExactTime(detail.createdAt) }}</span>
-            <a :href="`/posts/${detail.postId}`" target="_blank" rel="noopener noreferrer">
+            <a v-if="!detail.postPurged" :href="`/posts/${detail.postId}`" target="_blank" rel="noopener noreferrer">
               {{ detail.postTitle }}
             </a>
           </div>
@@ -149,9 +150,8 @@ function isUpdate(item) {
           </p>
           <template v-else>
             <p class="admin-moderation__quote">{{ detail.content }}</p>
-            <!-- 글쓴이가 지운 댓글만 기한이 있다. 운영자가 가린 것은 되살릴 수 있어 기한이 없다 -->
             <p v-if="detail.contentRetainedUntil" class="admin-comment-detail__notice">
-              글쓴이가 지운 댓글이라 공개 화면에는 보이지 않습니다.
+              {{ detail.postPurged ? '원글이 영구 삭제되어 댓글을 공개하거나 복구할 수 없습니다.' : '글쓴이가 지운 댓글이라 공개 화면에는 보이지 않습니다.' }}
               원문은 {{ formatExactTime(detail.contentRetainedUntil) }}까지 관리자만 볼 수 있고,
               이 시각이 지나면 다음 새벽 정리 때 파기해 되살릴 수 없습니다.
             </p>
@@ -240,7 +240,7 @@ function isUpdate(item) {
           {{ dismissing ? '처리 중' : '문제 없음' }}
         </button>
         <button
-          v-if="!detail.deleted"
+          v-if="!detail.deleted && !detail.postPurged"
           class="admin-button admin-button--danger"
           type="button"
           :disabled="dismissing"

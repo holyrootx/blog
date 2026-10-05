@@ -35,4 +35,9 @@ public record AdminPostSummaryResponse(
     public boolean restorable() {
         return deletedAt != null && LocalDateTime.now().isBefore(restoreUntil());
     }
+
+    @JsonProperty
+    public boolean purgeable() {
+        return deletedAt != null && !LocalDateTime.now().isBefore(restoreUntil());
+    }
 }

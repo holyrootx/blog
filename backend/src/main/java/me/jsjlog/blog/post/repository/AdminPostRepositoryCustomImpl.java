@@ -114,7 +114,7 @@ public class AdminPostRepositoryCustomImpl implements AdminPostRepositoryCustom 
 
         QPost post = QPost.post;
 
-        BooleanBuilder builder = new BooleanBuilder();
+        BooleanBuilder builder = new BooleanBuilder(post.contentPurgedAt.isNull());
 
         if (withStatus) {
             builder.and(condition.trashOrDefault() ? post.deletedAt.isNotNull() : post.deletedAt.isNull());
