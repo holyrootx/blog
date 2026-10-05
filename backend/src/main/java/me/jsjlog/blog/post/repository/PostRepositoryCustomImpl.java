@@ -23,66 +23,6 @@ public class PostRepositoryCustomImpl implements PostRepositoryCustom{
 
     private final JPAQueryFactory jpaQueryFactory;
 
-    /**
-     * 대문용 게시글 최신순으로 4건
-     * @return
-     */
-    @Override
-    public List<PostSummaryResponse> getLatestPostsForHomePage(){
-        QPost post = QPost.post;
-
-        BooleanBuilder builder = new BooleanBuilder();
-
-        builder.and(post.status.eq(PostStatus.PUBLISHED));
-        builder.and(post.deletedAt.isNull());
-
-        builder.and(post.publishedAt.loe(LocalDateTime.now()));
-
-        List<PostSummaryResponse> postSummaryResponseList = jpaQueryFactory.select(Projections.constructor(PostSummaryResponse.class,
-                        post.id,
-                        post.title,
-                        post.category.id,
-                        post.category.name,
-                        post.thumbnailImageUrl,
-                        post.publishedAt,
-                        post.views
-                )).from(post)
-                .where(builder)
-                .orderBy(post.publishedAt.desc())
-                .limit(4)
-                .fetch();
-
-        return postSummaryResponseList;
-    }
-
-    @Override
-    public List<PostSummaryResponse> getPopularPostsForHomePage() {
-        QPost post = QPost.post;
-
-        BooleanBuilder builder = new BooleanBuilder();
-
-        builder.and(post.status.eq(PostStatus.PUBLISHED));
-        builder.and(post.deletedAt.isNull());
-
-        builder.and(post.publishedAt.loe(LocalDateTime.now()));
-
-        List<PostSummaryResponse> postSummaryResponseList = jpaQueryFactory.select(
-                        Projections.constructor(PostSummaryResponse.class,
-                        post.id,
-                        post.title,
-                        post.category.id,
-                        post.category.name,
-                        post.thumbnailImageUrl,
-                        post.publishedAt,
-                        post.views
-                )).from(post)
-                .where(builder)
-                .orderBy(post.views.desc(), post.id.desc())
-                .limit(4)
-                .fetch();
-        return postSummaryResponseList;
-    }
-
     @Override
     public List<PostSummaryResponse> getPostsForHomePage(String sort, Long size){
 
@@ -92,9 +32,7 @@ public class PostRepositoryCustomImpl implements PostRepositoryCustom{
         QPost post = QPost.post;
 
         BooleanBuilder builder = new BooleanBuilder();
-        builder.and(post.status.eq(PostStatus.PUBLISHED));
-        builder.and(post.deletedAt.isNull());
-        builder.and(post.publishedAt.loe(LocalDateTime.now()));
+        builder.and(PublicPostCondition.of(post));
 
         OrderSpecifier<?>[] orderSpecifier = POPULAR_PARAM.equals(sort) ?
                                                 new OrderSpecifier<?>[]{ post.views.desc(), post.id.desc() } :
@@ -125,8 +63,7 @@ public class PostRepositoryCustomImpl implements PostRepositoryCustom{
 
         BooleanBuilder builder = new BooleanBuilder();
         builder.and(post.id.eq(postId));
-        builder.and(post.deletedAt.isNull());
-        builder.and(post.status.eq(PostStatus.PUBLISHED));
+        builder.and(PublicPostCondition.of(post));
 
 
         PostDetailResponse postDetailResponse = jpaQueryFactory.select(Projections.constructor(
@@ -157,7 +94,7 @@ public class PostRepositoryCustomImpl implements PostRepositoryCustom{
 
         Post currentPost = jpaQueryFactory
                 .selectFrom(post)
-                .where(post.id.eq(postId), post.deletedAt.isNull(), post.status.eq(PostStatus.PUBLISHED))
+                .where(post.id.eq(postId), PublicPostCondition.of(post))
                 .fetchOne();
 
         if (currentPost == null) {
@@ -178,9 +115,7 @@ public class PostRepositoryCustomImpl implements PostRepositoryCustom{
                                         post.publishedAt.eq(publishedAt)
                                                 .and(post.id.lt(postId))
                                 ),
-                        post.status.eq(PostStatus.PUBLISHED),
-                        post.deletedAt.isNull(),
-                        post.publishedAt.loe(LocalDateTime.now())
+                        PublicPostCondition.of(post)
                 )
                 .orderBy(
                         post.publishedAt.desc(),
@@ -201,9 +136,7 @@ public class PostRepositoryCustomImpl implements PostRepositoryCustom{
                                         post.publishedAt.eq(publishedAt)
                                                 .and(post.id.gt(postId))
                                 ),
-                        post.status.eq(PostStatus.PUBLISHED),
-                        post.deletedAt.isNull(),
-                        post.publishedAt.loe(LocalDateTime.now())
+                        PublicPostCondition.of(post)
                 )
                 .orderBy(
                         post.publishedAt.asc(),
@@ -220,9 +153,7 @@ public class PostRepositoryCustomImpl implements PostRepositoryCustom{
         QPost post = QPost.post;
 
         BooleanBuilder builder = new BooleanBuilder();
-        builder.and(post.status.eq(PostStatus.PUBLISHED));
-        builder.and(post.deletedAt.isNull());
-        builder.and(post.publishedAt.loe(LocalDateTime.now()));
+        builder.and(PublicPostCondition.of(post));
         builder.and(post.category.id.eq(categoryId));
         builder.and(post.id.ne(postId)); // 자기자신은 포함되지 않도록
 
@@ -299,9 +230,7 @@ public class PostRepositoryCustomImpl implements PostRepositoryCustom{
         String pattern = likePattern(keyword);
 
         BooleanBuilder builder = new BooleanBuilder();
-        builder.and(post.status.eq(PostStatus.PUBLISHED));
-        builder.and(post.deletedAt.isNull());
-        builder.and(post.publishedAt.loe(LocalDateTime.now()));
+        builder.and(PublicPostCondition.of(post));
         builder.and(keywordPredicate(post, pattern));
 
         return jpaQueryFactory
@@ -323,9 +252,7 @@ public class PostRepositoryCustomImpl implements PostRepositoryCustom{
     private BooleanBuilder publicPostPredicate(QPost post, PostListCondition condition) {
         BooleanBuilder builder = new BooleanBuilder();
 
-        builder.and(post.status.eq(PostStatus.PUBLISHED));
-        builder.and(post.deletedAt.isNull());
-        builder.and(post.publishedAt.loe(LocalDateTime.now()));
+        builder.and(PublicPostCondition.of(post));
 
         if (condition.categoryId() != null) {
             builder.and(post.category.id.eq(condition.categoryId()));

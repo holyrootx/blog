@@ -52,9 +52,11 @@ public interface PostRepository extends JpaRepository<Post,Long>, PostRepository
      */
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("update Post post set post.views = post.views + 1 "
-            + "where post.id = :postId and post.status = :status and post.deletedAt is null")
+            + "where post.id = :postId and post.status = :status and post.deletedAt is null"
+            + " and post.publishedAt <= :now")
     int increaseViewCount(
             @Param("postId") Long postId,
-            @Param("status") PostStatus status
+            @Param("status") PostStatus status,
+            @Param("now") LocalDateTime now
     );
 }

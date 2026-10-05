@@ -81,7 +81,7 @@ public class MemberService {
     @Transactional(readOnly = true)
     public List<MyCommentResponse> findMyComments(Long memberId) {
         return commentRepository
-                .findMyComments(memberId, PageRequest.of(0, MY_COMMENT_LIMIT))
+                .findMyComments(memberId, LocalDateTime.now(), PageRequest.of(0, MY_COMMENT_LIMIT))
                 .stream()
                 .map(MyCommentResponse::from)
                 .toList();

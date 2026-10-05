@@ -148,7 +148,7 @@ class PostTrashHistoryTest {
         assertThat(notifications.existsById(notification.getId())).isTrue();
         assertThat(notifications.findMine(member.getId(), PageRequest.of(0, 20))).isEmpty();
         assertThat(notifications.countUnread(member.getId())).isZero();
-        assertThat(commentRepository.findMyComments(member.getId(), PageRequest.of(0, 20))).isEmpty();
+        assertThat(commentRepository.findMyComments(member.getId(), LocalDateTime.now(), PageRequest.of(0, 20))).isEmpty();
 
         adminPosts.restorePost(post.getId());
         em.flush();
@@ -171,15 +171,14 @@ class PostTrashHistoryTest {
         em.flush();
         scheduler.publishDuePosts();
 
-        assertThat(posts.getLatestPostsForHomePage()).extracting(PostSummaryResponse::id).doesNotContain(post.getId());
-        assertThat(posts.getPopularPostsForHomePage()).extracting(PostSummaryResponse::id).doesNotContain(post.getId());
         assertThat(posts.getPostsForHomePage("latest", 50L)).extracting(PostSummaryResponse::id).doesNotContain(post.getId());
+        assertThat(posts.getPostsForHomePage("popular", 50L)).extracting(PostSummaryResponse::id).doesNotContain(post.getId());
         assertThat(posts.getPublicPostSuggestions(post.getTitle(), 10)).isEmpty();
         assertThat(posts.countPublicPosts(new PostListCondition(0, 20, category.getId(), null, null))).isZero();
         assertThat(posts.getPublicPosts(new PostListCondition(0, 20, category.getId(), null, null))).isEmpty();
         assertThat(posts.findPublicPostIdsForSitemap(PostStatus.PUBLISHED, LocalDateTime.now())).doesNotContain(post.getId());
         assertThat(posts.getPostDetail(post.getId())).isNull();
-        assertThat(posts.increaseViewCount(post.getId(), PostStatus.PUBLISHED)).isZero();
+        assertThat(posts.increaseViewCount(post.getId(), PostStatus.PUBLISHED, LocalDateTime.now())).isZero();
         assertThat(posts.findDueScheduledPosts(LocalDateTime.now())).extracting(Post::getId).doesNotContain(post.getId());
         assertThat(posts.existsByCategoryId(category.getId())).isTrue();
         assertThat(posts.findById(post.getId()).orElseThrow().getStatus()).isEqualTo(PostStatus.PUBLISHED);

@@ -39,14 +39,6 @@ public class PostService {
     private final MemberRepository memberRepository;
     private final SearchLogService searchLogService;
 
-    public List<PostSummaryResponse> getLatestPostsForHomePage(){
-        return postRepository.getLatestPostsForHomePage();
-    }
-
-    public List<PostSummaryResponse> getPopularPostsForHomePage(){
-        return postRepository.getPopularPostsForHomePage();
-    }
-
     public List<PostSummaryResponse> getPostsForHomePage(String sort, Long size){
         String POPULAR_PARAM = "popular";
         String LATEST_PARAM = "latest";
@@ -83,7 +75,7 @@ public class PostService {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new BlogException(ErrorCode.POST_NOT_FOUND));
 
-        if (!post.isPublished()) {
+        if (!post.isPubliclyVisible(LocalDateTime.now())) {
             throw new BlogException(ErrorCode.POST_NOT_FOUND);
         }
 
@@ -147,7 +139,7 @@ public class PostService {
         findReadablePost(postId);
 
         if (increaseViewCount) {
-            int updatedRows = postRepository.increaseViewCount(postId, PostStatus.PUBLISHED);
+            int updatedRows = postRepository.increaseViewCount(postId, PostStatus.PUBLISHED, LocalDateTime.now());
             if (updatedRows != 1) {
                 throw new BlogException(ErrorCode.POST_NOT_FOUND);
             }

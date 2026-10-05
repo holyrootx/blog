@@ -9,6 +9,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+
 @Service
 @RequiredArgsConstructor
 public class PostAccess {
@@ -31,7 +33,7 @@ public class PostAccess {
     @Transactional(propagation = Propagation.MANDATORY)
     public Post lockPublished(Long postId) {
         Post post = lockActive(postId);
-        if (!post.isPublished()) {
+        if (!post.isPubliclyVisible(LocalDateTime.now())) {
             throw new BlogException(ErrorCode.POST_NOT_FOUND);
         }
         return post;
