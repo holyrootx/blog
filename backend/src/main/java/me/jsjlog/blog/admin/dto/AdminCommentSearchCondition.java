@@ -4,7 +4,9 @@ public record AdminCommentSearchCondition(
         Integer page,
         Integer size,
         AdminCommentFilter status,
-        String keyword
+        String keyword,
+        // 회원 관리에서 댓글 수를 눌러 들어온 경우. 그 회원이 쓴 댓글만 본다
+        Long memberId
 ) {
 
     private static final int DEFAULT_PAGE = 0;

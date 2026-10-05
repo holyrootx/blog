@@ -23,6 +23,7 @@ import me.jsjlog.blog.common.domain.BaseEntity;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ContentHistory extends BaseEntity {
 
+    // 글 기록은 더 남기지 않는다. 이전에 쌓인 행을 읽을 수 있게 값은 둔다. 6개월 파기로 사라진다
     public enum Target { POST, COMMENT }
     public enum Action { CREATE, UPDATE, DELETE, RESTORE, PUBLISH, SCHEDULE, UNPUBLISH, HIDE }
 

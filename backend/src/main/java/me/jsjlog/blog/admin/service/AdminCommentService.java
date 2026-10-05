@@ -11,7 +11,8 @@ import me.jsjlog.blog.common.exception.ErrorCode;
 import me.jsjlog.blog.member.domain.Member;
 import me.jsjlog.blog.member.domain.MemberRole;
 import me.jsjlog.blog.member.repository.MemberRepository;
-import me.jsjlog.blog.admin.dto.AdminCommentModerationDetail;
+import me.jsjlog.blog.admin.dto.AdminCommentDetail;
+import me.jsjlog.blog.admin.dto.AdminCommentHistoryResponse;
 import me.jsjlog.blog.admin.dto.AdminCommentModerationResponse;
 import me.jsjlog.blog.admin.dto.AdminCommentReportResponse;
 import me.jsjlog.blog.notification.service.NotificationService;
@@ -23,10 +24,13 @@ import me.jsjlog.blog.post.repository.CommentModerationRepository;
 import me.jsjlog.blog.post.repository.CommentReportRepository;
 import me.jsjlog.blog.post.repository.CommentRepository;
 import me.jsjlog.blog.post.service.PostAccess;
+import me.jsjlog.blog.history.domain.CommentChange;
 import me.jsjlog.blog.history.domain.CommentSnapshot;
 import me.jsjlog.blog.history.domain.ContentHistory.Action;
 import me.jsjlog.blog.history.service.ContentHistoryService;
 
+import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -131,20 +135,21 @@ public class AdminCommentService {
         record(lockComment(commentId), adminId, CommentModerationAction.DISMISS, reason);
     }
 
-    /**
-     * 댓글 하나를 판단하는 데 필요한 것.
-     *
-     * <p>신고 내역과 조치 이력을 함께 준다. 이미 가린 댓글인 줄 모르고 또 가리는 일을
-     * 막으려면 둘을 같이 봐야 한다.</p>
-     */
+    /** 댓글 상세. 지금 본문, 신고와 조치, 변경 기록을 함께 준다 */
     @Transactional(readOnly = true)
-    public AdminCommentModerationDetail getModerationDetail(Long commentId) {
-        findComment(commentId);
+    public AdminCommentDetail getDetail(Long commentId) {
+        Comment comment = findComment(commentId);
+        String current = comment.getContent();
+        List<CommentChange> changes = historyService.commentChanges(commentId);
 
         List<AdminCommentReportResponse> reports = commentReportRepository
                 .findByCommentIdOrderByIdAsc(commentId)
                 .stream()
-                .map(AdminCommentReportResponse::from)
+                .map(report -> AdminCommentReportResponse.from(
+                        report,
+                        contentAt(report.getCreatedAt(), current, changes),
+                        current
+                ))
                 .toList();
 
         List<AdminCommentModerationResponse> moderations = commentModerationRepository
@@ -153,7 +158,41 @@ public class AdminCommentService {
                 .map(AdminCommentModerationResponse::from)
                 .toList();
 
-        return new AdminCommentModerationDetail(commentId, reports, moderations);
+        return new AdminCommentDetail(
+                comment.getId(),
+                comment.getPost().getId(),
+                comment.getPost().getTitle(),
+                comment.getParent() == null ? null : comment.getParent().getId(),
+                comment.getMember().getNickname(),
+                comment.getMember().getRole(),
+                current,
+                comment.getCreatedAt(),
+                comment.isDeleted(),
+                comment.isHiddenByAdmin(),
+                comment.isEdited(),
+                reports,
+                moderations,
+                changes.stream().map(AdminCommentHistoryResponse::from).toList()
+        );
+    }
+
+    /**
+     * 그 시각의 본문.
+     *
+     * 본문을 바꾸는 건 수정뿐이다. 그 시각 이후 첫 수정의 "수정 전" 이 그때 본문이고,
+     * 이후 수정이 없으면 지금 본문이 그때 본문이다.
+     */
+    private String contentAt(LocalDateTime at, String current, List<CommentChange> changes) {
+        if (at == null) {
+            return current;
+        }
+
+        return changes.stream()
+                .filter(change -> change.action() == Action.UPDATE && change.before() != null)
+                .filter(change -> change.occurredAt() != null && !change.occurredAt().isBefore(at))
+                .min(Comparator.comparing(CommentChange::occurredAt))
+                .map(change -> change.before().content())
+                .orElse(current);
     }
 
     /**

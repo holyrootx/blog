@@ -285,13 +285,25 @@ export function updateAdminCommentVisibility(commentId, hidden, reason = null) {
   });
 }
 
-/** 이 댓글의 신고 내역과 지금까지의 조치 */
-export async function getAdminCommentModeration(commentId) {
-  const detail = await getApiData(`${ADMIN_BLOG_API_BASE}/comments/${commentId}/moderation`);
+/** 댓글 상세. 지금 본문, 신고와 조치, 변경 기록 */
+export async function getAdminCommentDetail(commentId) {
+  const detail = await getApiData(`${ADMIN_BLOG_API_BASE}/comments/${commentId}`);
 
   return {
+    id: detail?.id ?? commentId,
+    postId: detail?.postId ?? null,
+    postTitle: detail?.postTitle ?? '제목 없는 글',
+    parentId: detail?.parentId ?? null,
+    nickname: detail?.nickname ?? '알 수 없는 회원',
+    memberRole: detail?.memberRole ?? 'USER',
+    content: detail?.content ?? '',
+    createdAt: detail?.createdAt ?? null,
+    deleted: Boolean(detail?.deleted),
+    hiddenByAdmin: Boolean(detail?.hiddenByAdmin),
+    edited: Boolean(detail?.edited),
     reports: Array.isArray(detail?.reports) ? detail.reports : [],
     moderations: Array.isArray(detail?.moderations) ? detail.moderations : [],
+    histories: Array.isArray(detail?.histories) ? detail.histories : [],
   };
 }
 

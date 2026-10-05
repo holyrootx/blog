@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import me.jsjlog.blog.admin.dto.AdminCommentListResponse;
 import me.jsjlog.blog.admin.dto.AdminCommentReplyRequest;
 import me.jsjlog.blog.admin.dto.AdminCommentSearchCondition;
-import me.jsjlog.blog.admin.dto.AdminCommentModerationDetail;
+import me.jsjlog.blog.admin.dto.AdminCommentDetail;
 import me.jsjlog.blog.admin.dto.AdminCommentModerationRequest;
 import me.jsjlog.blog.admin.dto.AdminCommentVisibilityRequest;
 import me.jsjlog.blog.admin.service.AdminCommentService;
@@ -56,10 +56,10 @@ public class AdminCommentController {
         return ApiResponse.ok();
     }
 
-    /** 이 댓글에 걸린 신고 내역과 지금까지의 조치 */
-    @GetMapping("/{commentId}/moderation")
-    public ApiResponse<AdminCommentModerationDetail> getModerationDetail(@PathVariable Long commentId) {
-        return ApiResponse.ok(adminCommentService.getModerationDetail(commentId));
+    /** 댓글 상세. 지금 본문, 신고와 조치, 변경 기록 */
+    @GetMapping("/{commentId}")
+    public ApiResponse<AdminCommentDetail> getDetail(@PathVariable Long commentId) {
+        return ApiResponse.ok(adminCommentService.getDetail(commentId));
     }
 
     /** 신고를 봤지만 댓글은 그대로 둔다 */
