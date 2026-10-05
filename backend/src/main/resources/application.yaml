@@ -8,6 +8,9 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
+    # 로컬과 테스트는 이미 꺼져 있다. 켜 두면 운영만 응답을 JSON 으로 바꾸는 동안까지 DB 커넥션을 쥐고,
+    # 트랜잭션 밖 LAZY 조회가 운영에서만 조용히 성공해 환경마다 동작이 달라진다
+    open-in-view: false
     properties:
       hibernate:
         format_sql: true
