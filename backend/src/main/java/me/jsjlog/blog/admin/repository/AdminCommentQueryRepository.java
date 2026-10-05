@@ -42,7 +42,8 @@ public class AdminCommentQueryRepository {
                         comment.member.role,
                         comment.content,
                         comment.createdAt,
-                        comment.deleted
+                        comment.deleted,
+                        comment.contentPurgedAt
                 )
                 .from(comment)
                 .join(comment.post)
@@ -79,7 +80,8 @@ public class AdminCommentQueryRepository {
                         Boolean.TRUE.equals(row.get(comment.deleted)),
                         answeredIds.contains(row.get(comment.id)),
                         reportCounts.getOrDefault(row.get(comment.id), 0L),
-                        unhandledReportCounts.getOrDefault(row.get(comment.id), 0L)
+                        unhandledReportCounts.getOrDefault(row.get(comment.id), 0L),
+                        row.get(comment.contentPurgedAt) != null
                 ))
                 .toList();
     }

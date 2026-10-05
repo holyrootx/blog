@@ -301,6 +301,9 @@ export async function getAdminCommentDetail(commentId) {
     deleted: Boolean(detail?.deleted),
     hiddenByAdmin: Boolean(detail?.hiddenByAdmin),
     edited: Boolean(detail?.edited),
+    deletedAt: detail?.deletedAt ?? null,
+    contentRetainedUntil: detail?.contentRetainedUntil ?? null,
+    contentPurged: Boolean(detail?.contentPurged),
     reports: Array.isArray(detail?.reports) ? detail.reports : [],
     moderations: Array.isArray(detail?.moderations) ? detail.moderations : [],
     histories: Array.isArray(detail?.histories) ? detail.histories : [],
@@ -329,6 +332,7 @@ function toAdminComment(comment) {
     answered: Boolean(comment.answered),
     reportCount: Number(comment.reportCount ?? 0),
     unhandledReportCount: Number(comment.unhandledReportCount ?? 0),
+    contentPurged: Boolean(comment.contentPurged),
   };
 }
 
