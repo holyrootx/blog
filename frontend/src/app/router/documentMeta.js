@@ -8,10 +8,8 @@ const DEFAULT_IMAGE = '/images/blog-hero-workspace.webp';
  * 전에는 어느 화면을 열어도 제목이 "정성주의 기록" 하나였다. 라우트에 title 을
  * 적어 두기는 했는데 읽는 곳이 없었다.
  *
- * 한 가지 알아둘 것이 있다. 여기서 넣는 값은 자바스크립트가 돈 뒤에 생긴다.
- * 구글은 스크립트를 실행하고 크롤링하니까 검색 결과에는 반영되지만, 카카오톡이나
- * 슬랙처럼 HTML 만 받아 가는 곳은 이 값을 못 본다. 그쪽까지 맞추려면 서버가
- * index.html 을 내보낼 때 끼워 넣어야 한다.
+ * 글 주소로 처음 들어올 때는 서버가 HTML에 메타 정보를 넣는다.
+ * 이 함수는 앱 안에서 다른 화면으로 이동했을 때 같은 정보를 갱신한다.
  */
 export function applyDocumentMeta({
   title,
@@ -34,13 +32,13 @@ export function applyDocumentMeta({
   meta('property', 'og:title', title ?? SITE_NAME);
   meta('property', 'og:description', description);
   meta('property', 'og:url', url);
-  meta('property', 'og:image', absolute(image));
+  meta('property', 'og:image', absolute(image || DEFAULT_IMAGE));
 
   // 카드 종류를 안 주면 트위터는 제목만 있는 작은 카드로 그린다
   meta('name', 'twitter:card', 'summary_large_image');
   meta('name', 'twitter:title', title ?? SITE_NAME);
   meta('name', 'twitter:description', description);
-  meta('name', 'twitter:image', absolute(image));
+  meta('name', 'twitter:image', absolute(image || DEFAULT_IMAGE));
 
   canonical(robots.startsWith('noindex') ? null : url);
 }
