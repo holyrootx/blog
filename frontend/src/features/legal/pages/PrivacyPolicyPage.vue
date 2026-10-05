@@ -3,7 +3,7 @@ import LegalDocumentLayout from '../components/LegalDocumentLayout.vue';
 </script>
 
 <template>
-  <LegalDocumentLayout title="개인정보처리방침" effective-date="2026년 9월 18일">
+  <LegalDocumentLayout title="개인정보처리방침" effective-date="2026년 10월 5일">
     <p>
       JSJ.log(이하 "서비스")는 댓글 작성과 회원 식별을 위한 소셜 로그인 기능을 제공합니다.
       서비스는 필요한 범위에서만 개인정보를 처리하며, 아래 목적 이외의 용도로 사용하지 않습니다.
@@ -16,6 +16,7 @@ import LegalDocumentLayout from '../components/LegalDocumentLayout.vue';
         <li>필수: 로그인 제공자, 제공자가 부여한 회원 식별자</li>
         <li>선택: 닉네임, 이메일 주소, 프로필 이미지 URL</li>
         <li>자동 생성: 로그인 세션 쿠키, 가입·수정 일시와 같은 서비스 이용 기록</li>
+        <li>자동 생성: 댓글 작성·수정·삭제 기록 (수정·삭제 전 댓글 내용 포함)</li>
       </ul>
       <p>소셜 계정의 비밀번호는 서비스가 수집하거나 저장하지 않습니다.</p>
     </section>
@@ -26,6 +27,7 @@ import LegalDocumentLayout from '../components/LegalDocumentLayout.vue';
         <li>회원 가입, 로그인, 계정 상태 확인</li>
         <li>댓글 작성자 식별과 닉네임·프로필 표시</li>
         <li>부정 이용 방지, 오류 확인, 보안 대응</li>
+        <li>신고된 댓글 확인과 분쟁 대응</li>
         <li>회원 문의와 권리 행사 처리</li>
       </ul>
       <p>
@@ -41,6 +43,10 @@ import LegalDocumentLayout from '../components/LegalDocumentLayout.vue';
         파기합니다. 작성한 댓글의 맥락과 작성자 표시를 유지하기 위해 제공자 식별자와 닉네임은 관련 댓글이
         유지되는 기간 동안 보관될 수 있습니다. 법령상 보존 의무가 있으면 해당 기간 동안 별도로 보관한 뒤
         파기합니다.
+      </p>
+      <p>
+        댓글을 고치거나 지우면 바뀌기 전 내용을 포함한 변경 기록을 신고 처리와 분쟁 대응을 위해
+        6개월간 보관한 뒤 파기합니다. 탈퇴한 회원의 기록도 같은 기간이 지나면 파기합니다.
       </p>
     </section>
 
