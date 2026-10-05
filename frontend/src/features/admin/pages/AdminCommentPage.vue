@@ -177,6 +177,7 @@ function changePageSize(nextSize) {
 function canReply(comment) {
   return comment.parentId === null
     && comment.memberRole !== 'ADMIN'
+    && !comment.postPurged
     && !comment.hidden;
 }
 
@@ -279,6 +280,8 @@ function hideFromDetail(target) {
 }
 
 function commentState(comment) {
+  if (comment.contentPurged) return '원문 파기';
+  if (comment.postPurged) return '보관 중';
   if (comment.hidden) return '숨김';
   if (comment.parentId !== null) return '답글';
   if (comment.memberRole === 'ADMIN') return '관리자 댓글';
@@ -396,7 +399,7 @@ function formatDateTime(value) {
           <div class="admin-comment-row__meta">
             <span
               class="admin-badge"
-              :class="comment.hidden ? 'admin-badge--off' : 'admin-badge--on'"
+              :class="comment.hidden || comment.postPurged ? 'admin-badge--off' : 'admin-badge--on'"
             >
               {{ commentState(comment) }}
             </span>
@@ -416,7 +419,8 @@ function formatDateTime(value) {
                 : `${comment.reportCount}건 처리됨` }}
             </button>
             <span>{{ formatDateTime(comment.createdAt) }}</span>
-            <a :href="`/posts/${comment.postId}`" target="_blank" rel="noopener noreferrer" @click.stop>
+            <span v-if="comment.postPurged">원글 영구 삭제</span>
+            <a v-else :href="`/posts/${comment.postId}`" target="_blank" rel="noopener noreferrer" @click.stop>
               {{ comment.postTitle }}
             </a>
           </div>
@@ -443,8 +447,8 @@ function formatDateTime(value) {
             class="admin-button admin-button--small"
             :class="{ 'admin-button--danger': !comment.hidden }"
             type="button"
-            :disabled="comment.contentPurged"
-            :title="comment.contentPurged ? '원문을 파기해 되살릴 수 없습니다' : undefined"
+            :disabled="comment.contentPurged || comment.postPurged"
+            :title="comment.postPurged ? '원글이 영구 삭제되어 댓글 상태를 변경할 수 없습니다' : comment.contentPurged ? '원문을 파기해 되살릴 수 없습니다' : undefined"
             @click="askVisibility(comment)"
           >
             {{ comment.hidden ? '복구' : '숨김' }}

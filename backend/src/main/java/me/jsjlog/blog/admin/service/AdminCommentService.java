@@ -21,9 +21,11 @@ import me.jsjlog.blog.post.domain.Comment;
 import me.jsjlog.blog.post.domain.CommentModeration;
 import me.jsjlog.blog.post.domain.CommentModerationAction;
 import me.jsjlog.blog.post.domain.CommentReport;
+import me.jsjlog.blog.post.domain.Post;
 import me.jsjlog.blog.post.repository.CommentModerationRepository;
 import me.jsjlog.blog.post.repository.CommentReportRepository;
 import me.jsjlog.blog.post.repository.CommentRepository;
+import me.jsjlog.blog.post.repository.PostRepository;
 import me.jsjlog.blog.post.service.CommentRetention;
 import me.jsjlog.blog.post.service.PostAccess;
 import me.jsjlog.blog.history.domain.CommentChange;
@@ -51,6 +53,7 @@ public class AdminCommentService {
     private final MemberRepository memberRepository;
     private final NotificationService notificationService;
     private final PostAccess postAccess;
+    private final PostRepository postRepository;
     private final ContentHistoryService historyService;
 
     @Transactional(readOnly = true)
@@ -140,7 +143,7 @@ public class AdminCommentService {
      */
     @Transactional
     public void dismissReports(Long commentId, String reason, Long adminId) {
-        record(lockComment(commentId), adminId, CommentModerationAction.DISMISS, reason);
+        record(lockCommentForReview(commentId), adminId, CommentModerationAction.DISMISS, reason);
     }
 
     /** 댓글 상세. 지금 본문, 신고와 조치, 변경 기록을 함께 준다 */
@@ -179,14 +182,23 @@ public class AdminCommentService {
                 comment.isHiddenByAdmin(),
                 comment.isEdited(),
                 comment.getDeletedAt(),
-                comment.getDeletedAt() == null || comment.isContentPurged()
-                        ? null
-                        : comment.getDeletedAt().plus(CommentRetention.RETENTION),
+                retainedUntil(comment),
                 comment.isContentPurged(),
+                comment.getPost().isContentPurged(),
                 reports,
                 moderations,
                 changes.stream().map(AdminCommentHistoryResponse::from).toList()
         );
+    }
+
+    private LocalDateTime retainedUntil(Comment comment) {
+        if (comment.isContentPurged()) return null;
+        LocalDateTime since = comment.getDeletedAt();
+        LocalDateTime postPurgedAt = comment.getPost().getContentPurgedAt();
+        if (postPurgedAt != null && (since == null || postPurgedAt.isBefore(since))) {
+            since = postPurgedAt;
+        }
+        return since == null ? null : since.plus(CommentRetention.RETENTION);
     }
 
     /**
@@ -269,8 +281,25 @@ public class AdminCommentService {
     private Comment findComment(Long commentId) {
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new BlogException(ErrorCode.COMMENT_NOT_FOUND));
-        postAccess.findActive(comment.getPost().getId());
+        requireReviewable(comment.getPost());
         return comment;
+    }
+
+    /** 원글을 영구 삭제해도 보관 중인 댓글의 신고 조사와 처리 기록은 남길 수 있다. */
+    private Comment lockCommentForReview(Long commentId) {
+        Long postId = commentRepository.findPostId(commentId)
+                .orElseThrow(() -> new BlogException(ErrorCode.COMMENT_NOT_FOUND));
+        Post post = postRepository.findLockedById(postId)
+                .orElseThrow(() -> new BlogException(ErrorCode.POST_NOT_FOUND));
+        requireReviewable(post);
+        return commentRepository.findLockedById(commentId)
+                .orElseThrow(() -> new BlogException(ErrorCode.COMMENT_NOT_FOUND));
+    }
+
+    private void requireReviewable(Post post) {
+        if (post.isDeleted() && !post.isContentPurged()) {
+            throw new BlogException(ErrorCode.POST_NOT_FOUND);
+        }
     }
 
     private Comment lockComment(Long commentId) {

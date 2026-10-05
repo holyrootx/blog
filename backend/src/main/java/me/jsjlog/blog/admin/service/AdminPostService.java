@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import me.jsjlog.blog.admin.dto.AdminPostDetailResponse;
 import me.jsjlog.blog.admin.dto.AdminPostListResponse;
 import me.jsjlog.blog.admin.dto.AdminPostRequest;
+import me.jsjlog.blog.admin.dto.AdminPostPurgeRequest;
 import me.jsjlog.blog.admin.dto.AdminPostSearchCondition;
 import me.jsjlog.blog.admin.dto.AdminPostStatusCounts;
 import me.jsjlog.blog.admin.dto.AdminPostSummaryResponse;
@@ -17,6 +18,9 @@ import me.jsjlog.blog.post.domain.Category;
 import me.jsjlog.blog.post.domain.Post;
 import me.jsjlog.blog.post.repository.CategoryRepository;
 import me.jsjlog.blog.post.repository.PostRepository;
+import me.jsjlog.blog.post.repository.PostReactionRepository;
+import me.jsjlog.blog.history.domain.ContentHistory.Target;
+import me.jsjlog.blog.history.repository.ContentHistoryRepository;
 import me.jsjlog.blog.post.service.PostAccess;
 import me.jsjlog.blog.post.service.PostPublicationPolicy;
 import org.springframework.context.ApplicationEventPublisher;
@@ -50,6 +54,8 @@ public class AdminPostService {
     private final MemberRepository memberRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final ImageCleanupService imageCleanupService;
+    private final ContentHistoryRepository historyRepository;
+    private final PostReactionRepository reactionRepository;
 
     @Transactional(readOnly = true)
     public AdminPostListResponse getPostList(AdminPostSearchCondition condition) {
@@ -203,7 +209,7 @@ public class AdminPostService {
 
     private Category findCategory(Long categoryId) {
         if (categoryId == null) {
-            // category_id 가 NOT NULL 이라 임시저장에도 값이 있어야 INSERT 가 된다
+            // 새 글과 편집 중인 글에는 카테고리가 필요하다. 영구 삭제된 글만 비운다.
             throw new BlogException(ErrorCode.CATEGORY_NOT_FOUND);
         }
 
@@ -289,6 +295,9 @@ public class AdminPostService {
     public void restorePost(Long postId) {
         Post post = postRepository.findLockedById(postId)
                 .orElseThrow(() -> new BlogException(ErrorCode.POST_NOT_FOUND));
+        if (post.isContentPurged()) {
+            throw new BlogException(ErrorCode.POST_CONTENT_PURGED);
+        }
         if (!post.isDeleted()) {
             throw new BlogException(ErrorCode.POST_NOT_DELETED);
         }
@@ -297,5 +306,32 @@ public class AdminPostService {
             throw new BlogException(ErrorCode.POST_RESTORE_EXPIRED);
         }
         post.restore(now);
+    }
+
+    @Transactional
+    public void purgePost(Long postId, AdminPostPurgeRequest request) {
+        Post post = postRepository.findLockedById(postId)
+                .orElseThrow(() -> new BlogException(ErrorCode.POST_NOT_FOUND));
+        if (post.isContentPurged()) {
+            throw new BlogException(ErrorCode.POST_CONTENT_PURGED);
+        }
+        if (!post.isDeleted()) {
+            throw new BlogException(ErrorCode.POST_NOT_DELETED);
+        }
+        LocalDateTime now = LocalDateTime.now();
+        if (!post.canPurge(now)) {
+            throw new BlogException(ErrorCode.POST_PURGE_TOO_EARLY);
+        }
+        if (request == null || !Objects.equals(post.getTitle(), request.title())
+                || !Objects.equals(post.getDeletedAt(), request.deletedAt())) {
+            throw new BlogException(ErrorCode.POST_PURGE_CONFIRMATION_MISMATCH);
+        }
+
+        Set<String> released = imageCleanupService.collectUsedUrls(post.getContent(), post.getThumbnailImageUrl());
+        post.purgeContent(now);
+        // 글 변경 이력 기능을 없애기 전에 저장한 사본도 남기지 않는다.
+        historyRepository.deleteByTargets(Target.POST, List.of(postId));
+        reactionRepository.deleteAllForPost(postId);
+        eventPublisher.publishEvent(new ImageCleanupService.PostImagesReleasedEvent(released));
     }
 }

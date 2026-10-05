@@ -2,6 +2,7 @@ package me.jsjlog.blog.admin.service;
 
 import me.jsjlog.blog.admin.domain.UploadImage;
 import me.jsjlog.blog.admin.dto.AdminPostRequest;
+import me.jsjlog.blog.admin.dto.AdminPostPurgeRequest;
 import me.jsjlog.blog.admin.repository.UploadImageRepository;
 import me.jsjlog.blog.common.upload.ImageStorage;
 import me.jsjlog.blog.post.domain.Category;
@@ -26,6 +27,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.doThrow;
 
 /**
  * 글을 고쳐 본문에서 뺀 이미지는 커밋 뒤에 지운다.
@@ -147,5 +149,61 @@ class PostUpdateImageReleaseTest {
         assertThat(images.existsById(image.getId())).isTrue();
         assertThat(posts.findById(post.getId()).orElseThrow().getDeletedAt())
                 .isBefore(LocalDateTime.now().plusSeconds(1));
+    }
+
+    private Post expiredTrash(UploadImage image) {
+        return tx.execute(status -> {
+            Post post = posts.save(new Post("영구 삭제 대상", "요약", "![사진](" + image.getUrl() + ")",
+                    category, image.getUrl(), null));
+            post.delete(LocalDateTime.now().minusDays(31).withNano(0));
+            return post;
+        });
+    }
+
+    private void purge(Post post) {
+        adminPosts.purgePost(post.getId(), new AdminPostPurgeRequest(post.getTitle(), post.getDeletedAt()));
+    }
+
+    @Test
+    void permanentDeletionRemovesOnlyUnusedImagesAfterCommit() {
+        UploadImage image = upload();
+        Post post = expiredTrash(image);
+        purge(post);
+        verify(imageStorage).delete(image.getStorageKey());
+        assertThat(images.existsById(image.getId())).isFalse();
+        assertThat(posts.findById(post.getId()).orElseThrow().getContent()).isEmpty();
+    }
+
+    @Test
+    void permanentDeletionPreservesSharedImages() {
+        UploadImage image = upload();
+        Post post = expiredTrash(image);
+        postWith("공유 중", image.getUrl());
+        purge(post);
+        verify(imageStorage, never()).delete(anyString());
+        assertThat(images.existsById(image.getId())).isTrue();
+    }
+
+    @Test
+    void rolledBackPermanentDeletionNeverDeletesFiles() {
+        UploadImage image = upload();
+        Post post = expiredTrash(image);
+        tx.executeWithoutResult(status -> {
+            purge(post);
+            status.setRollbackOnly();
+        });
+        verify(imageStorage, never()).delete(anyString());
+        assertThat(posts.findById(post.getId()).orElseThrow().isContentPurged()).isFalse();
+        assertThat(images.existsById(image.getId())).isTrue();
+    }
+
+    @Test
+    void failedStorageDeleteKeepsUploadRecordForRetryWithoutRestoringPost() {
+        UploadImage image = upload();
+        Post post = expiredTrash(image);
+        doThrow(new IllegalStateException("storage unavailable")).when(imageStorage).delete(anyString());
+        purge(post);
+        assertThat(images.existsById(image.getId())).isTrue();
+        assertThat(posts.findById(post.getId()).orElseThrow().isContentPurged()).isTrue();
     }
 }

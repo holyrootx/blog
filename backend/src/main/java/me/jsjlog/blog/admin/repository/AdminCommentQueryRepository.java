@@ -43,7 +43,8 @@ public class AdminCommentQueryRepository {
                         comment.content,
                         comment.createdAt,
                         comment.deleted,
-                        comment.contentPurgedAt
+                        comment.contentPurgedAt,
+                        comment.post.contentPurgedAt
                 )
                 .from(comment)
                 .join(comment.post)
@@ -81,7 +82,8 @@ public class AdminCommentQueryRepository {
                         answeredIds.contains(row.get(comment.id)),
                         reportCounts.getOrDefault(row.get(comment.id), 0L),
                         unhandledReportCounts.getOrDefault(row.get(comment.id), 0L),
-                        row.get(comment.contentPurgedAt) != null
+                        row.get(comment.contentPurgedAt) != null,
+                        row.get(comment.post.contentPurgedAt) != null
                 ))
                 .toList();
     }
@@ -171,7 +173,8 @@ public class AdminCommentQueryRepository {
             AdminCommentFilter filter
     ) {
         QComment comment = QComment.comment;
-        BooleanBuilder builder = new BooleanBuilder(comment.post.deletedAt.isNull());
+        BooleanBuilder builder = new BooleanBuilder(comment.post.deletedAt.isNull()
+                .or(comment.post.contentPurgedAt.isNotNull()));
 
         if (condition.memberId() != null) {
             builder.and(comment.member.id.eq(condition.memberId()));
@@ -189,7 +192,7 @@ public class AdminCommentQueryRepository {
         if (filter == AdminCommentFilter.UNANSWERED) {
             builder.and(unanswered(comment));
         } else if (filter == AdminCommentFilter.HIDDEN) {
-            builder.and(comment.deleted.isTrue());
+            builder.and(comment.deleted.isTrue().or(comment.post.contentPurgedAt.isNotNull()));
         } else if (filter == AdminCommentFilter.REPORTED) {
             builder.and(hasUnhandledReport(comment));
         }
@@ -220,6 +223,7 @@ public class AdminCommentQueryRepository {
         QComment reply = new QComment("adminReply");
 
         return comment.parent.isNull()
+                .and(comment.post.contentPurgedAt.isNull())
                 .and(comment.deleted.isFalse())
                 .and(comment.member.role.ne(MemberRole.ADMIN))
                 .and(JPAExpressions

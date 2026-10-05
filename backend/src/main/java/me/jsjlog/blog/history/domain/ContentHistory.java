@@ -35,7 +35,7 @@ public class ContentHistory extends BaseEntity {
     @Column(name = "target_type", nullable = false, length = 20, updatable = false)
     private Target targetType;
 
-    // History survives any future permanent deletion of the original entity.
+    // 댓글 원문 파기 시 해당 댓글 기록도 지운다. 예전 글 사본은 글 영구 삭제 시 함께 지운다.
     @Column(name = "target_id", nullable = false, updatable = false)
     private Long targetId;
 

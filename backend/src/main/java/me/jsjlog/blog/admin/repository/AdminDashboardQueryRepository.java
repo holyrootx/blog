@@ -100,7 +100,8 @@ public class AdminDashboardQueryRepository {
         return orZero(jpaQueryFactory
                 .select(report.comment.id.countDistinct())
                 .from(report)
-                .where(report.handledAt.isNull(), report.comment.post.deletedAt.isNull())
+                .where(report.handledAt.isNull(), report.comment.post.deletedAt.isNull()
+                        .or(report.comment.post.contentPurgedAt.isNotNull()))
                 .fetchOne());
     }
 
