@@ -91,6 +91,9 @@ uploads/
 **/uploads/
 backend/build/uploads/
 
+# DB 점검·수동 변경 SQL과 덤프는 저장소 밖에서 관리한다.
+*.[sS][qQ][lL]
+
 # Temporary files
 __pycache__/
 *.tmp

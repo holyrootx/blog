@@ -4,21 +4,20 @@
 
 현재 개발 단계에서는 `update`를 유지합니다. 블로그 오픈 전에 **스키마 확정 → DB 초기화 → DDL만으로 테이블 생성 → 데이터 재삽입 → 검증 → `validate` 전환**을 별도 작업으로 진행합니다. Flyway 도입은 이 전환의 필수 조건이 아니며, 필요하면 복원 검증 이후 별도 변경으로 결정합니다.
 
-검토용 SQL은 `ops/database/candidates`에 두며 애플리케이션 classpath와 배포 스크립트에서 자동 실행하지 않습니다. 이 문서 변경은 운영 DB나 애플리케이션 설정을 변경하지 않습니다.
+DB 점검·수동 변경 SQL과 덤프는 저장소 밖에서 관리합니다. `.sql` 파일은 Git 추적 대상에서 제외하며, 필요한 명령은 해당 배포 절차에서 별도로 확인합니다. 애플리케이션 classpath와 배포 스크립트에서는 외부 SQL을 자동 실행하지 않습니다.
 
 ## 현재 준비된 변경
 
-- `inspection/schema-state.sql`: 버전·SQL mode·테이블·컬럼·인덱스·FK·제약조건을 읽는 SELECT만 있다.
-- `scripts/inspect-database.sh`: 기존 MySQL login-path를 사용해 위 메타데이터와 데이터 없는 schema dump, 존재하는 경우 Flyway history를 **저장소 밖의 새 디렉터리**에 저장한다. 운영 서버 접속이나 계정 생성은 자동으로 하지 않는다.
-- `candidates/2026-020-post-trash-history.sql`: 기존 로컬 수동 SQL의 검토용 사본이다. `post.deleted_at`과 `content_history`가 없다고 확인된 스키마에만 필요하다. 기존 원본 SQL은 변경하지 않는다.
+- `scripts/inspect-database.sh`: 저장소 밖에 준비한 점검용 SQL 경로를 인자로 받는다. 버전·SQL mode·테이블·컬럼·인덱스·FK·제약조건을 읽는 SELECT만 포함됐는지 검토한 파일을 지정한다. 기존의 읽기 전용 MySQL login-path를 사용해 조회 결과와 데이터 없는 schema dump, 존재하는 경우 Flyway history를 **저장소 밖의 새 디렉터리**에 저장한다. 운영 서버 접속이나 계정 생성은 자동으로 하지 않는다.
+- 글 휴지통용 `post.deleted_at`과 `content_history`가 없다고 확인된 스키마에만 해당 변경이 필요하다. 적용할 명령은 대상 DB 상태를 확인한 뒤 저장소 밖에서 준비한다.
 - 글 변경 이력은 2026-025에서 제거했다. 글 작성·수정·발행·예약·예약 취소·삭제·복구는 더 이상 `content_history`에 남지 않는다. 이전 배포가 남긴 `POST` 행은 읽을 수 있게 ENUM 값을 두고, 기록된 날부터 6개월이 지나면 정리 작업이 지운다.
-- `candidates/2026-025-comment-retention.sql`: 댓글 보관·파기용 `comment.deleted_at`, `comment.content_purged_at` 추가와, 변경 기록에 남은 DELETE 시각으로만 기존 삭제 댓글의 삭제 시각을 채우는 검토용 SQL이다. 자동으로 실행하지 않는다.
+- 댓글 보관·파기에는 `comment.deleted_at`, `comment.content_purged_at`이 필요하다. 기존 삭제 댓글의 삭제 시각을 보완한다면 변경 기록에 남은 DELETE 시각으로만 판단한다. 적용할 명령은 별도로 검토하며 자동으로 실행하지 않는다.
 
 ## 1. 로컬 Mac에서 준비
 
 1. 검토 대상 SHA, 직전 배포 JAR, 실제 적용 중인 SHA를 각각 기록한다. GitHub 성공 실행은 서버 실행 SHA와 같은 증거가 아니다.
 2. 신뢰할 수 있는 호스트 키를 확인하고 기존 관리 경로로 서버에 접속한다. 키/DB 암호를 문서·터미널 출력·GitHub 로그에 붙여넣지 않는다.
-3. `inspection` SQL/스크립트와 SHA, 새/이전 JAR를 검증할 환경으로 전달한다. 백업·증거 폴더는 저장소 밖, 권한 700/600으로 관리한다.
+3. 저장소 밖에서 준비하고 검토한 점검용 SQL, 스크립트와 SHA, 새/이전 JAR를 검증할 환경으로 전달한다. SQL·백업·증거 폴더는 저장소 밖, 권한 700/600으로 관리한다.
 
 ## 2. 운영 서버에서 읽기 전용 조사
 
@@ -27,10 +26,12 @@
 이미 안전하게 등록된 읽기 전용 MySQL login-path가 있다고 가정한 조사 명령:
 
 ```bash
-bash scripts/inspect-database.sh blog-inspect blog /private-secure-path/schema-evidence-20261003
+bash scripts/inspect-database.sh blog-inspect blog \
+  /private-secure-path/schema-evidence-20261003 \
+  /private-secure-path/schema-state.sql
 ```
 
-`blog-inspect`와 출력 경로는 환경에서 확인한 값으로 바꾼다. login-path가 없으면 `mysql_config_editor`의 비밀번호 프롬프트로 설정하고, 필요한 SELECT/SHOW VIEW 범위 계정을 DBA가 지정한다. 스크립트는 행 데이터·비밀번호·계정 원문을 조회하지 않는다. 덤프의 view 정의 등에 운영 계정 식별자가 포함될 수 있으므로 schema evidence도 공개하지 않는다. 테이블 통계의 `approximate_rows`는 정확한 행 수 검증에 사용하지 않는다.
+`blog-inspect`와 출력·점검 SQL 경로는 환경에서 확인한 값으로 바꾼다. 점검 SQL은 행 데이터·비밀번호·계정 원문을 조회하지 않는 메타데이터 SELECT로만 준비한다. login-path가 없으면 `mysql_config_editor`의 비밀번호 프롬프트로 설정하고, 필요한 SELECT/SHOW VIEW 범위 계정을 DBA가 지정한다. 덤프의 view 정의 등에 운영 계정 식별자가 포함될 수 있으므로 schema evidence도 공개하지 않는다. 테이블 통계의 `approximate_rows`는 정확한 행 수 검증에 사용하지 않는다.
 
 MySQL 프롬프트에서 추가로 확인할 핵심 메타데이터:
 
@@ -73,7 +74,8 @@ CREATE DATABASE blog_upgrade_check CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai
 
 ```bash
 mysql --login-path=blog-clone blog_upgrade_check < /private-secure-path/blog-before-upgrade.sql
-bash scripts/inspect-database.sh blog-clone blog_upgrade_check /private-secure-path/clone-before
+bash scripts/inspect-database.sh blog-clone blog_upgrade_check \
+  /private-secure-path/clone-before /private-secure-path/schema-state.sql
 ```
 
 복원 직후 정확한 주요 테이블 COUNT, PK 범위, 상태별 개수, FK 무결성, 샘플 본문/댓글/이력의 hash를 원본 백업 기준과 대조한다. 비교 결과만 기록하고 회원 데이터·본문 원문을 공개 로그에 남기지 않는다. 스케줄러가 데이터를 변경할 수 있으므로 검증 앱은 운영 네트워크/R2/OAuth 자격증명과 분리하고 첫 비교가 끝나기 전 실행하지 않는다.
@@ -82,8 +84,9 @@ bash scripts/inspect-database.sh blog-clone blog_upgrade_check /private-secure-p
 
 ```bash
 # 2026-020 objects가 이미 있으면 이 명령은 생략한다.
-mysql --login-path=blog-clone blog_upgrade_check < ops/database/candidates/2026-020-post-trash-history.sql
-bash scripts/inspect-database.sh blog-clone blog_upgrade_check /private-secure-path/clone-after
+mysql --login-path=blog-clone blog_upgrade_check < /private-secure-path/2026-020-post-trash-history.sql
+bash scripts/inspect-database.sh blog-clone blog_upgrade_check \
+  /private-secure-path/clone-after /private-secure-path/schema-state.sql
 ```
 
 새 JAR를 이 복원 DB에 연결하고 `SPRING_JPA_HIBERNATE_DDL_AUTO=validate` override로 기동 검증한다. 빈 스키마를 새로 만드는 테스트와 구버전 데이터 업그레이드 테스트를 각각 수행한다. 이 단계에 필요한 DB URL/비밀번호는 검증 환경의 비밀 설정으로 제공한다. R2/소셜 인증/외부 발송은 테스트 대체값을 사용한다.

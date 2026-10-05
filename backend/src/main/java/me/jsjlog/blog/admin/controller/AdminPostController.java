@@ -6,6 +6,7 @@ import me.jsjlog.blog.admin.dto.AdminPostDetailResponse;
 import me.jsjlog.blog.admin.dto.AdminPostListResponse;
 import me.jsjlog.blog.admin.dto.AdminPostPublishRequest;
 import me.jsjlog.blog.admin.dto.AdminPostRequest;
+import me.jsjlog.blog.admin.dto.AdminPostPurgeRequest;
 import me.jsjlog.blog.admin.dto.AdminPostSearchCondition;
 import me.jsjlog.blog.admin.service.AdminPostService;
 import me.jsjlog.blog.common.response.ApiResponse;
@@ -89,6 +90,13 @@ public class AdminPostController {
     @PostMapping("/posts/{postId}/restore")
     public ApiResponse<Void> restorePost(@PathVariable Long postId) {
         adminPostService.restorePost(postId);
+        return ApiResponse.ok();
+    }
+
+    @DeleteMapping("/posts/{postId}/permanent")
+    public ApiResponse<Void> purgePost(@PathVariable Long postId,
+                                      @RequestBody AdminPostPurgeRequest request) {
+        adminPostService.purgePost(postId, request);
         return ApiResponse.ok();
     }
 }

@@ -37,6 +37,7 @@ public record AdminCommentSummaryResponse(
         long unhandledReportCount,
 
         /** 글쓴이가 지운 원문을 보관 기간이 지나 파기했는가. 목록에 빈 줄 대신 까닭을 쓴다 */
-        boolean contentPurged
+        boolean contentPurged,
+        boolean postPurged
 ) {
 }

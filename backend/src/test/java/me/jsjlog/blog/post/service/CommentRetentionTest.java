@@ -263,4 +263,46 @@ class CommentRetentionTest {
         assertThat(saved.isDeleted()).isTrue();
         assertThat(saved.getContent()).isEqualTo("예전에 지운 말");
     }
+
+    @Test
+    void purgesEveryCommentOfPermanentlyDeletedPostAtItsDeadline() {
+        Comment parent = comments.save(new Comment(post, null, writer, "원댓글"));
+        Comment reply = comments.save(new Comment(post, parent, admin, "답글"));
+        post.delete(DELETED_AT.minusDays(31));
+        post.purgeContent(DELETED_AT);
+        // 오래된 글에 대한 조사를 나중에 기록해도 원문 파기 때 그 사본을 함께 지워야 한다.
+        histories.save(new ContentHistory(ContentHistory.Target.COMMENT, parent.getId(), post.getId(),
+                ContentHistory.Action.HIDE, "원댓글", "원댓글"));
+        em.flush();
+
+        assertThat(retention.purgeExpired(EXPIRES_AT).purgedComments()).isZero();
+        assertThat(retention.purgeExpired(EXPIRES_AT.plusSeconds(1)).purgedComments()).isEqualTo(2);
+        assertThat(reload(parent).getContent()).isEmpty();
+        Comment savedReply = reload(reply);
+        assertThat(savedReply.getContent()).isEmpty();
+        assertThat(savedReply.getParent().getId()).isEqualTo(parent.getId());
+        assertThat(histories.findAll()).isEmpty();
+    }
+
+    @Test
+    void postPurgeDoesNotRestartAnAlreadyDeletedCommentsClock() {
+        Comment older = deletedAt("먼저 지운 댓글", DELETED_AT.minusMonths(2));
+        Comment live = comments.save(new Comment(post, null, writer, "남길 댓글"));
+        post.delete(DELETED_AT.minusDays(31));
+        post.purgeContent(DELETED_AT);
+        em.flush();
+
+        assertThat(retention.purgeExpired(EXPIRES_AT.minusMonths(1)).purgedComments()).isEqualTo(1);
+        assertThat(reload(older).getContent()).isEmpty();
+        assertThat(reload(live).getContent()).isEqualTo("남길 댓글");
+    }
+
+    @Test
+    void softTrashedPostAloneDoesNotStartCommentPurge() {
+        Comment live = comments.save(new Comment(post, null, writer, "복구 대기 댓글"));
+        post.delete(DELETED_AT.minusYears(2));
+        em.flush();
+        assertThat(retention.purgeExpired(EXPIRES_AT).purgedComments()).isZero();
+        assertThat(reload(live).getContent()).isEqualTo("복구 대기 댓글");
+    }
 }
