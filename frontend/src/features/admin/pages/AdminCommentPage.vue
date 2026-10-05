@@ -420,7 +420,10 @@ function formatDateTime(value) {
               {{ comment.postTitle }}
             </a>
           </div>
-          <p>{{ comment.content }}</p>
+          <p v-if="comment.contentPurged" class="admin-comment-row__purged">
+            보관 기간이 지나 원문을 파기했습니다.
+          </p>
+          <p v-else>{{ comment.content }}</p>
           <span v-if="comment.parentId !== null" class="admin-comment-row__reply-mark">
             답글 · 원댓글 #{{ comment.parentId }}
           </span>
@@ -435,10 +438,13 @@ function formatDateTime(value) {
           >
             답글
           </button>
+          <!-- 원문을 파기한 댓글은 되살릴 내용이 없다. 서버도 거절한다 -->
           <button
             class="admin-button admin-button--small"
             :class="{ 'admin-button--danger': !comment.hidden }"
             type="button"
+            :disabled="comment.contentPurged"
+            :title="comment.contentPurged ? '원문을 파기해 되살릴 수 없습니다' : undefined"
             @click="askVisibility(comment)"
           >
             {{ comment.hidden ? '복구' : '숨김' }}
@@ -549,6 +555,11 @@ function formatDateTime(value) {
 .admin-comment-row--clickable:focus-visible {
   outline: 2px solid var(--admin-control-accent);
   outline-offset: -2px;
+}
+
+.admin-comment-row__body > p.admin-comment-row__purged {
+  color: var(--admin-meta);
+  font-style: italic;
 }
 
 .admin-comment-member-filter {

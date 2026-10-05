@@ -13,6 +13,7 @@ import me.jsjlog.blog.member.domain.MemberRole;
 import me.jsjlog.blog.member.repository.MemberRepository;
 import me.jsjlog.blog.admin.dto.AdminCommentDetail;
 import me.jsjlog.blog.admin.dto.AdminCommentHistoryResponse;
+import me.jsjlog.blog.admin.dto.ReportedContent;
 import me.jsjlog.blog.admin.dto.AdminCommentModerationResponse;
 import me.jsjlog.blog.admin.dto.AdminCommentReportResponse;
 import me.jsjlog.blog.notification.service.NotificationService;
@@ -23,6 +24,7 @@ import me.jsjlog.blog.post.domain.CommentReport;
 import me.jsjlog.blog.post.repository.CommentModerationRepository;
 import me.jsjlog.blog.post.repository.CommentReportRepository;
 import me.jsjlog.blog.post.repository.CommentRepository;
+import me.jsjlog.blog.post.service.CommentRetention;
 import me.jsjlog.blog.post.service.PostAccess;
 import me.jsjlog.blog.history.domain.CommentChange;
 import me.jsjlog.blog.history.domain.CommentSnapshot;
@@ -103,6 +105,12 @@ public class AdminCommentService {
         }
 
         Comment comment = lockComment(commentId);
+
+        // 파기한 원문은 돌아오지 않는다. 빈 본문으로 다시 공개되거나 가림 상태로 바뀌지 않게 한다
+        if (comment.isContentPurged()) {
+            throw new BlogException(ErrorCode.COMMENT_CONTENT_PURGED);
+        }
+
         CommentSnapshot before = CommentSnapshot.from(comment);
 
         // delete() 가 아니다. 그건 글쓴이가 지울 때 쓰는 자리라, 여기서 부르면
@@ -141,14 +149,14 @@ public class AdminCommentService {
         Comment comment = findComment(commentId);
         String current = comment.getContent();
         List<CommentChange> changes = historyService.commentChanges(commentId);
+        LocalDateTime now = LocalDateTime.now();
 
         List<AdminCommentReportResponse> reports = commentReportRepository
                 .findByCommentIdOrderByIdAsc(commentId)
                 .stream()
                 .map(report -> AdminCommentReportResponse.from(
                         report,
-                        contentAt(report.getCreatedAt(), current, changes),
-                        current
+                        reportedContent(comment, report.getCreatedAt(), changes, now)
                 ))
                 .toList();
 
@@ -170,6 +178,11 @@ public class AdminCommentService {
                 comment.isDeleted(),
                 comment.isHiddenByAdmin(),
                 comment.isEdited(),
+                comment.getDeletedAt(),
+                comment.getDeletedAt() == null || comment.isContentPurged()
+                        ? null
+                        : comment.getDeletedAt().plus(CommentRetention.RETENTION),
+                comment.isContentPurged(),
                 reports,
                 moderations,
                 changes.stream().map(AdminCommentHistoryResponse::from).toList()
@@ -177,22 +190,54 @@ public class AdminCommentService {
     }
 
     /**
-     * 그 시각의 본문.
+     * 신고 당시 본문.
      *
-     * 본문을 바꾸는 건 수정뿐이다. 그 시각 이후 첫 수정의 "수정 전" 이 그때 본문이고,
-     * 이후 수정이 없으면 지금 본문이 그때 본문이다.
+     * 본문을 바꾸는 건 수정뿐이라, 신고 뒤 첫 수정의 "수정 전" 이 그때 본문이고 신고 뒤 수정이
+     * 없으면 지금 본문이 그때 본문이다. 다만 이건 신고 뒤 기록이 빠짐없이 있을 때만 맞다.
+     *
+     * 빠짐없는지는 이렇게 본다. 기록은 오래된 것부터 지워지므로, 신고 시각 이전의 기록이
+     * 하나라도 남아 있으면 그 뒤 기록은 다 있다. 이 댓글 기록이 없더라도 신고가 보관 기간 안이고
+     * 그때 이미 기록이 쌓이고 있었다면, 신고 뒤 수정은 모두 남아 있다.
+     *
+     * 근거가 없으면 지금 본문으로 대신하지 않는다. 이력이 파기된 뒤 고친 본문이 신고 당시
+     * 본문처럼 보이던 문제가 여기서 생겼다.
      */
-    private String contentAt(LocalDateTime at, String current, List<CommentChange> changes) {
-        if (at == null) {
-            return current;
+    private ReportedContent reportedContent(
+            Comment comment,
+            LocalDateTime reportedAt,
+            List<CommentChange> changes,
+            LocalDateTime now
+    ) {
+        if (comment.isContentPurged()) {
+            return ReportedContent.unknown(ReportedContent.Status.EXPIRED);
         }
 
-        return changes.stream()
-                .filter(change -> change.action() == Action.UPDATE && change.before() != null)
-                .filter(change -> change.occurredAt() != null && !change.occurredAt().isBefore(at))
-                .min(Comparator.comparing(CommentChange::occurredAt))
-                .map(change -> change.before().content())
-                .orElse(current);
+        if (reportedAt == null) {
+            return ReportedContent.unknown(ReportedContent.Status.NOT_RECORDED);
+        }
+
+        LocalDateTime cutoff = now.minus(CommentRetention.RETENTION);
+        boolean complete = changes.stream()
+                .anyMatch(change -> change.occurredAt() != null && !change.occurredAt().isAfter(reportedAt))
+                || (!reportedAt.isBefore(cutoff) && historyService.wasRecordingAt(reportedAt));
+
+        if (complete) {
+            return changes.stream()
+                    .filter(change -> change.action() == Action.UPDATE && change.before() != null)
+                    .filter(change -> change.occurredAt() != null && change.occurredAt().isAfter(reportedAt))
+                    .min(Comparator.comparing(CommentChange::occurredAt))
+                    .map(change -> ReportedContent.confirmed(change.before().content(), true))
+                    .orElseGet(() -> ReportedContent.confirmed(comment.getContent(), false));
+        }
+
+        // 한 번도 고친 적 없으면 지금 본문이 처음부터 그대로다
+        if (!comment.isEdited()) {
+            return ReportedContent.confirmed(comment.getContent(), false);
+        }
+
+        return ReportedContent.unknown(reportedAt.isBefore(cutoff)
+                ? ReportedContent.Status.EXPIRED
+                : ReportedContent.Status.NOT_RECORDED);
     }
 
     /**

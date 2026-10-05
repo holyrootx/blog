@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue';
 
 import { dismissAdminCommentReports, getAdminCommentDetail } from '../api/adminApi';
 import AdminTextInput from './AdminTextInput.vue';
+import { groupReportsByReportedContent, reportedContentNotice } from '../data/commentReportGroups';
 import BaseModal from '../../../shared/components/BaseModal.vue';
 import { formatExactTime } from '../../../shared/time/relativeTime';
 import { notifyError, notifySuccess } from '../../../shared/toast/toastStore';
@@ -41,31 +42,12 @@ const states = computed(() => {
   if (detail.value.parentId !== null) list.push('답글');
   if (detail.value.hiddenByAdmin) list.push('가림');
   else if (detail.value.deleted) list.push('삭제됨');
+  if (detail.value.contentPurged) list.push('원문 파기');
   if (detail.value.edited) list.push('수정됨');
   return list;
 });
 
-/** 신고 시점 본문이 같은 신고끼리 묶는다. 대개는 하나다 */
-const reportGroups = computed(() => {
-  const groups = [];
-
-  for (const report of detail.value?.reports ?? []) {
-    let group = groups.find((item) => item.content === report.reportedContent);
-
-    if (!group) {
-      group = {
-        content: report.reportedContent,
-        editedAfterReport: report.editedAfterReport,
-        reports: [],
-      };
-      groups.push(group);
-    }
-
-    group.reports.push(report);
-  }
-
-  return groups;
-});
+const reportGroups = computed(() => groupReportsByReportedContent(detail.value?.reports));
 
 watch(() => props.commentId, (id) => {
   memo.value = '';
@@ -162,7 +144,18 @@ function isUpdate(item) {
               {{ detail.postTitle }}
             </a>
           </div>
-          <p class="admin-moderation__quote">{{ detail.content }}</p>
+          <p v-if="detail.contentPurged" class="admin-comment-detail__notice">
+            보관 기간이 지나 원문을 파기했습니다. 관리자도 확인하거나 되살릴 수 없습니다.
+          </p>
+          <template v-else>
+            <p class="admin-moderation__quote">{{ detail.content }}</p>
+            <!-- 글쓴이가 지운 댓글만 기한이 있다. 운영자가 가린 것은 되살릴 수 있어 기한이 없다 -->
+            <p v-if="detail.contentRetainedUntil" class="admin-comment-detail__notice">
+              글쓴이가 지운 댓글이라 공개 화면에는 보이지 않습니다.
+              원문은 {{ formatExactTime(detail.contentRetainedUntil) }}까지 관리자만 볼 수 있고,
+              이 시각이 지나면 다음 새벽 정리 때 파기해 되살릴 수 없습니다.
+            </p>
+          </template>
         </section>
 
         <section v-if="reported" class="admin-comment-detail__section">
@@ -171,9 +164,12 @@ function isUpdate(item) {
           <div v-for="(group, index) in reportGroups" :key="index" class="admin-comment-detail__report">
             <div class="admin-comment-detail__label">
               <span>신고 시점 본문</span>
-              <span v-if="group.editedAfterReport" class="admin-comment-detail__flag">신고 후 수정됨</span>
+              <span v-if="group.editedAfterReport === true" class="admin-comment-detail__flag">신고 후 수정됨</span>
             </div>
-            <p class="admin-moderation__quote">{{ group.content }}</p>
+            <p v-if="group.status === 'CONFIRMED'" class="admin-moderation__quote">{{ group.content }}</p>
+            <p v-else class="admin-comment-detail__notice">
+              {{ reportedContentNotice(group, { contentPurged: detail.contentPurged }) }}
+            </p>
             <ul class="admin-moderation__list">
               <li v-for="report in group.reports" :key="report.id">
                 <span class="admin-moderation__reason">{{ report.reasonLabel }}</span>
@@ -208,7 +204,8 @@ function isUpdate(item) {
         <section class="admin-comment-detail__section">
           <h3 class="admin-moderation__title">변경 기록</h3>
           <p v-if="detail.histories.length === 0" class="admin-moderation__empty">
-            남은 기록이 없습니다. 기록 기능이 생기기 전에 쓴 댓글이거나, 보관 기간 6개월이 지났습니다.
+            남은 변경 기록이 없습니다. 기록은 남긴 때부터 6개월이 지나면 파기하고, 원문을 파기한 댓글은
+            기록도 함께 파기합니다. 기록 기능이 생기기 전에 쓴 댓글은 처음부터 기록이 없습니다.
           </p>
           <ul v-else class="admin-moderation__list">
             <li v-for="item in detail.histories" :key="item.id">
@@ -330,6 +327,14 @@ function isUpdate(item) {
   line-height: 1.6;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
+}
+
+/* 원문 대신 보여 주는 안내. 인용처럼 보이면 그게 댓글 내용인 줄 안다 */
+.admin-comment-detail__notice {
+  margin: 0 0 12px;
+  color: var(--admin-meta);
+  font-size: 13px;
+  line-height: 1.6;
 }
 
 .admin-comment-detail__error {

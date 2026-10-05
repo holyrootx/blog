@@ -1,5 +1,6 @@
 package me.jsjlog.blog.history.service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
@@ -43,6 +44,11 @@ public class ContentHistoryService {
                         commentSnapshot(history.getAfterSnapshot())
                 ))
                 .toList();
+    }
+
+    /** 그 시각에 이미 기록이 쌓이고 있었는가. 기록 기능이 생기기 전인지 가른다 */
+    public boolean wasRecordingAt(LocalDateTime time) {
+        return historyRepository.existsByCreatedAtLessThanEqual(time);
     }
 
     private String json(Object snapshot) {
