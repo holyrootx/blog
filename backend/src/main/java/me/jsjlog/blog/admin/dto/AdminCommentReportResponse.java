@@ -17,17 +17,26 @@ public record AdminCommentReportResponse(
         String reasonLabel,
         String detail,
         LocalDateTime reportedAt,
-        boolean handled
+        boolean handled,
+        // 신고받은 뒤에 글쓴이가 고칠 수 있어서, 지금 본문이 아니라 신고 당시 본문을 보여 준다
+        String reportedContent,
+        boolean editedAfterReport
 ) {
 
-    public static AdminCommentReportResponse from(CommentReport report) {
+    public static AdminCommentReportResponse from(
+            CommentReport report,
+            String reportedContent,
+            String currentContent
+    ) {
         return new AdminCommentReportResponse(
                 report.getId(),
                 report.getReason().name(),
                 report.getReason().getLabel(),
                 report.getDetail(),
                 report.getCreatedAt(),
-                report.getHandledAt() != null
+                report.getHandledAt() != null,
+                reportedContent,
+                !reportedContent.equals(currentContent)
         );
     }
 }

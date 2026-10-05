@@ -85,7 +85,6 @@ class PostTrashHistoryTest {
     @Autowired AdminDashboardQueryRepository dashboard;
     @Autowired ImageUsageRepository images;
     @Autowired ImageCleanupService cleanup;
-    @Autowired AdminImageService imageService;
     @Autowired EntityManager em;
     @Autowired MockMvc mvc;
     @Autowired PlatformTransactionManager transactionManager;
@@ -161,8 +160,8 @@ class PostTrashHistoryTest {
         assertThat(restored.getDeletedAt()).isNull();
         assertThat(commentRepository.findById(deleted.getId()).orElseThrow().isDeleted()).isTrue();
         assertThat(commentRepository.findById(hidden.getId()).orElseThrow().isHiddenByAdmin()).isTrue();
-        assertThat(history(post.getId())).extracting(ContentHistory::getAction)
-                .containsExactly(Action.DELETE, Action.RESTORE);
+        // 글 변경 기록은 남기지 않는다. 쓰는 곳이 없어 2026-025 에서 뺐다
+        assertThat(history(post.getId())).isEmpty();
         expectCode(() -> publicPosts.getPostDetail(post.getId(), false, null), ErrorCode.POST_NOT_FOUND);
     }
 
@@ -221,7 +220,7 @@ class PostTrashHistoryTest {
         expectCode(() -> adminComments.reply(comment.getId(), new AdminCommentReplyRequest("답글"), admin.getId()), ErrorCode.POST_NOT_FOUND);
         expectCode(() -> adminComments.updateVisibility(comment.getId(), new AdminCommentVisibilityRequest(true, null), admin.getId()), ErrorCode.POST_NOT_FOUND);
         expectCode(() -> adminComments.dismissReports(comment.getId(), null, admin.getId()), ErrorCode.POST_NOT_FOUND);
-        expectCode(() -> adminComments.getModerationDetail(comment.getId()), ErrorCode.POST_NOT_FOUND);
+        expectCode(() -> adminComments.getDetail(comment.getId()), ErrorCode.POST_NOT_FOUND);
     }
 
     @Test
@@ -245,7 +244,7 @@ class PostTrashHistoryTest {
     }
 
     @Test
-    void historyRetainsOldContentAndImages() {
+    void imageRemovedByEditIsNoLongerHeldByHistory() {
         String url = "https://images.test/2026/10/" + UUID.randomUUID() + "-thumbnail-v1.0.webp";
         UploadImage image = images.save(new UploadImage("2026/10/source.jpg", url, "image.jpg", "image/jpeg", 100));
         post.update(post.getTitle(), "요약", "![image](" + url + ")", category, url);
@@ -253,22 +252,16 @@ class PostTrashHistoryTest {
 
         adminPosts.updatePost(post.getId(), new AdminPostRequest(null, "수정된 제목", category.getId(), "요약", "새 본문", null));
         em.flush();
-        var saved = history(post.getId()).getFirst();
-        assertThat(saved.getBeforeSnapshot()).contains(url);
-        assertThat(saved.getAfterSnapshot()).contains("새 본문").doesNotContain(url);
-        assertThat(saved.getCreatedAt()).isNotNull();
-        assertThat(saved.getCreatedBy()).isNotBlank();
-        assertThat(images.findStillUsed(Set.of(url))).extracting(UploadImage::getId).contains(image.getId());
-        assertThat(images.findHistoryUsages(Set.of(url))).extracting(AdminImageUsage::where)
-                .containsExactly(AdminImageUsage.Where.CONTENT_HISTORY);
+
+        assertThat(history(post.getId())).isEmpty();
+        assertThat(images.findStillUsed(Set.of(url))).isEmpty();
         assertThat(images.findUnusedOlderThan(LocalDateTime.now().plusDays(1), PageRequest.of(0, 100)).getContent())
-                .extracting(UploadImage::getId).doesNotContain(image.getId());
-        assertThat(cleanup.cleanup(List.of(image.getId())).skippedUsedCount()).isEqualTo(1);
-        expectCode(() -> imageService.delete(image.getId()), ErrorCode.IMAGE_IN_USE);
+                .extracting(UploadImage::getId).contains(image.getId());
+        assertThat(cleanup.cleanup(List.of(image.getId())).skippedUsedCount()).isZero();
     }
 
     @Test
-    void commentLifecycleAndScheduledPublishSaveHistory() {
+    void commentLifecycleSavesHistoryButScheduledPublishDoesNot() {
         Long commentId = comments.createComment(post.getId(), new CommentCreateRequest("처음", null), member.getId()).id();
         comments.updateComment(commentId, "변경", member.getId());
         adminComments.updateVisibility(commentId, new AdminCommentVisibilityRequest(true, "숨김"), admin.getId());
@@ -283,7 +276,8 @@ class PostTrashHistoryTest {
         post.schedule(LocalDateTime.now().minusMinutes(1));
         em.flush();
         scheduler.publishDuePosts();
-        assertThat(history(post.getId()).getLast().getAction()).isEqualTo(Action.PUBLISH);
+        assertThat(posts.findById(post.getId()).orElseThrow().getStatus()).isEqualTo(PostStatus.PUBLISHED);
+        assertThat(history(post.getId()).getLast().getAction()).isEqualTo(Action.DELETE);
     }
 
     @Test
@@ -293,22 +287,18 @@ class PostTrashHistoryTest {
         em.flush();
         scheduler.publishDuePosts();
         assertThat(posts.findById(post.getId()).orElseThrow().getStatus()).isEqualTo(PostStatus.SCHEDULED);
-        assertThat(history(post.getId())).extracting(ContentHistory::getAction).containsExactly(Action.DELETE);
+        assertThat(history(post.getId())).isEmpty();
     }
 
     @Test
-    void createEditPublishUnpublishAndScheduleSavePostHistory() {
+    void postChangesAreNotRecorded() {
         Long id = adminPosts.createPost(new AdminPostRequest(null, "이력", category.getId(), "요약", "본문", null), admin.getId());
         adminPosts.updatePost(id, new AdminPostRequest(null, "수정", category.getId(), "요약", "다른 본문", null));
         adminPosts.publishPost(id, null);
         adminPosts.unpublishPost(id);
         adminPosts.publishPost(id, LocalDateTime.now().plusDays(1));
         em.flush();
-        assertThat(history(id)).extracting(ContentHistory::getAction)
-                .containsExactly(Action.CREATE, Action.UPDATE, Action.PUBLISH, Action.UNPUBLISH, Action.SCHEDULE);
-        assertThat(history(id).getFirst().getBeforeSnapshot()).isNull();
-        assertThat(history(id).get(1).getBeforeSnapshot()).contains("본문");
-        assertThat(history(id).get(1).getAfterSnapshot()).contains("다른 본문");
+        assertThat(history(id)).isEmpty();
     }
 
     @Test
@@ -339,18 +329,16 @@ class PostTrashHistoryTest {
                 .andExpect(jsonPath("$.data.items[0].restorable").value(true));
         mvc.perform(post(path).with(user(MemberPrincipal.ofLocal(admin))).with(csrf()))
                 .andExpect(status().isOk());
-        assertThat(history(post.getId()).getLast().getCreatedBy()).isEqualTo(admin.getId().toString());
+        assertThat(posts.findById(post.getId()).orElseThrow().getDeletedAt()).isNull();
     }
 
     @Test
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    void historyInsertFailureRollsBackPostDeletion() {
+    void postDeletionDoesNotDependOnHistory() {
         doThrow(new IllegalStateException("history unavailable")).when(histories).save(any(ContentHistory.class));
-        assertThatThrownBy(() -> adminPosts.deletePost(post.getId())).isInstanceOf(IllegalStateException.class);
-        new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
-            assertThat(posts.findById(post.getId()).orElseThrow().getDeletedAt()).isNull();
-            assertThat(history(post.getId())).isEmpty();
-        });
+        adminPosts.deletePost(post.getId());
+        new TransactionTemplate(transactionManager).executeWithoutResult(status ->
+                assertThat(posts.findById(post.getId()).orElseThrow().getDeletedAt()).isNotNull());
     }
 
     @Test
@@ -365,7 +353,7 @@ class PostTrashHistoryTest {
         adminPosts.deletePost(post.getId());
         em.flush();
 
-        var result = adminComments.getComments(new AdminCommentSearchCondition(0, 20, null, post.getTitle()));
+        var result = adminComments.getComments(new AdminCommentSearchCondition(0, 20, null, post.getTitle(), null));
         assertThat(result.items()).isEmpty();
         assertThat(result.statusCounts()).isEqualTo(new AdminCommentCounts(0, 0, 0, 0));
         assertThat(dashboard.countReportedComments()).isEqualTo(beforeReports - 1);

@@ -239,8 +239,16 @@ onMounted(search);
         </span>
       </template>
 
-      <template #cell-commentCount="{ value }">
-        {{ formatCount(value) }}개
+      <!-- 누르면 그 회원 댓글만 걸러서 댓글 관리로 간다 -->
+      <template #cell-commentCount="{ value, row }">
+        <RouterLink
+          v-if="value > 0"
+          class="admin-member-comment-link"
+          :to="{ name: 'admin-comments', query: { member: row.id } }"
+        >
+          {{ formatCount(value) }}개
+        </RouterLink>
+        <template v-else>{{ formatCount(value) }}개</template>
       </template>
 
       <template #cell-createdAt="{ value }">
@@ -303,3 +311,11 @@ onMounted(search);
     </BaseModal>
   </div>
 </template>
+
+<style scoped>
+.admin-member-comment-link {
+  color: var(--admin-title);
+  font-weight: 700;
+  text-decoration: underline;
+}
+</style>

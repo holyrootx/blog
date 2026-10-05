@@ -5,8 +5,6 @@ import java.time.LocalDateTime;
 import me.jsjlog.blog.admin.dto.AdminPostRequest;
 import me.jsjlog.blog.common.exception.BlogException;
 import me.jsjlog.blog.common.exception.ErrorCode;
-import me.jsjlog.blog.history.domain.ContentHistory;
-import me.jsjlog.blog.history.repository.ContentHistoryRepository;
 import me.jsjlog.blog.post.domain.Category;
 import me.jsjlog.blog.post.domain.Post;
 import me.jsjlog.blog.post.domain.PostStatus;
@@ -29,7 +27,6 @@ class PostPublicationRulesTest {
     @Autowired ScheduledPublisher publisher;
     @Autowired PostRepository posts;
     @Autowired CategoryRepository categories;
-    @Autowired ContentHistoryRepository histories;
     @Autowired EntityManager entityManager;
     Category category;
     Post post;
@@ -48,7 +45,6 @@ class PostPublicationRulesTest {
                         error -> assertThat(error.getErrorCode()).isEqualTo(ErrorCode.POST_CONTENT_REQUIRED));
         assertThat(post.getContent()).isEqualTo("본문");
         assertThat(post.getStatus()).isEqualTo(PostStatus.SCHEDULED);
-        assertThat(histories.findAll()).hasSize(1);
     }
 
     @Test
@@ -62,15 +58,10 @@ class PostPublicationRulesTest {
     }
 
     @Test
-    void cancelScheduleClearsTimeRecordsTransitionAndAllowsIncompleteDraft() {
-        LocalDateTime scheduledAt = post.getPublishedAt();
+    void cancelScheduleClearsTimeAndAllowsIncompleteDraft() {
         adminPosts.unpublishPost(post.getId());
         assertThat(post.getStatus()).isEqualTo(PostStatus.DRAFT);
         assertThat(post.getPublishedAt()).isNull();
-        ContentHistory cancellation = histories.findAll().getLast();
-        assertThat(cancellation.getAction()).isEqualTo(ContentHistory.Action.UNPUBLISH);
-        assertThat(cancellation.getBeforeSnapshot()).contains("SCHEDULED", scheduledAt.toLocalDate().toString());
-        assertThat(cancellation.getAfterSnapshot()).contains("DRAFT", "\"publishedAt\":null");
         adminPosts.updatePost(post.getId(), request("", ""));
         assertThat(post.getContent()).isEmpty();
         publisher.publishDuePosts();
@@ -84,7 +75,6 @@ class PostPublicationRulesTest {
         adminPosts.unpublishPost(post.getId());
         assertThat(post.getStatus()).isEqualTo(PostStatus.PRIVATE);
         assertThat(post.getPublishedAt()).isEqualTo(publishedAt);
-        assertThat(histories.findAll().getLast().getAction()).isEqualTo(ContentHistory.Action.UNPUBLISH);
     }
 
     @Test
@@ -100,12 +90,12 @@ class PostPublicationRulesTest {
         assertThat(post.getStatus()).isEqualTo(PostStatus.SCHEDULED);
         assertThat(noExcerpt.getStatus()).isEqualTo(PostStatus.SCHEDULED);
         assertThat(valid.getStatus()).isEqualTo(PostStatus.PUBLISHED);
-        assertThat(histories.findAll().stream()
-                .filter(history -> history.getAction() == ContentHistory.Action.PUBLISH)
-                .map(ContentHistory::getTargetId)).containsExactly(valid.getId());
+
+        // 다시 돌아도 이미 공개한 글을 또 건드리지 않고, 잘못된 예약도 그대로 둔다
+        LocalDateTime firstPublishedAt = valid.getPublishedAt();
         publisher.publishDuePosts();
-        assertThat(histories.findAll().stream()
-                .filter(history -> history.getAction() == ContentHistory.Action.PUBLISH)).hasSize(1);
+        assertThat(valid.getPublishedAt()).isEqualTo(firstPublishedAt);
+        assertThat(post.getStatus()).isEqualTo(PostStatus.SCHEDULED);
     }
 
     @Test

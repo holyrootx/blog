@@ -11,7 +11,6 @@ public record AdminImageUsage(String url, Where where, String title) {
     public enum Where {
         POST_CONTENT,
         POST_THUMBNAIL,
-        CONTENT_HISTORY,
         HOME_HERO,
         PROFILE
     }

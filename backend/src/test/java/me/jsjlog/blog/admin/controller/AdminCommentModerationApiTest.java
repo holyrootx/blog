@@ -102,7 +102,7 @@ class AdminCommentModerationApiTest {
     @Test
     @DisplayName("신고 내역을 볼 수 있다 — 누가 신고했는지는 빼고")
     void showsReports() throws Exception {
-        mockMvc.perform(get(url("/moderation")).with(user(admin)))
+        mockMvc.perform(get(url("")).with(user(admin)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.reports.length()").value(1))
                 .andExpect(jsonPath("$.data.reports[0].reasonLabel").value("욕설·비방"))
@@ -124,7 +124,7 @@ class AdminCommentModerationApiTest {
                                 """))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(get(url("/moderation")).with(user(admin)))
+        mockMvc.perform(get(url("")).with(user(admin)))
                 .andExpect(jsonPath("$.data.moderations.length()").value(1))
                 .andExpect(jsonPath("$.data.moderations[0].actionLabel").value("가림"))
                 .andExpect(jsonPath("$.data.moderations[0].reason").value("욕설이 심함"))
@@ -168,7 +168,7 @@ class AdminCommentModerationApiTest {
                                 """))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(get(url("/moderation")).with(user(admin)))
+        mockMvc.perform(get(url("")).with(user(admin)))
                 .andExpect(jsonPath("$.data.moderations[0].actionLabel").value("문제 없음"))
                 .andExpect(jsonPath("$.data.reports[0].handled").value(true));
 
@@ -216,7 +216,7 @@ class AdminCommentModerationApiTest {
                         .contentType(MediaType.APPLICATION_JSON).content(body.formatted("false")))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(get(url("/moderation")).with(user(admin)))
+        mockMvc.perform(get(url("")).with(user(admin)))
                 .andExpect(jsonPath("$.data.moderations.length()").value(2))
                 .andExpect(jsonPath("$.data.moderations[0].actionLabel").value("되돌림"));
 

@@ -171,6 +171,10 @@ public class AdminCommentQueryRepository {
         QComment comment = QComment.comment;
         BooleanBuilder builder = new BooleanBuilder(comment.post.deletedAt.isNull());
 
+        if (condition.memberId() != null) {
+            builder.and(comment.member.id.eq(condition.memberId()));
+        }
+
         if (StringUtils.hasText(condition.keyword())) {
             String keyword = condition.keyword().trim();
             builder.and(
