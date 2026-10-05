@@ -15,7 +15,7 @@ const IMAGE_URL = /!\[[^\]]*\]\(([^)\s]+)[^)]*\)|<img[^>]+src=["']([^"']+)["']/g
 export function collectDraftImageUrls() {
   const found = new Map();
 
-  let keys = [];
+  let keys;
 
   try {
     keys = Object.keys(localStorage).filter((key) => key.startsWith(KEY_PREFIX));

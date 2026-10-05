@@ -39,6 +39,7 @@ jobs:
       - name: Test and build frontend
         working-directory: frontend
         run: |
+          npm run lint
           npm test
           npm run test:browser
           npm run build
