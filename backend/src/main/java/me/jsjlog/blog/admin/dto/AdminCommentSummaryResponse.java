@@ -34,6 +34,9 @@ public record AdminCommentSummaryResponse(
          * <p>전체 신고 수와 나눠 두는 이유는 "봐야 할 것" 과 "이미 본 것" 이 다르기
          * 때문이다. 전체만 있으면 처리해도 숫자가 그대로라 목록에서 계속 눈에 걸린다.</p>
          */
-        long unhandledReportCount
+        long unhandledReportCount,
+
+        /** 글쓴이가 지운 원문을 보관 기간이 지나 파기했는가. 목록에 빈 줄 대신 까닭을 쓴다 */
+        boolean contentPurged
 ) {
 }

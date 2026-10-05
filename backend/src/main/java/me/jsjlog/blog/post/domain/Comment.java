@@ -13,6 +13,8 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
+import java.time.LocalDateTime;
+
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -84,6 +86,24 @@ public class Comment extends BaseEntity {
     @Column(name = "hidden_by_admin", nullable = false)
     private boolean hiddenByAdmin;
 
+    /**
+     * 글쓴이가 지운 시각. 지운 원문의 보관 기간을 여기서부터 센다.
+     *
+     * 운영자가 가린 것으로는 값이 생기지 않는다. 이 기능이 생기기 전에 지운 댓글은 비어 있고,
+     * 언제 지웠는지 근거가 없어 자동으로 파기하지 않는다.
+     */
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
+    /**
+     * 지운 원문을 파기한 시각. 값이 있으면 본문은 비어 있고 되살릴 수 없다.
+     *
+     * 빈 본문만으로 판단하지 않는다. 파기한 것과 원래 비어 있던 것을 구분해야
+     * 관리자 화면이 "파기했다" 고 말할 수 있다.
+     */
+    @Column(name = "content_purged_at")
+    private LocalDateTime contentPurgedAt;
+
     public Comment(
             Post post,
             Comment parent,
@@ -112,12 +132,25 @@ public class Comment extends BaseEntity {
 
     /** 글쓴이가 지운다 */
     public void delete() {
-        this.deleted = true;
-        this.hiddenByAdmin = false;
+        delete(LocalDateTime.now());
     }
 
-    /** 운영자가 가린다. 글쓴이가 지운 것과 화면에 다르게 나온다 */
+    public void delete(LocalDateTime now) {
+        this.deleted = true;
+        this.hiddenByAdmin = false;
+        this.deletedAt = now;
+    }
+
+    /**
+     * 운영자가 가린다. 글쓴이가 지운 것과 화면에 다르게 나온다.
+     *
+     * 글쓴이가 이미 지운 댓글을 가려도 삭제 시각은 그대로 둔다. 가리는 것으로 보관 기간이
+     * 끝없이 늘어나면 안 된다.
+     */
     public void hideByAdmin() {
+        if (isContentPurged()) {
+            throw new IllegalStateException("원문을 파기한 댓글은 상태를 바꿀 수 없다");
+        }
         this.deleted = true;
         this.hiddenByAdmin = true;
     }
@@ -125,8 +158,17 @@ public class Comment extends BaseEntity {
     /** 운영자가 되돌린다. 글쓴이가 지운 글까지 되살릴 수 있는 것은 의도한 바다 —
         잘못 지웠다는 요청이 올 수 있고, 되돌린 사실은 조치 이력에 남는다 */
     public void restore() {
+        // 파기한 원문은 돌아오지 않는다. 빈 본문으로 다시 공개되는 것도 막는다
+        if (isContentPurged()) {
+            throw new IllegalStateException("원문을 파기한 댓글은 되살릴 수 없다");
+        }
         this.deleted = false;
         this.hiddenByAdmin = false;
+        this.deletedAt = null;
+    }
+
+    public boolean isContentPurged() {
+        return contentPurgedAt != null;
     }
 
     /**

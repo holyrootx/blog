@@ -18,16 +18,15 @@ public record AdminCommentReportResponse(
         String detail,
         LocalDateTime reportedAt,
         boolean handled,
-        // 신고받은 뒤에 글쓴이가 고칠 수 있어서, 지금 본문이 아니라 신고 당시 본문을 보여 준다
+        // 신고받은 뒤에 글쓴이가 고칠 수 있어서, 지금 본문이 아니라 신고 당시 본문을 보여 준다.
+        // 확인할 수 없으면 본문은 비우고 까닭을 상태로 알린다
         String reportedContent,
-        boolean editedAfterReport
+        ReportedContent.Status reportedContentStatus,
+        // 신고 뒤에 고쳤는가. 확인할 수 없으면 null 이다
+        Boolean editedAfterReport
 ) {
 
-    public static AdminCommentReportResponse from(
-            CommentReport report,
-            String reportedContent,
-            String currentContent
-    ) {
+    public static AdminCommentReportResponse from(CommentReport report, ReportedContent reported) {
         return new AdminCommentReportResponse(
                 report.getId(),
                 report.getReason().name(),
@@ -35,8 +34,9 @@ public record AdminCommentReportResponse(
                 report.getDetail(),
                 report.getCreatedAt(),
                 report.getHandledAt() != null,
-                reportedContent,
-                !reportedContent.equals(currentContent)
+                reported.content(),
+                reported.status(),
+                reported.editedAfterReport()
         );
     }
 }
