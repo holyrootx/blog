@@ -7,7 +7,7 @@ import PostBody from './PostBody.vue';
 import { removePostReaction, setPostReaction } from '../api/postApi';
 import { useMemberAuth } from '../../member/data/memberAuthStore';
 import { rememberReturnPath } from '../../member/data/memberReturnPath';
-import { notifyError, notifySuccess } from '../../../shared/toast/toastStore';
+import { notifyError } from '../../../shared/toast/toastStore';
 
 const showInlineAds = false;
 const showTags = false;

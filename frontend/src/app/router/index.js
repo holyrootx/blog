@@ -23,6 +23,7 @@ const OAuthCallbackPage = () => import('../../features/member/pages/OAuthCallbac
 const MemberSettingsPage = () => import('../../features/member/pages/MemberSettingsPage.vue');
 const PrivacyPolicyPage = () => import('../../features/legal/pages/PrivacyPolicyPage.vue');
 const TermsPage = () => import('../../features/legal/pages/TermsPage.vue');
+const PublicLayout = () => import('../PublicLayout.vue');
 const AdminLayout = () => import('../../features/admin/components/AdminLayout.vue');
 const AdminLoginPage = () => import('../../features/admin/pages/AdminLoginPage.vue');
 const AdminDashboardPage = () => import('../../features/admin/pages/AdminDashboardPage.vue');
@@ -47,85 +48,91 @@ const router = createRouter({
   scrollBehavior: scrollToHash,
   routes: [
     ...sandboxRoutes,
+    // 공개 화면. 헤더와 푸터는 PublicLayout 이 한 번만 그리고, 아래 화면은 본문만 그린다
     {
       path: '/',
-      name: 'home',
-      component: HomePage,
-      meta: {
-        layout: 'public',
-      },
-    },
-    // 대문과 글 하단의 "전체 보기" 가 오는 자리.
-    // 이 라우트가 없던 동안 두 링크는 흰 화면으로 떨어졌다
-    {
-      path: '/posts',
-      name: 'post-list',
-      component: PostListPage,
-      meta: {
-        layout: 'public',
-        title: '전체 글',
-      },
-    },
-    {
-      path: '/posts/:id',
-      name: 'post-detail',
-      component: PostDetailPage,
-      meta: {
-        layout: 'public',
-      },
-    },
-    // 회원 로그인. 관리자 로그인과 다른 화면이다 — 아이디·비밀번호 칸이 없고
-    // 공개 화면을 보던 사람이 댓글을 쓰려고 들어오는 자리다
-    {
-      path: '/login',
-      name: 'member-login',
-      component: MemberLoginPage,
-      meta: {
-        layout: 'public',
-        title: '로그인',
-        robots: 'noindex,follow',
-      },
-    },
-    // 소셜 인증을 마친 브라우저가 돌아오는 자리.
-    // 서버가 결과를 ?result= 로만 알려 주고, 제공자 식별자는 서버 세션에만 둔다
-    {
-      path: '/oauth/callback',
-      name: 'oauth-callback',
-      component: OAuthCallbackPage,
-      meta: {
-        layout: 'public',
-        robots: 'noindex,follow',
-      },
-    },
-    // 내 계정 설정. 로그인 확인은 화면이 직접 한다 — 앱이 뜰 때 시작한 /me 응답을
-    // 기다려야 해서, 가드에서 막으면 아직 확인 전인 사람이 로그인 화면으로 튕긴다
-    {
-      path: '/settings',
-      name: 'member-settings',
-      component: MemberSettingsPage,
-      meta: {
-        layout: 'public',
-        title: '내 설정',
-        robots: 'noindex,follow',
-      },
-    },
-    {
-      path: '/privacy',
-      name: 'privacy-policy',
-      component: PrivacyPolicyPage,
-      meta: {
-        layout: 'public',
-        title: '개인정보 처리방침',
-      },
-    },
-    {
-      path: '/terms',
-      name: 'terms',
-      component: TermsPage,
-      meta: {
-        layout: 'public',
-        title: '이용약관',
-      },
+      component: PublicLayout,
+      children: [
+        {
+          path: '',
+          name: 'home',
+          component: HomePage,
+        },
+        // 대문과 글 하단의 "전체 보기" 가 오는 자리.
+        // 이 라우트가 없던 동안 두 링크는 흰 화면으로 떨어졌다
+        {
+          path: 'posts',
+          name: 'post-list',
+          component: PostListPage,
+          meta: {
+            title: '전체 글',
+          },
+        },
+        {
+          path: 'posts/:id',
+          name: 'post-detail',
+          component: PostDetailPage,
+        },
+        // 회원 로그인. 관리자 로그인과 다른 화면이다 — 아이디·비밀번호 칸이 없고
+        // 공개 화면을 보던 사람이 댓글을 쓰려고 들어오는 자리다
+        {
+          path: 'login',
+          name: 'member-login',
+          component: MemberLoginPage,
+          meta: {
+            title: '로그인',
+            robots: 'noindex,follow',
+          },
+        },
+        // 소셜 인증을 마친 브라우저가 돌아오는 자리.
+        // 서버가 결과를 ?result= 로만 알려 주고, 제공자 식별자는 서버 세션에만 둔다
+        {
+          path: 'oauth/callback',
+          name: 'oauth-callback',
+          component: OAuthCallbackPage,
+          meta: {
+            robots: 'noindex,follow',
+          },
+        },
+        // 내 계정 설정. 로그인 확인은 화면이 직접 한다 — 앱이 뜰 때 시작한 /me 응답을
+        // 기다려야 해서, 가드에서 막으면 아직 확인 전인 사람이 로그인 화면으로 튕긴다
+        {
+          path: 'settings',
+          name: 'member-settings',
+          component: MemberSettingsPage,
+          meta: {
+            title: '내 설정',
+            robots: 'noindex,follow',
+          },
+        },
+        {
+          path: 'privacy',
+          name: 'privacy-policy',
+          component: PrivacyPolicyPage,
+          meta: {
+            title: '개인정보 처리방침',
+          },
+        },
+        {
+          path: 'terms',
+          name: 'terms',
+          component: TermsPage,
+          meta: {
+            title: '이용약관',
+          },
+        },
+        // 어느 라우트와도 안 맞을 때. 없으면 RouterView 가 아무것도 안 그려서
+        // 오류라는 것조차 안 보이는 흰 화면이 된다
+        {
+          path: ':pathMatch(.*)*',
+          name: 'not-found',
+          component: NotFoundPage,
+          meta: {
+            title: '페이지를 찾을 수 없습니다',
+            robots: 'noindex,follow',
+          },
+        },
+      ],
     },
     // 로그인 화면은 관리자 레이아웃 밖에 둔다.
     // 안에 두면 로그인하지 않은 사람에게 사이드바 메뉴가 먼저 보인다
@@ -134,7 +141,6 @@ const router = createRouter({
       name: 'admin-login',
       component: AdminLoginPage,
       meta: {
-        layout: 'admin',
         title: '관리자 로그인',
         robots: 'noindex,follow',
       },
@@ -143,7 +149,6 @@ const router = createRouter({
       path: '/admin',
       component: AdminLayout,
       meta: {
-        layout: 'admin',
         robots: 'noindex,follow',
         // 이 아래 화면은 전부 로그인이 필요하다
         requiresAdmin: true,
@@ -246,18 +251,6 @@ const router = createRouter({
           },
         },
       ],
-    },
-    // 어느 라우트와도 안 맞을 때. 없으면 RouterView 가 아무것도 안 그려서
-    // 오류라는 것조차 안 보이는 흰 화면이 된다
-    {
-      path: '/:pathMatch(.*)*',
-      name: 'not-found',
-      component: NotFoundPage,
-      meta: {
-        layout: 'public',
-        title: '페이지를 찾을 수 없습니다',
-        robots: 'noindex,follow',
-      },
     },
   ],
 });

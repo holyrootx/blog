@@ -1,17 +1,18 @@
 <script setup>
-import { reactive, ref, watch } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 
 import { applyDocumentMeta, summarize } from '../../../app/router/documentMeta';
 
-import BlogHeader from '../../home/components/BlogHeader.vue';
 import PostArticle from '../components/PostArticle.vue';
 import PostArticleSkeleton from '../components/PostArticleSkeleton.vue';
 import PostAside from '../components/PostAside.vue';
 import CommentSection from '../components/CommentSection.vue';
 import PostRelated from '../components/PostRelated.vue';
 import NotFoundPage from './NotFoundPage.vue';
-import { getBlogProfile } from '../../home/api/homeApi';
+import { blogProfile, blogProfileLoading } from '../../home/data/blogProfileStore';
+import { useSectionLoader } from '../../../shared/composables/useSectionLoader';
+import { mergeDefined } from '../../../shared/data/mergeDefined';
 import {
   getAdjacentPosts,
   getPostComments,
@@ -48,11 +49,6 @@ const EMPTY_DETAIL = {
     tags: [],
     commentCount: 0,
   },
-  author: {
-    name: '',
-    job: '',
-    avatarImageUrl: '',
-  },
   body: [],
   toc: [],
   adjacentPosts: { prev: null, next: null },
@@ -69,13 +65,15 @@ const detail = reactive({
   ...structuredClone(EMPTY_DETAIL),
   comments: { ...EMPTY_COMMENTS },
 });
-const loading = reactive({
-  author: true,
-  post: true,
-  adjacent: true,
-  related: true,
-  comments: true,
-});
+const { loading, load, restart } = useSectionLoader(['post', 'adjacent', 'related', 'comments']);
+
+// 글쓴이는 블로그 주인 한 사람이라 헤더와 같은 프로필을 쓴다. 글을 옮길 때마다 다시 받지 않는다
+const EMPTY_AUTHOR = {
+  name: '',
+  job: '',
+  avatarImageUrl: '',
+};
+const author = computed(() => mergeDefined(EMPTY_AUTHOR, blogProfile.value));
 const notFound = ref(false);
 const postLoadError = ref(false);
 const showAds = false;
@@ -91,15 +89,13 @@ watch(
 function loadPostPage(postId) {
   const requestedPostId = String(postId);
 
+  restart();
   notFound.value = false;
   postLoadError.value = false;
   Object.assign(detail, structuredClone({
     ...EMPTY_DETAIL,
     comments: EMPTY_COMMENTS,
   }));
-  Object.keys(loading).forEach((key) => {
-    loading[key] = true;
-  });
 
   if (!/^[1-9]\d*$/.test(requestedPostId)) {
     notFound.value = true;
@@ -108,80 +104,65 @@ function loadPostPage(postId) {
     return;
   }
 
-  loadPostData('author', requestedPostId, getBlogProfile, (profile) => {
-    detail.author = mergeDefined(detail.author, profile);
-  });
-  loadPostData('post', requestedPostId, () => getPostDetail(postId), (postDetail) => {
-    detail.post = {
-      ...postDetail.post,
-      commentCount: detail.comments.total,
-    };
-    detail.body = postDetail.body;
-    detail.toc = postDetail.toc;
+  load('post', {
+    cacheKey: `post:${requestedPostId}`,
+    request: () => getPostDetail(postId),
+    apply: (postDetail) => {
+      detail.post = {
+        ...postDetail.post,
+        commentCount: detail.comments.total,
+      };
+      detail.body = postDetail.body;
+      detail.toc = postDetail.toc;
 
-    // 라우터는 글 번호만 알아서 제목을 못 채운다. 글이 도착한 지금 채운다
-    applyDocumentMeta({
-      title: postDetail.post.title,
-      description: postDetail.post.excerpt?.trim() || summarize(postDetail.body),
-      image: postDetail.post.coverImageUrl,
-      path: `/posts/${requestedPostId}`,
-      type: 'article',
-    });
-  }, (error) => {
-    if (error.status === 404) {
-      notFound.value = true;
-      applyDocumentMeta({ title: '찾는 글이 없습니다', robots: 'noindex,follow' });
-      return;
-    }
-
-    postLoadError.value = true;
-    console.error(error);
-  });
-  loadPostData('adjacent', requestedPostId, () => getAdjacentPosts(postId), (adjacentPosts) => {
-    detail.adjacentPosts = adjacentPosts;
-  });
-  loadPostData('related', requestedPostId, () => getRelatedPosts(postId), (relatedPosts) => {
-    detail.relatedPosts = relatedPosts ?? [];
-  });
-  loadPostData('comments', requestedPostId, () => getPostComments(postId), (comments) => {
-    detail.comments = comments;
-    detail.post = {
-      ...detail.post,
-      commentCount: comments.total,
-    };
-  });
-}
-
-function loadPostData(key, requestedPostId, request, apply, onError = console.error) {
-  request()
-    .then((value) => {
-      if (String(route.params.id) === requestedPostId) {
-        apply(value);
-      }
-    })
-    .catch((error) => {
-      if (String(route.params.id) === requestedPostId) {
-        onError(error);
-      }
-    })
-    .finally(() => {
-      if (String(route.params.id) === requestedPostId) {
-        loading[key] = false;
-      }
-    });
-}
-
-function mergeDefined(base, next) {
-  return Object.entries(next ?? {}).reduce(
-    (result, [key, value]) => {
-      if (value !== null && value !== undefined && value !== '') {
-        result[key] = value;
-      }
-
-      return result;
+      // 라우터는 글 번호만 알아서 제목을 못 채운다. 글이 도착한 지금 채운다
+      applyDocumentMeta({
+        title: postDetail.post.title,
+        description: postDetail.post.excerpt?.trim() || summarize(postDetail.body),
+        image: postDetail.post.coverImageUrl,
+        path: `/posts/${requestedPostId}`,
+        type: 'article',
+      });
     },
-    { ...base },
-  );
+    onError: (error, { showingCached }) => {
+      // 그사이 글이 내려갔으면 전에 본 내용이 있어도 없는 글로 바꾼다
+      if (error.status === 404) {
+        notFound.value = true;
+        applyDocumentMeta({ title: '찾는 글이 없습니다', robots: 'noindex,follow' });
+        return;
+      }
+
+      console.error(error);
+      if (!showingCached) {
+        postLoadError.value = true;
+      }
+    },
+  });
+  load('adjacent', {
+    cacheKey: `post:${requestedPostId}:adjacent`,
+    request: () => getAdjacentPosts(postId),
+    apply: (adjacentPosts) => {
+      detail.adjacentPosts = adjacentPosts;
+    },
+  });
+  load('related', {
+    cacheKey: `post:${requestedPostId}:related`,
+    request: () => getRelatedPosts(postId),
+    apply: (relatedPosts) => {
+      detail.relatedPosts = relatedPosts ?? [];
+    },
+  });
+  // 댓글은 들고 있지 않는다. 쓰고 지우는 자리라 전에 받은 목록을 먼저 보이면 지운 댓글이 잠깐 되살아난다
+  load('comments', {
+    request: () => getPostComments(postId),
+    apply: (comments) => {
+      detail.comments = comments;
+      detail.post = {
+        ...detail.post,
+        commentCount: comments.total,
+      };
+    },
+  });
 }
 
 function applyPostReaction(reaction) {
@@ -197,10 +178,8 @@ function applyPostReaction(reaction) {
 
 <template>
   <NotFoundPage v-if="notFound" />
-  <div v-else class="public-shell">
-    <BlogHeader :title="detail.author.name || 'JSJ.log'" />
-
-    <main v-if="postLoadError" class="not-found">
+  <template v-else>
+    <main v-if="postLoadError" class="public-shell__main not-found">
       <h1 class="not-found__title">글을 불러오지 못했습니다</h1>
       <p class="not-found__text">잠시 후 다시 시도해 주세요.</p>
       <div class="not-found__actions">
@@ -219,10 +198,10 @@ function applyPostReaction(reaction) {
             @focus-comments="commentSection?.focusCommentInput()"
             @reaction-changed="applyPostReaction"
             :post="detail.post"
-            :author="detail.author"
+            :author="author"
             :body="detail.body"
             :adjacent-posts="detail.adjacentPosts"
-            :author-loading="loading.author"
+            :author-loading="blogProfileLoading"
           />
 
           <CommentSection
@@ -258,5 +237,5 @@ function applyPostReaction(reaction) {
       <span class="anchor-ad__label">광고 · AD (하단 고정)</span>
       <div class="anchor-ad__slot">{{ detail.anchorAd.label }}</div>
     </div>
-  </div>
+  </template>
 </template>

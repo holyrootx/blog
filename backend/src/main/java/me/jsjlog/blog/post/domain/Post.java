@@ -169,6 +169,16 @@ public class Post extends BaseEntity {
         return !isDeleted() && this.status == PostStatus.PUBLISHED;
     }
 
+    /**
+     * 독자에게 보여도 되는 글인가. 공개 조회 쿼리(PublicPostCondition)와 같은 기준이다.
+     *
+     * <p>발행 상태만 보면 발행 시각이 아직 오지 않은 글을 놓친다. 예약은 SCHEDULED 로 따로 두지만,
+     * 기준이 쿼리와 갈라지면 한쪽에서만 보이는 글이 생긴다.</p>
+     */
+    public boolean isPubliclyVisible(LocalDateTime now) {
+        return isPublished() && publishedAt != null && !publishedAt.isAfter(now);
+    }
+
     public boolean isDeleted() {
         return deletedAt != null;
     }

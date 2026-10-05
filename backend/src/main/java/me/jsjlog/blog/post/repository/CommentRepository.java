@@ -34,8 +34,13 @@ public interface CommentRepository extends JpaRepository<Comment, Long>, Comment
      */
     @Query("select c from Comment c join fetch c.post p where c.member.id = :memberId"
             + " and p.deletedAt is null and p.status = me.jsjlog.blog.post.domain.PostStatus.PUBLISHED"
+            + " and p.publishedAt <= :now"
             + " order by c.id desc")
-    List<Comment> findMyComments(@Param("memberId") Long memberId, Pageable pageable);
+    List<Comment> findMyComments(
+            @Param("memberId") Long memberId,
+            @Param("now") LocalDateTime now,
+            Pageable pageable
+    );
 
     /** 댓글 삭제 또는 원글 영구 삭제 중 먼저 도래한 기한으로 원문을 파기한다. */
     @Query("select c.id from Comment c where c.contentPurgedAt is null"

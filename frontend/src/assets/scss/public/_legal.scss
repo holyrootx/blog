@@ -20,10 +20,9 @@
   color: var(--accent-dark);
 }
 
+/* 공개 화면 공통 카드(.public-shell__main) 안에 들어간다. 바탕과 높이는 카드가 정한다 */
 .legal-document {
-  min-height: 100vh;
-  padding: 64px 24px 96px;
-  background: var(--page-bg);
+  padding: 48px 24px 80px;
   color: var(--text-muted);
 }
 
@@ -32,15 +31,8 @@
   margin: 0 auto;
 }
 
-.legal-document__back {
-  color: var(--text);
-  font-size: 16px;
-  font-weight: 700;
-  text-decoration: none;
-}
-
 .legal-document__header {
-  margin: 42px 0 36px;
+  margin: 0 0 36px;
   padding-bottom: 24px;
   border-bottom: 1px solid var(--line);
 }
@@ -87,10 +79,6 @@
 @include bp.upto(md) {
   .legal-document {
     padding: 36px 20px 72px;
-  }
-
-  .legal-document__header {
-    margin-top: 32px;
   }
 
   .legal-document__header h1 {

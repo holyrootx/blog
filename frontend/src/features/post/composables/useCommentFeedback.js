@@ -103,10 +103,12 @@ export function useCommentFeedback({ postId, isSignedIn, goToLogin }) {
       reactionError.value = error?.message ?? '댓글 반응을 저장하지 못했습니다.';
       notifyError(reactionError.value);
     } finally {
-      if (requestedRevision !== revision) return;
-      const pendingIds = new Set(reactionPendingIds.value);
-      pendingIds.delete(comment.id);
-      reactionPendingIds.value = pendingIds;
+      // finally 에서 return 하면 앞에서 던진 예외를 삼킨다. 늦은 응답이면 정리만 건너뛴다
+      if (requestedRevision === revision) {
+        const pendingIds = new Set(reactionPendingIds.value);
+        pendingIds.delete(comment.id);
+        reactionPendingIds.value = pendingIds;
+      }
     }
   }
 

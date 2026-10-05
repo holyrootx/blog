@@ -1,22 +1,21 @@
 <script setup>
 import { computed, onMounted, reactive } from 'vue';
 
-import BlogHeader from '../components/BlogHeader.vue';
 import HomeHero from '../components/HomeHero.vue';
 import PostSection from '../components/PostSection.vue';
 import HomeTopicSection from '../components/HomeTopicSection.vue';
 import {
-  getBlogProfile,
   getHomePageHero,
   getHomePosts,
   getHomeTopics,
   getHomeTopicSection,
 } from '../api/homeApi';
+import { blogProfile, blogProfileLoading } from '../data/blogProfileStore';
+import { useSectionLoader } from '../../../shared/composables/useSectionLoader';
+import { mergeDefined } from '../../../shared/data/mergeDefined';
 
 // API 응답이 오기 전까지의 초기 상태. mergeDefined가 빈 값을 덮어쓰지 않으므로
 // 여기 남은 값은 API가 해당 필드를 내려주지 않았을 때 그대로 노출된다.
-const SITE_TITLE = 'JSJ.log';
-
 const EMPTY_HERO = {
   subTitle: '',
   title: '',
@@ -41,102 +40,82 @@ const EMPTY_TOPIC_SECTION = {
 };
 
 const home = reactive({
-  header: { title: SITE_TITLE },
   hero: { ...EMPTY_HERO },
-  profile: { ...EMPTY_PROFILE },
   topicSection: { ...EMPTY_TOPIC_SECTION },
   topics: [],
   featuredPosts: [],
   recentPosts: [],
 });
 
-const loading = reactive({
-  profile: true,
-  hero: true,
-  topicSection: true,
-  topics: true,
-  featuredPosts: true,
-  recentPosts: true,
-});
+// 프로필은 헤더와 같이 쓰는 값이라 화면이 따로 받지 않는다. 받는 일은 PublicLayout 이 한다
+const profile = computed(() => mergeDefined(EMPTY_PROFILE, blogProfile.value));
 
-const headerTitle = computed(() => home.profile.name || home.header.title);
+const { loading, load } = useSectionLoader(['hero', 'topicSection', 'topics', 'featuredPosts', 'recentPosts']);
 
 onMounted(() => {
-  loadHomeData('profile', getBlogProfile, (profile) => {
-    home.profile = mergeDefined(home.profile, profile);
+  load('hero', {
+    cacheKey: 'home:hero',
+    request: getHomePageHero,
+    apply: (hero) => {
+      home.hero = mergeDefined(EMPTY_HERO, hero);
+    },
   });
-  loadHomeData('hero', getHomePageHero, (hero) => {
-    home.hero = mergeDefined(home.hero, hero);
+  load('topicSection', {
+    cacheKey: 'home:topic-section',
+    request: getHomeTopicSection,
+    apply: (section) => {
+      home.topicSection = mergeDefined(EMPTY_TOPIC_SECTION, section);
+    },
   });
-  loadHomeData('topicSection', getHomeTopicSection, (section) => {
-    home.topicSection = mergeDefined(home.topicSection, section);
+  load('topics', {
+    cacheKey: 'home:topics',
+    request: getHomeTopics,
+    apply: (topics) => {
+      home.topics = Array.isArray(topics) ? topics : [];
+    },
   });
-  loadHomeData('topics', getHomeTopics, (topics) => {
-    home.topics = Array.isArray(topics) ? topics : [];
+  load('featuredPosts', {
+    cacheKey: 'home:popular-posts',
+    request: () => getHomePosts('popular'),
+    apply: (posts) => {
+      home.featuredPosts = posts;
+    },
   });
-  loadHomeData('featuredPosts', () => getHomePosts('popular'), (posts) => {
-    home.featuredPosts = posts;
-  });
-  loadHomeData('recentPosts', () => getHomePosts('latest'), (posts) => {
-    home.recentPosts = posts;
+  load('recentPosts', {
+    cacheKey: 'home:latest-posts',
+    request: () => getHomePosts('latest'),
+    apply: (posts) => {
+      home.recentPosts = posts;
+    },
   });
 });
-
-function loadHomeData(key, request, apply) {
-  request()
-    .then(apply)
-    .catch((error) => console.error(error))
-    .finally(() => {
-      loading[key] = false;
-    });
-}
-
-function mergeDefined(base, next) {
-  return Object.entries(next ?? {}).reduce(
-    (result, [key, value]) => {
-      if (value !== null && value !== undefined && value !== '') {
-        result[key] = value;
-      }
-
-      return result;
-    },
-    { ...base },
-  );
-}
 </script>
 
 <template>
-  <div class="public-shell">
-    <BlogHeader :title="headerTitle" />
-    <main class="public-shell__main">
-      <HomeHero
-        :hero="home.hero"
-        :profile="home.profile"
-        :hero-loading="loading.hero"
-        :profile-loading="loading.profile"
-      />
-      <HomeTopicSection
-        :section="home.topicSection"
-        :topics="home.topics"
-        :section-loading="loading.topicSection"
-        :topics-loading="loading.topics"
-      />
-      <PostSection
-        title="인기글"
-        sort="popular"
-        :posts="home.featuredPosts"
-        :loading="loading.featuredPosts"
-      />
-      <PostSection
-        title="최근 글"
-        sort="latest"
-        :posts="home.recentPosts"
-        :loading="loading.recentPosts"
-      />
-    </main>
-    <footer class="public-footer">
-      <RouterLink to="/privacy">개인정보처리방침</RouterLink>
-      <RouterLink to="/terms">서비스 이용약관</RouterLink>
-    </footer>
-  </div>
+  <main class="public-shell__main">
+    <HomeHero
+      :hero="home.hero"
+      :profile="profile"
+      :hero-loading="loading.hero"
+      :profile-loading="blogProfileLoading"
+    />
+    <HomeTopicSection
+      :section="home.topicSection"
+      :topics="home.topics"
+      :section-loading="loading.topicSection"
+      :topics-loading="loading.topics"
+    />
+    <PostSection
+      title="인기글"
+      sort="popular"
+      :posts="home.featuredPosts"
+      :loading="loading.featuredPosts"
+    />
+    <PostSection
+      title="최근 글"
+      sort="latest"
+      :posts="home.recentPosts"
+      :loading="loading.recentPosts"
+    />
+  </main>
 </template>

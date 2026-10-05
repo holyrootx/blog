@@ -5,6 +5,7 @@ import com.querydsl.core.Tuple;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.querydsl.core.types.dsl.NumberExpression;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import me.jsjlog.blog.member.domain.MemberRole;
 import me.jsjlog.blog.post.domain.CommentReactionType;
@@ -15,7 +16,6 @@ import me.jsjlog.blog.post.dto.CommentItemResponse;
 import me.jsjlog.blog.post.dto.CommentListResponse;
 import me.jsjlog.blog.post.dto.CommentReplyResponse;
 import me.jsjlog.blog.post.dto.CommentReplyListResponse;
-import me.jsjlog.blog.post.domain.PostStatus;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -33,6 +33,7 @@ public class CommentRepositoryCustomImpl implements CommentRepositoryCustom {
     private static final int INITIAL_REPLY_SIZE = 10;
 
     private final JPAQueryFactory jpaQueryFactory;
+    private final EntityManager entityManager;
 
     /** 각 부모에서 처음 답글 10개만 읽고, 반응은 반환할 댓글에 대해서만 모은다. */
     @Override
@@ -47,8 +48,7 @@ public class CommentRepositoryCustomImpl implements CommentRepositoryCustom {
 
         BooleanBuilder builder = new BooleanBuilder();
         builder.and(comment.post.id.eq(postId));
-        builder.and(comment.post.deletedAt.isNull());
-        builder.and(comment.post.status.eq(PostStatus.PUBLISHED));
+        builder.and(PublicPostCondition.of(comment.post));
         builder.and(comment.parent.isNull());
 
         if (cursor != null) {
@@ -94,16 +94,15 @@ public class CommentRepositoryCustomImpl implements CommentRepositoryCustom {
                 .map(row -> row.get(comment.id))
                 .toList();
 
-        Map<Long, List<ReplyRow>> repliesByParentId = new HashMap<>();
+        Map<Long, List<ReplyRow>> repliesByParentId = getInitialReplyRows(postId, parentIds, INITIAL_REPLY_SIZE + 1);
         Set<Long> parentsWithMoreReplies = new HashSet<>();
-        for (Long parentId : parentIds) {
-            List<ReplyRow> rows = getReplyRows(postId, parentId, null, INITIAL_REPLY_SIZE + 1);
-            if (rows.size() > INITIAL_REPLY_SIZE) {
-                parentsWithMoreReplies.add(parentId);
-                rows = rows.subList(0, INITIAL_REPLY_SIZE);
+        repliesByParentId.replaceAll((parentId, rows) -> {
+            if (rows.size() <= INITIAL_REPLY_SIZE) {
+                return rows;
             }
-            repliesByParentId.put(parentId, rows);
-        }
+            parentsWithMoreReplies.add(parentId);
+            return rows.subList(0, INITIAL_REPLY_SIZE);
+        });
         List<Long> visibleCommentIds = collectVisibleCommentIds(parentIds, repliesByParentId);
         ReactionData reactionData = getReactionData(visibleCommentIds, memberId);
         Set<Long> reportedByMe = getReportedCommentIds(visibleCommentIds, memberId);
@@ -170,6 +169,48 @@ public class CommentRepositoryCustomImpl implements CommentRepositoryCustom {
         return new CommentReplyListResponse(replies, hasNext ? replies.getLast().id() : null, hasNext);
     }
 
+    /**
+     * 한 페이지의 부모 댓글들에 대해, 부모마다 앞쪽 답글을 {@code limit} 개까지 한 번에 읽는다.
+     *
+     * <p>부모마다 따로 물으면 한 페이지 50개에 답글 쿼리만 50번 나간다. 부모별로 끊어 세려면
+     * 창 함수가 필요한데 QueryDSL(JPQL) 이 그것도, FROM 절 서브쿼리도 표현하지 못해서 여기만 HQL 로 쓴다.
+     * MySQL 8 과 테스트용 H2 모두 {@code row_number() over} 를 지원한다.</p>
+     *
+     * <p>글이 공개 상태인지는 다시 보지 않는다. 부모를 고른 쿼리가 같은 글을 공개 조건으로 이미 걸렀다.</p>
+     */
+    private Map<Long, List<ReplyRow>> getInitialReplyRows(Long postId, List<Long> parentIds, int limit) {
+        Map<Long, List<ReplyRow>> rowsByParentId = new HashMap<>();
+        if (parentIds.isEmpty()) {
+            return rowsByParentId;
+        }
+
+        List<Object[]> rows = entityManager.createQuery("""
+                        select r.id, r.parentId, r.memberId, r.nickname, r.content, r.createdAt, r.role,
+                               r.deleted, r.edited
+                        from (
+                            select c.id as id, c.parent.id as parentId, m.id as memberId, m.nickname as nickname,
+                                   c.content as content, c.createdAt as createdAt, m.role as role,
+                                   c.deleted as deleted, c.edited as edited,
+                                   row_number() over (partition by c.parent.id order by c.id) as replyOrder
+                            from Comment c join c.member m
+                            where c.post.id = :postId and c.parent.id in :parentIds and c.deleted = false
+                        ) r
+                        where r.replyOrder <= :limit
+                        order by r.parentId, r.id
+                        """, Object[].class)
+                .setParameter("postId", postId)
+                .setParameter("parentIds", parentIds)
+                .setParameter("limit", limit)
+                .getResultList();
+
+        for (Object[] row : rows) {
+            rowsByParentId.computeIfAbsent((Long) row[1], parentId -> new ArrayList<>()).add(new ReplyRow(
+                    (Long) row[0], (Long) row[2], (String) row[3], (String) row[4], (LocalDateTime) row[5],
+                    (MemberRole) row[6], Boolean.TRUE.equals(row[7]), Boolean.TRUE.equals(row[8])));
+        }
+        return rowsByParentId;
+    }
+
     private List<ReplyRow> getReplyRows(Long postId, Long parentId, Long cursor, long limit) {
         QComment reply = new QComment("reply");
         List<Tuple> rows = jpaQueryFactory.select(
@@ -177,7 +218,7 @@ public class CommentRepositoryCustomImpl implements CommentRepositoryCustom {
                         reply.createdAt, reply.member.role, reply.deleted, reply.edited)
                 .from(reply)
                 .where(reply.post.id.eq(postId), reply.parent.id.eq(parentId),
-                        reply.post.deletedAt.isNull(), reply.post.status.eq(PostStatus.PUBLISHED),
+                        PublicPostCondition.of(reply.post),
                         reply.deleted.isFalse(), cursor == null ? null : reply.id.gt(cursor))
                 .orderBy(reply.id.asc())
                 .limit(limit)
@@ -312,8 +353,7 @@ public class CommentRepositoryCustomImpl implements CommentRepositoryCustom {
                 .from(comment)
                 .where(
                         comment.post.id.eq(postId),
-                        comment.post.deletedAt.isNull(),
-                        comment.post.status.eq(PostStatus.PUBLISHED),
+                        PublicPostCondition.of(comment.post),
                         comment.deleted.isFalse()
                 )
                 .fetchOne();

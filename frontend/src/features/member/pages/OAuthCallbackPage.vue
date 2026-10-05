@@ -185,7 +185,7 @@ function retryLogin() {
 </script>
 
 <template>
-  <main class="member-auth">
+  <main class="public-shell__main member-auth">
     <p v-if="phase === PHASE.LOADING" class="member-auth__loading">로그인 정보를 확인하고 있습니다…</p>
 
     <MemberNicknameForm

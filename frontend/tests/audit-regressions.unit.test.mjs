@@ -253,7 +253,7 @@ test('stale post list successes, failures and fallback do not replace latest res
   const route = reactive({ query: { category: '1' }, fullPath: '/posts?category=1' });
   const p = await load('features/post/pages/PostListPage.vue', ['load', 'posts', 'loading', 'failed', 'fallbackPosts'], {
     useRoute: () => route, useRouter: () => ({}), watch() {}, getPosts: () => (++call === 1 ? first.promise : second.promise),
-    getHomePosts: () => fallback.promise, loadCategories: async () => [], getBlogProfile: async () => null,
+    getHomePosts: () => fallback.promise, loadCategories: async () => [], useSectionLoader: await sectionLoader(),
   });
   const a = p.load(); route.query.category = '2'; const b = p.load();
   first.reject(new Error('stale')); await a; assert.equal(p.loading.value, true); assert.equal(p.failed.value, false);
@@ -266,18 +266,33 @@ test('late empty-search fallback cannot overwrite a newer category result', asyn
   const route = reactive({ query: { q: 'search' }, fullPath: '/posts?q=search' });
   const p = await load('features/post/pages/PostListPage.vue', ['load', 'posts', 'fallbackPosts'], {
     useRoute: () => route, useRouter: () => ({}), watch() {}, getPosts: async () => ({ items: ++call === 1 ? [] : [{ id: 2 }], totalElements: 1, totalPages: 1 }),
-    getHomePosts: () => fallback.promise, loadCategories: async () => [], getBlogProfile: async () => null,
+    getHomePosts: () => fallback.promise, loadCategories: async () => [], useSectionLoader: await sectionLoader(),
   });
   const a = p.load(); await Promise.resolve(); route.query = { category: '2' }; await p.load();
   fallback.resolve([{ id: 99 }]); await a; assert.equal(p.posts.value[0].id, 2); assert.equal(p.fallbackPosts.value.length, 0);
 });
 
+/** 화면이 쓰는 실제 영역 로더. 늦은 응답을 버리는 일은 이 로더가 하므로 가짜로 바꾸지 않는다 */
+async function sectionLoader() {
+  const cache = await load('shared/data/responseCache.js', ['readCachedResponse', 'writeCachedResponse']);
+  const { useSectionLoader } = await load('shared/composables/useSectionLoader.js', ['useSectionLoader'], cache);
+  return useSectionLoader;
+}
+
 async function editor(api = {}) {
   const backups = new Map(), route = reactive({ params: {} });
+  const draftStore = {
+    savePostDraft: (key, form) => backups.set(key, { ...form }), clearPostDraft: key => backups.delete(key),
+    loadPostDraft: key => (backups.has(key) ? { form: backups.get(key) } : null),
+  };
+  // 편집 화면에서 떼어 낸 조각도 실제 코드를 그대로 쓴다. 저장소 경계만 같은 가짜로 잇는다
+  const rules = await load('features/admin/composables/usePostEditRules.js', ['usePostEditRules', 'TITLE_MAX', 'EXCERPT_MAX']);
+  const backup = await load('features/admin/composables/usePostDraftBackup.js', ['usePostDraftBackup'], { watch() {}, ...draftStore });
+  const dates = await load('features/admin/data/postEditorDates.js', ['formatEditorDateTime', 'toLocalInputValue']);
   const p = await load('features/admin/pages/AdminPostEditPage.vue', ['form', 'save', 'runConfirmedAction', 'confirmAction', 'lastSavedForm', 'saveDraftNow', 'onBeforeUnload', 'status', 'canSave', 'cancelSchedule'], {
     watch() {}, useRoute: () => route, useRouter: () => ({ replace: async () => {} }),
     firstImageUrlOf: () => '', getFallbackPostImageUrl: () => '',
-    savePostDraft: (key, form) => backups.set(key, { ...form }), clearPostDraft: key => backups.delete(key),
+    ...draftStore, ...rules, ...backup, ...dates,
     getAdminPost: async () => ({ status: 'DRAFT', updatedAt: 'now', publishedAt: null }),
     ...api,
   });
@@ -406,7 +421,7 @@ test('older successful post list response cannot replace the latest category', a
   const route = reactive({ query: { category: '1' }, fullPath: '/posts?category=1' });
   const p = await load('features/post/pages/PostListPage.vue', ['load', 'posts', 'loading'], {
     useRoute: () => route, useRouter: () => ({}), watch() {}, getPosts: () => (++call === 1 ? first.promise : second.promise),
-    getHomePosts: async () => [], loadCategories: async () => [], getBlogProfile: async () => null,
+    getHomePosts: async () => [], loadCategories: async () => [], useSectionLoader: await sectionLoader(),
   });
   const a = p.load(); route.query.category = '2'; const b = p.load();
   second.resolve({ items: [{ categoryId: 2 }], totalElements: 1, totalPages: 1 }); await b;

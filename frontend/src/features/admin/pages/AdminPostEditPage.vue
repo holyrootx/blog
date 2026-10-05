@@ -10,26 +10,21 @@ import {
   publishAdminPost,
   unpublishAdminPost,
   updateAdminPost,
-  uploadAdminImage,
 } from '../api/adminApi';
-import {
-  cleanUpPostDrafts,
-  clearPostDraft,
-  loadPostDraft,
-  savePostDraft,
-} from '../data/adminPostDraftStore';
+import { cleanUpPostDrafts, clearPostDraft, savePostDraft } from '../data/adminPostDraftStore';
 import { notifyError, notifySuccess } from '../../../shared/toast/toastStore';
 import { firstImageUrlOf } from '../data/postEditorBlocks';
+import { formatEditorDateTime, toLocalInputValue } from '../data/postEditorDates';
+import { EXCERPT_MAX, TITLE_MAX, usePostEditRules } from '../composables/usePostEditRules';
+import { usePostDraftBackup } from '../composables/usePostDraftBackup';
 import AdminPageHeader from '../components/AdminPageHeader.vue';
 import AdminTextInput from '../components/AdminTextInput.vue';
 import AdminSelect from '../components/AdminSelect.vue';
-import BaseModal from '../../../shared/components/BaseModal.vue';
 import AdminBlockEditor from '../components/AdminBlockEditor.vue';
+import AdminPostThumbnailField from '../components/AdminPostThumbnailField.vue';
+import AdminPostDraftDialog from '../components/AdminPostDraftDialog.vue';
+import AdminPostActionDialog from '../components/AdminPostActionDialog.vue';
 import { getFallbackPostImageUrl } from '../../../shared/post/postCardMapper';
-
-const TITLE_MAX = 255;
-const EXCERPT_MAX = 500;
-const THUMBNAIL_MAX = 500;
 
 const STATUS_LABELS = {
   PUBLISHED: '발행',
@@ -68,11 +63,6 @@ const saving = ref(false);
 const formError = ref('');
 const savedMessage = ref('');
 
-const thumbnailInput = ref(null);
-const thumbnailEditorOpen = ref(false);
-const uploadingThumbnail = ref(false);
-const thumbnailUploadError = ref('');
-
 const confirmAction = ref('');
 
 const firstBodyImageUrl = computed(() => firstImageUrlOf(form.content));
@@ -88,10 +78,6 @@ const isScheduled = computed(() => status.value === 'SCHEDULED');
 
 // datetime-local 이 과거를 못 고르게 막는 하한. 초 단위는 버린다
 const earliestPublishAt = computed(() => toLocalInputValue(new Date()));
-const draftFound = ref(null);
-
-// 스냅샷을 만든 뒤 서버에서 글이 따로 바뀌었는지
-const draftConflict = ref(false);
 
 const isPublished = computed(() => !isNew.value && status.value === 'PUBLISHED');
 
@@ -104,66 +90,32 @@ const categoryOptions = computed(() => categories.value.map((category) => ({
   label: category.name,
 })));
 
-// 임시저장의 최소 조건은 타협이 아니라 DB 제약이다.
-// title 과 category_id 가 NOT NULL 이라 이 둘 없이는 INSERT 자체가 안 된다
-const canSaveDraft = computed(() => form.title.trim().length > 0 && form.categoryId !== '');
-
-const draftBlockReason = computed(() => {
-  if (canSaveDraft.value) {
-    return '';
-  }
-
-  return `제목과 카테고리를 채우면 ${saveLabel.value}할 수 있습니다.`;
-});
-
-// 발행은 되돌리기 비용이 비싸서 검증도 엄격하다
-const canPublish = computed(() => canSaveDraft.value
-  && form.content.trim().length > 0
-  && form.excerpt.trim().length > 0);
-
-const publishBlockReason = computed(() => {
-  if (canPublish.value) {
-    return '';
-  }
-
-  if (!canSaveDraft.value) {
-    return draftBlockReason.value;
-  }
-
-  if (form.content.trim().length === 0) {
-    return '본문을 채우면 발행할 수 있습니다.';
-  }
-
-  return '요약을 채우면 발행할 수 있습니다.';
-});
-
-// 발행된 글은 발행 조건을 계속 만족해야 한다.
-// 공개된 글에서 요약을 지우면 공개 화면 카드가 빈다
-const canSave = computed(() => (isPublished.value || isScheduled.value ? canPublish.value : canSaveDraft.value));
-
-const saveBlockReason = computed(() => (isPublished.value || isScheduled.value ? publishBlockReason.value : draftBlockReason.value));
-
-/**
- * 지금 막혀 있는 이유 한 줄.
- *
- * 비활성 이유를 tooltip 으로만 두면 회색 버튼만 보고 왜 못 누르는지 알 수 없다.
- */
-const editorHint = computed(() => {
-  if (saveBlockReason.value) {
-    return saveBlockReason.value;
-  }
-
-  return publishBlockReason.value;
-});
-
-const lengthError = computed(() => {
-  if (form.title.trim().length > TITLE_MAX) return `제목은 ${TITLE_MAX}자까지 입력할 수 있습니다.`;
-  if (form.excerpt.length > EXCERPT_MAX) return `요약은 ${EXCERPT_MAX}자까지 입력할 수 있습니다.`;
-  if (form.thumbnailImageUrl.length > THUMBNAIL_MAX) return '썸네일 주소는 500자까지 입력할 수 있습니다.';
-  return '';
+const {
+  canPublish,
+  publishBlockReason,
+  canSave,
+  saveBlockReason,
+  editorHint,
+  lengthError,
+} = usePostEditRules({
+  form,
+  keepsPublicRules: computed(() => isPublished.value || isScheduled.value),
+  saveLabel,
 });
 
 const draftKey = computed(() => (isNew.value ? 'new' : String(postId.value)));
+
+const {
+  draftFound,
+  draftConflict,
+  saveDraftNow,
+  restoreDraft,
+  discardDraft,
+  closeDraftPrompt,
+  acknowledgeSavedForm,
+  resetDraftPrompt,
+  offerSavedDraft,
+} = usePostDraftBackup({ form, draftKey, serverUpdatedAt, lastSavedForm });
 
 /* ── 불러오기 ─────────────────────────────── */
 
@@ -200,95 +152,7 @@ async function loadPost() {
   }
 }
 
-/* ── 로컬 임시 보관 ───────────────────────── */
-// 서버 자동저장이 아니다. 브라우저에만 남긴다.
-// 대상별로 키를 나누는 이유: 한 키에 덮어쓰면 글 A를 두고 B를 열었다 돌아왔을 때
-// A의 스냅샷이 B로 덮여 사라진다
-
-let draftTimer = null;
-
-function scheduleDraftSave() {
-  clearTimeout(draftTimer);
-  // 매 글자마다 쓰면 긴 본문에서 직렬화 비용이 눈에 띄고,
-  // 10초로 두면 방금 쓴 문단이 보호 범위 밖에 남는다
-  draftTimer = setTimeout(saveDraftNow, 2000);
-}
-
-// 한 글자라도 들어있는지. 빈 폼까지 남기면 /posts/new 를 열기만 해도 쓰레기가 쌓인다
-const hasAnyInput = computed(() => Object.values(form).some((value) => String(value).trim() !== ''));
-
-function saveDraftNow() {
-  clearTimeout(draftTimer);
-
-  // 임시저장 버튼이 비활성인 동안에도 로컬 보관은 계속 돌아간다.
-  // 제목을 안 붙였다는 이유로 본문 30분치를 버리면 보관의 존재 이유가 없다
-  if (!hasAnyInput.value) {
-    return;
-  }
-
-  // 서버에 저장한 내용 그대로면 새로 남길 이유가 없다.
-  // 여기서 지우지는 않는다 — 글을 열면 loadPost 가 폼을 바꾸고, 그 watcher 가 건 2초 타이머가
-  // 복구 창이 떠 있는 동안 여기에 도달한다. 지우면 사용자가 고르기도 전에 보관본이 사라진다.
-  // 지우는 일은 명시적인 경로(버리기·저장 성공·글 삭제)만 한다
-  if (lastSavedForm.value && JSON.stringify({ ...form }) === lastSavedForm.value) {
-    return;
-  }
-
-  savePostDraft(draftKey.value, { ...form }, serverUpdatedAt.value);
-}
-
-function restoreDraft() {
-  Object.assign(form, draftFound.value.form);
-  draftFound.value = null;
-  draftConflict.value = false;
-}
-
-function discardDraft() {
-  clearPostDraft(draftKey.value);
-  draftFound.value = null;
-  draftConflict.value = false;
-}
-
 /* ── 대표 이미지 ───────────────────────────── */
-
-function openThumbnailEditor() {
-  thumbnailUploadError.value = '';
-  thumbnailEditorOpen.value = true;
-}
-
-async function uploadThumbnail(event) {
-  const file = event.target.files?.[0];
-
-  if (!file || uploadingThumbnail.value) {
-    return;
-  }
-
-  uploadingThumbnail.value = true;
-  thumbnailUploadError.value = '';
-
-  try {
-    const image = await uploadAdminImage(file);
-
-    if (!image.url) {
-      throw new Error('업로드한 이미지 주소를 받지 못했습니다.');
-    }
-
-    form.thumbnailImageUrl = image.url;
-    thumbnailEditorOpen.value = false;
-  } catch (error) {
-    console.error(error);
-    thumbnailUploadError.value = error.message || '대표 이미지를 업로드하지 못했습니다.';
-  } finally {
-    uploadingThumbnail.value = false;
-    event.target.value = '';
-  }
-}
-
-function resetThumbnail() {
-  form.thumbnailImageUrl = '';
-  thumbnailUploadError.value = '';
-  thumbnailEditorOpen.value = false;
-}
 
 /** 대표 이미지가 비어 있으면 저장 시점의 본문 첫 이미지를 한 번 적용한다. */
 function applyAutomaticThumbnail() {
@@ -374,16 +238,6 @@ async function persistForm() {
   await updateAdminPost(postId.value, buildRequest());
   acknowledgeSavedForm(snapshot);
   return postId.value;
-}
-
-function acknowledgeSavedForm(snapshot) {
-  lastSavedForm.value = snapshot;
-  if (JSON.stringify({ ...form }) === snapshot) {
-    clearTimeout(draftTimer);
-    clearPostDraft(draftKey.value);
-  } else {
-    saveDraftNow();
-  }
 }
 
 /** 본문은 그대로 두고 서버 상태(수정 시각·발행 상태)만 다시 읽는다 */
@@ -491,7 +345,7 @@ function publishedMessage(action) {
   }
 
   return isScheduled.value
-    ? `발행했습니다. ${formatDateTime(publishedAt.value)}에 공개됩니다.`
+    ? `발행했습니다. ${formatEditorDateTime(publishedAt.value)}에 공개됩니다.`
     : '발행했습니다. 지금 공개됩니다.';
 }
 
@@ -587,57 +441,10 @@ async function runDelete() {
   }
 }
 
-const CONFIRM_TEXTS = {
-  publish: {
-    title: '이 글을 발행할까요?',
-    description: '공개 화면과 검색엔진이 이 글을 보게 됩니다.',
-  },
-  unpublish: {
-    title: '이 글을 내릴까요?',
-    description: '공개 화면에서 사라집니다. 발행일은 그대로 남습니다.',
-  },
-  cancelSchedule: {
-    title: '발행 예약을 취소할까요?',
-    description: '임시저장 상태로 돌아가고 예약 시각을 지웁니다. 작성 중인 내용은 유지됩니다.',
-  },
-  delete: {
-    title: '이 글을 삭제할까요?',
-    description: '휴지통으로 이동합니다. 댓글과 이미지는 보관하며 30일 이내에 복구할 수 있습니다.',
-  },
-};
-
-const confirmText = computed(() => CONFIRM_TEXTS[confirmAction.value] ?? { title: '', description: '' });
-
-/** datetime-local 입력이 쓰는 형식(YYYY-MM-DDTHH:mm)으로. UTC 로 바꾸면 시간이 밀린다 */
-function toLocalInputValue(date) {
-  const pad = (number) => String(number).padStart(2, '0');
-
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
-    + `T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
-
-function formatDateTime(value) {
-  if (!value) {
-    return '';
-  }
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return '';
-  }
-
-  const pad = (number) => String(number).padStart(2, '0');
-
-  return `${date.getFullYear()}.${pad(date.getMonth() + 1)}.${pad(date.getDate())} `
-    + `${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
-
 /* ── 생명주기 ─────────────────────────────── */
 
 async function enter() {
-  draftFound.value = null;
-  draftConflict.value = false;
+  resetDraftPrompt();
 
   // 앞 글에서 남은 안내와 다시 시도 버튼을 들고 오면 엉뚱한 글을 발행하게 된다
   formError.value = '';
@@ -650,30 +457,8 @@ async function enter() {
   // 손대기 전까지는 브라우저에 아무것도 쓰지 않는다
   lastSavedForm.value = JSON.stringify({ ...form });
 
-  const draft = loadPostDraft(draftKey.value);
-
-  if (!draft) {
-    return;
-  }
-
-  // 내용이 같으면 물어볼 이유가 없다
-  if (JSON.stringify(draft.form) === JSON.stringify({ ...form })) {
-    clearPostDraft(draftKey.value);
-    return;
-  }
-
-  // 스냅샷이 기준으로 삼은 서버 값과 지금 서버 값이 다르면, 그 사이 다른 곳에서 글이 바뀐 것이다.
-  // 그래도 말없이 버리지 않는다 — 사용자가 쓰던 내용을 묻지도 않고 지우는 것이
-  // 이 기능이 막으려는 사고 그 자체다. 어느 쪽이 최신인지 알려주고 고르게 한다
-  draftConflict.value = Boolean(draft.baseUpdatedAt)
-    && Boolean(serverUpdatedAt.value)
-    && draft.baseUpdatedAt !== serverUpdatedAt.value;
-
-  draftFound.value = draft;
+  offerSavedDraft();
 }
-
-// 폼이 바뀌면 2초 뒤에 스냅샷을 남긴다
-watch(form, scheduleDraftSave, { deep: true });
 
 // 새로고침·창 닫기 직전에는 동기적으로 남긴다
 function onBeforeUnload() {
@@ -700,7 +485,6 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('beforeunload', onBeforeUnload);
-  clearTimeout(draftTimer);
 });
 
 // 사이드바로 다른 화면에 가기 직전에도 남긴다
@@ -762,7 +546,7 @@ watch(postId, (id) => {
             {{ STATUS_LABELS[status] }}
           </span>
           <span v-if="publishedAt" class="admin-editor__published">
-            {{ formatDateTime(publishedAt) }} {{ isScheduled ? '공개 예정' : '발행' }}
+            {{ formatEditorDateTime(publishedAt) }} {{ isScheduled ? '공개 예정' : '발행' }}
           </span>
           <span v-if="savedMessage" class="admin-editor__saved">{{ savedMessage }}</span>
         </div>
@@ -851,20 +635,12 @@ watch(postId, (id) => {
           </span>
         </div>
 
-        <div class="admin-editor__thumbnail">
-          <span class="admin-field__label">대표 이미지</span>
-          <div class="admin-editor__thumbnail-media">
-            <img :src="representativeImageUrl" :alt="`${form.title || '게시글'} 대표 이미지`" />
-            <button
-              class="admin-button admin-button--ghost admin-button--small"
-              type="button"
-              :disabled="saving || uploadingThumbnail"
-              @click="openThumbnailEditor"
-            >
-              수정하기
-            </button>
-          </div>
-        </div>
+        <AdminPostThumbnailField
+          v-model="form.thumbnailImageUrl"
+          :preview-url="representativeImageUrl"
+          :post-title="form.title"
+          :disabled="saving"
+        />
 
         <div class="admin-field">
           <span class="admin-field__label">
@@ -892,113 +668,25 @@ watch(postId, (id) => {
       </p>
     </template>
 
-    <BaseModal
-      variant="admin"
-      :open="thumbnailEditorOpen"
-      title="대표 이미지 수정"
-      size="small"
-      @close="thumbnailEditorOpen = false"
-    >
-      <div class="admin-editor__thumbnail-dialog">
-        <img :src="representativeImageUrl" :alt="`${form.title || '게시글'} 대표 이미지 미리보기`" />
-        <p v-if="thumbnailUploadError" class="admin-form-error">{{ thumbnailUploadError }}</p>
-      </div>
-
-      <template #footer>
-        <button
-          class="admin-button admin-button--ghost"
-          type="button"
-          :disabled="uploadingThumbnail"
-          @click="resetThumbnail"
-        >
-          초기화
-        </button>
-        <button
-          class="admin-button admin-button--solid"
-          type="button"
-          :disabled="uploadingThumbnail"
-          @click="thumbnailInput?.click()"
-        >
-          {{ uploadingThumbnail ? '업로드 중' : '이미지 교체' }}
-        </button>
-      </template>
-    </BaseModal>
-
-    <input
-      ref="thumbnailInput"
-      class="admin-editor__thumbnail-input"
-      type="file"
-      accept="image/jpeg,image/png,image/webp"
-      @change="uploadThumbnail"
-    />
 
     <!-- 로컬 스냅샷 복구 -->
-    <BaseModal variant="admin"
-      :open="draftFound !== null"
-      title="작성 중이던 내용이 있습니다"
-      description="브라우저에 남아 있던 내용입니다. 불러올까요?"
-      size="small"
-      :close-on-backdrop="false"
-      @close="draftFound = null"
-    >
-      <p class="admin-post__confirm">
-        {{ formatDateTime(draftFound?.savedAt) }}에 보관됨
-      </p>
-
-      <p v-if="draftConflict" class="admin-category__confirm-note">
-        보관한 뒤 서버에서 이 글이 따로 바뀌었습니다.
-        불러오면 화면의 내용이 보관본으로 덮이고, 저장할 때 서버 내용을 덮어씁니다.
-      </p>
-
-      <template #footer>
-        <button class="admin-button admin-button--ghost" type="button" @click="discardDraft">
-          버리기
-        </button>
-        <button class="admin-button admin-button--solid" type="button" @click="restoreDraft">
-          불러오기
-        </button>
-      </template>
-    </BaseModal>
+    <AdminPostDraftDialog
+      :draft="draftFound"
+      :conflict="draftConflict"
+      @restore="restoreDraft"
+      @discard="discardDraft"
+      @close="closeDraftPrompt"
+    />
 
     <!-- 발행·내리기·삭제 확인 -->
-    <BaseModal variant="admin"
-      :open="confirmAction !== ''"
-      :title="confirmText.title"
-      :description="confirmText.description"
-      size="small"
-      @close="confirmAction = ''"
-    >
-      <p class="admin-post__confirm">{{ form.title }}</p>
-
-      <!-- 발행 시각은 여기서만 정한다. 글의 내용이 아니라 발행이라는 행동에 딸린 값이다.
-           과거는 고를 수 없다 — 지나간 시각에 발행할 일이 없다 -->
-      <label v-if="confirmAction === 'publish'" class="admin-field admin-post__schedule">
-        <span class="admin-field__label">발행 시각</span>
-        <input
-          v-model="scheduledAt"
-          class="admin-field__input"
-          type="datetime-local"
-          :min="earliestPublishAt"
-        />
-        <small class="admin-post__schedule-hint">
-          {{ scheduledAt ? '그때까지 공개 화면에 나오지 않습니다.' : '비워 두면 지금 발행합니다.' }}
-        </small>
-      </label>
-
-      <template #footer><button
-          class="admin-button"
-          :class="confirmAction === 'delete' ? 'admin-button--danger' : 'admin-button--solid'"
-          type="button"
-          :disabled="saving"
-          @click="runConfirmedAction"
-        >
-          {{ saving ? '처리 중…' : confirmAction === 'delete' ? '삭제' : '확인' }}
-        </button>
-      
-        <button class="admin-button admin-button--ghost" type="button" @click="confirmAction = ''">
-          취소
-        </button>
-        </template>
-    </BaseModal>
+    <AdminPostActionDialog
+      v-model:scheduled-at="scheduledAt"
+      :action="confirmAction"
+      :post-title="form.title"
+      :saving="saving"
+      :earliest-publish-at="earliestPublishAt"
+      @confirm="runConfirmedAction"
+      @cancel="confirmAction = ''"
+    />
   </div>
 </template>
