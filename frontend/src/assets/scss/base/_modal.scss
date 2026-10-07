@@ -9,14 +9,12 @@
   --modal-surface: var(--admin-card);
   --modal-line: var(--admin-card-line);
   --modal-title: var(--admin-title);
-  --modal-muted: var(--admin-muted);
 }
 
 .modal--public {
   --modal-surface: var(--surface);
   --modal-line: var(--line);
   --modal-title: var(--text);
-  --modal-muted: var(--text-muted);
 }
 
 .modal {

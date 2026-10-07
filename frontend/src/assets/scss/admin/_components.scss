@@ -307,7 +307,7 @@
 }
 
 .admin-icon-button:hover:not(:disabled) {
-  border-color: var(--admin-accent-border);
+  border-color: var(--admin-accent);
   color: var(--admin-accent-dark);
 }
 
@@ -2248,7 +2248,7 @@
    신고 주장과 지금까지의 판단을 한 화면에 같이 놓는다 */
 
 .admin-badge--report {
-  border: 1px solid var(--admin-line, var(--moderation-line));
+  border: 1px solid var(--moderation-line);
   background: transparent;
   font-family: inherit;
   cursor: pointer;
@@ -2265,7 +2265,7 @@
 .admin-moderation__quote {
   margin: 0 0 16px;
   padding: 12px 14px;
-  border-left: 3px solid var(--admin-line, var(--moderation-line));
+  border-left: 3px solid var(--moderation-line);
   background: var(--moderation-quote-bg);
   font-size: 14px;
   line-height: 1.7;
@@ -2289,7 +2289,7 @@
   gap: 8px;
   align-items: baseline;
   padding: 9px 0;
-  border-bottom: 1px solid var(--admin-line, var(--moderation-list-line));
+  border-bottom: 1px solid var(--moderation-list-line);
   font-size: 13px;
 }
 
