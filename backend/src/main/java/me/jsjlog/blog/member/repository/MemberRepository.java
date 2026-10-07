@@ -53,6 +53,31 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     int updateActiveNickname(@Param("id") Long id, @Param("nickname") String nickname,
                              @Param("updatedAt") LocalDateTime updatedAt, @Param("updatedBy") String updatedBy);
 
+    /** 복구와 새 가입이 겹쳐도 먼저 완료된 선택을 오래된 조회 결과로 덮어쓰지 않는다. */
+    @Modifying(clearAutomatically = true)
+    @Query("""
+            update Member m set m.status = me.jsjlog.blog.member.domain.MemberStatus.ACTIVE,
+                m.email = :email, m.profileImageUrl = :profileImageUrl,
+                m.updatedAt = :updatedAt, m.updatedBy = :updatedBy
+            where m.id = :id and m.provider = :provider and m.providerUserId = :providerUserId
+                and m.status = me.jsjlog.blog.member.domain.MemberStatus.WITHDRAWN
+            """)
+    int reactivateWithdrawn(@Param("id") Long id, @Param("provider") AuthProvider provider,
+                            @Param("providerUserId") String providerUserId, @Param("email") String email,
+                            @Param("profileImageUrl") String profileImageUrl,
+                            @Param("updatedAt") LocalDateTime updatedAt, @Param("updatedBy") String updatedBy);
+
+    /** 제공자 연결 해제와 새 회원 INSERT는 같은 트랜잭션에서 함께 성공하거나 함께 롤백한다. */
+    @Modifying(clearAutomatically = true)
+    @Query("""
+            update Member m set m.providerUserId = null, m.updatedAt = :updatedAt, m.updatedBy = :updatedBy
+            where m.id = :id and m.provider = :provider and m.providerUserId = :providerUserId
+                and m.status = me.jsjlog.blog.member.domain.MemberStatus.WITHDRAWN
+            """)
+    int detachWithdrawnProvider(@Param("id") Long id, @Param("provider") AuthProvider provider,
+                                @Param("providerUserId") String providerUserId,
+                                @Param("updatedAt") LocalDateTime updatedAt, @Param("updatedBy") String updatedBy);
+
     /**
      * 그 권한을 가진 회원 전부.
      *
