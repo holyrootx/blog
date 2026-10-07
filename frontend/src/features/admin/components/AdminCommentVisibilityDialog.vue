@@ -114,6 +114,6 @@ async function submit() {
 
 <style scoped>
 .admin-comment-visibility__error {
-  color: #9b3d2d;
+  color: var(--admin-error-text);
 }
 </style>
