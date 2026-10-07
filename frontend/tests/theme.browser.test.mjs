@@ -19,11 +19,16 @@ after(async () => { await browser?.close(); await server?.close(); });
 afterEach(async () => { await page?.close(); assert.deepEqual(errors, []); });
 
 /** 약관 화면을 연다. 헤더가 있고 API 에 기대는 것이 적은 화면이다 */
-async function openPage(colorScheme) {
+async function openPage(colorScheme, blockedMethods = []) {
   errors = [];
   page = await browser.newPage({ viewport: { width: 1280, height: 900 }, colorScheme });
   page.setDefaultTimeout(5000);
   page.on('pageerror', error => errors.push(error.message));
+  await page.addInitScript(methods => {
+    for (const method of methods) {
+      Storage.prototype[method] = () => { throw new DOMException('Storage blocked', 'SecurityError'); };
+    }
+  }, blockedMethods);
   await page.route('**/api/v1/**', route => route.fulfill({ json: { success: true, data: null } }));
   await page.goto(`${server.resolvedUrls.local[0]}terms`);
   await page.locator('.theme-toggle').waitFor();
@@ -61,4 +66,63 @@ test('the remembered pick is applied before the app code arrives', async () => {
   await page.route('**/src/app/main.js', route => route.abort());
   await page.reload();
   assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), 'dark');
+});
+
+const visibleState = () => page.evaluate(() => ({
+  attribute: document.documentElement.dataset.theme ?? null,
+  background: getComputedStyle(document.documentElement).backgroundColor,
+  disabled: document.querySelector('.theme-toggle').disabled,
+  label: document.querySelector('.theme-toggle').getAttribute('aria-label'),
+}));
+
+async function expectDeviceTheme(colorScheme) {
+  const dark = colorScheme === 'dark';
+  await page.emulateMedia({ colorScheme });
+  const label = `기기 설정에 따라 ${dark ? '어두운' : '밝은'} 화면 사용 중`;
+  await page.waitForFunction(expected => document.querySelector('.theme-toggle').getAttribute('aria-label') === expected, label);
+  assert.deepEqual(await visibleState(), {
+    attribute: null,
+    background: dark ? 'rgb(18, 16, 14)' : 'rgb(244, 239, 232)',
+    disabled: true,
+    label,
+  });
+}
+
+test('blocked storage follows the device and does not offer a manual choice', async () => {
+  await openPage('light', ['getItem', 'setItem', 'removeItem']);
+  await expectDeviceTheme('light');
+  await expectDeviceTheme('dark');
+  await expectDeviceTheme('light');
+});
+
+test('a failed write keeps the screen and toggle on the device theme', async () => {
+  await openPage('light', ['setItem']);
+  await page.locator('.theme-toggle').click();
+  await expectDeviceTheme('light');
+  await expectDeviceTheme('dark');
+  await expectDeviceTheme('light');
+});
+
+test('a remembered theme is cleared from the screen when storage reads start failing', async () => {
+  await openPage('light');
+  await page.locator('.theme-toggle').click();
+  assert.equal((await state()).attribute, 'dark');
+  await page.evaluate(() => {
+    Storage.prototype.getItem = () => { throw new DOMException('Storage blocked', 'SecurityError'); };
+  });
+  await expectDeviceTheme('dark');
+  await expectDeviceTheme('light');
+});
+
+test('a failed removal cannot reapply the stale remembered choice on a device change', async () => {
+  await openPage('dark');
+  await page.locator('.theme-toggle').click();
+  assert.equal((await state()).stored, 'light');
+  await page.evaluate(() => {
+    Storage.prototype.removeItem = () => { throw new DOMException('Storage blocked', 'SecurityError'); };
+  });
+  await page.locator('.theme-toggle').click();
+  await expectDeviceTheme('dark');
+  await expectDeviceTheme('light');
+  await expectDeviceTheme('dark');
 });
