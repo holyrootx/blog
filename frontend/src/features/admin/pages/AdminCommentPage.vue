@@ -318,7 +318,7 @@ function formatCount(value) {
 }
 
 .admin-comment-feed__message--error {
-  color: #9b3d2d;
+  color: var(--admin-error-text);
 }
 
 .admin-comment-feed__message button {

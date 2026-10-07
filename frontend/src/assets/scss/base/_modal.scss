@@ -27,7 +27,7 @@
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: rgba(30, 27, 24, 0.45);
+  background: var(--modal-backdrop);
 }
 
 .modal__panel {

@@ -5,6 +5,7 @@ import MemberMenu from '../../member/components/MemberMenu.vue';
 import NotificationBell from '../../member/components/NotificationBell.vue';
 import SearchBox from '../../search/components/SearchBox.vue';
 import SiteMenu from '../../navigation/components/SiteMenu.vue';
+import ThemeToggle from '../../../shared/components/ThemeToggle.vue';
 
 defineProps({
   title: {
@@ -55,6 +56,8 @@ defineProps({
           </button>
         </template>
       </SearchBox>
+
+      <ThemeToggle />
 
       <SiteMenu>
         <template #trigger="{ open }">
