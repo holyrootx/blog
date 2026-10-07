@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 
-import { currentTheme, toggleTheme } from '../theme/themeStore';
+import { canChooseTheme, currentTheme, toggleTheme } from '../theme/themeStore';
 
 /**
  * 밝은 화면 ↔ 어두운 화면. 공개 헤더와 관리자 윗줄이 같이 쓴다.
@@ -10,7 +10,10 @@ import { currentTheme, toggleTheme } from '../theme/themeStore';
  * 화면 읽기 프로그램은 그림을 못 보니 누르면 무엇이 되는지를 말로 알려야 한다.
  */
 const isDark = computed(() => currentTheme.value === 'dark');
-const label = computed(() => (isDark.value ? '밝은 화면으로 보기' : '어두운 화면으로 보기'));
+const label = computed(() => {
+  if (!canChooseTheme.value) return `기기 설정에 따라 ${isDark.value ? '어두운' : '밝은'} 화면 사용 중`;
+  return isDark.value ? '밝은 화면으로 보기' : '어두운 화면으로 보기';
+});
 </script>
 
 <template>
@@ -19,6 +22,7 @@ const label = computed(() => (isDark.value ? '밝은 화면으로 보기' : '어
     type="button"
     :aria-label="label"
     :title="label"
+    :disabled="!canChooseTheme"
     @click="toggleTheme"
   >
     <svg v-if="isDark" viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" focusable="false">
@@ -58,10 +62,15 @@ const label = computed(() => (isDark.value ? '밝은 화면으로 보기' : '어
   cursor: pointer;
 }
 
-.theme-toggle:hover,
+.theme-toggle:hover:not(:disabled),
 .theme-toggle:focus-visible {
   border-color: var(--line);
   background: var(--surface);
   outline: none;
+}
+
+.theme-toggle:disabled {
+  cursor: default;
+  opacity: 0.6;
 }
 </style>

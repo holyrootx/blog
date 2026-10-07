@@ -245,6 +245,13 @@ public class PostService {
     }
 
     @Transactional(readOnly = true)
+    public CommentContextResponse getCommentContext(Long postId, Long commentId, Long memberId) {
+        // 미공개 글, 다른 글의 댓글, 삭제된 대상 모두 같은 응답으로 처리한다.
+        return commentRepository.getCommentContext(postId, commentId, memberId)
+                .orElseThrow(() -> new BlogException(ErrorCode.COMMENT_NOT_FOUND));
+    }
+
+    @Transactional(readOnly = true)
     public CommentReplyListResponse getCommentReplies(Long postId, Long parentId, Long cursor, Long size, Long memberId) {
         findReadablePost(postId);
         var parent = commentRepository.findById(parentId)

@@ -133,6 +133,11 @@ export async function getCommentReplies(postId, commentId, { cursor, size = 20 }
   };
 }
 
+export async function getCommentContext(postId, commentId, { signal } = {}) {
+  const context = await getApiData(`/api/v1/blog/posts/${postId}/comments/${commentId}/context`, { signal });
+  return { targetCommentId: context.targetCommentId, item: toCommentPage({ items: [context.item] }).items[0] };
+}
+
 export function createPostComment(postId, { content, parentId = null }) {
   return sendApiData(`/api/v1/blog/posts/${postId}/comments`, {
     method: 'POST',

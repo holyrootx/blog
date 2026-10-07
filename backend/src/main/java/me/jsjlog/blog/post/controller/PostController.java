@@ -119,6 +119,16 @@ public class PostController {
         return ApiResponse.ok(comments);
     }
 
+    @GetMapping("/blog/posts/{postId}/comments/{commentId}/context")
+    public ApiResponse<CommentContextResponse> getCommentContext(
+            @PathVariable Long postId,
+            @PathVariable Long commentId,
+            @AuthenticationPrincipal MemberPrincipal principal
+    ) {
+        return ApiResponse.ok(postService.getCommentContext(
+                postId, commentId, principal == null ? null : principal.getId()));
+    }
+
     @GetMapping("/blog/posts/{postId}/comments/{commentId}/replies")
     public ApiResponse<CommentReplyListResponse> getCommentReplies(
             @PathVariable Long postId, @PathVariable Long commentId,

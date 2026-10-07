@@ -6,6 +6,7 @@ import CommentActions from './CommentActions.vue';
 import CommentEditForm from './CommentEditForm.vue';
 import CommentReportDialog from './CommentReportDialog.vue';
 import { useCommentFeed } from '../composables/useCommentFeed';
+import { useCommentTarget } from '../composables/useCommentTarget';
 import { useCommentComposer } from '../composables/useCommentComposer';
 import { useCommentManagement } from '../composables/useCommentManagement';
 import { useCommentFeedback } from '../composables/useCommentFeedback';
@@ -37,8 +38,12 @@ const signinBox = ref(null);
 const showBottomAd = false;
 const commentPlaceholder = computed(() => props.comments.placeholder ?? '');
 const commentMaxLength = computed(() => props.comments.maxLength ?? 1000);
-const { total, items, hasNext, loading, sentinel, loadMore, loadReplies, replyLoadingIds } = useCommentFeed({
+const { total, items, hasNext, loading, sentinel, loadMore, loadReplies, replyLoadingIds, mergeTarget, clearTarget } = useCommentFeed({
   postId: toRef(props, 'postId'), comments: toRef(props, 'comments'),
+});
+const { targetLoading, targetMessage, targetRetryable, retryTarget } = useCommentTarget({
+  postId: toRef(props, 'postId'), initialLoading: toRef(props, 'initialLoading'),
+  comments: toRef(props, 'comments'), mergeTarget, clearTarget,
 });
 const {
   submitting,
@@ -134,6 +139,12 @@ watch(() => props.comments, () => { replyTargetId.value = null; });
       <span v-if="initialLoading" class="ui-skeleton comments__count-skeleton" aria-hidden="true"></span>
       <span v-else class="comments__count">{{ total }}</span>
       <span class="comments__note">이 글에 남겨진 이야기</span>
+    </div>
+
+    <p v-if="targetLoading" class="comments__note" role="status">알림의 댓글을 찾고 있습니다.</p>
+    <div v-else-if="targetMessage" role="status">
+      <p class="comment-reaction__error">{{ targetMessage }}</p>
+      <button v-if="targetRetryable" type="button" class="ui-button" @click="retryTarget">다시 시도</button>
     </div>
 
     <div v-if="initialLoading" class="comments__initial-skeleton" aria-hidden="true">
