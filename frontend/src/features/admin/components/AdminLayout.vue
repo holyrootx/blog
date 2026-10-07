@@ -1,6 +1,7 @@
 <script setup>
 import AdminSideBar from './AdminSideBar.vue';
 import NotificationBell from '../../member/components/NotificationBell.vue';
+import ThemeToggle from '../../../shared/components/ThemeToggle.vue';
 
 // 관리자 스타일은 여기서 받는다. main.scss 에 두면 공개 화면 방문자도 같이 받는다
 import '../../../assets/scss/admin.scss';
@@ -20,6 +21,7 @@ import '../../../assets/scss/admin.scss';
           만들기 전과 같다
         -->
         <div class="admin-topbar">
+          <ThemeToggle />
           <NotificationBell />
         </div>
 

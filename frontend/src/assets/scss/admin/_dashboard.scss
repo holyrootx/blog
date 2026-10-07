@@ -122,8 +122,8 @@
 }
 
 .admin-sidebar__item--active {
-  border-color: var(--admin-accent-strong);
-  background: var(--admin-accent-strong);
+  border-color: var(--admin-sidebar-active-bg);
+  background: var(--admin-sidebar-active-bg);
   color: var(--admin-sidebar-active-text);
 }
 
@@ -192,6 +192,7 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
+  gap: 6px;
   margin: -14px 0 10px;
 }
 

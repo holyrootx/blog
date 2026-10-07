@@ -865,7 +865,7 @@
 .admin-pagination__button--active {
   border-color: var(--admin-accent-strong);
   background: var(--admin-accent-strong);
-  color: var(--admin-button-primary-text);
+  color: var(--on-accent);
   font-weight: 700;
 }
 
@@ -2045,7 +2045,7 @@
 }
 
 .block-editor__image-align:focus-visible {
-  outline: 2px solid var(--on-accent);
+  outline: 2px solid var(--on-image);
   outline-offset: -2px;
 }
 
@@ -2104,7 +2104,7 @@
 }
 
 .block-editor__image-captionbutton:focus-visible {
-  outline: 2px solid var(--on-accent);
+  outline: 2px solid var(--on-image);
   outline-offset: -2px;
 }
 
@@ -2140,7 +2140,7 @@
   padding: 2px 8px;
   border-radius: 999px;
   background: rgba(0, 0, 0, 0.6);
-  color: var(--on-accent);
+  color: var(--on-image);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
   line-height: 1.6;

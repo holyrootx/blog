@@ -4,7 +4,7 @@
   min-height: 100vh;
   padding: 0 12px 24px;
   background:
-    radial-gradient(circle at top left, rgba(235, 94, 40, 0.08), transparent 30%),
+    radial-gradient(circle at top left, color-mix(in srgb, var(--accent) 8%, transparent), transparent 30%),
     var(--page-bg);
 }
 
@@ -26,7 +26,7 @@
   border: 1px solid var(--line);
   border-bottom: 0;
   border-radius: var(--radius) var(--radius) 0 0;
-  background: rgba(255, 250, 244, 0.92);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
   backdrop-filter: blur(14px);
 }
 
@@ -87,7 +87,7 @@
   overflow: clip;
   border: 1px solid var(--line);
   border-radius: 0 0 var(--radius) var(--radius);
-  background: rgba(255, 250, 244, 0.94);
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
   box-shadow: var(--shadow);
 }
 
@@ -387,7 +387,7 @@
   padding: 16px 22px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: rgba(255, 250, 244, 0.72);
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
   color: var(--text-muted);
   font-size: 15px;
 }
@@ -653,5 +653,25 @@
   .post-card__title {
     min-height: 0;
     font-size: 15px;
+  }
+}
+
+/* 작은 폰(320~360). 헤더에 단추가 다섯 개까지 서면(검색·밝기·메뉴·알림·회원) 이름이 두 줄로
+   꺾이고 로그인 단추가 세로로 접힌다. 여백과 단추 폭을 조금씩 덜어 한 줄에 세운다 */
+@include bp.upto(xs) {
+  .blog-header {
+    padding: 0 12px;
+  }
+
+  .blog-header__actions {
+    gap: 4px;
+  }
+
+  .blog-header__button {
+    min-width: 40px;
+  }
+
+  .blog-header__button--icon {
+    min-width: 34px;
   }
 }
