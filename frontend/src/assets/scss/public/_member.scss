@@ -863,3 +863,10 @@
   border-color: var(--accent);
   color: var(--accent-dark);
 }
+
+/* 작은 폰에서 헤더 한 줄에 서도록 덜어낸다(public/_home.scss 의 xs 와 같은 사정) */
+@include bp.upto(xs) {
+  .member-menu__signin {
+    padding: 0 10px;
+  }
+}

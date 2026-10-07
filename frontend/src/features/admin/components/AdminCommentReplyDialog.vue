@@ -147,6 +147,6 @@ async function submit() {
 }
 
 .admin-comment-reply-form__error {
-  color: #9b3d2d;
+  color: var(--admin-error-text);
 }
 </style>

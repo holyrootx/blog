@@ -15,6 +15,7 @@
   --code-muted: #ada397;
   --shadow: 0 24px 80px rgba(69, 43, 25, 0.14);
   --radius: 8px;
+  --modal-backdrop: rgba(30, 27, 24, 0.45);
 }
 
 /*
@@ -33,6 +34,8 @@
   --admin-sidebar-menu: #c4bcb0;
   --admin-sidebar-label: #b0a69b;
   --admin-sidebar-group: #ada397;
+  /* 사이드바는 어느 테마에서나 어둡다. 선택 칸도 같이 고정한다 */
+  --admin-sidebar-active-bg: #a84f1b;
   --admin-canvas: #fdfbf7;
   --admin-card: #fff;
   --admin-card-line: #e6e0d6;
@@ -71,6 +74,8 @@
   --admin-danger-line: #f3c9c3;
   /* 체크박스·포커스 등 폼 컨트롤 강조색 */
   --admin-control-accent: #d2762f;
+  /* 댓글 처리 창의 오류 문구. 세 창에 같은 값이 따로 적혀 있었다 */
+  --admin-error-text: #9b3d2d;
 }
 
 /*
@@ -83,6 +88,8 @@
 :root {
   /* 색 배경 위에 얹는 글자 */
   --on-accent: #fff;
+  /* 사진 위 검은 덮개에 얹는 글자. 바탕이 늘 사진이라 테마를 타지 않는다 */
+  --on-image: #fff;
 
   /* 글 화면 바탕 */
   --post-surface: #fffefb;
@@ -154,4 +161,136 @@
   --brand-kakao: #fee500;
   --brand-kakao-text: #191600;
   --brand-naver: #03c75a;
+}
+
+/*
+ * 어두운 화면.
+ *
+ * 처음에는 기기 설정을 따른다. 헤더 단추로 고르면 html 에 data-theme 이 붙고, 그때부터는
+ * 기기 설정보다 그 값이 앞선다(shared/theme/themeStore.js). 같은 값을 두 자리에서 써야 해서
+ * mixin 으로 한 번만 적는다.
+ *
+ * 색을 채운 단추는 밝은 주황에 어두운 글자로 뒤집는다. 짙은 주황에 흰 글자를 그대로 두면
+ * 같은 토큰을 글자색으로 쓰는 링크·강조 문구가 어두운 바탕에서 읽히지 않는다.
+ * 그래서 --on-accent 도 같이 어두워진다. 사진 위 글자는 --on-image 를 쓴다.
+ *
+ * 그대로 두는 값: 코드 블록 색칠(바탕이 원래 어둡다), 관리자 사이드바 글자(사이드바가
+ * 원래 어둡다), 소셜 브랜드 색.
+ */
+@mixin dark-tokens {
+  color-scheme: dark;
+
+  --page-bg: #12100e;
+  --surface: #1b1815;
+  --surface-muted: #24201c;
+  --text: #ede6dc;
+  --text-muted: #b4a699;
+  --line: #352f29;
+  --accent: #f0753d;
+  --accent-strong: #f0895a;
+  --accent-dark: #f7ae86;
+  --accent-soft: #3a261a;
+  --text-subtle: #a3968a;
+  --code-bg: #0e0c0b;
+  --shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+  /* 바탕이 이미 어두워서 같은 농도로는 팝업이 떠 보이지 않는다 */
+  --modal-backdrop: rgba(0, 0, 0, 0.62);
+
+  --admin-sidebar-bg: #0f0d0c;
+  --admin-sidebar-line: #2a2521;
+  --admin-sidebar-avatar: #3a342f;
+  --admin-canvas: #151311;
+  --admin-card: #1e1b18;
+  --admin-card-line: #332e29;
+  --admin-list-line: #2a2622;
+  --admin-accent: #e48a48;
+  --admin-accent-strong: #ec9f68;
+  --admin-accent-dark: #f2b27f;
+  --admin-accent-line: #5c3d24;
+  --admin-chart-1: #e48a48;
+  --admin-chart-2: #b9713c;
+  --admin-chart-3: #8a5532;
+  --admin-chart-4: #5e3d27;
+  --admin-chart-5: #4a3222;
+  --admin-chart-track: #2a2622;
+  --admin-surface-subtle: #1a1815;
+  --admin-surface-hover: #26221e;
+  --admin-surface-selected: #33251a;
+  --admin-title: #f2ece4;
+  --admin-text-strong: #ddd4c9;
+  --admin-text: #b8aea3;
+  --admin-dot: #4a433d;
+  --admin-button-primary: #ede6dc;
+  --admin-button-primary-text: #1b1815;
+  --admin-button-secondary: #24201c;
+  --admin-button-secondary-line: #3d3731;
+  --admin-button-secondary-text: #d9d0c5;
+  --admin-shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
+  --admin-danger: #f2766a;
+  --admin-danger-soft: #3b1c18;
+  --admin-danger-line: #6e2d26;
+  --admin-control-accent: #e48a48;
+  --admin-error-text: #f0907a;
+
+  --on-accent: #1d130d;
+
+  --post-surface: #1d1a17;
+  --post-surface-raised: #221f1b;
+  --post-surface-related: #191714;
+  --post-aside-bg: #26221e;
+  --post-aside-fill: #302b26;
+  --post-line: #2f2a25;
+  --post-line-strong: #3a342e;
+  --post-aside-line: #443d36;
+  --post-heading: #f2ece4;
+  --post-toc-active: #f2a56c;
+  --post-toc-marker: #e48a48;
+
+  --ad-slot-bg: #201d19;
+  --ad-slot-line: #4a4038;
+  --ad-card-slot-bg: #24201c;
+
+  --callout-text: #e2dad0;
+  --callout-tip-bg: #2e2419;
+  --callout-warning-bg: #35201a;
+  --callout-warning-icon: #4d2a20;
+  --callout-warning-text: #f4a58a;
+  --callout-note-bg: #26241f;
+  --callout-note-icon: #37342d;
+  --callout-note-text: #c9c1b4;
+
+  --comment-author-bg: #4a3523;
+  --comment-author-line: #5e432b;
+  --comment-error: #f0907a;
+  --comment-report: #f2766a;
+  --post-error: #f47f72;
+
+  --editor-code-bg: #0e0c0b;
+  --editor-lang-bg: #080706;
+  --editor-lang-line: #2e2823;
+  --editor-selected: #5aa2e6;
+
+  --moderation-line: #3a3a3a;
+  --moderation-list-line: #2c2c2c;
+  --moderation-quote-bg: #232323;
+  --moderation-text: #c4c4c4;
+  --moderation-meta: #9a9a9a;
+  --moderation-pending-text: #f08070;
+
+  --member-danger-line: #5a2f24;
+  --member-danger-bg: #2a1a15;
+}
+
+:root {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  @include dark-tokens;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    @include dark-tokens;
+  }
 }
