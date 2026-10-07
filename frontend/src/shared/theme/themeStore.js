@@ -31,21 +31,30 @@ const media = typeof window !== 'undefined' && window.matchMedia
   ? window.matchMedia('(prefers-color-scheme: dark)')
   : null;
 
-const theme = ref(resolveTheme(readStored(), media?.matches));
+const storageAvailable = ref(true);
+const stored = readStored();
+const theme = ref(resolveTheme(stored, media?.matches));
 
 // theme-init.js 를 못 받았어도 기억한 값은 지킨다
-applyStored(readStored());
+applyStored(stored);
 
-// 기억한 값이 없을 때만 기기 설정을 따라 단추 모양을 바꾼다. 색은 CSS 가 이미 바꿨다
+// 저장소 접근이 도중에 막혔어도 화면과 단추가 같은 기기 설정을 따르게 한다.
 media?.addEventListener('change', () => {
-  theme.value = resolveTheme(readStored(), media.matches);
+  const remembered = storageAvailable.value ? readStored() : null;
+  applyStored(remembered);
+  theme.value = resolveTheme(remembered, media.matches);
 });
 
 export const currentTheme = readonly(theme);
+export const canChooseTheme = readonly(storageAvailable);
 
 export function toggleTheme() {
   const next = nextThemeChoice(theme.value, media?.matches);
-  writeStored(next.stored);
+  if (!storageAvailable.value || !writeStored(next.stored)) {
+    applyStored(null);
+    theme.value = resolveTheme(null, media?.matches);
+    return;
+  }
   applyStored(next.stored);
   theme.value = next.theme;
 }
@@ -56,6 +65,7 @@ function readStored() {
   try {
     return window.localStorage.getItem(THEME_STORAGE_KEY);
   } catch {
+    storageAvailable.value = false;
     return null;
   }
 }
@@ -64,8 +74,11 @@ function writeStored(value) {
   try {
     if (value) window.localStorage.setItem(THEME_STORAGE_KEY, value);
     else window.localStorage.removeItem(THEME_STORAGE_KEY);
+    return true;
   } catch {
-    // 이번 방문 동안은 data-theme 으로 유지된다
+    // 저장에 실패했는데 화면만 바꾸면 다음 기기 설정 변경 때 단추와 색이 어긋난다.
+    storageAvailable.value = false;
+    return false;
   }
 }
 

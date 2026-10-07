@@ -1,6 +1,7 @@
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { getCommentReplies, getPostComments } from '../api/postApi';
 import { notifyError } from '../../../shared/toast/toastStore';
+import { mergeCommentItems } from '../data/commentItems';
 
 export function useCommentFeed({ postId, comments }) {
   const total = ref(0);
@@ -12,6 +13,7 @@ export function useCommentFeed({ postId, comments }) {
   const replyLoadingIds = ref(new Set());
   let observer = null;
   let revision = 0;
+  let targetOverlay = null;
 
   async function loadMore() {
     if (loading.value || !hasNext.value || nextCursor.value === null) return;
@@ -20,7 +22,12 @@ export function useCommentFeed({ postId, comments }) {
     try {
       const nextPage = await getPostComments(postId.value, { cursor: nextCursor.value });
       if (requestedRevision !== revision) return;
-      items.value = [...items.value, ...nextPage.items];
+      if (targetOverlay && nextPage.items.some((item) => item.id === targetOverlay.parentId)) {
+        targetOverlay.addedParent = false;
+        const listed = nextPage.items.find((item) => item.id === targetOverlay.parentId);
+        listed.replies.forEach((reply) => targetOverlay.addedReplyIds.delete(reply.id));
+      }
+      items.value = mergeCommentItems(items.value, nextPage.items);
       total.value = nextPage.total;
       nextCursor.value = nextPage.nextCursor;
       hasNext.value = nextPage.hasNext;
@@ -38,6 +45,9 @@ export function useCommentFeed({ postId, comments }) {
     try {
       const page = await getCommentReplies(postId.value, comment.id, { cursor: comment.replyNextCursor });
       if (requestedRevision !== revision) return;
+      if (targetOverlay?.parentId === comment.id) {
+        page.items.forEach((reply) => targetOverlay.addedReplyIds.delete(reply.id));
+      }
       const ids = new Set(comment.replies.map((reply) => reply.id));
       comment.replies = [...comment.replies, ...page.items.filter((reply) => !ids.has(reply.id))]
         .sort((a, b) => a.id - b.id);
@@ -56,6 +66,7 @@ export function useCommentFeed({ postId, comments }) {
 
   watch([postId, comments], ([, page]) => {
     revision += 1;
+    targetOverlay = null;
     replyLoadingIds.value = new Set();
     total.value = page.total ?? 0;
     items.value = [...(page.items ?? [])];
@@ -81,5 +92,28 @@ export function useCommentFeed({ postId, comments }) {
     observer?.disconnect();
   });
 
-  return { total, items, hasNext, loading, sentinel, loadMore, loadReplies, replyLoadingIds };
+  function mergeTarget(item) {
+    clearTarget();
+    const existing = items.value.find((comment) => comment.id === item.id);
+    const replyIds = new Set(existing?.replies.map((reply) => reply.id) ?? []);
+    targetOverlay = {
+      parentId: item.id,
+      addedParent: !existing,
+      addedReplyIds: new Set(item.replies.filter((reply) => !replyIds.has(reply.id)).map((reply) => reply.id)),
+    };
+    items.value = mergeCommentItems(items.value, [item]);
+  }
+
+  function clearTarget() {
+    if (!targetOverlay) return;
+    if (targetOverlay.addedParent) {
+      items.value = items.value.filter((item) => item.id !== targetOverlay.parentId);
+    } else {
+      const parent = items.value.find((item) => item.id === targetOverlay.parentId);
+      if (parent) parent.replies = parent.replies.filter((reply) => !targetOverlay.addedReplyIds.has(reply.id));
+    }
+    targetOverlay = null;
+  }
+
+  return { total, items, hasNext, loading, sentinel, loadMore, loadReplies, replyLoadingIds, mergeTarget, clearTarget };
 }

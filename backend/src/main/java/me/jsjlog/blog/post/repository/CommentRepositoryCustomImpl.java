@@ -4,6 +4,7 @@ import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.Tuple;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.core.types.dsl.NumberExpression;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +14,7 @@ import me.jsjlog.blog.post.domain.QComment;
 import me.jsjlog.blog.post.domain.QCommentReaction;
 import me.jsjlog.blog.post.domain.QCommentReport;
 import me.jsjlog.blog.post.dto.CommentItemResponse;
+import me.jsjlog.blog.post.dto.CommentContextResponse;
 import me.jsjlog.blog.post.dto.CommentListResponse;
 import me.jsjlog.blog.post.dto.CommentReplyResponse;
 import me.jsjlog.blog.post.dto.CommentReplyListResponse;
@@ -26,6 +28,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.Optional;
+import java.util.Comparator;
 
 @RequiredArgsConstructor
 public class CommentRepositoryCustomImpl implements CommentRepositoryCustom {
@@ -69,17 +73,7 @@ public class CommentRepositoryCustomImpl implements CommentRepositoryCustom {
         );
 
         // 다음 묶음이 있는지 보려고 한 건 더 가져온다.
-        List<Tuple> commentRows = jpaQueryFactory.select(
-                        comment.id,
-                        comment.member.id,
-                        comment.member.nickname,
-                        comment.content,
-                        comment.createdAt,
-                        comment.member.role,
-                        comment.deleted,
-                        comment.edited,
-                        comment.hiddenByAdmin
-                ).from(comment)
+        List<Tuple> commentRows = selectParentRows(comment)
                 .where(builder)
                 .orderBy(comment.id.desc())
                 .limit(size + 1)
@@ -110,41 +104,11 @@ public class CommentRepositoryCustomImpl implements CommentRepositoryCustom {
         List<CommentItemResponse> items = new ArrayList<>();
         for (Tuple commentRow : commentRows) {
             Long commentId = commentRow.get(comment.id);
-            boolean deleted = Boolean.TRUE.equals(commentRow.get(comment.deleted));
-            ReactionSummary reactions = reactionData.summary(commentId);
-
-            List<CommentReplyResponse> replies = repliesByParentId
-                    .getOrDefault(commentId, List.of())
-                    .stream()
-                    .map(reply -> toReplyResponse(
-                            reply,
-                            reactionData.summary(reply.id()),
-                            memberId,
-                            reportedByMe.contains(reply.id())))
-                    .toList();
-
-            items.add(new CommentItemResponse(
-                    commentId,
-                    deleted ? null : commentRow.get(comment.member.nickname),
-                    deleted ? null : commentRow.get(comment.content),
-                    commentRow.get(comment.createdAt),
-                    commentRow.get(comment.member.role) == MemberRole.ADMIN,
-                    deleted,
-                    deleted ? 0L : reactions.likeCount(),
-                    deleted ? 0L : reactions.dislikeCount(),
-                    !deleted && reactions.likedByMe(),
-                    !deleted && reactions.dislikedByMe(),
-                    // 삭제된 댓글은 내 것이라도 내 것으로 치지 않는다. 지워진 자리에
-                    // 신고할 것도 감출 것도 없다
-                    !deleted && isMine(commentRow.get(comment.member.id), memberId),
-                    // 지운 댓글은 내용이 사라지므로 고쳤다는 표시도 뜻이 없다
-                    !deleted && Boolean.TRUE.equals(commentRow.get(comment.edited)),
-                    deleted && Boolean.TRUE.equals(commentRow.get(comment.hiddenByAdmin)),
-                    !deleted && reportedByMe.contains(commentId),
-                    replies,
-                    parentsWithMoreReplies.contains(commentId) ? replies.getLast().id() : null,
-                    parentsWithMoreReplies.contains(commentId)
-            ));
+            List<ReplyRow> replies = repliesByParentId.getOrDefault(commentId, List.of());
+            boolean hasMoreReplies = parentsWithMoreReplies.contains(commentId);
+            items.add(toCommentItem(commentRow, replies,
+                    hasMoreReplies ? replies.getLast().id() : null, hasMoreReplies,
+                    reactionData, reportedByMe, memberId));
         }
 
         Long nextCursor = null;
@@ -153,6 +117,76 @@ public class CommentRepositoryCustomImpl implements CommentRepositoryCustom {
         }
 
         return new CommentListResponse(countVisibleComments(postId), items, nextCursor, hasNext);
+    }
+
+    /** 댓글 페이지를 순회하지 않고 알림 대상과 부모 스레드를 바로 찾는다. */
+    @Override
+    public Optional<CommentContextResponse> getCommentContext(Long postId, Long commentId, Long memberId) {
+        QComment comment = QComment.comment;
+        Tuple target = jpaQueryFactory.select(comment.id, comment.parent.id)
+                .from(comment)
+                .where(comment.id.eq(commentId), comment.post.id.eq(postId),
+                        PublicPostCondition.of(comment.post), comment.deleted.isFalse())
+                .fetchOne();
+        if (target == null) return Optional.empty();
+
+        Long parentId = target.get(comment.parent.id);
+        boolean isReply = parentId != null;
+        if (!isReply) parentId = commentId;
+        Tuple parent = selectParentRows(comment)
+                .where(comment.id.eq(parentId), comment.post.id.eq(postId), comment.parent.isNull(),
+                        PublicPostCondition.of(comment.post))
+                .fetchOne();
+        if (parent == null) return Optional.empty();
+
+        List<ReplyRow> firstPage = getReplyRows(postId, parentId, null, INITIAL_REPLY_SIZE + 1);
+        boolean hasNext = firstPage.size() > INITIAL_REPLY_SIZE;
+        List<ReplyRow> replies = new ArrayList<>(hasNext ? firstPage.subList(0, INITIAL_REPLY_SIZE) : firstPage);
+        // 먼 답글을 끼워 넣더라도 그 앞의 답글을 건너뛰지 않도록 원래 첫 페이지 커서를 보존한다.
+        Long nextCursor = hasNext ? replies.getLast().id() : null;
+        if (isReply && replies.stream().noneMatch(reply -> reply.id().equals(commentId))) {
+            List<ReplyRow> targetRows = getReplyRows(postId, parentId, null, 1, commentId);
+            if (targetRows.isEmpty()) return Optional.empty();
+            replies.add(targetRows.getFirst());
+            replies.sort(Comparator.comparing(ReplyRow::id));
+        }
+
+        List<Long> visibleIds = new ArrayList<>();
+        visibleIds.add(parentId);
+        replies.forEach(reply -> visibleIds.add(reply.id()));
+        CommentItemResponse item = toCommentItem(parent, replies, nextCursor, hasNext,
+                getReactionData(visibleIds, memberId), getReportedCommentIds(visibleIds, memberId), memberId);
+        return Optional.of(new CommentContextResponse(commentId, item));
+    }
+
+    private JPAQuery<Tuple> selectParentRows(QComment comment) {
+        return jpaQueryFactory.select(comment.id, comment.member.id, comment.member.nickname,
+                comment.content, comment.createdAt, comment.member.role, comment.deleted,
+                comment.edited, comment.hiddenByAdmin).from(comment);
+    }
+
+    /** 일반 목록과 알림 목적지가 같은 익명화·반응·본인 표시 규칙을 사용한다. */
+    private CommentItemResponse toCommentItem(
+            Tuple row, List<ReplyRow> replyRows, Long replyNextCursor, boolean replyHasNext,
+            ReactionData reactionData, Set<Long> reportedByMe, Long memberId
+    ) {
+        QComment comment = QComment.comment;
+        Long id = row.get(comment.id);
+        boolean deleted = Boolean.TRUE.equals(row.get(comment.deleted));
+        ReactionSummary reactions = reactionData.summary(id);
+        List<CommentReplyResponse> replies = replyRows.stream()
+                .map(reply -> toReplyResponse(reply, reactionData.summary(reply.id()),
+                        memberId, reportedByMe.contains(reply.id())))
+                .toList();
+        return new CommentItemResponse(
+                id, deleted ? null : row.get(comment.member.nickname), deleted ? null : row.get(comment.content),
+                row.get(comment.createdAt), row.get(comment.member.role) == MemberRole.ADMIN, deleted,
+                deleted ? 0L : reactions.likeCount(), deleted ? 0L : reactions.dislikeCount(),
+                !deleted && reactions.likedByMe(), !deleted && reactions.dislikedByMe(),
+                !deleted && isMine(row.get(comment.member.id), memberId),
+                !deleted && Boolean.TRUE.equals(row.get(comment.edited)),
+                deleted && Boolean.TRUE.equals(row.get(comment.hiddenByAdmin)),
+                !deleted && reportedByMe.contains(id), replies, replyNextCursor, replyHasNext);
     }
 
     @Override
@@ -212,6 +246,10 @@ public class CommentRepositoryCustomImpl implements CommentRepositoryCustom {
     }
 
     private List<ReplyRow> getReplyRows(Long postId, Long parentId, Long cursor, long limit) {
+        return getReplyRows(postId, parentId, cursor, limit, null);
+    }
+
+    private List<ReplyRow> getReplyRows(Long postId, Long parentId, Long cursor, long limit, Long targetId) {
         QComment reply = new QComment("reply");
         List<Tuple> rows = jpaQueryFactory.select(
                         reply.id, reply.member.id, reply.member.nickname, reply.content,
@@ -219,7 +257,8 @@ public class CommentRepositoryCustomImpl implements CommentRepositoryCustom {
                 .from(reply)
                 .where(reply.post.id.eq(postId), reply.parent.id.eq(parentId),
                         PublicPostCondition.of(reply.post),
-                        reply.deleted.isFalse(), cursor == null ? null : reply.id.gt(cursor))
+                        reply.deleted.isFalse(), cursor == null ? null : reply.id.gt(cursor),
+                        targetId == null ? null : reply.id.eq(targetId))
                 .orderBy(reply.id.asc())
                 .limit(limit)
                 .fetch();
