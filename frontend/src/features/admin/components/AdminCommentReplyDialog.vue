@@ -122,7 +122,7 @@ async function submit() {
 .admin-comment-reply-form textarea {
   width: 100%;
   resize: vertical;
-  border: 1px solid var(--admin-input-line);
+  border: 1px solid var(--admin-card-line);
   border-radius: 7px;
   padding: 12px;
   background: var(--admin-card);
