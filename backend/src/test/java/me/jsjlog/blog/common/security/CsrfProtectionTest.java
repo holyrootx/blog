@@ -2,6 +2,7 @@ package me.jsjlog.blog.common.security;
 
 import me.jsjlog.blog.member.domain.Member;
 import me.jsjlog.blog.member.repository.MemberRepository;
+import me.jsjlog.blog.member.repository.MemberStatusHistoryRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -45,6 +46,11 @@ class CsrfProtectionTest {
     @Autowired
     private MemberRepository memberRepository;
 
+
+    @Autowired
+
+    private MemberStatusHistoryRepository memberStatusHistoryRepository;
+
     @Autowired
     private PasswordEncoder passwordEncoder;
 
@@ -53,6 +59,7 @@ class CsrfProtectionTest {
 
     @BeforeEach
     void seedAdmin() {
+        memberStatusHistoryRepository.deleteAll();
         memberRepository.deleteAll();
         memberRepository.save(Member.ofLocalAdmin(USERNAME, passwordEncoder.encode(PASSWORD), "테스트 관리자"));
     }

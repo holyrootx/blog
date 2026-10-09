@@ -2,6 +2,7 @@
 import { computed, onMounted, reactive, ref } from 'vue';
 
 import {
+  getAdminCommonCodes,
   getAdminMembers,
   suspendAdminMember,
   unsuspendAdminMember,
@@ -11,7 +12,7 @@ import AdminPageHeader from '../components/AdminPageHeader.vue';
 import AdminSearchPanel from '../components/AdminSearchPanel.vue';
 import AdminGridToolbar from '../components/AdminGridToolbar.vue';
 import AdminTextInput from '../components/AdminTextInput.vue';
-import AdminSegmented from '../components/AdminSegmented.vue';
+import AdminSelect from '../components/AdminSelect.vue';
 import AdminDataGrid from '../components/AdminDataGrid.vue';
 import AdminPageSize from '../components/AdminPageSize.vue';
 import AdminPagination from '../components/AdminPagination.vue';
@@ -46,12 +47,29 @@ const action = ref('');
 const actionPending = ref(false);
 const actionError = ref('');
 
+// 상태 이름은 공통 코드 MEMBER_STATUS 에서 가져온다. 공통 코드 화면에서 이름을 고치면 여기도 바뀐다.
+// 아래 값은 그 목록이 도착하기 전(또는 못 받았을 때) 탭이 코드 그대로 보이지 않게 하는 자리 채움이다
+const statusNames = ref({ ACTIVE: '활동', SUSPENDED: '정지', WITHDRAWN: '탈퇴' });
+
+// 콤보는 맨 앞에 "전체"(빈 값)를 스스로 붙이므로, 그 글자만 따로 넘긴다
+const statusPlaceholder = computed(() => `전체 ${formatCount(statusCounts.value.all)}`);
+
 const statusOptions = computed(() => [
-  { value: '', label: `전체 ${formatCount(statusCounts.value.all)}` },
-  { value: 'ACTIVE', label: `활동 ${formatCount(statusCounts.value.active)}` },
-  { value: 'SUSPENDED', label: `정지 ${formatCount(statusCounts.value.suspended)}` },
-  { value: 'WITHDRAWN', label: `탈퇴 ${formatCount(statusCounts.value.withdrawn)}` },
+  { value: 'ACTIVE', label: `${statusNames.value.ACTIVE} ${formatCount(statusCounts.value.active)}` },
+  { value: 'SUSPENDED', label: `${statusNames.value.SUSPENDED} ${formatCount(statusCounts.value.suspended)}` },
+  { value: 'WITHDRAWN', label: `${statusNames.value.WITHDRAWN} ${formatCount(statusCounts.value.withdrawn)}` },
 ]);
+
+async function loadStatusNames() {
+  try {
+    (await getAdminCommonCodes('MEMBER_STATUS')).forEach((code) => {
+      statusNames.value = { ...statusNames.value, [code.code]: code.codeName };
+    });
+  } catch (error) {
+    // 이름을 못 받아도 목록은 써야 한다. 행의 이름은 회원 목록 응답에 이미 들어 있다
+    console.error(error);
+  }
+}
 
 const confirmText = computed(() => {
   if (action.value === 'suspend') {
@@ -168,12 +186,6 @@ function formatDate(value) {
   return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`;
 }
 
-const STATUS_LABELS = {
-  ACTIVE: '활동',
-  SUSPENDED: '정지',
-  WITHDRAWN: '탈퇴',
-};
-
 const PROVIDER_LABELS = {
   GOOGLE: 'Google',
   KAKAO: 'Kakao',
@@ -181,7 +193,10 @@ const PROVIDER_LABELS = {
   LOCAL: 'Local',
 };
 
-onMounted(search);
+onMounted(() => {
+  search();
+  loadStatusNames();
+});
 </script>
 
 <template>
@@ -196,7 +211,13 @@ onMounted(search);
         label="회원"
         placeholder="닉네임 또는 이메일"
       />
-      <AdminSegmented v-model="condition.status" label="상태" :options="statusOptions" />
+      <!-- 상태 이름은 공통 코드에서 바꿀 수 있어 길이가 정해져 있지 않다. 탭은 이름이 길면 잘려서 콤보로 둔다 -->
+      <AdminSelect
+        v-model="condition.status"
+        label="상태"
+        :placeholder="statusPlaceholder"
+        :options="statusOptions"
+      />
     </AdminSearchPanel>
 
     <AdminGridToolbar :total-count="totalElements">
@@ -229,13 +250,13 @@ onMounted(search);
         {{ PROVIDER_LABELS[value] ?? value }}
       </template>
 
-      <template #cell-status="{ value }">
+      <template #cell-status="{ value, row }">
         <span
           class="admin-badge"
           :class="value === 'ACTIVE' ? 'admin-badge--on'
             : value === 'SUSPENDED' ? 'admin-badge--danger' : 'admin-badge--off'"
         >
-          {{ STATUS_LABELS[value] ?? value }}
+          {{ row.statusName ?? statusNames[value] ?? value }}
         </span>
       </template>
 

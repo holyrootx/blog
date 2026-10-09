@@ -1,11 +1,11 @@
 package me.jsjlog.blog.admin.dto;
 
-import me.jsjlog.blog.member.domain.MemberStatus;
+import me.jsjlog.blog.member.domain.MemberStatusCode;
 
 public record AdminMemberSearchCondition(
         Integer page,
         Integer size,
-        MemberStatus status,
+        MemberStatusCode status,
         String keyword
 ) {
 

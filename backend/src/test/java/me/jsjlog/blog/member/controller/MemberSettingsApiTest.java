@@ -3,8 +3,10 @@ package me.jsjlog.blog.member.controller;
 import me.jsjlog.blog.common.security.MemberPrincipal;
 import me.jsjlog.blog.member.domain.AuthProvider;
 import me.jsjlog.blog.member.domain.Member;
-import me.jsjlog.blog.member.domain.MemberStatus;
+import me.jsjlog.blog.member.domain.MemberStatusCode;
 import me.jsjlog.blog.member.repository.MemberRepository;
+import me.jsjlog.blog.member.repository.MemberStatusHistoryRepository;
+import me.jsjlog.blog.member.repository.MemberStatusRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -46,12 +48,20 @@ class MemberSettingsApiTest {
     private MemberRepository memberRepository;
 
     @Autowired
+    private MemberStatusRepository memberStatusRepository;
+
+    @Autowired
+    private MemberStatusHistoryRepository memberStatusHistoryRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     private Member member;
 
     @BeforeEach
     void seed() {
+        // 상태 이력이 회원을 가리키므로 먼저 지운다. 운영에서는 회원을 지우지 않는다
+        memberStatusHistoryRepository.deleteAll();
         memberRepository.deleteAll();
 
         member = memberRepository.save(Member.ofSocial(
@@ -132,8 +142,8 @@ class MemberSettingsApiTest {
     }
 
     @Test
-    @DisplayName("탈퇴하면 자격 정보가 지워지고 식별자와 닉네임은 남는다")
-    void withdrawClearsCredentialsButKeepsIdentity() throws Exception {
+    @DisplayName("탈퇴하면 자격 정보와 프로필 사진이 지워지고, 식별자는 복원 기간 동안 회원 상태로 옮겨지며 닉네임은 남는다")
+    void withdrawClearsCredentialsAndMovesIdentityForRestore() throws Exception {
         mockMvc.perform(post(WITHDRAW)
                         .with(authentication(login(member)))
                         .with(csrf()))
@@ -141,14 +151,28 @@ class MemberSettingsApiTest {
 
         Member withdrawn = memberRepository.findById(member.getId()).orElseThrow();
 
-        assertThat(withdrawn.getStatus()).isEqualTo(MemberStatus.WITHDRAWN);
+        assertThat(withdrawn.getStatusCode()).isEqualTo(MemberStatusCode.WITHDRAWN);
         assertThat(withdrawn.getEmail()).isNull();
         assertThat(withdrawn.getUsername()).isNull();
         assertThat(withdrawn.getPasswordHash()).isNull();
 
-        // 재가입 때 예전 계정을 찾는 열쇠이고, 댓글 작성자 표시에 쓰인다. 지우면 안 된다
-        assertThat(withdrawn.getProviderUserId()).isEqualTo("108712345678901234567");
+        assertThat(withdrawn.getProfileImageUrl()).isNull();
+
+        // 식별자는 회원 행에서 빠지고, 복원 기간 동안만 회원 상태에 남는다
+        assertThat(withdrawn.getProviderUserId()).isNull();
+        var status = memberStatusRepository.findById(member.getId()).orElseThrow();
+        assertThat(status.getRestoreProvider()).isEqualTo(AuthProvider.GOOGLE);
+        assertThat(status.getRestoreProviderUserId()).isEqualTo("108712345678901234567");
+        assertThat(status.getRestoreExpiresAt()).isAfter(status.getStatusChangedAt().plusDays(29));
+
+        // 남은 댓글의 작성자 표시에 쓰인다
         assertThat(withdrawn.getNickname()).isEqualTo("졸린너구리47");
+
+        // 같은 트랜잭션에서 이력이 한 줄 남는다
+        assertThat(memberStatusHistoryRepository.findAllByMember_IdOrderByIdAsc(member.getId()))
+                .extracting(history -> history.getFromMemberStatusCode() + "->" + history.getToMemberStatusCode()
+                        + ":" + history.getReasonCode() + ":" + history.getActorTypeCode())
+                .containsExactly("ACTIVE->WITHDRAWN:WITHDRAW:SELF");
     }
 
     @Test
@@ -163,8 +187,8 @@ class MemberSettingsApiTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("MEMBER_ADMIN_CANNOT_WITHDRAW"));
 
-        assertThat(memberRepository.findById(admin.getId()).orElseThrow().getStatus())
-                .isEqualTo(MemberStatus.ACTIVE);
+        assertThat(memberRepository.findById(admin.getId()).orElseThrow().getStatusCode())
+                .isEqualTo(MemberStatusCode.ACTIVE);
     }
 
     @Test
@@ -173,7 +197,7 @@ class MemberSettingsApiTest {
         mockMvc.perform(post(WITHDRAW).with(authentication(login(member))))
                 .andExpect(status().isForbidden());
 
-        assertThat(memberRepository.findById(member.getId()).orElseThrow().getStatus())
-                .isEqualTo(MemberStatus.ACTIVE);
+        assertThat(memberRepository.findById(member.getId()).orElseThrow().getStatusCode())
+                .isEqualTo(MemberStatusCode.ACTIVE);
     }
 }

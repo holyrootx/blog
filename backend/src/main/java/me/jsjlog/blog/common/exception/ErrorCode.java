@@ -111,6 +111,17 @@ public enum ErrorCode {
     CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "CATEGORY_NOT_FOUND", "카테고리를 찾을 수 없습니다."),
     CATEGORY_NAME_DUPLICATED(HttpStatus.CONFLICT, "CATEGORY_NAME_DUPLICATED", "이미 사용 중인 카테고리 이름입니다."),
     CATEGORY_IN_USE(HttpStatus.CONFLICT, "CATEGORY_IN_USE", "글이 달린 카테고리는 삭제할 수 없습니다."),
+    COMMON_CODE_GROUP_NOT_FOUND(HttpStatus.NOT_FOUND, "COMMON_CODE_GROUP_NOT_FOUND", "공통 코드 그룹을 찾을 수 없습니다."),
+    COMMON_CODE_NOT_FOUND(HttpStatus.NOT_FOUND, "COMMON_CODE_NOT_FOUND", "공통 코드를 찾을 수 없습니다."),
+    COMMON_CODE_GROUP_DUPLICATED(HttpStatus.CONFLICT, "COMMON_CODE_GROUP_DUPLICATED", "이미 있는 그룹 코드입니다."),
+    COMMON_CODE_DUPLICATED(HttpStatus.CONFLICT, "COMMON_CODE_DUPLICATED", "이 그룹에 이미 있는 코드입니다."),
+    COMMON_CODE_KEY_INVALID(HttpStatus.BAD_REQUEST, "COMMON_CODE_KEY_INVALID", "코드 값은 영문 대문자·숫자·밑줄(_)로 50자까지 입력할 수 있습니다."),
+    // 서버 코드(enum)에 있는 그룹은 서버가 동작을 아는 코드만 가진다. 화면에서 코드를 더하면
+    // 다음 시작 때 enum 과 대조하다 서버가 뜨지 않고, 끄면 쓰고 있는 동작이 이름을 잃는다
+    COMMON_CODE_MANAGED_BY_SERVER(HttpStatus.CONFLICT, "COMMON_CODE_MANAGED_BY_SERVER", "서버 코드와 연결된 그룹이라 코드 추가와 사용 여부 변경은 개발로만 할 수 있습니다."),
+    COMMON_CODE_NAME_REQUIRED(HttpStatus.BAD_REQUEST, "COMMON_CODE_NAME_REQUIRED", "이름을 입력해 주세요."),
+    COMMON_CODE_VALUE_TOO_LONG(HttpStatus.BAD_REQUEST, "COMMON_CODE_VALUE_TOO_LONG", "이름은 100자, 설명은 500자까지 입력할 수 있습니다."),
+    COMMON_CODE_SORT_ORDER_INVALID(HttpStatus.BAD_REQUEST, "COMMON_CODE_SORT_ORDER_INVALID", "순서는 0부터 9999까지 입력할 수 있습니다."),
     FILE_TOO_LARGE(HttpStatus.BAD_REQUEST, "FILE_TOO_LARGE", "파일 크기가 너무 큽니다."),
     UNSUPPORTED_FILE_TYPE(HttpStatus.BAD_REQUEST, "UNSUPPORTED_FILE_TYPE", "지원하지 않는 파일 형식입니다."),
     FILE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "FILE_UPLOAD_FAILED", "파일 업로드에 실패했습니다.");

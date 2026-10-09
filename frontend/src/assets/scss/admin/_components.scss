@@ -742,6 +742,16 @@
   background: color-mix(in srgb, var(--admin-surface-selected) 90%, var(--admin-accent) 10%);
 }
 
+/* 지금 보고 있는 행. 첫 칸 왼쪽에 줄을 그어 체크 선택과 구분한다.
+   마우스를 올려도 고른 행으로 보이도록 hover 보다 앞선다 */
+.admin-grid__table tbody tr.admin-grid__row--active td {
+  background: var(--admin-accent-soft);
+}
+
+.admin-grid__table tbody tr.admin-grid__row--active td:first-child {
+  box-shadow: inset 3px 0 0 var(--admin-accent);
+}
+
 /* ── 개수 선택 ─────────────────────────────── */
 
 .admin-page-size {

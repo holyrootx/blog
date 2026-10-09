@@ -5,6 +5,8 @@ import me.jsjlog.blog.admin.dto.AdminMemberListResponse;
 import me.jsjlog.blog.admin.dto.AdminMemberSearchCondition;
 import me.jsjlog.blog.admin.service.AdminMemberService;
 import me.jsjlog.blog.common.response.ApiResponse;
+import me.jsjlog.blog.common.security.MemberPrincipal;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,14 +26,16 @@ public class AdminMemberController {
     }
 
     @PostMapping("/{memberId}/suspend")
-    public ApiResponse<Void> suspend(@PathVariable Long memberId) {
-        adminMemberService.suspend(memberId);
+    public ApiResponse<Void> suspend(@PathVariable Long memberId,
+                                     @AuthenticationPrincipal MemberPrincipal principal) {
+        adminMemberService.suspend(memberId, principal.getId());
         return ApiResponse.ok();
     }
 
     @PostMapping("/{memberId}/unsuspend")
-    public ApiResponse<Void> unsuspend(@PathVariable Long memberId) {
-        adminMemberService.unsuspend(memberId);
+    public ApiResponse<Void> unsuspend(@PathVariable Long memberId,
+                                       @AuthenticationPrincipal MemberPrincipal principal) {
+        adminMemberService.unsuspend(memberId, principal.getId());
         return ApiResponse.ok();
     }
 }

@@ -9,6 +9,14 @@ spring:
     hibernate:
       ddl-auto: create-drop
     open-in-view: false
+    # 표를 만든 뒤에 아래 시드를 넣는다
+    defer-datasource-initialization: true
+
+  # 공통 코드 초기값. 서버가 뜰 때 enum 과 대조하므로 테스트 DB 에도 있어야 한다
+  sql:
+    init:
+      mode: always
+      data-locations: classpath:db/common-code-seed.sql
 
 blog:
   upload:

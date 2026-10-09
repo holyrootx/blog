@@ -3,7 +3,7 @@ package me.jsjlog.blog.post.service;
 import me.jsjlog.blog.common.exception.BlogException;
 import me.jsjlog.blog.common.exception.ErrorCode;
 import me.jsjlog.blog.member.domain.Member;
-import me.jsjlog.blog.member.domain.MemberStatus;
+import me.jsjlog.blog.member.domain.MemberStatusCode;
 import me.jsjlog.blog.member.repository.MemberRepository;
 import me.jsjlog.blog.notification.service.NotificationService;
 import me.jsjlog.blog.post.domain.Comment;
@@ -192,7 +192,7 @@ class CommentServiceTest {
         when(post.isPubliclyVisible(any())).thenReturn(true);
         when(commentRepository.findLockedById(20L)).thenReturn(Optional.of(comment));
         when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(member));
-        when(member.getStatus()).thenReturn(MemberStatus.ACTIVE);
+        when(member.getStatusCode()).thenReturn(MemberStatusCode.ACTIVE);
         when(commentReactionRepository.findByCommentIdAndMemberIdAndType(
                 20L,
                 MEMBER_ID,
@@ -225,7 +225,7 @@ class CommentServiceTest {
     @Test
     void rejectsRateLimitedRequestsBeforeAcquiringPostLock() {
         when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(member));
-        when(member.getStatus()).thenReturn(MemberStatus.ACTIVE);
+        when(member.getStatusCode()).thenReturn(MemberStatusCode.ACTIVE);
         org.mockito.Mockito.doThrow(new BlogException(ErrorCode.COMMENT_RATE_LIMITED))
                 .when(commentWriteGuard).check(MEMBER_ID);
         assertThatThrownBy(() -> commentService.createComment(POST_ID,
@@ -239,6 +239,6 @@ class CommentServiceTest {
         when(postRepository.findLockedById(POST_ID)).thenReturn(Optional.of(post));
         when(post.isPubliclyVisible(any())).thenReturn(true);
         when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(member));
-        when(member.getStatus()).thenReturn(MemberStatus.ACTIVE);
+        when(member.getStatusCode()).thenReturn(MemberStatusCode.ACTIVE);
     }
 }

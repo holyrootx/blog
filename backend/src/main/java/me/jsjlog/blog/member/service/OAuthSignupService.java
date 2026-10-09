@@ -10,7 +10,7 @@ import me.jsjlog.blog.common.security.oauth.PendingOAuthSession;
 import me.jsjlog.blog.member.domain.Member;
 import me.jsjlog.blog.member.domain.MemberStatus;
 import me.jsjlog.blog.member.repository.MemberRepository;
-import org.springframework.data.domain.AuditorAware;
+import me.jsjlog.blog.member.repository.MemberStatusRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,7 +19,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class OAuthSignupService {
 
     private final MemberRepository memberRepository;
-    private final AuditorAware<String> auditorProvider;
+    private final MemberStatusRepository memberStatusRepository;
+    private final MemberStatusService memberStatusService;
 
     @Transactional
     public Member signup(PendingOAuthSession pendingSession, String nickname) {
@@ -38,74 +39,61 @@ public class OAuthSignupService {
             throw new BlogException(ErrorCode.OAUTH_SIGNUP_NOT_ALLOWED);
         }
 
-        Member member = Member.ofSocial(
-                pendingSession.provider(),
-                pendingSession.providerUserId(),
-                nickname.trim(),
-                pendingSession.email(),
-                pendingSession.profileImageUrl()
-        );
-
-        return memberRepository.save(member);
+        LocalDateTime now = LocalDateTime.now();
+        memberStatusService.expireStaleRestore(pendingSession.provider(), pendingSession.providerUserId(), now);
+        Member member = memberRepository.save(newMember(pendingSession, nickname));
+        memberStatusService.recordSignup(member, now);
+        return member;
     }
 
     @Transactional
     public Member reactivate(PendingOAuthSession pendingSession) {
-        Member withdrawnMember = requiredWithdrawnMember(pendingSession);
+        LocalDateTime now = LocalDateTime.now();
+        Long memberId = requiredRestorable(pendingSession, now).getMemberId();
 
-        if (memberRepository.reactivateWithdrawn(withdrawnMember.getId(), pendingSession.provider(),
-                pendingSession.providerUserId(), pendingSession.email(), pendingSession.profileImageUrl(),
-                LocalDateTime.now(), auditorProvider.getCurrentAuditor().orElse("system")) != 1) {
+        if (!memberStatusService.reactivate(memberId, pendingSession.provider(), pendingSession.providerUserId(),
+                pendingSession.email(), pendingSession.profileImageUrl(), now)) {
             throw new BlogException(ErrorCode.OAUTH_REACTIVATION_NOT_ALLOWED);
         }
-        // 조건부 갱신이 영속성 컨텍스트를 비웠으므로 응답용 객체만 맞춘다.
-        withdrawnMember.reactivate(
-                pendingSession.email(),
-                pendingSession.profileImageUrl()
-        );
-
-        return withdrawnMember;
+        // 조건부 갱신이 영속성 컨텍스트를 비웠으므로 응답에 쓸 최신 행을 다시 읽는다
+        return memberRepository.findById(memberId)
+                .orElseThrow(() -> new BlogException(ErrorCode.OAUTH_REACTIVATION_NOT_ALLOWED));
     }
 
     @Transactional
     public Member rejoin(PendingOAuthSession pendingSession, String nickname) {
-        Member withdrawnMember = requiredWithdrawnMember(pendingSession);
+        LocalDateTime now = LocalDateTime.now();
+        Long withdrawnId = requiredRestorable(pendingSession, now).getMemberId();
 
-        // UPDATE 시점에도 탈퇴 상태와 제공자 연결이 그대로인 경우에만 새 계정을 만든다.
-        // 연결을 먼저 해제하되 새 회원 저장이 실패하면 이 변경도 함께 롤백한다.
-        if (memberRepository.detachWithdrawnProvider(withdrawnMember.getId(), pendingSession.provider(),
-                pendingSession.providerUserId(), LocalDateTime.now(),
-                auditorProvider.getCurrentAuditor().orElse("system")) != 1) {
+        // 복원 정보가 그대로인 경우에만 새 계정을 만든다. 정보를 먼저 지우되 새 회원 저장이 실패하면
+        // 이 변경도 함께 롤백되어 다시 복원할 수 있다
+        if (!memberStatusService.releaseForRejoin(withdrawnId, pendingSession.provider(),
+                pendingSession.providerUserId(), now)) {
             throw new BlogException(ErrorCode.OAUTH_REACTIVATION_NOT_ALLOWED);
         }
 
-        Member newMember = Member.ofSocial(
+        Member member = memberRepository.save(newMember(pendingSession, nickname));
+        memberStatusService.recordSignup(member, now);
+        return member;
+    }
+
+    private MemberStatus requiredRestorable(PendingOAuthSession pendingSession, LocalDateTime now) {
+        if (pendingSession.loginState() != OAuthLoginState.REACTIVATION_REQUIRED) {
+            throw new BlogException(ErrorCode.OAUTH_REACTIVATION_NOT_ALLOWED);
+        }
+
+        return memberStatusRepository
+                .findRestorable(pendingSession.provider(), pendingSession.providerUserId(), now)
+                .orElseThrow(() -> new BlogException(ErrorCode.OAUTH_REACTIVATION_NOT_ALLOWED));
+    }
+
+    private static Member newMember(PendingOAuthSession pendingSession, String nickname) {
+        return Member.ofSocial(
                 pendingSession.provider(),
                 pendingSession.providerUserId(),
                 nickname.trim(),
                 pendingSession.email(),
                 pendingSession.profileImageUrl()
         );
-
-        return memberRepository.save(newMember);
-    }
-
-    private Member requiredWithdrawnMember(PendingOAuthSession pendingSession) {
-        if (pendingSession.loginState() != OAuthLoginState.REACTIVATION_REQUIRED) {
-            throw new BlogException(ErrorCode.OAUTH_REACTIVATION_NOT_ALLOWED);
-        }
-
-        Member member = memberRepository
-                .findByProviderAndProviderUserId(
-                        pendingSession.provider(),
-                        pendingSession.providerUserId()
-                )
-                .orElseThrow(() -> new BlogException(ErrorCode.OAUTH_REACTIVATION_NOT_ALLOWED));
-
-        if (member.getStatus() != MemberStatus.WITHDRAWN) {
-            throw new BlogException(ErrorCode.OAUTH_REACTIVATION_NOT_ALLOWED);
-        }
-
-        return member;
     }
 }
