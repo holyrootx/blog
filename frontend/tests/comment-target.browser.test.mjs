@@ -153,6 +153,43 @@ test('context waits for the initial page and overlapping normal pages never dupl
   assert.equal(await page.locator('#comment-1').count(), 1);
 });
 
+/** 스크롤이 300ms 동안 멈춰 있을 때까지 기다린다. 부드러운 스크롤이 끝나기 전에 위치를 재지 않으려고 */
+const scrollSettled = () => page.waitForFunction(() => new Promise(resolve => {
+  let last = scrollY;
+  let still = 0;
+  const tick = () => {
+    still = Math.abs(scrollY - last) < 1 ? still + 1 : 0;
+    last = scrollY;
+    if (still >= 18) resolve(true); else requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}));
+
+test('an older top-level target stays on screen when the pages between it and the first page load', async () => {
+  // 운영에서 실제로 난 일: 대상으로 스크롤하는 동안 목록 끝의 자동 불러오기가 돌아
+  // 80~71 이 대상 위에 끼어들고, 스크롤은 밀리기 전 자리에서 멈췄다
+  const nextPages = [];
+  let requestedWhileScrolling = null;
+  handleComments = async (route, url) => {
+    if (!url.searchParams.has('cursor')) return ok(route, { ...initial(), hasNext: true, nextCursor: 81 });
+    nextPages.push(url.searchParams.get('cursor'));
+    // 대상으로 가는 스크롤이 아직 움직이는 중에 다음 페이지를 부르면 안 된다
+    const before = await page.evaluate(() => scrollY);
+    await new Promise(resolve => setTimeout(resolve, 120));
+    requestedWhileScrolling = Math.abs(await page.evaluate(() => scrollY) - before) > 1;
+    return ok(route, { total: 50, items: Array.from({ length: 20 }, (_, i) => comment(80 - i)), hasNext: false });
+  };
+  handleContext = (route, id) => ok(route, { targetCommentId: id, item: comment(id) });
+  await open('#comment-70');
+  await page.locator('#comment-80').waitFor();
+  await scrollSettled();
+  assert.deepEqual(nextPages, ['81']);
+  assert.equal(requestedWhileScrolling, false);
+  assert.equal(await page.locator('#comment-70').count(), 1);
+  const top = await page.locator('#comment-70').evaluate(element => element.getBoundingClientRect().top);
+  assert.ok(top >= 75 && top < 860, `target should stay on screen, but its top is ${Math.round(top)}px`);
+});
+
 test('back navigation reloads the target thread while preserving the previous scroll position', async () => {
   await open('#comment-111');
   await arrived(111);

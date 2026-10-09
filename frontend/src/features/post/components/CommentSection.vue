@@ -38,12 +38,15 @@ const signinBox = ref(null);
 const showBottomAd = false;
 const commentPlaceholder = computed(() => props.comments.placeholder ?? '');
 const commentMaxLength = computed(() => props.comments.maxLength ?? 1000);
-const { total, items, hasNext, loading, sentinel, loadMore, loadReplies, replyLoadingIds, mergeTarget, clearTarget } = useCommentFeed({
+const {
+  total, items, hasNext, loading, sentinel, loadMore, loadReplies, replyLoadingIds,
+  mergeTarget, clearTarget, pauseAutoLoad, resumeAutoLoad,
+} = useCommentFeed({
   postId: toRef(props, 'postId'), comments: toRef(props, 'comments'),
 });
 const { targetLoading, targetMessage, targetRetryable, retryTarget } = useCommentTarget({
   postId: toRef(props, 'postId'), initialLoading: toRef(props, 'initialLoading'),
-  comments: toRef(props, 'comments'), mergeTarget, clearTarget,
+  comments: toRef(props, 'comments'), mergeTarget, clearTarget, pauseAutoLoad, resumeAutoLoad,
 });
 const {
   submitting,
