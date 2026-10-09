@@ -2,6 +2,7 @@ package me.jsjlog.blog.common.config;
 
 import me.jsjlog.blog.member.domain.Member;
 import me.jsjlog.blog.member.repository.MemberRepository;
+import me.jsjlog.blog.member.repository.MemberStatusHistoryRepository;
 import me.jsjlog.blog.post.domain.Category;
 import me.jsjlog.blog.post.repository.CategoryRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,6 +41,11 @@ class AuditingTest {
     @Autowired
     private MemberRepository memberRepository;
 
+
+    @Autowired
+
+    private MemberStatusHistoryRepository memberStatusHistoryRepository;
+
     @Autowired
     private CategoryRepository categoryRepository;
 
@@ -50,6 +56,7 @@ class AuditingTest {
 
     @BeforeEach
     void seedAdmin() {
+        memberStatusHistoryRepository.deleteAll();
         memberRepository.deleteAll();
         Member admin = memberRepository.save(
                 Member.ofLocalAdmin(USERNAME, passwordEncoder.encode(PASSWORD), "테스트 관리자"));

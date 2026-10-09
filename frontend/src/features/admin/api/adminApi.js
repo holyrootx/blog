@@ -2,6 +2,7 @@ import { getApiData, sendApiData, sendApiFile } from '../../../shared/api/blogAp
 
 const ADMIN_BLOG_API_BASE = '/api/v1/admin/blog';
 const PUBLIC_BLOG_API_BASE = '/api/v1/blog';
+const ADMIN_COMMON_CODE_API_BASE = '/api/v1/admin/common-codes/groups';
 
 export async function getAdminBlogProfile(profileId = 1) {
   const profile = await getApiData(`${PUBLIC_BLOG_API_BASE}/profile?profileId=${profileId}`);
@@ -268,6 +269,8 @@ function toAdminMember(member) {
     email: member.email ?? '',
     provider: member.provider ?? '',
     status: member.status ?? 'ACTIVE',
+    // 화면에 보일 이름. 서버가 공통 코드 MEMBER_STATUS 에서 붙여 준다
+    statusName: member.statusName ?? null,
     commentCount: toNumber(member.commentCount),
     createdAt: member.createdAt ?? null,
   };
@@ -358,6 +361,70 @@ export function deleteAdminMenu(menuId) {
   return sendApiData(`${ADMIN_BLOG_API_BASE}/menus/${menuId}`, {
     method: 'DELETE',
   });
+}
+
+// 공통 코드 그룹 목록. 검색어는 그룹과 그 안 코드의 값·이름에서 찾는다
+export async function getAdminCommonCodeGroups(condition = {}) {
+  const result = await getApiData(withQuery(ADMIN_COMMON_CODE_API_BASE, condition));
+
+  return {
+    items: Array.isArray(result?.items) ? result.items.map(toAdminCommonCodeGroup) : [],
+    page: toNumber(result?.page),
+    size: toNumber(result?.size),
+    totalElements: toNumber(result?.totalElements),
+    totalPages: toNumber(result?.totalPages),
+  };
+}
+
+// 그룹 추가. 그룹 코드는 만든 뒤 바꿀 수 없다
+export async function createAdminCommonCodeGroup(request) {
+  return toAdminCommonCodeGroup(await sendApiData(ADMIN_COMMON_CODE_API_BASE, {
+    method: 'POST',
+    body: request,
+  }));
+}
+
+// 그룹의 이름·설명·사용 여부. 서버 코드가 쓰는 그룹은 끌 수 없다
+export async function updateAdminCommonCodeGroup(groupCode, request) {
+  return toAdminCommonCodeGroup(await sendApiData(`${ADMIN_COMMON_CODE_API_BASE}/${encodeURIComponent(groupCode)}`, {
+    method: 'PUT',
+    body: request,
+  }));
+}
+
+// 그룹의 코드 전부. 사용하지 않는 코드도 온다
+export async function getAdminCommonCodes(groupCode) {
+  const codes = await getApiData(`${ADMIN_COMMON_CODE_API_BASE}/${encodeURIComponent(groupCode)}/codes`);
+
+  return Array.isArray(codes) ? codes : [];
+}
+
+// 코드 추가. 서버 코드가 쓰는 그룹에는 넣을 수 없다
+export function createAdminCommonCode(groupCode, request) {
+  return sendApiData(`${ADMIN_COMMON_CODE_API_BASE}/${encodeURIComponent(groupCode)}/codes`, {
+    method: 'POST',
+    body: request,
+  });
+}
+
+// 코드의 이름·설명·순서·사용 여부. 코드 값은 바꾸지 않는다
+export function updateAdminCommonCode(groupCode, code, request) {
+  return sendApiData(`${ADMIN_COMMON_CODE_API_BASE}/${encodeURIComponent(groupCode)}/codes/${encodeURIComponent(code)}`, {
+    method: 'PUT',
+    body: request,
+  });
+}
+
+function toAdminCommonCodeGroup(group) {
+  return {
+    groupCode: group?.groupCode ?? '',
+    groupName: group?.groupName ?? '',
+    description: group?.description ?? '',
+    enabled: Boolean(group?.enabled),
+    managedByEnum: Boolean(group?.managedByEnum),
+    codeCount: toNumber(group?.codeCount),
+    updatedAt: group?.updatedAt ?? null,
+  };
 }
 
 // 카테고리 관리 화면용. 공개 목록과 달리 글 수가 함께 내려온다

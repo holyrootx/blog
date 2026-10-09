@@ -55,7 +55,7 @@ class PendingOAuthSessionIsolationTest {
         completeOAuth(browser, pending);
         assertThat(browser.getAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY)).isNull();
 
-        if (mutation.equals("suspend")) adminMembers.suspend(previous.getId());
+        if (mutation.equals("suspend")) adminMembers.suspend(previous.getId(), null);
         else memberService.withdraw(previous.getId());
 
         assertThat(otherBrowser.isInvalid()).isTrue();
@@ -69,7 +69,7 @@ class PendingOAuthSessionIsolationTest {
                 AuthProvider.GOOGLE, nextIdentity.providerUserId(), "다음 회원", null, null));
         completeOAuth(browser, MemberPrincipal.ofSocial(next));
         assertThat(browser.getAttribute(PendingOAuthSession.ATTRIBUTE_NAME)).isNull();
-        adminMembers.suspend(next.getId());
+        adminMembers.suspend(next.getId(), null);
         assertThat(browser.isInvalid()).isTrue();
     }
 

@@ -224,7 +224,7 @@ public class PostService {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new BlogException(ErrorCode.UNAUTHORIZED));
 
-        if (!member.getStatus().isActive()) {
+        if (!member.getStatusCode().isActive()) {
             throw new BlogException(ErrorCode.FORBIDDEN);
         }
 

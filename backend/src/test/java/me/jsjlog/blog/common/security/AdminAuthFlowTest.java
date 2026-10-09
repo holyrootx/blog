@@ -9,6 +9,7 @@ import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpSession;
 import me.jsjlog.blog.member.domain.Member;
 import me.jsjlog.blog.member.repository.MemberRepository;
+import me.jsjlog.blog.member.repository.MemberStatusHistoryRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
@@ -45,11 +46,17 @@ class AdminAuthFlowTest {
     @Autowired
     private MemberRepository memberRepository;
 
+
+    @Autowired
+
+    private MemberStatusHistoryRepository memberStatusHistoryRepository;
+
     @Autowired
     private PasswordEncoder passwordEncoder;
 
     @BeforeEach
     void seedAdmin() {
+        memberStatusHistoryRepository.deleteAll();
         memberRepository.deleteAll();
         memberRepository.save(Member.ofLocalAdmin(USERNAME, passwordEncoder.encode(PASSWORD), "테스트 관리자"));
     }

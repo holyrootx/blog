@@ -1,5 +1,6 @@
 package me.jsjlog.blog.common.security;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -10,7 +11,7 @@ import me.jsjlog.blog.common.security.oauth.OAuthLoginState;
 import me.jsjlog.blog.common.security.oauth.PendingOAuthSession;
 import me.jsjlog.blog.member.domain.AuthProvider;
 import me.jsjlog.blog.member.domain.Member;
-import me.jsjlog.blog.member.domain.MemberStatus;
+import me.jsjlog.blog.member.domain.MemberStatusCode;
 import me.jsjlog.blog.member.repository.MemberRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -154,10 +155,10 @@ class MemberSessionPolicyTest {
         MockHttpSession first = socialLogin(reader);
         MockHttpSession second = socialLogin(reader);
         new TransactionTemplate(transactions).executeWithoutResult(transaction -> {
-            adminMembers.suspend(reader.getId());
+            adminMembers.suspend(reader.getId(), admin.getId());
             transaction.setRollbackOnly();
         });
-        assertThat(members.findById(reader.getId()).orElseThrow().getStatus()).isEqualTo(MemberStatus.ACTIVE);
+        assertThat(members.findById(reader.getId()).orElseThrow().getStatusCode()).isEqualTo(MemberStatusCode.ACTIVE);
         assertThat(first.isInvalid()).isFalse();
         mvc.perform(get(COMMENTS).session(second)).andExpect(status().isOk());
     }
@@ -166,7 +167,7 @@ class MemberSessionPolicyTest {
     void loginRegisteredBeforeSuspensionCommitIsAlsoRevoked() throws Exception {
         try (var executor = Executors.newSingleThreadExecutor()) {
             MockHttpSession concurrentLogin = new TransactionTemplate(transactions).execute(transaction -> {
-                adminMembers.suspend(reader.getId());
+                adminMembers.suspend(reader.getId(), admin.getId());
                 try {
                     return executor.submit(() -> socialLogin(reader)).get(5, TimeUnit.SECONDS);
                 } catch (Exception error) {
@@ -202,7 +203,7 @@ class MemberSessionPolicyTest {
         MockHttpSession session = new MockHttpSession();
         storeSocialAuthentication(reader, session);
         mvc.perform(get(COMMENTS).session(session)).andExpect(status().isOk());
-        adminMembers.suspend(reader.getId());
+        adminMembers.suspend(reader.getId(), admin.getId());
         assertThat(session.isInvalid()).isTrue();
     }
 
@@ -243,11 +244,12 @@ class MemberSessionPolicyTest {
 
     @Test
     void rejoinKeepsExplicitChoiceAndRotatesSessionAndCsrf() throws Exception {
-        reader.withdraw();
+        String providerUserId = reader.getProviderUserId();
+        reader.withdraw(LocalDateTime.now());
         members.saveAndFlush(reader);
-        MockHttpSession pending = pendingSession(reader.getProviderUserId(), OAuthLoginState.REACTIVATION_REQUIRED);
+        MockHttpSession pending = pendingSession(providerUserId, OAuthLoginState.REACTIVATION_REQUIRED);
         assertCompletedOAuth("rejoin", pending, "{\"nickname\":\"다시 가입\"}");
-        assertThat(members.findById(reader.getId()).orElseThrow().getStatus()).isEqualTo(MemberStatus.WITHDRAWN);
+        assertThat(members.findById(reader.getId()).orElseThrow().getStatusCode()).isEqualTo(MemberStatusCode.WITHDRAWN);
         assertThat(members.findById(reader.getId()).orElseThrow().getProviderUserId()).isNull();
     }
 

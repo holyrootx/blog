@@ -4,9 +4,10 @@ import java.time.LocalDateTime;
 
 import me.jsjlog.blog.common.security.MemberPrincipal;
 import me.jsjlog.blog.member.domain.Member;
-import me.jsjlog.blog.member.domain.MemberStatus;
+import me.jsjlog.blog.member.domain.MemberStatusCode;
 import me.jsjlog.blog.member.domain.NicknameGenerator;
 import me.jsjlog.blog.member.repository.MemberRepository;
+import me.jsjlog.blog.member.repository.MemberStatusRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.AuditorAware;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
@@ -33,6 +34,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
     private final OAuth2UserService<OAuth2UserRequest, OAuth2User> delegate;
     private final OAuthAttributeReaders attributeReaders;
     private final MemberRepository memberRepository;
+    private final MemberStatusRepository memberStatusRepository;
     private final NicknameGenerator nicknameGenerator;
     private final AuditorAware<String> auditorProvider;
 
@@ -40,22 +42,26 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
     public CustomOAuth2UserService(
             OAuthAttributeReaders attributeReaders,
             MemberRepository memberRepository,
+            MemberStatusRepository memberStatusRepository,
             NicknameGenerator nicknameGenerator,
             AuditorAware<String> auditorProvider
     ) {
-        this(new DefaultOAuth2UserService(), attributeReaders, memberRepository, nicknameGenerator, auditorProvider);
+        this(new DefaultOAuth2UserService(), attributeReaders, memberRepository, memberStatusRepository,
+                nicknameGenerator, auditorProvider);
     }
 
     CustomOAuth2UserService(
             OAuth2UserService<OAuth2UserRequest, OAuth2User> delegate,
             OAuthAttributeReaders attributeReaders,
             MemberRepository memberRepository,
+            MemberStatusRepository memberStatusRepository,
             NicknameGenerator nicknameGenerator,
             AuditorAware<String> auditorProvider
     ) {
         this.delegate = delegate;
         this.attributeReaders = attributeReaders;
         this.memberRepository = memberRepository;
+        this.memberStatusRepository = memberStatusRepository;
         this.nicknameGenerator = nicknameGenerator;
         this.auditorProvider = auditorProvider;
     }
@@ -70,19 +76,33 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
         return memberRepository
                 .findByProviderAndProviderUserId(userInfo.provider(), userInfo.providerUserId())
                 .map(member -> resolveExistingMember(member, userInfo, authenticationStartedAtNanos))
+                .orElseGet(() -> resolveNewOrRestorable(userInfo));
+    }
+
+    /**
+     * 회원 표에 없는 계정. 복원 기간 안의 탈퇴 회원이면 복원할지 묻고, 아니면 새로 가입한다.
+     *
+     * 기간은 여기서 직접 본다. 하루 한 번 도는 정리 작업이 아직 지우지 않았어도 기간이 지났으면 새 가입이다.
+     */
+    private OAuth2User resolveNewOrRestorable(OAuthUserInfo userInfo) {
+        return memberStatusRepository
+                .findRestorable(userInfo.provider(), userInfo.providerUserId(), LocalDateTime.now())
+                .<OAuth2User>map(status -> PendingOAuthPrincipal.reactivation(userInfo, status.getMember().getNickname()))
                 .orElseGet(() -> PendingOAuthPrincipal.signup(userInfo, suggestedNickname(userInfo)));
     }
 
     private OAuth2User resolveExistingMember(Member member, OAuthUserInfo userInfo, long authenticationStartedAtNanos) {
-        if (member.getStatus() == MemberStatus.SUSPENDED) {
+        if (member.getStatusCode() == MemberStatusCode.SUSPENDED) {
             throw new OAuth2AuthenticationException(
                     new OAuth2Error(ACCOUNT_SUSPENDED),
                     "정지된 회원은 로그인할 수 없습니다."
             );
         }
 
-        if (member.getStatus() == MemberStatus.WITHDRAWN) {
-            return PendingOAuthPrincipal.reactivation(userInfo, member.getNickname());
+        // 탈퇴하면 제공자 ID 를 회원 표에서 빼므로 여기 오지 않는다. 오면 옮기는 SQL 이 빠진 예전 데이터다
+        if (member.getStatusCode() == MemberStatusCode.WITHDRAWN) {
+            throw new OAuth2AuthenticationException(new OAuth2Error("account_changed"),
+                    "계정 정보가 변경되었습니다. 다시 로그인해 주세요.");
         }
 
         if (memberRepository.updateActiveProfile(member.getId(), userInfo.email(), userInfo.profileImageUrl(),

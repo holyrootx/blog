@@ -13,9 +13,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import me.jsjlog.blog.member.domain.AuthProvider;
 import me.jsjlog.blog.member.domain.Member;
 import me.jsjlog.blog.member.domain.MemberRole;
-import me.jsjlog.blog.member.domain.MemberStatus;
+import me.jsjlog.blog.member.domain.MemberStatusCode;
 import me.jsjlog.blog.member.domain.NicknameGenerator;
 import me.jsjlog.blog.member.repository.MemberRepository;
+import me.jsjlog.blog.member.repository.MemberStatusRepository;
 import me.jsjlog.blog.common.security.MemberPrincipal;
 import me.jsjlog.blog.post.domain.Category;
 import me.jsjlog.blog.post.domain.Comment;
@@ -68,6 +69,7 @@ class OAuthSignupIntegrityTest {
 
     @Autowired MockMvc mvc;
     @Autowired MemberRepository members;
+    @Autowired MemberStatusRepository memberStatuses;
     @Autowired CategoryRepository categories;
     @Autowired PostRepository posts;
     @Autowired CommentRepository comments;
@@ -114,7 +116,7 @@ class OAuthSignupIntegrityTest {
         MockHttpSession session = pending(AuthProvider.KAKAO, subject, email, state);
         if (state == OAuthLoginState.REACTIVATION_REQUIRED) {
             Member withdrawn = Member.ofSocial(AuthProvider.KAKAO, subject, "예전 독자", null, null);
-            withdrawn.withdraw();
+            withdrawn.withdraw(LocalDateTime.now());
             members.saveAndFlush(withdrawn);
         }
         String forged = """
@@ -164,10 +166,12 @@ class OAuthSignupIntegrityTest {
         try {
             MvcResult failed = complete("rejoin", session, "저장 실패 검증");
             assertThat(failed.getResponse().getStatus()).isEqualTo(409);
-            assertThat(identityCount(subject)).isEqualTo(1);
-            Member stillWithdrawn = members.findByProviderAndProviderUserId(AuthProvider.GOOGLE, subject).orElseThrow();
-            assertThat(stillWithdrawn.getId()).isEqualTo(old.getId());
-            assertThat(stillWithdrawn.getStatus()).isEqualTo(MemberStatus.WITHDRAWN);
+            // 탈퇴하면 제공자 ID 는 회원 상태의 복원 정보로 옮겨 가 있다. 실패한 새로 만들기가 그 정보를 지우지 않았어야 한다
+            assertThat(identityCount(subject)).isZero();
+            var stillRestorable = memberStatuses.findRestorable(AuthProvider.GOOGLE, subject, LocalDateTime.now())
+                    .orElseThrow();
+            assertThat(stillRestorable.getMemberId()).isEqualTo(old.getId());
+            assertThat(stillRestorable.getMemberStatusCode()).isEqualTo(MemberStatusCode.WITHDRAWN);
             assertThat(jdbc.queryForObject("select member_id from comment where id = ?", Long.class, original.getId()))
                     .isEqualTo(old.getId());
             assertAnonymous(session);
@@ -205,14 +209,16 @@ class OAuthSignupIntegrityTest {
         assertAnonymous(delayed);
 
         Member previous = members.findById(old.getId()).orElseThrow();
+        // 어느 쪽이 이겼든 복원 정보는 한 번만 쓰이고 사라진다
+        assertThat(memberStatuses.findById(old.getId()).orElseThrow().getRestoreProviderUserId()).isNull();
         if (winnerAction.equals("reactivate")) {
             assertThat(memberId).isEqualTo(old.getId());
-            assertThat(previous.getStatus()).isEqualTo(MemberStatus.ACTIVE);
+            assertThat(previous.getStatusCode()).isEqualTo(MemberStatusCode.ACTIVE);
             assertThat(previous.getProviderUserId()).isEqualTo(subject);
             editComment(winner, original, "복구한 작성자의 수정", 200);
         } else {
             assertThat(memberId).isNotEqualTo(old.getId());
-            assertThat(previous.getStatus()).isEqualTo(MemberStatus.WITHDRAWN);
+            assertThat(previous.getStatusCode()).isEqualTo(MemberStatusCode.WITHDRAWN);
             assertThat(previous.getProviderUserId()).isNull();
             editComment(winner, original, "새 계정의 수정", 403);
             assertThat(comments.findById(original.getId()).orElseThrow().getContent()).isEqualTo("예전 댓글");
@@ -248,7 +254,7 @@ class OAuthSignupIntegrityTest {
 
     private Member withdrawnMember(String subject) {
         Member member = Member.ofSocial(AuthProvider.GOOGLE, subject, "예전 독자", null, null);
-        member.withdraw();
+        member.withdraw(LocalDateTime.now());
         return members.saveAndFlush(member);
     }
 
@@ -270,7 +276,7 @@ class OAuthSignupIntegrityTest {
         var providerUser = new DefaultOAuth2User(List.of(new SimpleGrantedAuthority("ROLE_USER")),
                 Map.of("response", Map.of("id", subject, "nickname", "제공자 이름", "email", email)), "response");
         var service = new CustomOAuth2UserService(request -> providerUser,
-                attributeReaders, members, nicknames, auditorProvider);
+                attributeReaders, members, memberStatuses, nicknames, auditorProvider);
         var registration = ClientRegistration.withRegistrationId("naver")
                 .clientId("test-client").clientSecret("test-secret")
                 .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
@@ -297,7 +303,7 @@ class OAuthSignupIntegrityTest {
     private void assertIdentity(long id, AuthProvider provider, String subject, String email) {
         Member current = members.findById(id).orElseThrow();
         assertThat(current.getRole()).isEqualTo(MemberRole.USER);
-        assertThat(current.getStatus()).isEqualTo(MemberStatus.ACTIVE);
+        assertThat(current.getStatusCode()).isEqualTo(MemberStatusCode.ACTIVE);
         assertThat(current.getProvider()).isEqualTo(provider);
         assertThat(current.getProviderUserId()).isEqualTo(subject);
         assertThat(current.getEmail()).isEqualTo(email);
@@ -337,12 +343,16 @@ class OAuthSignupIntegrityTest {
         @Bean LookupProbe lookupProbe() { return new LookupProbe(); }
     }
 
-    /** 실제 SQL 조회를 마친 요청만 멈춘다. 저장·트랜잭션·예외는 모킹하지 않는다. */
+    /**
+     * 실제 SQL 조회를 마친 요청만 멈춘다. 저장·트랜잭션·예외는 모킹하지 않는다.
+     * 가입은 회원 조회 뒤에, 복원·새로 만들기는 복원 정보 조회 뒤에 멈춘다.
+     */
     @Aspect
     static class LookupProbe {
         volatile LookupGate gate;
 
-        @Around("execution(* me.jsjlog.blog.member.repository.MemberRepository.findByProviderAndProviderUserId(..))")
+        @Around("execution(* me.jsjlog.blog.member.repository.MemberRepository.findByProviderAndProviderUserId(..))"
+                + " || execution(* me.jsjlog.blog.member.repository.MemberStatusRepository.findRestorable(..))")
         Object afterLookup(ProceedingJoinPoint query) throws Throwable {
             Object result = query.proceed();
             LookupGate current = gate;
