@@ -22,7 +22,10 @@ import org.springframework.data.repository.query.Param;
  */
 public interface MemberRepository extends JpaRepository<Member, Long> {
 
-    /** 소셜 로그인의 유일한 조회 경로. 탈퇴한 행도 같이 찾힌다 — 재가입을 판단해야 한다 */
+    /**
+     * 소셜 로그인의 첫 조회 경로. 탈퇴한 회원은 제공자 ID 를 회원 상태로 옮겨 두므로 여기서 찾히지 않는다 —
+     * 복원 기간 안이면 {@link MemberStatusRepository#findRestorable} 에서 찾는다.
+     */
     Optional<Member> findByProviderAndProviderUserId(AuthProvider provider, String providerUserId);
 
     /**
@@ -38,7 +41,9 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     @Query("""
             update Member m set m.email = :email, m.profileImageUrl = :profileImageUrl,
                 m.updatedAt = :updatedAt, m.updatedBy = :updatedBy
-            where m.id = :id and m.status = me.jsjlog.blog.member.domain.MemberStatus.ACTIVE
+            where m.id = :id and exists (
+                select 1 from MemberStatus s where s.memberId = m.id
+                    and s.memberStatusCode = me.jsjlog.blog.member.domain.MemberStatusCode.ACTIVE)
             """)
     int updateActiveProfile(@Param("id") Long id, @Param("email") String email,
                             @Param("profileImageUrl") String profileImageUrl,
@@ -48,35 +53,28 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     @Modifying(clearAutomatically = true)
     @Query("""
             update Member m set m.nickname = :nickname, m.updatedAt = :updatedAt, m.updatedBy = :updatedBy
-            where m.id = :id and m.status = me.jsjlog.blog.member.domain.MemberStatus.ACTIVE
+            where m.id = :id and exists (
+                select 1 from MemberStatus s where s.memberId = m.id
+                    and s.memberStatusCode = me.jsjlog.blog.member.domain.MemberStatusCode.ACTIVE)
             """)
     int updateActiveNickname(@Param("id") Long id, @Param("nickname") String nickname,
                              @Param("updatedAt") LocalDateTime updatedAt, @Param("updatedBy") String updatedBy);
 
-    /** 복구와 새 가입이 겹쳐도 먼저 완료된 선택을 오래된 조회 결과로 덮어쓰지 않는다. */
+    /**
+     * 복원. 회원 상태를 먼저 조건부로 되돌린 뒤({@link MemberStatusRepository#reactivate}) 부른다.
+     * 탈퇴 때 비운 제공자 ID 와 프로필을 다시 채운다.
+     */
     @Modifying(clearAutomatically = true)
     @Query("""
-            update Member m set m.status = me.jsjlog.blog.member.domain.MemberStatus.ACTIVE,
+            update Member m set m.providerUserId = :providerUserId,
                 m.email = :email, m.profileImageUrl = :profileImageUrl,
                 m.updatedAt = :updatedAt, m.updatedBy = :updatedBy
-            where m.id = :id and m.provider = :provider and m.providerUserId = :providerUserId
-                and m.status = me.jsjlog.blog.member.domain.MemberStatus.WITHDRAWN
+            where m.id = :id and m.provider = :provider and m.providerUserId is null
             """)
-    int reactivateWithdrawn(@Param("id") Long id, @Param("provider") AuthProvider provider,
+    int restoreProviderLink(@Param("id") Long id, @Param("provider") AuthProvider provider,
                             @Param("providerUserId") String providerUserId, @Param("email") String email,
                             @Param("profileImageUrl") String profileImageUrl,
                             @Param("updatedAt") LocalDateTime updatedAt, @Param("updatedBy") String updatedBy);
-
-    /** 제공자 연결 해제와 새 회원 INSERT는 같은 트랜잭션에서 함께 성공하거나 함께 롤백한다. */
-    @Modifying(clearAutomatically = true)
-    @Query("""
-            update Member m set m.providerUserId = null, m.updatedAt = :updatedAt, m.updatedBy = :updatedBy
-            where m.id = :id and m.provider = :provider and m.providerUserId = :providerUserId
-                and m.status = me.jsjlog.blog.member.domain.MemberStatus.WITHDRAWN
-            """)
-    int detachWithdrawnProvider(@Param("id") Long id, @Param("provider") AuthProvider provider,
-                                @Param("providerUserId") String providerUserId,
-                                @Param("updatedAt") LocalDateTime updatedAt, @Param("updatedBy") String updatedBy);
 
     /**
      * 그 권한을 가진 회원 전부.

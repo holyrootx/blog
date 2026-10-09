@@ -45,6 +45,17 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  // 왼쪽 목록에서 고른 항목을 오른쪽에 보여 주는 화면처럼, 지금 보고 있는 행의 rowKey 값
+  activeKey: {
+    type: [String, Number],
+    default: null,
+  },
+  // 이보다 좁아지면 표 안에서 가로로 넘긴다. 비우면 기본값(전체 폭 목록 기준).
+  // 화면을 둘로 나눠 쓰는 좁은 표는 칸이 적어서 더 작게 준다
+  minWidth: {
+    type: String,
+    default: null,
+  },
 });
 
 const emit = defineEmits(['row-click', 'update:selectedKeys', 'retry']);
@@ -74,6 +85,10 @@ const someChecked = computed(
 
 function isChecked(row) {
   return props.selectedKeys.includes(row[props.rowKey]);
+}
+
+function isActive(row) {
+  return props.activeKey !== null && row[props.rowKey] === props.activeKey;
 }
 
 function toggleRow(row) {
@@ -107,7 +122,11 @@ function onRowClick(row) {
 
 <template>
   <div class="admin-grid">
-    <table class="admin-grid__table" :class="{ 'admin-grid__table--clickable': rowClickable }">
+    <table
+      class="admin-grid__table"
+      :class="{ 'admin-grid__table--clickable': rowClickable }"
+      :style="minWidth ? { minWidth } : undefined"
+    >
       <colgroup>
         <col v-if="selectable" style="width: 46px" />
         <col v-for="column in columns" :key="column.key" :style="{ width: column.width }" />
@@ -167,7 +186,11 @@ function onRowClick(row) {
           <tr
             v-for="row in rows"
             :key="row[rowKey]"
-            :class="{ 'admin-grid__row--checked': selectable && isChecked(row) }"
+            :class="{
+              'admin-grid__row--checked': selectable && isChecked(row),
+              'admin-grid__row--active': isActive(row),
+            }"
+            :aria-current="isActive(row) ? 'true' : undefined"
             @click="onRowClick(row)"
           >
             <!-- 체크박스를 눌렀을 때 행 클릭(팝업)이 같이 일어나지 않게 막는다 -->

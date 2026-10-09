@@ -35,6 +35,7 @@ public class MemberService {
     private static final int MY_COMMENT_LIMIT = 100;
 
     private final MemberRepository memberRepository;
+    private final MemberStatusService memberStatusService;
     private final MemberSessionManager memberSessions;
     private final CommentRepository commentRepository;
     private final AuditorAware<String> auditorProvider;
@@ -57,7 +58,7 @@ public class MemberService {
      * 탈퇴.
      *
      * <p>행을 지우지 않는다. 댓글이 이 행을 가리키고 있어서 지우면 댓글이 사라지고
-     * 답글이 부모를 잃는다. 무엇을 남기고 무엇을 지우는지는 {@link Member#withdraw()} 에 있다.</p>
+     * 답글이 부모를 잃는다. 무엇을 남기고 무엇을 지우는지는 {@link Member#withdraw(LocalDateTime)} 에 있다.</p>
      *
      * <p>탈퇴가 커밋된 뒤 다른 브라우저의 인증도 함께 폐기한다.</p>
      */
@@ -70,11 +71,11 @@ public class MemberService {
             throw new BlogException(ErrorCode.MEMBER_ADMIN_CANNOT_WITHDRAW);
         }
 
-        if (!member.getStatus().isActive()) {
+        if (!member.getStatusCode().isActive()) {
             throw new BlogException(ErrorCode.FORBIDDEN);
         }
 
-        member.withdraw();
+        memberStatusService.withdraw(member, LocalDateTime.now());
         memberSessions.revokeAfterCommit(memberId);
     }
 
@@ -96,7 +97,7 @@ public class MemberService {
     private Member requiredActiveMember(Long memberId) {
         Member member = requiredMember(memberId);
 
-        if (!member.getStatus().isActive()) {
+        if (!member.getStatusCode().isActive()) {
             throw new BlogException(ErrorCode.FORBIDDEN);
         }
 

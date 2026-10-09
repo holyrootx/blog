@@ -1,5 +1,8 @@
 package me.jsjlog.blog.member.domain;
 
+import java.time.LocalDateTime;
+
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -7,6 +10,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
@@ -65,7 +69,10 @@ public class Member extends BaseEntity {
     @Column(name = "provider", nullable = false, length = 20)
     private AuthProvider provider;
 
-    /** 제공자가 준 고유 번호. LOCAL 회원은 없다. 탈퇴해도 남긴다 — 재가입 때 예전 행을 찾는 열쇠다 */
+    /**
+     * 제공자가 준 고유 번호. LOCAL 회원은 없다.
+     * 탈퇴하면 {@link MemberStatus} 로 옮기고 여기서는 비운다 — 복원 기간 동안 거기서 찾는다.
+     */
     @Column(name = "provider_user_id", length = 255)
     private String providerUserId;
 
@@ -87,8 +94,11 @@ public class Member extends BaseEntity {
     @Column(name = "profile_image_url", length = 500)
     private String profileImageUrl;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 20)
+    /**
+     * 지금 상태. 별도 표(member_status)에 있고 회원과 함께 저장된다.
+     * 상태를 읽을 때는 {@link #getStatusCode()} 를 쓴다.
+     */
+    @OneToOne(mappedBy = "member", cascade = CascadeType.ALL, optional = false)
     private MemberStatus status;
 
     /**
@@ -111,7 +121,7 @@ public class Member extends BaseEntity {
         member.nickname = nickname;
         member.email = email;
         member.profileImageUrl = profileImageUrl;
-        member.status = MemberStatus.ACTIVE;
+        member.status = new MemberStatus(member, MemberStatusCode.ACTIVE, LocalDateTime.now());
 
         return member;
     }
@@ -130,9 +140,13 @@ public class Member extends BaseEntity {
         member.username = username;
         member.passwordHash = passwordHash;
         member.nickname = nickname;
-        member.status = MemberStatus.ACTIVE;
+        member.status = new MemberStatus(member, MemberStatusCode.ACTIVE, LocalDateTime.now());
 
         return member;
+    }
+
+    public MemberStatusCode getStatusCode() {
+        return status.getMemberStatusCode();
     }
 
     /**
@@ -140,29 +154,18 @@ public class Member extends BaseEntity {
      * 답글이 부모를 잃는다.
      *
      * <p>지우는 값들은 다시 로그인하면 제공자가 채워 주는 것들이라 파기해도 복구에 지장이 없다.
-     * {@code providerUserId} 와 {@code nickname} 은 남긴다.</p>
+     * 닉네임은 남긴다 — 남은 댓글의 작성자 표시에 쓴다. 제공자 ID 는 복원 기간 동안만
+     * {@link MemberStatus} 로 옮겨 둔다.</p>
+     *
+     * <p>이력은 남기지 않는다. 상태를 바꾸는 서비스({@code MemberStatusService})가 이 메서드를 부르고 이력을 쓴다.</p>
      */
-    public void withdraw() {
+    public void withdraw(LocalDateTime now) {
+        status.withdraw(provider, providerUserId, now);
+        this.providerUserId = null;
         this.email = null;
         this.passwordHash = null;
         this.username = null;
-        this.status = MemberStatus.WITHDRAWN;
-    }
-
-    /** 재가입에서 "예전 계정 쓰기" 를 고른 경우 */
-    public void reactivate(String email, String profileImageUrl) {
-        this.status = MemberStatus.ACTIVE;
-        this.email = email;
-        this.profileImageUrl = profileImageUrl;
-    }
-
-    /**
-     * 재가입에서 "새로 만들기" 를 고른 경우. 예전 행과 소셜 계정의 연결을 끊는다.
-     *
-     * 끊고 나면 그 행은 아무도 되살릴 수 없다. 댓글이 없으면 지워도 된다 — 가리키는 게 없다.
-     */
-    public void detachProvider() {
-        this.providerUserId = null;
+        this.profileImageUrl = null;
     }
 
     /** 로그인할 때마다 제공자가 준 최신 값으로 맞춘다. 닉네임은 본인이 정한 값이라 건드리지 않는다 */
@@ -180,12 +183,12 @@ public class Member extends BaseEntity {
         this.passwordHash = passwordHash;
     }
 
-    public void suspend() {
-        this.status = MemberStatus.SUSPENDED;
+    public void suspend(LocalDateTime now) {
+        status.changeTo(MemberStatusCode.SUSPENDED, now);
     }
 
-    public void unsuspend() {
-        this.status = MemberStatus.ACTIVE;
+    public void unsuspend(LocalDateTime now) {
+        status.changeTo(MemberStatusCode.ACTIVE, now);
     }
 
     public boolean isAdmin() {

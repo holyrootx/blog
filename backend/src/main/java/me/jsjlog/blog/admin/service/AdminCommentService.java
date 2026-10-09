@@ -318,7 +318,7 @@ public class AdminCommentService {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new BlogException(ErrorCode.UNAUTHORIZED));
 
-        if (!member.getStatus().isActive() || member.getRole() != MemberRole.ADMIN) {
+        if (!member.getStatusCode().isActive() || member.getRole() != MemberRole.ADMIN) {
             throw new BlogException(ErrorCode.FORBIDDEN);
         }
 

@@ -93,6 +93,8 @@ backend/build/uploads/
 
 # DB 점검·수동 변경 SQL과 덤프는 저장소 밖에서 관리한다.
 *.[sS][qQ][lL]
+# 테스트가 읽는 씨드는 코드라서 추적한다 (공통 코드가 비면 서버가 뜨지 않는다)
+!backend/src/test/resources/db/*.sql
 
 # Temporary files
 __pycache__/

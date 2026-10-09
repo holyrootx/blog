@@ -1,5 +1,6 @@
 package me.jsjlog.blog.common.security.oauth;
 
+import java.time.LocalDateTime;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -19,10 +20,12 @@ import me.jsjlog.blog.common.exception.BlogException;
 import me.jsjlog.blog.member.domain.AuthProvider;
 import me.jsjlog.blog.member.domain.Member;
 import me.jsjlog.blog.member.domain.MemberRole;
-import me.jsjlog.blog.member.domain.MemberStatus;
+import me.jsjlog.blog.member.domain.MemberStatusCode;
 import me.jsjlog.blog.member.domain.NicknameGenerator;
 import me.jsjlog.blog.member.repository.MemberRepository;
+import me.jsjlog.blog.member.repository.MemberStatusRepository;
 import me.jsjlog.blog.member.service.MemberService;
+import me.jsjlog.blog.member.service.MemberStatusService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -57,6 +60,8 @@ class OAuthSessionConcurrencyTest {
     @Autowired MemberSessionManager sessions;
     @Autowired AdminMemberService adminMembers;
     @Autowired MemberService memberService;
+    @Autowired MemberStatusService memberStatusService;
+    @Autowired MemberStatusRepository memberStatuses;
     @Autowired CommentRepository comments;
     @Autowired NicknameGenerator nicknames;
     @Autowired PlatformTransactionManager transactions;
@@ -91,11 +96,11 @@ class OAuthSessionConcurrencyTest {
                         new AdminUserDetailsService(pausedMembers).loadUserByUsername(admin.getUsername())),
                 () -> {
                     new TransactionTemplate(transactions).executeWithoutResult(transaction -> {
-                        members.findById(admin.getId()).orElseThrow().suspend();
+                        members.findById(admin.getId()).orElseThrow().suspend(LocalDateTime.now());
                         sessions.revokeAfterCommit(admin.getId());
                     });
                     new TransactionTemplate(transactions).executeWithoutResult(transaction ->
-                            members.findById(admin.getId()).orElseThrow().unsuspend());
+                            members.findById(admin.getId()).orElseThrow().unsuspend(LocalDateTime.now()));
                 });
 
         assertThatThrownBy(() -> sessions.onAuthentication(new MockHttpServletRequest(), principal))
@@ -105,8 +110,8 @@ class OAuthSessionConcurrencyTest {
     @Test
     void socialLookupStartedBeforeRevocationCannotCreateFreshAuthenticationAfterRestore() throws Exception {
         OAuth2User principal = runPaused(this::loadSocialUser, () -> {
-            adminMembers.suspend(reader.getId());
-            adminMembers.unsuspend(reader.getId());
+            adminMembers.suspend(reader.getId(), null);
+            adminMembers.unsuspend(reader.getId(), null);
         });
         assertThatThrownBy(() -> sessions.onAuthentication(new MockHttpServletRequest(), (MemberPrincipal) principal))
                 .isInstanceOf(SessionAuthenticationException.class);
@@ -122,7 +127,7 @@ class OAuthSessionConcurrencyTest {
         assertThat(current.getEmail()).isEqualTo("after@example.test");
         assertThat(current.getProfileImageUrl()).isEqualTo("https://example.test/after.png");
         assertThat(principal.getProfileImageUrl()).isEqualTo(current.getProfileImageUrl());
-        assertThat(current.getStatus()).isEqualTo(MemberStatus.ACTIVE);
+        assertThat(current.getStatusCode()).isEqualTo(MemberStatusCode.ACTIVE);
         assertThat(current.getNickname()).isEqualTo("독자");
         assertThat(current.getUpdatedAt()).isAfter(before.getUpdatedAt());
         assertThat(current.getUpdatedBy()).isEqualTo("system");
@@ -132,10 +137,10 @@ class OAuthSessionConcurrencyTest {
 
     @Test
     void profileSynchronizationCannotUndoCommittedSuspension() throws Exception {
-        Object outcome = runPaused(this::loadSocialUserOrError, () -> adminMembers.suspend(reader.getId()));
+        Object outcome = runPaused(this::loadSocialUserOrError, () -> adminMembers.suspend(reader.getId(), null));
         Member current = members.findById(reader.getId()).orElseThrow();
-        assertThat(current).extracting(Member::getStatus, Member::getEmail)
-                .containsExactly(MemberStatus.SUSPENDED, "before@example.test");
+        assertThat(current).extracting(Member::getStatusCode, Member::getEmail)
+                .containsExactly(MemberStatusCode.SUSPENDED, "before@example.test");
         assertThat(outcome).isInstanceOf(OAuth2AuthenticationException.class);
     }
 
@@ -143,11 +148,13 @@ class OAuthSessionConcurrencyTest {
     void profileSynchronizationCannotRestoreWithdrawnAccountOrErasedEmail() throws Exception {
         Object outcome = runPaused(this::loadSocialUserOrError, () -> memberService.withdraw(reader.getId()));
         Member current = members.findById(reader.getId()).orElseThrow();
-        assertThat(current).extracting(Member::getStatus, Member::getEmail)
-                .containsExactly(MemberStatus.WITHDRAWN, null);
+        assertThat(current).extracting(Member::getStatusCode, Member::getEmail)
+                .containsExactly(MemberStatusCode.WITHDRAWN, null);
         assertThat(current.getNickname()).isEqualTo("독자");
-        assertThat(current.getProfileImageUrl()).isEqualTo("https://example.test/before.png");
-        assertThat(current.getProviderUserId()).isEqualTo(reader.getProviderUserId());
+        assertThat(current.getProfileImageUrl()).isNull();
+        assertThat(current.getProviderUserId()).isNull();
+        assertThat(memberStatuses.findById(reader.getId()).orElseThrow().getRestoreProviderUserId())
+                .isEqualTo(reader.getProviderUserId());
         assertThat(current.getUsername()).isNull();
         assertThat(current.getPasswordHash()).isNull();
         assertThat(outcome).isInstanceOf(OAuth2AuthenticationException.class);
@@ -157,7 +164,7 @@ class OAuthSessionConcurrencyTest {
     void nicknameEditCannotRestoreWithdrawnAccountOrErasedEmail() throws Exception {
         doAnswer(invocation -> pauseAfterRead(members.findById(reader.getId())))
                 .when(pausedMembers).findById(reader.getId());
-        MemberService delayedNicknameService = new MemberService(pausedMembers, sessions, comments, auditorProvider);
+        MemberService delayedNicknameService = new MemberService(pausedMembers, memberStatusService, sessions, comments, auditorProvider);
         Object outcome = runPaused(() -> {
                     try {
                         return new TransactionTemplate(transactions).execute(transaction ->
@@ -168,11 +175,13 @@ class OAuthSessionConcurrencyTest {
                 },
                 () -> memberService.withdraw(reader.getId()));
         Member current = members.findById(reader.getId()).orElseThrow();
-        assertThat(current).extracting(Member::getStatus, Member::getEmail)
-                .containsExactly(MemberStatus.WITHDRAWN, null);
+        assertThat(current).extracting(Member::getStatusCode, Member::getEmail)
+                .containsExactly(MemberStatusCode.WITHDRAWN, null);
         assertThat(current.getNickname()).isEqualTo("독자");
-        assertThat(current.getProfileImageUrl()).isEqualTo("https://example.test/before.png");
-        assertThat(current.getProviderUserId()).isEqualTo(reader.getProviderUserId());
+        assertThat(current.getProfileImageUrl()).isNull();
+        assertThat(current.getProviderUserId()).isNull();
+        assertThat(memberStatuses.findById(reader.getId()).orElseThrow().getRestoreProviderUserId())
+                .isEqualTo(reader.getProviderUserId());
         assertThat(outcome).isInstanceOf(BlogException.class);
     }
 
@@ -212,7 +221,8 @@ class OAuthSessionConcurrencyTest {
                 "email", "after@example.test",
                 "picture", "https://example.test/after.png"), "sub");
         var service = new CustomOAuth2UserService(request -> providerUser,
-                new OAuthAttributeReaders(List.of(new GoogleAttributeReader())), pausedMembers, nicknames, auditorProvider);
+                new OAuthAttributeReaders(List.of(new GoogleAttributeReader())), pausedMembers, memberStatuses, nicknames,
+                auditorProvider);
         var registration = ClientRegistration.withRegistrationId("google")
                 .clientId("test-client").clientSecret("test-secret")
                 .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)

@@ -35,6 +35,7 @@ const AdminCommentPage = () => import('../../features/admin/pages/AdminCommentPa
 const AdminHomeSettingsPage = () => import('../../features/admin/pages/AdminHomeSettingsPage.vue');
 const AdminMemberPage = () => import('../../features/admin/pages/AdminMemberPage.vue');
 const AdminImagePage = () => import('../../features/admin/pages/AdminImagePage.vue');
+const AdminCommonCodePage = () => import('../../features/admin/pages/AdminCommonCodePage.vue');
 
 // 샌드박스(src/sandbox)는 gitignore 대상이라 없을 수 있다.
 // import.meta.glob은 매칭되는 파일이 없으면 빈 객체를 주므로 빌드가 깨지지 않는다.
@@ -238,6 +239,15 @@ const router = createRouter({
           component: AdminMemberPage,
           meta: {
             title: '회원 관리',
+            group: '운영',
+          },
+        },
+        {
+          path: 'codes',
+          name: 'admin-common-codes',
+          component: AdminCommonCodePage,
+          meta: {
+            title: '공통 코드',
             group: '운영',
           },
         },

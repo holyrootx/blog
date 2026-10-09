@@ -8,8 +8,9 @@ import me.jsjlog.blog.admin.dto.AdminMemberSearchCondition;
 import me.jsjlog.blog.admin.dto.AdminMemberStatusCounts;
 import me.jsjlog.blog.admin.dto.AdminMemberSummaryResponse;
 import me.jsjlog.blog.member.domain.MemberRole;
-import me.jsjlog.blog.member.domain.MemberStatus;
+import me.jsjlog.blog.member.domain.MemberStatusCode;
 import me.jsjlog.blog.member.domain.QMember;
+import me.jsjlog.blog.member.domain.QMemberStatus;
 import me.jsjlog.blog.post.domain.QComment;
 import org.springframework.stereotype.Repository;
 import org.springframework.util.StringUtils;
@@ -26,6 +27,7 @@ public class AdminMemberQueryRepository {
     /** 운영자 계정은 제재 대상 목록에서 제외한다. */
     public List<AdminMemberSummaryResponse> getMembers(AdminMemberSearchCondition condition) {
         QMember member = QMember.member;
+        QMemberStatus status = QMemberStatus.memberStatus;
         QComment comment = QComment.comment;
 
         List<Tuple> rows = jpaQueryFactory
@@ -34,11 +36,12 @@ public class AdminMemberQueryRepository {
                         member.nickname,
                         member.email,
                         member.provider,
-                        member.status,
+                        status.memberStatusCode,
                         comment.count(),
                         member.createdAt
                 )
                 .from(member)
+                .join(status).on(status.memberId.eq(member.id))
                 .leftJoin(comment).on(comment.member.id.eq(member.id))
                 .where(toPredicate(condition, condition.status()))
                 .groupBy(
@@ -46,7 +49,7 @@ public class AdminMemberQueryRepository {
                         member.nickname,
                         member.email,
                         member.provider,
-                        member.status,
+                        status.memberStatusCode,
                         member.createdAt
                 )
                 .orderBy(member.createdAt.desc(), member.id.desc())
@@ -60,7 +63,8 @@ public class AdminMemberQueryRepository {
                         row.get(member.nickname),
                         row.get(member.email),
                         row.get(member.provider),
-                        row.get(member.status),
+                        row.get(status.memberStatusCode),
+                        null,
                         Objects.requireNonNullElse(row.get(comment.count()), 0L),
                         row.get(member.createdAt)
                 ))
@@ -75,30 +79,33 @@ public class AdminMemberQueryRepository {
     public AdminMemberStatusCounts countByStatus(AdminMemberSearchCondition condition) {
         return new AdminMemberStatusCounts(
                 count(condition, null),
-                count(condition, MemberStatus.ACTIVE),
-                count(condition, MemberStatus.SUSPENDED),
-                count(condition, MemberStatus.WITHDRAWN)
+                count(condition, MemberStatusCode.ACTIVE),
+                count(condition, MemberStatusCode.SUSPENDED),
+                count(condition, MemberStatusCode.WITHDRAWN)
         );
     }
 
-    private long count(AdminMemberSearchCondition condition, MemberStatus status) {
+    private long count(AdminMemberSearchCondition condition, MemberStatusCode statusCode) {
         QMember member = QMember.member;
+        QMemberStatus status = QMemberStatus.memberStatus;
 
         Long count = jpaQueryFactory
                 .select(member.count())
                 .from(member)
-                .where(toPredicate(condition, status))
+                .join(status).on(status.memberId.eq(member.id))
+                .where(toPredicate(condition, statusCode))
                 .fetchOne();
 
         return Objects.requireNonNullElse(count, 0L);
     }
 
-    private BooleanBuilder toPredicate(AdminMemberSearchCondition condition, MemberStatus status) {
+    /** 상태 조건은 회원 상태 표에 건다. 부르는 쪽이 그 표를 함께 join 해 둔다 */
+    private BooleanBuilder toPredicate(AdminMemberSearchCondition condition, MemberStatusCode statusCode) {
         QMember member = QMember.member;
         BooleanBuilder builder = new BooleanBuilder(member.role.eq(MemberRole.USER));
 
-        if (status != null) {
-            builder.and(member.status.eq(status));
+        if (statusCode != null) {
+            builder.and(QMemberStatus.memberStatus.memberStatusCode.eq(statusCode));
         }
 
         if (StringUtils.hasText(condition.keyword())) {

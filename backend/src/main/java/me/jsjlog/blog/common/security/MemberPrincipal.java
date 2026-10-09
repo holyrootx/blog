@@ -7,7 +7,7 @@ import java.util.Objects;
 
 import me.jsjlog.blog.member.domain.Member;
 import me.jsjlog.blog.member.domain.MemberRole;
-import me.jsjlog.blog.member.domain.MemberStatus;
+import me.jsjlog.blog.member.domain.MemberStatusCode;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -39,7 +39,7 @@ public class MemberPrincipal implements UserDetails, OAuth2User {
     private final String nickname;
     private final String profileImageUrl;
     private final MemberRole role;
-    private final MemberStatus status;
+    private final MemberStatusCode status;
     private final Map<String, Object> attributes;
 
     private MemberPrincipal(
@@ -49,7 +49,7 @@ public class MemberPrincipal implements UserDetails, OAuth2User {
             String nickname,
             String profileImageUrl,
             MemberRole role,
-            MemberStatus status,
+            MemberStatusCode status,
             Map<String, Object> attributes,
             long authenticationStartedAtNanos
     ) {
@@ -77,7 +77,7 @@ public class MemberPrincipal implements UserDetails, OAuth2User {
                 member.getNickname(),
                 member.getProfileImageUrl(),
                 member.getRole(),
-                member.getStatus(),
+                member.getStatusCode(),
                 Map.of(),
                 authenticationStartedAtNanos
         );
@@ -103,7 +103,7 @@ public class MemberPrincipal implements UserDetails, OAuth2User {
                 member.getNickname(),
                 member.getProfileImageUrl(),
                 member.getRole(),
-                member.getStatus(),
+                member.getStatusCode(),
                 Map.of(
                         "memberId", member.getId(),
                         "nickname", member.getNickname(),
@@ -130,7 +130,7 @@ public class MemberPrincipal implements UserDetails, OAuth2User {
         return role;
     }
 
-    public MemberStatus getStatus() {
+    public MemberStatusCode getStatus() {
         return status;
     }
 
@@ -144,7 +144,7 @@ public class MemberPrincipal implements UserDetails, OAuth2User {
 
     boolean matchesCurrentAccount(Member member) {
         return member != null && Objects.equals(id, member.getId())
-                && status.isActive() && member.getStatus().isActive()
+                && status.isActive() && member.getStatusCode().isActive()
                 && role == member.getRole()
                 && (!isAdmin() || (Objects.equals(username, member.getUsername())
                     && Objects.equals(passwordHash, member.getPasswordHash())));
