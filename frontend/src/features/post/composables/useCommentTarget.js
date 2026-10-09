@@ -2,7 +2,39 @@ import { nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { commentTargetNavigation } from '../../../app/router/commentTargetNavigation';
 import { getCommentContext } from '../api/postApi';
 
-export function useCommentTarget({ postId, initialLoading, comments, mergeTarget, clearTarget }) {
+/** 부드러운 스크롤은 프레임마다 scroll 을 낸다. 이만큼 조용하면 멈춘 것으로 본다 */
+const SCROLL_QUIET_MS = 150;
+/** 스크롤 이벤트를 놓쳐도 자동 불러오기가 영영 멈춰 있지 않게 하는 상한 */
+const SCROLL_SETTLE_LIMIT_MS = 2000;
+
+/**
+ * 라우터가 대상으로 옮긴 스크롤이 끝날 때까지 기다린다.
+ *
+ * scrollend 는 지원하지 않는 브라우저가 있어 쓰지 않는다. 이미 그 자리라 스크롤이 아예 없을
+ * 수도 있으니, 첫 이벤트를 기다리지 않고 한 프레임 뒤부터 조용함을 잰다.
+ */
+function waitForScrollSettle() {
+  return new Promise((resolve) => {
+    let quietTimer;
+    const limitTimer = setTimeout(done, SCROLL_SETTLE_LIMIT_MS);
+    function done() {
+      clearTimeout(quietTimer);
+      clearTimeout(limitTimer);
+      window.removeEventListener('scroll', restart);
+      resolve();
+    }
+    function restart() {
+      clearTimeout(quietTimer);
+      quietTimer = setTimeout(done, SCROLL_QUIET_MS);
+    }
+    window.addEventListener('scroll', restart, { passive: true });
+    requestAnimationFrame(restart);
+  });
+}
+
+export function useCommentTarget({
+  postId, initialLoading, comments, mergeTarget, clearTarget, pauseAutoLoad, resumeAutoLoad,
+}) {
   const targetLoading = ref(false);
   const targetMessage = ref('');
   const targetRetryable = ref(false);
@@ -13,6 +45,7 @@ export function useCommentTarget({ postId, initialLoading, comments, mergeTarget
     revision += 1;
     controller?.abort();
     clearTarget();
+    resumeAutoLoad();
     targetLoading.value = false;
     targetMessage.value = '';
     targetRetryable.value = false;
@@ -23,6 +56,8 @@ export function useCommentTarget({ postId, initialLoading, comments, mergeTarget
     controller?.abort();
     controller = new AbortController();
     const { signal } = controller;
+    // 대상을 받아 스크롤이 끝날 때까지 목록 끝 자동 불러오기를 멈춘다(useCommentFeed.pauseAutoLoad)
+    pauseAutoLoad();
     targetLoading.value = true;
     targetMessage.value = '';
     targetRetryable.value = false;
@@ -55,6 +90,11 @@ export function useCommentTarget({ postId, initialLoading, comments, mergeTarget
     } finally {
       if (current()) targetLoading.value = false;
     }
+
+    // 여기까지 왔으면 라우터가 대상(또는 댓글 제목)으로 스크롤을 시작했다. 다른 대상으로
+    // 넘어갔다면 그쪽이 멈춤을 이어받았으므로 풀지 않는다
+    await waitForScrollSettle();
+    if (requested === revision) resumeAutoLoad();
   }
 
   watch([commentTargetNavigation, postId, initialLoading, comments], ([navigation, id, loading]) => {
