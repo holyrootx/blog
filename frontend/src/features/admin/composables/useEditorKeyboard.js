@@ -20,6 +20,7 @@ export function useEditorKeyboard({ editorRef, selection, undo, redo, focusBlock
     pasteBlocks,
     removeSelectedBlocks,
     moveSelectedBlocks,
+    duplicateSelected,
   } = selection;
 
   function onEditorKeydown(event) {
@@ -95,6 +96,20 @@ export function useEditorKeyboard({ editorRef, selection, undo, redo, focusBlock
     if (command && key === 'v') {
       event.preventDefault();
       pasteBlocks();
+      return true;
+    }
+
+    // 노션과 같은 단축키: ⌘D 복제, ⌘⇧↑·↓ 옮기기
+    if (command && key === 'd' && selectedIds.value.length > 0) {
+      event.preventDefault();
+      duplicateSelected();
+      return true;
+    }
+
+    if (command && event.shiftKey && (event.key === 'ArrowUp' || event.key === 'ArrowDown')
+      && selectedIds.value.length > 0) {
+      event.preventDefault();
+      moveSelectedBlocks(event.key === 'ArrowUp' ? -1 : 1);
       return true;
     }
 

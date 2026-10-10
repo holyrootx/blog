@@ -1,6 +1,7 @@
 <script setup>
 import PostInline from './PostInline.vue';
 import PostCode from './PostCode.vue';
+import PostList from './PostList.vue';
 
 /**
  * 마크다운 블록을 그린다.
@@ -58,16 +59,62 @@ const calloutLabels = {
         <p class="post-callout__text"><PostInline :tokens="block.inline" /></p>
       </div>
 
-      <component
-        :is="block.ordered ? 'ol' : 'ul'"
-        v-else-if="block.type === 'list'"
-        class="post-body__list"
-        :class="block.ordered ? 'post-body__list--ordered' : 'post-body__list--bullet'"
+      <!-- 토글은 접힌 채로 시작한다. 안쪽은 본문과 같은 방식으로 다시 그린다 -->
+      <!-- 제목 토글은 제목 태그를 summary 안에 둔다. 목차가 이 id 로 찾아온다 -->
+      <details
+        v-else-if="block.type === 'toggle'"
+        :id="block.id"
+        class="post-toggle"
+        :class="block.level ? `post-toggle--h${block.level}` : ''"
       >
-        <li v-for="(item, itemIndex) in block.items" :key="itemIndex">
-          <PostInline :tokens="item" />
-        </li>
-      </component>
+        <summary class="post-toggle__summary">
+          <component
+            :is="`h${block.level + 1}`"
+            v-if="block.level"
+            class="post-toggle__heading"
+          ><PostInline :tokens="block.inline" /></component>
+          <PostInline v-else :tokens="block.inline" />
+        </summary>
+        <PostBody class="post-toggle__body" :body="block.children" />
+      </details>
+
+      <!-- 목록 안의 목록·할 일까지 PostList 가 그린다 -->
+      <PostList v-else-if="block.type === 'list'" :list="block" />
+
+      <!-- 표는 좁은 화면에서 본문 폭을 넘지 않고 옆으로 밀어 본다 -->
+      <div
+        v-else-if="block.type === 'table'"
+        class="post-table"
+        role="region"
+        aria-label="표"
+        tabindex="0"
+      >
+        <table class="post-table__grid">
+          <thead v-if="block.header">
+            <tr>
+              <th
+                v-for="(cell, col) in block.rows[0]"
+                :key="col"
+                scope="col"
+                :style="block.align[col] ? { textAlign: block.align[col] } : null"
+              >
+                <PostInline :tokens="cell" />
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(cells, row) in block.header ? block.rows.slice(1) : block.rows" :key="row">
+              <td
+                v-for="(cell, col) in cells"
+                :key="col"
+                :style="block.align[col] ? { textAlign: block.align[col] } : null"
+              >
+                <PostInline :tokens="cell" />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
       <hr v-else-if="block.type === 'divider'" class="post-body__divider" />
 

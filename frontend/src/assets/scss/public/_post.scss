@@ -385,6 +385,198 @@
   margin-top: 6px;
 }
 
+/* 목록 안의 목록. 깊이마다 모양을 바꿔 어느 단계인지 보이게 한다 (노션과 같다) */
+.post-body__list .post-body__list {
+  margin-top: 6px;
+}
+
+.post-body__list--bullet.post-body__list--depth-1 { list-style: circle; }
+.post-body__list--bullet.post-body__list--depth-2 { list-style: square; }
+.post-body__list--ordered.post-body__list--depth-1 { list-style: lower-alpha; }
+.post-body__list--ordered.post-body__list--depth-2 { list-style: lower-roman; }
+
+/* 할 일 목록은 글머리 대신 체크 상자를 쓴다. 상자는 읽기 전용이다 */
+.post-body__list--todo {
+  padding-left: 4px;
+  list-style: none;
+}
+
+.post-body__todo {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 10px;
+  align-items: baseline;
+}
+
+/* 하위 목록은 체크 상자 아래가 아니라 글 아래에 줄을 맞춘다 */
+.post-body__todo > .post-body__list {
+  grid-column: 2;
+}
+
+.post-body__todo-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  border: 1.5px solid var(--text-subtle);
+  border-radius: 4px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  transform: translateY(2px);
+}
+
+.post-body__todo-box--done {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.post-body__todo--done > .post-body__todo-text {
+  color: var(--text-subtle);
+  text-decoration: line-through;
+}
+
+/* 토글: 제목 앞 ▸ 를 누르면 펼쳐진다 (노션과 같은 모양) */
+.post-toggle {
+  margin: 20px 0 0;
+}
+
+.post-toggle__summary {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  font-size: 16.5px;
+  line-height: 1.95;
+  list-style: none;
+  cursor: pointer;
+}
+
+/* 제목 토글: 제목과 같은 크기·여백 */
+.post-toggle--h1,
+.post-toggle--h2,
+.post-toggle--h3 {
+  margin-top: 38px;
+  scroll-margin-top: 88px;
+}
+
+.post-toggle--h1 {
+  margin-top: 46px;
+}
+
+.post-toggle--h3 {
+  margin-top: 30px;
+}
+
+.post-toggle--h1 > .post-toggle__summary,
+.post-toggle--h2 > .post-toggle__summary,
+.post-toggle--h3 > .post-toggle__summary {
+  align-items: center;
+}
+
+.post-toggle__heading {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.4;
+}
+
+.post-toggle--h1 .post-toggle__heading {
+  font-size: 26px;
+}
+
+.post-toggle--h3 .post-toggle__heading {
+  font-size: 18.5px;
+}
+
+.post-toggle__summary::-webkit-details-marker {
+  display: none;
+}
+
+.post-toggle__summary::before {
+  content: '▸';
+  flex: none;
+  width: 18px;
+  color: var(--text-subtle);
+  text-align: center;
+  transition: transform 0.15s;
+}
+
+.post-toggle[open] > .post-toggle__summary::before {
+  transform: rotate(90deg);
+}
+
+/* 안쪽은 제목 글과 같은 세로줄에서 시작한다 (삼각형 18 + 간격 8).
+   안쪽도 PostBody 라서 본문 바깥 여백(.post-body)이 한 번 더 붙지 않게 덮는다 */
+.post-toggle > .post-toggle__body {
+  padding: 0 0 0 26px;
+}
+
+/* 안쪽 첫 블록은 제목에 바짝 붙인다 */
+.post-toggle__body > :first-child {
+  margin-top: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .post-toggle__summary::before {
+    transition: none;
+  }
+}
+
+/* 글자 색·배경 색. 이름은 매퍼가 정해 둔 것만 넘긴다 */
+@each $name in gray, brown, orange, yellow, green, blue, purple, pink, red {
+  .post-color--#{$name} {
+    color: var(--ink-#{$name});
+  }
+
+  .post-color--#{$name}-bg {
+    border-radius: 3px;
+    background: var(--ink-#{$name}-bg);
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+  }
+}
+
+/* 글자 색 안의 코드·링크도 그 색을 따른다 (노션과 같다) */
+.post-color:not([class$='-bg']) > .post-body__inline-code,
+.post-color:not([class$='-bg']) > .post-body__link {
+  color: inherit;
+}
+
+/* 표. 넓으면 본문 폭 안에서 옆으로 밀어 본다 (모바일) */
+.post-table {
+  margin: 28px 0 0;
+  overflow-x: auto;
+}
+
+.post-table:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.post-table__grid {
+  min-width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.post-table__grid th,
+.post-table__grid td {
+  min-width: 96px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.post-table__grid th {
+  background: var(--surface-muted);
+  font-weight: 700;
+}
+
 .post-body__divider {
   margin: 34px 0 0;
   border: 0;

@@ -1,9 +1,9 @@
 import { nextTick, ref } from 'vue';
 import { notifyError } from '../../../shared/toast/toastStore';
-import { createBlock, toMarkdown } from '../data/postEditorBlocks';
+import { createBlock, insertPoint, moveBlockRange, shiftIndent, toMarkdown } from '../data/postEditorBlocks';
 import { hasHeldBlocks, heldBlocks, holdBlocks, readClipboardBlocks } from '../data/postEditorClipboard';
 
-export function useBlockSelection({ blocks, editorRef, sync, isUploading }) {
+export function useBlockSelection({ blocks, editorRef, sync, isUploading, isHidden = () => false }) {
   // 드래그로 옮기는 중인 블록과 놓을 자리
   const draggingId = ref('');
   const dropIndex = ref(-1);
@@ -85,11 +85,22 @@ export function useBlockSelection({ blocks, editorRef, sync, isUploading }) {
     focusEditor();
   }
 
+  /** from 에서 direction 쪽으로 화면에 보이는 다음 블록. 없으면 from 그대로 */
+  function visibleStep(from, direction) {
+    for (let cursor = from + direction; cursor >= 0 && cursor < blocks.value.length; cursor += direction) {
+      if (!isHidden(blocks.value[cursor].id)) {
+        return cursor;
+      }
+    }
+
+    return from;
+  }
+
   function moveSelectionCursor(direction) {
     const current = blockIndex(selectionCursorId.value || selectedIds.value[0]);
-    const target = Math.min(Math.max(current + direction, 0), blocks.value.length - 1);
+    const target = current < 0 ? 0 : visibleStep(current, direction);
 
-    if (target >= 0) {
+    if (blocks.value[target]) {
       selectOnly(blocks.value[target].id);
     }
   }
@@ -97,7 +108,7 @@ export function useBlockSelection({ blocks, editorRef, sync, isUploading }) {
   function extendSelection(direction) {
     const anchor = blockIndex(selectionAnchorId.value || selectedIds.value[0]);
     const cursor = blockIndex(selectionCursorId.value || selectedIds.value[selectedIds.value.length - 1]);
-    const target = Math.min(Math.max(cursor + direction, 0), blocks.value.length - 1);
+    const target = cursor < 0 ? -1 : visibleStep(cursor, direction);
 
     if (anchor < 0 || target < 0) {
       return;
@@ -109,14 +120,46 @@ export function useBlockSelection({ blocks, editorRef, sync, isUploading }) {
   }
 
   function moveInsertCursor(direction) {
-    keyboardInsertIndex.value = Math.min(
-      Math.max(keyboardInsertIndex.value + direction, 0),
-      blocks.value.length,
-    );
+    let next = keyboardInsertIndex.value;
+
+    // 접힌 토글 안쪽(숨은 블록 앞자리)은 건너뛴다
+    do {
+      next = Math.min(Math.max(next + direction, 0), blocks.value.length);
+    } while (next > 0 && next < blocks.value.length && isHidden(blocks.value[next].id));
+
+    keyboardInsertIndex.value = next;
+  }
+
+  /**
+   * 고른 블록과 그 안쪽 블록(바로 아래로 더 깊게 들인 블록들)의 id.
+   * 토글·목록 부모를 옮기거나 지우면 딸린 블록이 따라가야 한다 (노션과 같다).
+   */
+  function withDescendants() {
+    const selected = new Set(selectedIds.value);
+    const result = new Set();
+    let parentIndent = null;
+
+    blocks.value.forEach((block) => {
+      const indent = block.indent ?? 0;
+
+      if (parentIndent !== null && indent > parentIndent) {
+        result.add(block.id);
+        return;
+      }
+
+      parentIndent = null;
+
+      if (selected.has(block.id)) {
+        result.add(block.id);
+        parentIndent = indent;
+      }
+    });
+
+    return result;
   }
 
   function selectedBlocks() {
-    const selected = new Set(selectedIds.value);
+    const selected = withDescendants();
 
     return blocks.value.filter((block) => selected.has(block.id));
   }
@@ -177,6 +220,12 @@ export function useBlockSelection({ blocks, editorRef, sync, isUploading }) {
    * 막지 않고 브라우저에 맡긴다. 글자를 붙여 넣으려던 것일 수 있어서다.</p>
    */
   function onBlockPaste(event) {
+    // 코드 칸(입력 요소) 안에서는 붙여넣은 글을 그대로 둔다. #, 백틱, 빈 줄도 코드의 일부다.
+    // 마크다운으로 풀면 "# 주석" 이 코드 밖의 제목이 된다
+    if (event.target instanceof HTMLTextAreaElement || event.target instanceof HTMLInputElement) {
+      return;
+    }
+
     const text = event.clipboardData?.getData('text/plain') ?? '';
     const pasting = hasHeldBlocks() && text === toMarkdown(heldBlocks())
       ? heldBlocks()
@@ -216,7 +265,7 @@ export function useBlockSelection({ blocks, editorRef, sync, isUploading }) {
   }
 
   function removeSelectedBlocks(keepInsertCursor = false) {
-    const selected = new Set(selectedIds.value);
+    const selected = withDescendants();
     const indexes = blocks.value
       .map((block, index) => (selected.has(block.id) ? index : -1))
       .filter((index) => index >= 0);
@@ -273,8 +322,10 @@ export function useBlockSelection({ blocks, editorRef, sync, isUploading }) {
         : (preferredIndex >= 0 ? preferredIndex : blocks.value.length);
     }
 
-    const pasted = source.map(cloneBlock);
-    blocks.value.splice(at, 0, ...pasted);
+    // 놓는 자리의 깊이에 맞춘다. 토글 안에 붙여 넣으면 토글 안쪽이 된다
+    const point = insertPoint(blocks.value, at);
+    const pasted = shiftIndent(source.map(cloneBlock), point.depth);
+    blocks.value.splice(point.at, 0, ...pasted);
     keyboardInsertIndex.value = -1;
     selectedIds.value = pasted.map((block) => block.id);
     selectionAnchorId.value = pasted[0]?.id ?? '';
@@ -284,20 +335,48 @@ export function useBlockSelection({ blocks, editorRef, sync, isUploading }) {
     focusEditor();
   }
 
-  function moveSelectedBlocks(direction) {
-    const moving = selectedBlocks();
+  /** 고른 블록을 바로 아래에 복제하고, 복제본을 고른다 (노션 ⌘D) */
+  function duplicateSelected() {
+    const selected = withDescendants();
+    const indexes = blocks.value
+      .map((block, index) => (selected.has(block.id) ? index : -1))
+      .filter((index) => index >= 0);
 
-    if (moving.length === 0) {
+    if (indexes.length === 0 || selectedBlocks().some((block) => isUploading(block))) {
       return;
     }
 
-    const selected = new Set(moving.map((block) => block.id));
-    const first = blocks.value.findIndex((block) => selected.has(block.id));
-    const rest = blocks.value.filter((block) => !selected.has(block.id));
-    const at = Math.min(Math.max(first + direction, 0), rest.length);
-    const next = [...rest.slice(0, at), ...moving, ...rest.slice(at)];
+    const copies = selectedBlocks().map(cloneBlock);
+    blocks.value.splice(Math.max(...indexes) + 1, 0, ...copies);
+    selectedIds.value = copies.map((block) => block.id);
+    selectionAnchorId.value = copies[0].id;
+    selectionCursorId.value = copies[copies.length - 1].id;
 
-    if (next.every((block, index) => block.id === blocks.value[index]?.id)) {
+    sync();
+    focusEditor();
+  }
+
+  function moveSelectedBlocks(direction) {
+    const selected = withDescendants();
+    const indexes = blocks.value
+      .map((block, index) => (selected.has(block.id) ? index : -1))
+      .filter((index) => index >= 0);
+
+    if (indexes.length === 0) {
+      return;
+    }
+
+    // 떨어져 고른 블록은 한 덩어리로 모은 뒤 옮긴다
+    const first = indexes[0];
+    const moving = blocks.value.filter((block) => selected.has(block.id));
+    const gathered = [
+      ...blocks.value.slice(0, first).filter((block) => !selected.has(block.id)),
+      ...moving,
+      ...blocks.value.slice(first).filter((block) => !selected.has(block.id)),
+    ];
+    const next = moveBlockRange(gathered, first, first + moving.length, direction);
+
+    if (!next || next.every((block, index) => block.id === blocks.value[index]?.id)) {
       return;
     }
 
@@ -331,16 +410,19 @@ export function useBlockSelection({ blocks, editorRef, sync, isUploading }) {
       return;
     }
 
-    const selected = new Set(selectedIds.value);
+    const selected = withDescendants();
     const moving = blocks.value.filter((block) => selected.has(block.id));
     const selectedBefore = blocks.value
       .slice(0, dropIndex.value)
       .filter((block) => selected.has(block.id)).length;
     const rest = blocks.value.filter((block) => !selected.has(block.id));
-    const at = Math.min(Math.max(dropIndex.value - selectedBefore, 0), rest.length);
-    const next = [...rest.slice(0, at), ...moving, ...rest.slice(at)];
+    const point = insertPoint(rest, Math.min(Math.max(dropIndex.value - selectedBefore, 0), rest.length));
+    const next = [...rest.slice(0, point.at), ...moving, ...rest.slice(point.at)];
 
+    // 제자리에 놓았으면 깊이도 건드리지 않는다
     if (!next.every((block, index) => block.id === blocks.value[index]?.id)) {
+      // 놓은 자리의 깊이에 맞춘다. 펼친 토글 바로 아래에 놓으면 토글 안으로 들어간다
+      shiftIndent(moving, point.depth);
       blocks.value = next;
       sync();
     }
@@ -374,6 +456,8 @@ export function useBlockSelection({ blocks, editorRef, sync, isUploading }) {
     removeSelectedBlocks,
     pasteBlocks,
     moveSelectedBlocks,
+    duplicateSelected,
+    withDescendants,
     onDragStart,
     onDragOver,
     onDrop,

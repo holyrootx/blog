@@ -18,6 +18,28 @@
   --modal-backdrop: rgba(30, 27, 24, 0.45);
 }
 
+/* 본문 글자 색·배경 색 (노션과 같은 아홉 가지). 밝은 바탕에서도 글이 읽히게 노션보다 조금 짙게 둔다 */
+:root {
+  --ink-gray: #6f6e69;
+  --ink-brown: #8a5a44;
+  --ink-orange: #b45309;
+  --ink-yellow: #8a6a0f;
+  --ink-green: #2f7451;
+  --ink-blue: #2b6a92;
+  --ink-purple: #7b4fa0;
+  --ink-pink: #a83a74;
+  --ink-red: #c03a35;
+  --ink-gray-bg: #efeeeb;
+  --ink-brown-bg: #f4eae6;
+  --ink-orange-bg: #fbe6d2;
+  --ink-yellow-bg: #faf0cf;
+  --ink-green-bg: #e3efe1;
+  --ink-blue-bg: #e0eef6;
+  --ink-purple-bg: #efe8f6;
+  --ink-pink-bg: #f8e6ef;
+  --ink-red-bg: #fbe2e2;
+}
+
 /*
  * 관리자 토큰.
  *
@@ -198,6 +220,25 @@
 
   --admin-sidebar-bg: #0f0d0c;
   --admin-sidebar-line: #2a2521;
+
+  --ink-gray: #a8a49e;
+  --ink-brown: #c4927c;
+  --ink-orange: #e0894f;
+  --ink-yellow: #d9a850;
+  --ink-green: #5fb183;
+  --ink-blue: #6e9bd9;
+  --ink-purple: #b07fe0;
+  --ink-pink: #e06aa6;
+  --ink-red: #ec6a62;
+  --ink-gray-bg: #34302c;
+  --ink-brown-bg: #4a3228;
+  --ink-orange-bg: #5c3b23;
+  --ink-yellow-bg: #564328;
+  --ink-green-bg: #243d30;
+  --ink-blue-bg: #143a4e;
+  --ink-purple-bg: #3c2d49;
+  --ink-pink-bg: #4e2c3c;
+  --ink-red-bg: #522e2a;
   --admin-sidebar-avatar: #3a342f;
   --admin-canvas: #151311;
   --admin-card: #1e1b18;
