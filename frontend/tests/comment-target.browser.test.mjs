@@ -193,8 +193,12 @@ test('an older top-level target stays on screen when the pages between it and th
 test('back navigation reloads the target thread while preserving the previous scroll position', async () => {
   await open('#comment-111');
   await arrived(111);
+  // 대상으로 가는 부드러운 스크롤이 끝난 뒤에 옮긴다. 바쁜 기기(CI)에서는 대상이 보이고도 스크롤이
+  // 더 이어져서, 그 사이에 400 으로 옮기면 남은 스크롤이 더해져 다른 자리(예: 440)에 선다
+  await scrollSettled();
   await page.evaluate(() => window.scrollTo({ top: 400, behavior: 'instant' }));
   await page.waitForFunction(() => Math.abs(scrollY - 400) < 2);
+  await scrollSettled();
   await page.evaluate(async () => {
     const { default: router } = await import('/src/app/router/index.js');
     await router.push('/posts/2');
