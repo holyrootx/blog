@@ -104,11 +104,17 @@ public class PostPageService {
         String text = post.getExcerpt();
         if (text == null || text.isBlank()) {
             // 대표 설명이 없으면 코드·이미지를 제외한 본문에서 짧은 설명을 만든다.
+            // 편집기가 쓰는 HTML 모양(<u> 밑줄, <span data-color> 색, <details> 토글)은 태그만 걷고 글은 남긴다.
+            // 표는 칸 구분선(|)과 --- 줄을 걷는다. 콜아웃(:::tip)·할 일([ ]) 표기도 뺀다.
             text = post.getContent().replaceAll("(?s)```.*?(?:```|$)", " ")
                     .replaceAll("!\\[[^\\]]*]\\([^\\n]*\\)", " ")
                     .replaceAll("\\[([^\\]]+)]\\([^\\n)]*\\)", "$1")
-                    .replaceAll("(?m)^\\s*(?:#{1,6}\\s+|>\\s*|[-*+]\\s+|[0-9]+\\.\\s+)", "")
-                    .replaceAll("[*_`]", "");
+                    .replaceAll("</?(?:u|span|details|summary)(?:\\s[^>]*)?>", " ")
+                    .replaceAll("(?m)^\\s*\\|?(?:\\s*:?-+:?\\s*\\|)+(?:\\s*:?-+:?\\s*)?$", " ")
+                    .replaceAll("(?m)^\\s*:::\\s*\\w*\\s*$", " ")
+                    .replaceAll("(?m)^\\s*(?:#{1,6}\\s+|>\\s*|[-*+]\\s+(?:\\[[ xX]]\\s+)?|[0-9]+\\.\\s+)", "")
+                    .replace("|", " ")
+                    .replaceAll("[*_`~]", "");
         }
         text = text.replaceAll("\\s+", " ").strip();
         if (text.isEmpty()) {

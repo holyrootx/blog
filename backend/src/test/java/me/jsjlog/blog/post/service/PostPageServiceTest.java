@@ -100,6 +100,16 @@ class PostPageServiceTest {
     }
 
     @Test
+    void missingExcerptDropsEditorTagsTableLinesAndCalloutMarkers() {
+        post.update("공개 글", "", "<details>\n<summary>접은 <u>제목</u></summary>\n\n"
+                + "<span data-color=\"red-bg\">빨간</span> ~~옛~~ 글\n\n</details>\n\n"
+                + "| 이름 | 값 |\n| --- | :---: |\n| a | 1 |\n\n:::tip\n팁\n:::\n\n- [x] 할 일", post.getCategory(), "");
+        String html = service.render("1").html();
+        assertThat(html).contains("content=\"접은 제목 빨간 옛 글 이름 값 a 1 팁 할 일\"")
+                .doesNotContain("data-color", "&lt;", "---", ":::", "[x]");
+    }
+
+    @Test
     void metadataIsReadAgainAfterUnpublishingAndAfterFrontendDeployment() throws IOException {
         assertThat(service.render("1").found()).isTrue();
         Files.writeString(index, Files.readString(index).replace("current.js", "next.js"));

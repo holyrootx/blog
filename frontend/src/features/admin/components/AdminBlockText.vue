@@ -1,7 +1,15 @@
 <script setup>
 import { onMounted, ref, watch } from 'vue';
 
-import { findCompletedMarker, htmlToInline, inlineToHtml } from '../data/inlineMarkdown';
+import {
+  colorRuns,
+  findCompletedMarker,
+  htmlToInline,
+  inlineToHtml,
+  readRuns,
+  runsToMarkdown,
+  safeHref,
+} from '../data/inlineMarkdown';
 
 /**
  * 글자를 쓰는 블록 한 칸. contenteditable 이다.
@@ -49,7 +57,7 @@ watch(() => props.modelValue, (next) => {
     return;
   }
 
-  if (htmlToInline(rootRef.value) === next) {
+  if (htmlToInline(rootRef.value, { root: true }) === next) {
     return;
   }
 
@@ -57,7 +65,7 @@ watch(() => props.modelValue, (next) => {
 });
 
 function readText() {
-  return rootRef.value ? htmlToInline(rootRef.value) : '';
+  return rootRef.value ? htmlToInline(rootRef.value, { root: true }) : '';
 }
 
 function onInput() {
@@ -121,26 +129,317 @@ function applyCompletedMarker() {
   selection.addRange(next);
 }
 
-/** 선택한 글자를 태그로 감싼다 (Cmd+B 등) */
-function wrapSelection(tag) {
+// 글자 서식 태그. 저장 형식은 한 글자에 서식 하나만 담을 수 있다
+const FORMAT_SELECTOR = 'strong, b, em, i, s, strike, del, u, code, a';
+const FORMAT_NAMES = { strong: 'strong, b', em: 'em, i', s: 's, strike, del', u: 'u', code: 'code', a: 'a' };
+
+/** 구간의 시작이 들어 있는 서식 태그. 이 블록 안의 것만 본다 */
+function formatAt(range) {
+  const start = range.startContainer.nodeType === Node.ELEMENT_NODE
+    ? range.startContainer
+    : range.startContainer.parentElement;
+  const found = start?.closest(FORMAT_SELECTOR);
+
+  return found && rootRef.value.contains(found) ? found : null;
+}
+
+/** 태그가 어느 서식인지 (b 는 strong, i 는 em) */
+function formatKind(element) {
+  return Object.keys(FORMAT_NAMES).find((kind) => element.matches(FORMAT_NAMES[kind])) ?? '';
+}
+
+/**
+ * 감쌀 조각 안의 서식을 푼다. 서식 안의 서식은 저장되지 않으므로 화면에서도 미리 푼다 —
+ * 보이는 것과 저장되는 것이 같아야 한다.
+ */
+function unwrapFormats(fragment) {
+  fragment.querySelectorAll(FORMAT_SELECTOR).forEach((element) => {
+    element.replaceWith(...element.childNodes);
+  });
+
+  return fragment;
+}
+
+/** 고른 구간을 새 서식 태그로 감싸고, 그 글자를 다시 골라 둔다 */
+function wrapRange(range, element) {
+  element.appendChild(unwrapFormats(range.extractContents()));
+  range.insertNode(element);
+
+  const next = document.createRange();
+  next.selectNodeContents(element);
+  return next;
+}
+
+/** 서식 태그를 풀고, 풀린 글자를 다시 골라 둔다 */
+function unwrapElement(element) {
+  const first = element.firstChild;
+  const last = element.lastChild;
+  const next = document.createRange();
+
+  element.replaceWith(...element.childNodes);
+  next.setStartBefore(first);
+  next.setEndAfter(last);
+  return next;
+}
+
+/**
+ * 선택한 글자의 서식을 켜고 끈다 (Cmd+B 등).
+ *
+ * 이미 그 서식 안이면 풀고, 아니면 감싼다. 어느 쪽이든 같은 글자를 다시 골라 둔다 —
+ * 선택이 풀리면 다음에 친 글자가 엉뚱한 자리(고른 글의 맨 앞)에 들어간다.
+ * 다른 서식 안에서는 걸지 않는다(저장하면 하나가 사라진다). 그러면 false.
+ */
+function toggleFormat(tag) {
   const selection = window.getSelection();
 
   if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
-    return;
+    return false;
   }
 
   const range = selection.getRangeAt(0);
 
   if (!rootRef.value.contains(range.commonAncestorContainer)) {
+    return false;
+  }
+
+  const existing = formatAt(range);
+
+  if (existing && formatKind(existing) !== tag) {
+    return false;
+  }
+
+  const next = existing ? unwrapElement(existing) : wrapRange(range, document.createElement(tag));
+
+  selection.removeAllRanges();
+  selection.addRange(next);
+  emit('update:modelValue', readText());
+  return true;
+}
+
+/**
+ * 고른 글자에 링크를 건다. 이미 링크 안이면 주소를 바꾸고, 주소가 비면 링크를 푼다.
+ * 끝난 뒤에도 같은 글자를 골라 둔다. 다른 서식 안에서는 걸지 않는다(false).
+ */
+function applyLink(href) {
+  const selection = window.getSelection();
+
+  if (!selection || selection.rangeCount === 0) {
+    return false;
+  }
+
+  const range = selection.getRangeAt(0);
+
+  if (!rootRef.value.contains(range.commonAncestorContainer)) {
+    return false;
+  }
+
+  const existing = formatAt(range);
+  let next;
+
+  if (existing && formatKind(existing) !== 'a') {
+    return false;
+  }
+
+  if (existing) {
+    if (!href) {
+      next = unwrapElement(existing);
+    } else {
+      existing.setAttribute('href', safeHref(href));
+      existing.setAttribute('data-href', href);
+      next = document.createRange();
+      next.selectNodeContents(existing);
+    }
+  } else {
+    if (!href || selection.isCollapsed) {
+      return false;
+    }
+
+    const link = document.createElement('a');
+    link.setAttribute('href', safeHref(href));
+    link.setAttribute('data-href', href);
+    next = wrapRange(range, link);
+  }
+
+  selection.removeAllRanges();
+  selection.addRange(next);
+  emit('update:modelValue', readText());
+  return true;
+}
+
+/**
+ * 커서 바로 앞의 글자 count 개를 지운다. 커서 뒤 글자는 건드리지 않는다.
+ * / 메뉴로 고른 명령에서 "/명령" 만 지울 때 쓴다 — 줄 끝까지 지우면 뒤에 쓰던 글이 사라진다.
+ */
+function removeBeforeCaret(count) {
+  const selection = window.getSelection();
+
+  if (!selection || selection.rangeCount === 0 || count <= 0) {
+    return;
+  }
+
+  const caret = selection.getRangeAt(0);
+
+  if (!rootRef.value.contains(caret.startContainer)) {
+    return;
+  }
+
+  // 커서에서 뒤로 글자를 세며 지울 구간의 시작을 찾는다. 서식 태그를 넘어갈 수 있다
+  const walker = document.createTreeWalker(rootRef.value, NodeFilter.SHOW_TEXT);
+  const nodes = [];
+
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    nodes.push(node);
+  }
+
+  const head = document.createRange();
+  head.selectNodeContents(rootRef.value);
+  head.setEnd(caret.startContainer, caret.startOffset);
+  let remaining = head.toString().length - count;
+
+  if (remaining < 0) {
+    return;
+  }
+
+  const target = document.createRange();
+
+  for (const node of nodes) {
+    if (remaining <= node.textContent.length) {
+      target.setStart(node, remaining);
+      break;
+    }
+
+    remaining -= node.textContent.length;
+  }
+
+  target.setEnd(caret.startContainer, caret.startOffset);
+  target.deleteContents();
+  target.collapse(true);
+
+  selection.removeAllRanges();
+  selection.addRange(target);
+  emit('update:modelValue', readText());
+}
+
+/**
+ * 커서 자리에 서식 글자를 넣고 그 글자를 골라 둔다. 바로 치면 자리 글자가 바뀐다.
+ * @param href 링크일 때 주소
+ */
+function insertFormatted(tag, text, href = '') {
+  const selection = window.getSelection();
+
+  if (!selection || selection.rangeCount === 0) {
+    return;
+  }
+
+  const range = selection.getRangeAt(0);
+
+  if (!rootRef.value.contains(range.startContainer)) {
     return;
   }
 
   const element = document.createElement(tag);
-  element.appendChild(range.extractContents());
+  element.textContent = text;
+
+  if (tag === 'a') {
+    element.setAttribute('href', href);
+    element.setAttribute('data-href', href);
+  }
+
+  range.deleteContents();
+
+  // 다른 서식 안이면 그 바깥 바로 뒤에 넣는다. 서식 안의 서식은 저장되지 않는다
+  const existing = formatAt(range);
+
+  if (existing) {
+    range.setStartAfter(existing);
+    range.collapse(true);
+  }
+
   range.insertNode(element);
 
+  const next = document.createRange();
+  next.selectNodeContents(element);
   selection.removeAllRanges();
+  selection.addRange(next);
   emit('update:modelValue', readText());
+}
+
+/**
+ * 블록 안에서 줄을 바꾼다 (여러 줄 블록의 Enter, Shift+Enter).
+ * 브라우저 기본 Enter 는 줄을 <div> 로 나눠서 저장 형식과 어긋나기 쉽다. <br> 로 통일한다
+ */
+function insertLineBreak() {
+  document.execCommand('insertLineBreak');
+}
+
+/** 화면에서 한 줄의 높이. 커서가 첫 줄·끝 줄인지 가늠할 때 쓴다 */
+function lineHeight() {
+  const value = Number.parseFloat(getComputedStyle(rootRef.value).lineHeight);
+
+  return Number.isFinite(value) ? value : 24;
+}
+
+/**
+ * 커서가 블록의 첫 줄·끝 줄에 있는지와 가로 위치.
+ * 방향키로 위아래 블록에 넘어갈지 정한다 — 글자 끝까지 가야 넘어가면, 한 줄짜리 문단에서도
+ * 아래 키를 두 번 눌러야 다음 문단에 간다.
+ */
+function caretLine() {
+  const selection = window.getSelection();
+  const box = rootRef.value.getBoundingClientRect();
+
+  if (!selection || selection.rangeCount === 0 || !rootRef.value.contains(selection.focusNode)) {
+    return { first: true, last: true, x: box.left };
+  }
+
+  // 선택이 있어도 커서가 움직이는 끝(focus)을 기준으로 잰다
+  const range = document.createRange();
+  range.setStart(selection.focusNode, selection.focusOffset);
+  range.collapse(true);
+
+  // 빈 줄이나 줄 맨 앞에서는 사각형이 비어 나온다. 그러면 블록 기준으로 본다
+  const rect = [...range.getClientRects()].pop() ?? range.getBoundingClientRect();
+  const height = lineHeight();
+
+  if (!rect || (rect.width === 0 && rect.height === 0)) {
+    // 한 줄짜리 칸이면 어디에 있든 첫 줄이자 끝 줄이다 (커서를 맨 앞에 놓은 직후 흔히 이렇게 잰다)
+    const single = readText() === '' || box.height < height * 1.5;
+    return { first: single || isCaretAtStart(), last: single || isCaretAtEnd(), x: box.left };
+  }
+
+  return {
+    first: rect.top - box.top < height * 0.75,
+    last: box.bottom - rect.bottom < height * 0.75,
+    x: rect.left,
+  };
+}
+
+/**
+ * 가로 위치 x 에 가장 가까운 자리에 커서를 놓는다.
+ * @param edge 'first' 면 첫 줄, 'last' 면 끝 줄
+ */
+function focusAt(x, edge) {
+  const element = rootRef.value;
+
+  if (!element) {
+    return;
+  }
+
+  element.focus();
+
+  const box = element.getBoundingClientRect();
+  const height = lineHeight();
+  const y = edge === 'first' ? box.top + height / 2 : box.bottom - height / 2;
+  const range = document.caretRangeFromPoint?.(Math.min(Math.max(x, box.left), box.right - 1), y);
+
+  if (range && element.contains(range.startContainer)) {
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    return;
+  }
+
+  focus(edge === 'first' ? 'start' : 'end');
 }
 
 /** @param position 'start' · 'end' · 앞에서부터 센 글자 수 */
@@ -188,6 +487,89 @@ function placeCaret(range, element, offset) {
   // 글자가 모자라면 맨 뒤에 둔다
   range.selectNodeContents(element);
   range.collapse(false);
+}
+
+/** 입력칸 맨 앞부터 (node, offset) 까지 보이는 글자 수. 줄바꿈과 보이지 않는 글자는 세지 않는다 */
+function visibleOffset(node, offset) {
+  const range = document.createRange();
+  range.selectNodeContents(rootRef.value);
+  range.setEnd(node, offset);
+
+  return range.toString().replace(/\u200b/g, '').length;
+}
+
+/** 보이는 글자 수로 센 [start, end) 를 고른다. 앞 끝은 다음 조각 맨 앞, 뒤 끝은 앞 조각 맨 끝에 둔다 */
+function selectVisible(start, end) {
+  const walker = document.createTreeWalker(rootRef.value, NodeFilter.SHOW_TEXT);
+  const range = document.createRange();
+  let counted = 0;
+  let started = false;
+
+  range.selectNodeContents(rootRef.value);
+
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const length = node.textContent.length;
+
+    if (!started && start < counted + length) {
+      range.setStart(node, start - counted);
+      started = true;
+    }
+
+    if (started && end <= counted + length) {
+      range.setEnd(node, end - counted);
+      break;
+    }
+
+    counted += length;
+  }
+
+  const selection = window.getSelection();
+  selection.removeAllRanges();
+  selection.addRange(range);
+}
+
+/**
+ * 고른 글자에 글자 색·배경 색을 칠한다. '' 이면 색을 지운다.
+ * 서식(굵게 등)은 그대로 두고 색만 바꾼다 — 색은 서식 바깥을 감싼다. 고른 구간은 그대로 남긴다.
+ */
+function applyColor(color) {
+  const root = rootRef.value;
+  const selection = window.getSelection();
+
+  if (!root || !selection || selection.rangeCount === 0) {
+    return false;
+  }
+
+  const range = selection.getRangeAt(0);
+
+  if (range.collapsed || !root.contains(range.startContainer) || !root.contains(range.endContainer)) {
+    return false;
+  }
+
+  const start = visibleOffset(range.startContainer, range.startOffset);
+  const end = visibleOffset(range.endContainer, range.endOffset);
+  const markdown = runsToMarkdown(colorRuns(readRuns(root, { root: true }), start, end, color));
+
+  root.innerHTML = inlineToHtml(markdown);
+  emit('update:modelValue', markdown);
+  selectVisible(start, end);
+
+  return true;
+}
+
+/** 블록의 글 전체에 색을 칠한다(블록 메뉴의 "색") */
+function colorAll(color) {
+  if (!rootRef.value || readText() === '') {
+    return false;
+  }
+
+  const range = document.createRange();
+  range.selectNodeContents(rootRef.value);
+  const selection = window.getSelection();
+  selection.removeAllRanges();
+  selection.addRange(range);
+
+  return applyColor(color);
 }
 
 /** 커서가 블록 맨 앞인지. Backspace 로 앞 블록과 합칠지 판단할 때 쓴다 */
@@ -294,7 +676,15 @@ defineExpose({
   isCaretAtEnd,
   textBeforeCaret,
   caretOffset,
-  wrapSelection,
+  toggleFormat,
+  applyLink,
+  applyColor,
+  colorAll,
+  removeBeforeCaret,
+  insertFormatted,
+  insertLineBreak,
+  caretLine,
+  focusAt,
   readText,
   splitAtCaret,
 });

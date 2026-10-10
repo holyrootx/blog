@@ -10,7 +10,9 @@ test('typed Markdown markers turn into block formats and drop the marker', () =>
     ['## 소제목', { type: 'heading', level: 2, text: '소제목' }],
     ['- 항목', { type: 'bullet', text: '항목' }],
     ['3. 셋째', { type: 'ordered', text: '셋째' }],
-    ['> 인용', { type: 'quote', text: '인용' }],
+    // 노션과 같다: > 는 토글, " 는 인용
+    ['> 토글', { type: 'toggle', text: '토글' }],
+    ['" 인용', { type: 'quote', text: '인용' }],
     ['```', { type: 'code', text: '' }],
     ['---', { type: 'divider', text: '' }],
   ];
