@@ -2,6 +2,8 @@ import { createApp, h, nextTick, ref } from 'vue';
 import { createMemoryHistory, createRouter } from 'vue-router';
 import AdminBlockEditor from '../src/features/admin/components/AdminBlockEditor.vue';
 import CommentSection from '../src/features/post/components/CommentSection.vue';
+import PostBody from '../src/features/post/components/PostBody.vue';
+import { toPostBody } from '../src/shared/post/postContentMapper';
 import AppToast from '../src/shared/components/AppToast.vue';
 import { useMemberAuth } from '../src/features/member/data/memberAuthStore';
 import { setCsrfToken } from '../src/shared/api/blogApiClient';
@@ -29,13 +31,17 @@ const app = createApp({
   setup: () => () => h('main', { style: 'max-width:900px;margin:24px auto;padding:16px;' }, [
     mode.value === 'editor'
       ? h(AdminBlockEditor, { modelValue: markdown.value, 'onUpdate:modelValue': value => { markdown.value = value; } })
-      : h(CommentSection, { ref: commentSection, postId: postId.value, comments: comments.value, initialLoading: loading.value }),
+      : mode.value === 'post'
+        ? h(PostBody, { body: toPostBody(markdown.value) })
+        : h(CommentSection, { ref: commentSection, postId: postId.value, comments: comments.value, initialLoading: loading.value }),
     h(AppToast),
   ]),
 });
 app.use(router).mount('#fixture');
 window.fixture = {
   async editor(value) { markdown.value = value; mode.value = 'editor'; await nextTick(); },
+  // 저장된 마크다운이 공개 글 화면에서 어떻게 보이는지
+  async post(value) { markdown.value = value; mode.value = 'post'; await nextTick(); },
   async comments(value, initialLoading = false, id = 1) {
     postId.value = id;
     comments.value = value;

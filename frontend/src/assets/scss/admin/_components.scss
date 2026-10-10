@@ -1601,6 +1601,11 @@
   color: var(--text-subtle);
 }
 
+/* 문단 안내는 지금 쓰는 줄과 빈 글에만 보인다. 빈 문단마다 보이면 글이 어수선하다 */
+.block-editor__row:not(:only-of-type) .block-editor__text--paragraph:not(:focus):empty::before {
+  content: none;
+}
+
 /* 인라인 서식이 쓰는 중에 그대로 보인다 */
 .block-editor__text strong { font-weight: 800; }
 .block-editor__text em { font-style: italic; }
@@ -1629,6 +1634,18 @@
   letter-spacing: -0.02em;
   line-height: 1.4;
 }
+
+/* 제목 토글은 제목과 같은 글꼴이다. 삼각형은 커진 첫 줄 가운데에 맞춘다 */
+.block-editor__text--toggle.block-editor__text--h1,
+.block-editor__text--toggle.block-editor__text--h2,
+.block-editor__text--toggle.block-editor__text--h3 {
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.4;
+}
+
+.block-editor__row--toggle:has(.block-editor__text--h1) > .block-editor__toggle { margin-top: 7px; }
+.block-editor__row--toggle:has(.block-editor__text--h3) > .block-editor__toggle { margin-top: 2px; }
 
 .block-editor__text--h1 { font-size: 26px; }
 .block-editor__text--h2 { font-size: 22px; }
@@ -1660,6 +1677,319 @@
   color: var(--admin-meta);
   font-size: 15px;
   line-height: 1.9;
+}
+
+/* 할 일 체크 상자. 첫 줄 가운데에 맞춘다(글은 16px · 줄 높이 1.9) */
+.block-editor__todo {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-top: 6px;
+  padding: 0;
+  border: 1.5px solid var(--admin-meta);
+  border-radius: 4px;
+  background: var(--admin-card);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.block-editor__todo:hover {
+  border-color: var(--admin-accent);
+}
+
+.block-editor__todo--done {
+  border-color: var(--admin-accent);
+  background: var(--admin-accent);
+}
+
+/* 토글 삼각형. 펼치면 아래를 향한다. 첫 줄 가운데에 맞춘다.
+   폭 18 + 줄 간격 8 = 들여쓰기 한 단계(26)라서 안쪽 블록의 글이 토글 제목 글과 같은 세로줄에 선다 */
+.block-editor__toggle {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 22px;
+  margin-top: 4px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--admin-title);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 0.12s ease;
+}
+
+.block-editor__toggle:hover {
+  background: var(--admin-surface-hover);
+}
+
+.block-editor__toggle--open {
+  transform: rotate(90deg);
+}
+
+/* 빈 토글 안내. 누르면 안쪽 첫 줄이 생긴다 */
+.block-editor__toggle-empty {
+  display: block;
+  margin: 2px 0 4px;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--admin-meta);
+  font-family: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.block-editor__toggle-empty:hover {
+  color: var(--admin-title);
+}
+
+/* 접힌 토글 안쪽 블록. 지우지 않고 감추기만 한다 */
+.block-editor__row--hidden {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .block-editor__toggle {
+    transition: none;
+  }
+}
+
+/* ── 표 ─────────────────────────────────────
+   칸 경계선 위에 줄·열 손잡이가 얹힌다(노션과 같다). 손잡이가 잘리지 않게 스크롤 상자에 여백을 두고
+   같은 만큼 바깥으로 당겨, 표의 왼쪽 선은 다른 블록의 글과 같은 세로줄에 선다 */
+.block-table {
+  flex: 1;
+  min-width: 0;
+  margin: 8px 0;
+}
+
+.block-table__scroll {
+  overflow-x: auto;
+  margin: -10px 0 0 -10px;
+  padding: 10px 0 2px 10px;
+}
+
+.block-table__frame {
+  display: inline-grid;
+  grid-template-columns: auto 18px;
+  grid-template-rows: auto 18px;
+  gap: 4px;
+  vertical-align: top;
+}
+
+.block-table__grid {
+  grid-column: 1;
+  grid-row: 1;
+  border-collapse: collapse;
+}
+
+.block-table__cell {
+  position: relative;
+  min-width: 120px;
+  padding: 6px 10px;
+  border: 1px solid var(--admin-card-line);
+  vertical-align: top;
+}
+
+.block-table .block-table__text {
+  min-height: 1.6em;
+  font-size: 15px;
+  line-height: 1.6;
+  text-align: inherit;
+}
+
+.block-table__row--header .block-table__cell {
+  background: var(--admin-surface-subtle);
+}
+
+.block-table__row--header .block-table__text {
+  font-weight: 700;
+}
+
+.block-table__row-handle,
+.block-table__col-handle {
+  position: absolute;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--admin-card-line);
+  border-radius: 4px;
+  background: var(--admin-card);
+  color: var(--admin-meta);
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.1s ease;
+}
+
+.block-table__row-handle {
+  top: 50%;
+  left: -9px;
+  width: 16px;
+  height: 22px;
+  letter-spacing: -3px;
+  transform: translateY(-50%);
+}
+
+.block-table__col-handle {
+  top: -9px;
+  left: 50%;
+  width: 24px;
+  height: 16px;
+  transform: translateX(-50%);
+}
+
+.block-table__row--active .block-table__row-handle,
+.block-table__cell--active-col .block-table__col-handle,
+.block-table__row-handle[aria-expanded='true'],
+.block-table__col-handle[aria-expanded='true'] {
+  opacity: 1;
+}
+
+.block-table__row-handle:hover,
+.block-table__col-handle:hover,
+.block-table__row-handle[aria-expanded='true'],
+.block-table__col-handle[aria-expanded='true'] {
+  background: var(--admin-surface-hover);
+  color: var(--admin-title);
+}
+
+/* 표 오른쪽·아래 끝의 + 막대. 표에 마우스를 올리거나 칸에 커서가 있으면 보인다 */
+.block-table__add {
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: var(--admin-surface-subtle);
+  color: var(--admin-meta);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.1s ease;
+}
+
+.block-table__add--col {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.block-table__add--row {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.block-table:hover .block-table__add,
+.block-table:focus-within .block-table__add {
+  opacity: 1;
+}
+
+.block-table__add:hover {
+  background: var(--admin-surface-hover);
+  color: var(--admin-title);
+}
+
+.block-table__menu {
+  position: fixed;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  min-width: 180px;
+  padding: 6px;
+  border: 1px solid var(--admin-card-line);
+  border-radius: 10px;
+  background: var(--admin-card);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
+}
+
+.block-table__menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--admin-text-strong);
+  font-family: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.block-table__menu-item:hover:not(:disabled),
+.block-table__menu-item:focus-visible {
+  background: var(--admin-surface-hover);
+  outline: none;
+}
+
+.block-table__menu-item--danger {
+  color: var(--admin-danger);
+}
+
+.block-table__menu-item:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.block-table__menu-check {
+  color: var(--admin-accent);
+  font-weight: 700;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .block-table__row-handle,
+  .block-table__col-handle,
+  .block-table__add {
+    transition: none;
+  }
+}
+
+/* 글자 색·배경 색 (공개 화면과 같은 색) */
+// 색 이름은 따옴표로 감싼다. 그대로 두면 Sass 가 red·gray 를 색 값으로 읽는다
+@each $name in 'gray', 'brown', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'red' {
+  .block-editor__text span[data-color='#{$name}'] {
+    color: var(--ink-#{$name});
+  }
+
+  .block-editor__text span[data-color='#{$name}-bg'] {
+    border-radius: 3px;
+    background: var(--ink-#{$name}-bg);
+  }
+
+  // 서식 막대·블록 메뉴의 색 견본. 단추 기본 글자색보다 앞서도록 바깥 상자까지 같이 적는다
+  :is(.admin-text-toolbar, .admin-block-menu) .admin-text-toolbar__swatch--#{$name} {
+    color: var(--ink-#{$name});
+  }
+
+  :is(.admin-text-toolbar, .admin-block-menu) .admin-text-toolbar__swatch--#{$name}-bg {
+    background: var(--ink-#{$name}-bg);
+  }
+}
+
+.block-editor__text span[data-color]:not([data-color$='-bg']) > code {
+  color: inherit;
+}
+
+/* 끝낸 할 일은 흐리게 긋는다 (노션과 같다) */
+.block-editor__text--done {
+  color: var(--text-subtle);
+  text-decoration: line-through;
 }
 
 /* 코드 블록 — 검은 박스 안에서 바로 친다.
@@ -1732,10 +2062,223 @@
   left: 0;
 }
 
+/* 글자를 고르면 그 위에 뜨는 서식 막대 (노션과 같은 자리·구성) */
+.admin-text-toolbar {
+  position: fixed;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid var(--admin-card-line);
+  border-radius: 8px;
+  background: var(--admin-card);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+}
+
+.admin-text-toolbar__button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 30px;
+  height: 28px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--admin-text-strong);
+  font-family: inherit;
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.admin-text-toolbar__button:hover:not(:disabled) {
+  background: var(--admin-surface-hover);
+}
+
+.admin-text-toolbar__button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.admin-text-toolbar__button--active {
+  background: var(--admin-accent-soft);
+  color: var(--admin-accent-dark);
+}
+
+.admin-text-toolbar__bold { font-weight: 800; }
+.admin-text-toolbar__italic { font-style: italic; font-family: Georgia, serif; }
+.admin-text-toolbar__code { font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+.admin-text-toolbar__underline { text-decoration: underline; }
+.admin-text-toolbar__strike { text-decoration: line-through; }
+
+.admin-text-toolbar__caret {
+  color: var(--admin-meta);
+  font-size: 10px;
+}
+
+.admin-text-toolbar__divider {
+  width: 1px;
+  height: 18px;
+  margin: 0 4px;
+  background: var(--admin-card-line);
+}
+
+.admin-text-toolbar__turn {
+  position: relative;
+}
+
+.admin-text-toolbar__color {
+  position: relative;
+}
+
+.admin-text-toolbar__color-button {
+  font-weight: 700;
+}
+
+/* 색 고르기. 글자 색 열 가지·배경 색 열 가지를 두 줄로 */
+.admin-text-toolbar__colors {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 1;
+  display: grid;
+  gap: 8px;
+  width: max-content;
+  padding: 10px;
+  border: 1px solid var(--admin-card-line);
+  border-radius: 8px;
+  background: var(--admin-card);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+}
+
+.admin-text-toolbar__color-group {
+  display: grid;
+  grid-template-columns: repeat(10, 26px);
+  gap: 4px;
+}
+
+.admin-text-toolbar__color-title {
+  grid-column: 1 / -1;
+  margin: 0 0 2px;
+  color: var(--admin-meta);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.admin-text-toolbar__color-option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+}
+
+.admin-text-toolbar__color-option:hover,
+.admin-text-toolbar__color-option:focus-visible {
+  border-color: var(--admin-card-line);
+  outline: none;
+}
+
+.admin-text-toolbar__color-option[aria-checked='true'] {
+  border-color: var(--admin-accent);
+}
+
+.admin-text-toolbar__swatch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--admin-card-line);
+  border-radius: 4px;
+  color: var(--admin-title);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.admin-text-toolbar__menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 150px;
+  max-height: 260px;
+  margin: 0;
+  padding: 4px;
+  overflow-y: auto;
+  border: 1px solid var(--admin-card-line);
+  border-radius: 8px;
+  background: var(--admin-card);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+  list-style: none;
+}
+
+.admin-text-toolbar__option {
+  padding: 6px 10px;
+  border-radius: 5px;
+  color: var(--admin-text-strong);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.admin-text-toolbar__option:hover {
+  background: var(--admin-surface-hover);
+}
+
+.admin-text-toolbar__option--current {
+  color: var(--admin-accent-dark);
+  font-weight: 700;
+}
+
+.admin-text-toolbar__link-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  max-width: min(420px, calc(100vw - 32px));
+}
+
+.admin-text-toolbar__link-input {
+  width: 260px;
+  max-width: 100%;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--admin-card-line);
+  border-radius: 5px;
+  background: var(--admin-card);
+  color: var(--admin-text-strong);
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.admin-text-toolbar__error {
+  flex-basis: 100%;
+  margin: 2px 4px;
+  color: var(--admin-danger);
+  font-size: 12px;
+}
+
+/* 아래 공간이 모자랄 때는 줄 위로 펼친다 */
+.block-editor__menu.admin-slash--up {
+  top: auto;
+  bottom: 100%;
+}
+
+/* 마지막 블록 아래는 늘 비워 둔다. 빈 글에서도 쓸 자리가 넉넉하고,
+   끝 줄에서 연 / 메뉴가 아래로 펼칠 공간이 생긴다. 이 영역 어디를 눌러도 이어 쓴다 */
 .block-editor__tail {
   position: relative;
-  display: block;
+  display: flex;
+  align-items: flex-start;
   width: 100%;
+  min-height: max(160px, 40vh);
   margin-top: 16px;
   padding: 10px 0;
   border: 0;
@@ -1793,6 +2336,107 @@
 
 .block-editor__row {
   padding-left: 26px;
+}
+
+/* + 는 손잡이 왼쪽, 편집기 안쪽 여백에 둔다. 손잡이처럼 줄에 마우스를 올리면 나온다 */
+.block-editor__add {
+  position: absolute;
+  left: -22px;
+  top: 2px;
+  width: 20px;
+  height: 22px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--admin-meta);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.block-editor__row:hover .block-editor__add,
+.block-editor__add:focus-visible {
+  opacity: 1;
+}
+
+.block-editor__add:hover {
+  background: var(--admin-surface-hover);
+  color: var(--admin-text-strong);
+}
+
+/* 손잡이 메뉴 (노션과 같은 구성) */
+.admin-block-menu {
+  position: fixed;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+  padding: 6px;
+  border: 1px solid var(--admin-card-line);
+  border-radius: 10px;
+  background: var(--admin-card);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
+}
+
+.admin-block-menu__title {
+  margin: 2px 8px 6px;
+  color: var(--admin-meta);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.admin-block-menu__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--admin-text-strong);
+  font-family: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.admin-block-menu__item:hover,
+.admin-block-menu__item:focus-visible {
+  background: var(--admin-surface-hover);
+  outline: none;
+}
+
+.admin-block-menu__item--danger {
+  color: var(--admin-danger);
+}
+
+.admin-block-menu__item--current {
+  color: var(--admin-accent-dark);
+  font-weight: 700;
+}
+
+.admin-block-menu__hint {
+  color: var(--admin-meta);
+  font-family: inherit;
+  font-size: 11.5px;
+}
+
+.admin-block-menu__submenu {
+  display: flex;
+  flex-direction: column;
+  max-height: 240px;
+  margin-top: 4px;
+  padding-top: 4px;
+  overflow-y: auto;
+  border-top: 1px solid var(--admin-card-line);
+}
+
+.admin-block-menu__submenu--color .admin-block-menu__item {
+  justify-content: flex-start;
+  gap: 10px;
 }
 
 /* 평소에는 숨어 있다가 줄에 마우스를 올리면 나온다 */
