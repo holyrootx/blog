@@ -2,33 +2,63 @@ import { nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { commentTargetNavigation } from '../../../app/router/commentTargetNavigation';
 import { getCommentContext } from '../api/postApi';
 
-/** 부드러운 스크롤은 프레임마다 scroll 을 낸다. 이만큼 조용하면 멈춘 것으로 본다 */
+/** 스크롤 위치가 이만큼 그대로 머물러야 멈춘 것으로 본다 */
 const SCROLL_QUIET_MS = 150;
-/** 스크롤 이벤트를 놓쳐도 자동 불러오기가 영영 멈춰 있지 않게 하는 상한 */
-const SCROLL_SETTLE_LIMIT_MS = 2000;
+/**
+ * 시간과 함께 "그대로였던 프레임 수" 도 센다. 시간만 재면 느린 기기(CI 포함)에서 한 프레임이
+ * 150ms 를 넘길 때, 아직 움직이는 스크롤을 멈췄다고 보고 자동 불러오기를 너무 일찍 푼다
+ */
+const SCROLL_STILL_FRAMES = 10;
+/** 끝 신호를 놓쳐도 자동 불러오기가 영영 멈춰 있지 않게 하는 상한. 느린 기기의 부드러운 스크롤보다 길게 */
+const SCROLL_SETTLE_LIMIT_MS = 4000;
 
 /**
  * 라우터가 대상으로 옮긴 스크롤이 끝날 때까지 기다린다.
  *
- * scrollend 는 지원하지 않는 브라우저가 있어 쓰지 않는다. 이미 그 자리라 스크롤이 아예 없을
- * 수도 있으니, 첫 이벤트를 기다리지 않고 한 프레임 뒤부터 조용함을 잰다.
+ * 스크롤 끝 신호(scrollend)를 주는 브라우저에서는, 스크롤이 움직이기 시작한 뒤에는 그 신호만 믿는다.
+ * 바쁜 기기에서는 부드러운 스크롤이 몇 프레임씩 멈췄다 가기도 해서, 조용함만으로는 끝을 잘못 본다.
+ * 신호가 없는 브라우저는 프레임마다 위치를 재서 한동안 그대로이면 끝난 것으로 본다.
+ * 이미 그 자리라 스크롤이 아예 없으면 끝 신호도 오지 않으므로, 움직임이 없을 때는 조용함으로 끝낸다.
  */
 function waitForScrollSettle() {
   return new Promise((resolve) => {
-    let quietTimer;
+    const endSignal = 'onscrollend' in window;
+    let last = window.scrollY;
+    let lastMove = performance.now();
+    let stillFrames = 0;
+    let moved = false;
+    let frame = requestAnimationFrame(tick);
     const limitTimer = setTimeout(done, SCROLL_SETTLE_LIMIT_MS);
+
+    if (endSignal) {
+      window.addEventListener('scrollend', done);
+    }
+
     function done() {
-      clearTimeout(quietTimer);
+      cancelAnimationFrame(frame);
       clearTimeout(limitTimer);
-      window.removeEventListener('scroll', restart);
+      window.removeEventListener('scrollend', done);
       resolve();
     }
-    function restart() {
-      clearTimeout(quietTimer);
-      quietTimer = setTimeout(done, SCROLL_QUIET_MS);
+
+    function tick(now) {
+      if (Math.abs(window.scrollY - last) >= 1) {
+        last = window.scrollY;
+        lastMove = now;
+        stillFrames = 0;
+        moved = true;
+      } else {
+        stillFrames += 1;
+      }
+
+      const quiet = stillFrames >= SCROLL_STILL_FRAMES && now - lastMove >= SCROLL_QUIET_MS;
+
+      if (quiet && !(endSignal && moved)) {
+        done();
+      } else {
+        frame = requestAnimationFrame(tick);
+      }
     }
-    window.addEventListener('scroll', restart, { passive: true });
-    requestAnimationFrame(restart);
   });
 }
 
