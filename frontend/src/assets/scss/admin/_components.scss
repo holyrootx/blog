@@ -1961,7 +1961,8 @@
 }
 
 /* 글자 색·배경 색 (공개 화면과 같은 색) */
-@each $name in gray, brown, orange, yellow, green, blue, purple, pink, red {
+// 색 이름은 따옴표로 감싼다. 그대로 두면 Sass 가 red·gray 를 색 값으로 읽는다
+@each $name in 'gray', 'brown', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'red' {
   .block-editor__text span[data-color='#{$name}'] {
     color: var(--ink-#{$name});
   }
