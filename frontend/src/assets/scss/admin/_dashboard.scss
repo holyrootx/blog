@@ -6,7 +6,8 @@
   width: 100%;
   min-height: 100vh;
   margin: 0 auto;
-  overflow: hidden;
+  /* hidden 이 아니라 clip 이다. hidden 은 이 상자를 스크롤 상자로 만들어 사이드바 고정(sticky)이 먹지 않는다 */
+  overflow: clip;
   border: 0;
   border-radius: 0;
   background: var(--admin-card);
@@ -20,10 +21,17 @@
   background: var(--admin-canvas, var(--admin-canvas));
 }
 
+/* 긴 글을 쓰며 본문이 길어져도 메뉴는 화면에 붙어 있는다. 메뉴가 화면보다 길면 사이드바 안에서만 스크롤한다 */
 .admin-sidebar {
+  position: sticky;
+  top: 0;
   display: flex;
   flex-direction: column;
-  min-height: 100%;
+  align-self: start;
+  height: 100vh;
+  height: 100dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 32px 18px 28px;
   border-right: 1px solid var(--admin-sidebar-line);
   background: var(--admin-sidebar-bg);
@@ -579,6 +587,7 @@
     position: static;
     height: auto;
     min-height: 0;
+    overflow: visible;
     padding: 18px;
   }
 
