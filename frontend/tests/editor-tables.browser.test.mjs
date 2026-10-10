@@ -19,6 +19,8 @@ const open = value => page.evaluate(text => window.fixture.editor(text), value);
 const texts = () => page.locator('.block-editor__row:not(.block-editor__row--table) .block-editor__text');
 const cell = (row, col) => page.locator(`[data-cell="${row}:${col}"] [contenteditable="true"]`);
 const press = key => page.keyboard.press(key);
+// 단어 단위로 고르는 키. 맥은 Alt, 리눅스(CI)·윈도는 Control 이다
+const WORD = process.platform === 'darwin' ? 'Alt' : 'Control';
 const type = text => page.keyboard.type(text, { delay: 10 });
 const focusedCell = () => page.evaluate(() => document.activeElement?.closest('[data-cell]')?.dataset.cell ?? '');
 const table = (...lines) => lines.join('\n');
@@ -192,7 +194,7 @@ test('칸 안 서식: ⌘B, 서식 막대(바꾸기 단추 없음), 칸 안에�
 
   await cell(1, 0).click();
   await press('End');
-  await press('Shift+Alt+ArrowLeft');
+  await press(`Shift+${WORD}+ArrowLeft`);
   const toolbar = page.getByRole('toolbar', { name: '글자 서식' });
   await toolbar.waitFor();
   assert.equal(await toolbar.getByTitle('블록 바꾸기').count(), 0);

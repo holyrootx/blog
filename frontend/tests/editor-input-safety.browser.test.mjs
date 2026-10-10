@@ -22,6 +22,8 @@ const open = value => page.evaluate(text => window.fixture.editor(text), value);
 const texts = () => page.locator('.block-editor [contenteditable="true"]');
 const type = text => page.keyboard.type(text, { delay: 10 });
 const press = key => page.keyboard.press(key);
+// 단어 단위로 고르는 키. 맥은 Alt, 리눅스(CI)·윈도는 Control 이다
+const WORD = process.platform === 'darwin' ? 'Alt' : 'Control';
 
 before(async () => {
   server = await createServer({
@@ -144,7 +146,7 @@ test('굵게를 켜고 끈 뒤에도 고른 글자가 그대로 골라져 있고
   await open('alpha beta');
   await texts().first().click();
   await press('End');
-  await press('Shift+Alt+ArrowLeft');
+  await press(`Shift+${WORD}+ArrowLeft`);
   await press('ControlOrMeta+b');
   assert.equal(await markdown(), 'alpha **beta**');
   assert.equal(await page.evaluate(() => window.getSelection().toString()), 'beta');

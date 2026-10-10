@@ -21,6 +21,8 @@ const markdown = () => page.evaluate(() => window.fixture.markdown());
 const open = value => page.evaluate(text => window.fixture.editor(text), value);
 const texts = () => page.locator('.block-editor [contenteditable="true"]');
 const press = key => page.keyboard.press(key);
+// 단어 단위로 고르는 키. 맥은 Alt, 리눅스(CI)·윈도는 Control 이다
+const WORD = process.platform === 'darwin' ? 'Alt' : 'Control';
 const selected = () => page.evaluate(() => window.getSelection().toString());
 const toolbar = () => page.getByRole('toolbar', { name: '글자 서식' });
 const button = name => toolbar().getByRole('button', { name, exact: true });
@@ -32,7 +34,7 @@ const pressedState = (name, value) => page.waitForFunction(([label, expected]) =
 async function selectLastWord(index = 0) {
   await texts().nth(index).click();
   await press('End');
-  await press('Shift+Alt+ArrowLeft');
+  await press(`Shift+${WORD}+ArrowLeft`);
   await toolbar().waitFor();
 }
 
