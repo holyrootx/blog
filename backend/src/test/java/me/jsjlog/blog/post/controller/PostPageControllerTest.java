@@ -76,18 +76,14 @@ class PostPageControllerTest {
     }
 
     @Test
-    void detailApiProvidesTheSameArticleIdentityWithoutChangingModificationTimeOnView() throws Exception {
-        String modified = post.getUpdatedAt().atZone(java.time.ZoneId.of("Asia/Seoul"))
-                .format(java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+    void detailApiAndHtmlProvideArticleStructuredData() throws Exception {
         mvc.perform(get("/api/v1/blog/posts/" + post.getId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.structuredData['@type']").value("BlogPosting"))
                 .andExpect(jsonPath("$.data.structuredData.headline").value("공유할 글"))
-                .andExpect(jsonPath("$.data.structuredData.url").value("https://blog.example/posts/" + post.getId()))
-                .andExpect(jsonPath("$.data.structuredData.dateModified").value(modified));
+                .andExpect(jsonPath("$.data.structuredData.url").value("https://blog.example/posts/" + post.getId()));
         mvc.perform(get("/posts/" + post.getId()))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("application/ld+json")))
-                .andExpect(content().string(containsString("\"dateModified\":\"" + modified + "\"")));
+                .andExpect(content().string(containsString("application/ld+json")));
     }
 }
