@@ -5,7 +5,7 @@ import { createServer } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import { chromium } from 'playwright';
 
-let server, browser, page, errors, heldPost, postRequested;
+let server, browser, page, errors, heldPost, postRequested, listRequests;
 const ok = (route, data = null) => route.fulfill({ json: { success: true, data } });
 const deferred = () => { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; };
 
@@ -35,12 +35,19 @@ before(async () => {
 });
 after(async () => { await browser?.close(); await server?.close(); });
 beforeEach(async () => {
-  errors = []; heldPost = null; postRequested = deferred();
+  errors = []; heldPost = null; postRequested = deferred(); listRequests = [];
   page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   page.setDefaultTimeout(5000);
   page.on('pageerror', error => errors.push(error.message));
   await page.route('**/api/v1/**', async route => {
-    const { pathname } = new URL(route.request().url());
+    const { pathname, searchParams } = new URL(route.request().url());
+    if (pathname === '/api/v1/blog/posts') {
+      listRequests.push(Object.fromEntries(searchParams));
+      const number = Number(searchParams.get('page') ?? 0);
+      return ok(route, { items: [post(101 + number, `목록 ${number + 1}쪽 글`)],
+        page: number, size: 12, totalElements: 276, totalPages: 23 });
+    }
+    if (pathname === '/api/v1/blog/categories') return ok(route, [{ id: 3, name: 'Spring' }]);
     if (pathname === '/api/v1/blog/posts/5') return ok(route, post(5, '앞의 글'));
     if (pathname === '/api/v1/blog/posts/5/adjacent') return ok(route, { previousPost: null, nextPost: { id: 6, title: '뒤의 글' } });
     if (pathname === '/api/v1/blog/posts/6') { heldPost = route; postRequested.resolve(); return undefined; }
@@ -88,4 +95,78 @@ test('moving to another post inside the app never marks the loading page noindex
   await ok(heldPost, post(6, '뒤의 글'));
   await page.waitForFunction(() => document.title.startsWith('뒤의 글'));
   assert.equal(await robots(), 'index,follow');
+});
+
+test('a later category page removes tracking and fragments without canonicalizing to page one', async () => {
+  await page.goto(`${server.resolvedUrls.local[0]}posts/?utm_source=test&category=03&page=02&sort=latest#top`);
+  await page.getByRole('heading', { name: '목록 2쪽 글', exact: true }).waitFor();
+  const expected = new URL('/posts?page=2&category=3', page.url()).href;
+  assert.equal(await canonical(), expected);
+  assert.equal(await page.locator('meta[property="og:url"]').getAttribute('content'), expected);
+  assert.equal(await page.locator('link[rel="canonical"]').count(), 1);
+  assert.equal(await robots(), 'index,follow');
+  assert.deepEqual(listRequests.at(-1), { page: '1', size: '12', sort: 'latest', categoryId: '3' });
+});
+
+test('pagination exposes real links and keeps the selected category across page blocks', async () => {
+  await page.goto(`${server.resolvedUrls.local[0]}posts?page=10&category=3&utm_source=test`);
+  await page.getByRole('heading', { name: '목록 10쪽 글', exact: true }).waitFor();
+  const pager = page.getByRole('navigation', { name: '페이지', exact: true });
+  assert.equal(await pager.getByRole('button').count(), 0);
+  assert.equal(await pager.getByRole('link', { name: '1', exact: true }).getAttribute('href'), '/posts?category=3');
+  assert.equal(await pager.getByRole('link', { name: '끝', exact: true }).getAttribute('href'), '/posts?page=23&category=3');
+  assert.equal(await pager.locator('[aria-current="page"]').count(), 1);
+  assert.equal(await pager.locator('[aria-current="page"]').textContent(), '10');
+
+  const next = pager.getByRole('link', { name: '다음 10개 ›', exact: true });
+  assert.equal(await next.getAttribute('href'), '/posts?page=11&category=3');
+  await next.click();
+  await page.getByRole('heading', { name: '목록 11쪽 글', exact: true }).waitFor();
+  assert.equal(await canonical(), new URL('/posts?page=11&category=3', page.url()).href);
+  assert.equal(await pager.getByRole('link', { name: '처음', exact: true }).getAttribute('href'), '/posts?category=3');
+  assert.equal(await pager.getByRole('link', { name: '‹ 이전 10개', exact: true }).getAttribute('href'), '/posts?page=10&category=3');
+  await pager.getByRole('link', { name: '처음', exact: true }).click();
+  await page.getByRole('heading', { name: '목록 1쪽 글', exact: true }).waitFor();
+  assert.deepEqual(listRequests.at(-1), { page: '0', size: '12', sort: 'latest', categoryId: '3' });
+});
+
+test('search is noindex until cleared, then restores the category canonical in the same tab', async () => {
+  const query = new URLSearchParams({ q: '  Vue & Spring  ', page: '2', category: '3', utm_source: 'test' });
+  await page.goto(`${server.resolvedUrls.local[0]}posts?${query}`);
+  await page.getByRole('heading', { name: '‘Vue & Spring’ 검색 결과', exact: true }).waitFor();
+  assert.equal(await robots(), 'noindex,follow');
+  assert.equal(await page.locator('link[rel="canonical"]').count(), 0);
+  assert.equal(await page.title(), '‘Vue & Spring’ 검색 결과 · 정성주의 기록');
+  const next = page.getByRole('navigation', { name: '페이지', exact: true }).getByRole('link', { name: '3', exact: true });
+  const nextUrl = new URL(await next.getAttribute('href'), page.url());
+  assert.equal(nextUrl.searchParams.get('q'), 'Vue & Spring');
+  assert.equal(nextUrl.searchParams.get('category'), '3');
+
+  await page.getByRole('button', { name: '검색 지우기', exact: true }).click();
+  await page.getByRole('heading', { name: 'Spring', exact: true }).waitFor();
+  assert.equal(await robots(), 'index,follow');
+  assert.equal(await canonical(), new URL('/posts?category=3', page.url()).href);
+  assert.equal(await page.title(), '전체 글 · 정성주의 기록');
+  assert.deepEqual(listRequests.at(-1), { page: '0', size: '12', sort: 'latest', categoryId: '3' });
+});
+
+test('duplicate search values and malformed numbers still render the ordinary list', async () => {
+  await page.goto(`${server.resolvedUrls.local[0]}posts?q=Vue&q=Spring&page=0.5&category=bad&utm_source=test`);
+  await page.getByRole('heading', { name: '목록 1쪽 글', exact: true }).waitFor();
+  assert.equal(await canonical(), new URL('/posts', page.url()).href);
+  assert.equal(await robots(), 'index,follow');
+  assert.equal(await page.getByRole('button', { name: '검색 지우기', exact: true }).count(), 0);
+  assert.deepEqual(listRequests.at(-1), { page: '0', size: '12', sort: 'latest' });
+});
+
+test('static pages and article pages keep clean canonical and share URLs', async () => {
+  await page.goto(`${server.resolvedUrls.local[0]}privacy/?utm_source=test#top`);
+  await page.waitForFunction(() => document.title.startsWith('개인정보 처리방침'));
+  assert.equal(await canonical(), new URL('/privacy', page.url()).href);
+  assert.equal(await page.locator('meta[property="og:url"]').getAttribute('content'), await canonical());
+
+  await page.goto(`${server.resolvedUrls.local[0]}posts/5?utm_source=test#top`);
+  await page.waitForFunction(() => document.title.startsWith('앞의 글'));
+  assert.equal(await canonical(), new URL('/posts/5', page.url()).href);
+  assert.equal(await page.locator('meta[property="og:type"]').getAttribute('content'), 'article');
 });

@@ -5,6 +5,7 @@ import { RouterLink, useRoute, useRouter } from 'vue-router';
 import HighlightedText from '../../search/components/HighlightedText.vue';
 import { getPosts } from '../api/postApi';
 import { loadCategories } from '../data/categoryStore';
+import { readPostListQuery, toPostListQuery } from '../data/postListQuery';
 import { getHomePosts } from '../../home/api/homeApi';
 import { useSectionLoader } from '../../../shared/composables/useSectionLoader';
 
@@ -33,33 +34,11 @@ const failed = ref(false);
 const sections = useSectionLoader(['posts']);
 const loading = computed(() => sections.loading.posts);
 
-const page = computed(() => {
-  const value = Number(route.query.page ?? 1);
-
-  return Number.isFinite(value) && value > 0 ? Math.floor(value) : 1;
-});
-
-const categoryId = computed(() => {
-  const value = Number(route.query.category);
-
-  return Number.isFinite(value) && value > 0 ? value : null;
-});
-
-const sort = computed(() => (route.query.sort === 'popular' ? 'popular' : 'latest'));
-
-/**
- * 검색어.
- *
- * <p>서버와 같은 최소 길이를 여기서도 본다. 주소창에 {@code ?q=ㄱ} 을 직접 칠 수 있고,
- * 그때 화면이 "검색 결과" 라고 말하면서 전체 목록을 보여 주면 앞뒤가 맞지 않는다.</p>
- */
-const MIN_KEYWORD_LENGTH = 2;
-
-const keyword = computed(() => {
-  const typed = (route.query.q ?? '').trim();
-
-  return typed.length >= MIN_KEYWORD_LENGTH ? typed : '';
-});
+const listCondition = computed(() => readPostListQuery(route.query));
+const page = computed(() => listCondition.value.page);
+const categoryId = computed(() => listCondition.value.categoryId);
+const sort = computed(() => listCondition.value.sort);
+const keyword = computed(() => listCondition.value.keyword);
 
 const currentCategoryName = computed(
   () => categories.value.find((category) => category.id === categoryId.value)?.name ?? '',
@@ -99,29 +78,10 @@ const pageNumbers = computed(() => {
 });
 
 function queryFor(changes) {
-  const next = {
+  return toPostListQuery(readPostListQuery({
     ...route.query,
     ...changes,
-  };
-
-  // 기본값은 주소에서 뺀다. /posts?page=1&sort=latest 보다 /posts 가 읽기 좋다
-  if (!next.page || Number(next.page) === 1) {
-    delete next.page;
-  }
-
-  if (next.sort === 'latest') {
-    delete next.sort;
-  }
-
-  if (!next.category) {
-    delete next.category;
-  }
-
-  if (!next.q) {
-    delete next.q;
-  }
-
-  return next;
+  }));
 }
 
 /**
@@ -194,9 +154,6 @@ loadCategories().then((found) => {
   categoriesLoading.value = false;
 });
 
-function goTo(number) {
-  router.push({ name: 'post-list', query: queryFor({ page: String(number) }) });
-}
 </script>
 
 <template>
@@ -334,43 +291,42 @@ function goTo(number) {
         앞 묶음으로는 그 묶음의 마지막 쪽으로 간다. 10쪽에서 11쪽으로 넘어왔다면
         돌아갈 곳도 10쪽이다 — 1쪽으로 보내면 읽던 자리를 잃는다
       -->
-      <button
+      <RouterLink
         v-if="hasPreviousBlock"
         class="post-pager__button"
-        type="button"
         title="1쪽으로"
-        @click="goTo(1)"
-      >처음</button>
-      <button
+        :aria-current-value="null"
+        :to="{ name: 'post-list', query: queryFor({ page: '1' }) }"
+      >처음</RouterLink>
+      <RouterLink
         v-if="hasPreviousBlock"
         class="post-pager__button"
-        type="button"
-        @click="goTo(blockStart - 1)"
-      >‹ 이전 {{ BLOCK_SIZE }}개</button>
+        :aria-current-value="null"
+        :to="{ name: 'post-list', query: queryFor({ page: String(blockStart - 1) }) }"
+      >‹ 이전 {{ BLOCK_SIZE }}개</RouterLink>
 
-      <button
+      <RouterLink
         v-for="number in pageNumbers"
         :key="number"
         class="post-pager__number"
         :class="{ 'post-pager__number--active': number === page }"
-        type="button"
-        :aria-current="number === page ? 'page' : undefined"
-        @click="goTo(number)"
-      >{{ number }}</button>
+        :aria-current-value="number === page ? 'page' : null"
+        :to="{ name: 'post-list', query: queryFor({ page: String(number) }) }"
+      >{{ number }}</RouterLink>
 
-      <button
+      <RouterLink
         v-if="hasNextBlock"
         class="post-pager__button"
-        type="button"
-        @click="goTo(blockEnd + 1)"
-      >다음 {{ BLOCK_SIZE }}개 ›</button>
-      <button
+        :aria-current-value="null"
+        :to="{ name: 'post-list', query: queryFor({ page: String(blockEnd + 1) }) }"
+      >다음 {{ BLOCK_SIZE }}개 ›</RouterLink>
+      <RouterLink
         v-if="hasNextBlock"
         class="post-pager__button"
-        type="button"
+        :aria-current-value="null"
         :title="`${totalPages}쪽으로`"
-        @click="goTo(totalPages)"
-      >끝</button>
+        :to="{ name: 'post-list', query: queryFor({ page: String(totalPages) }) }"
+      >끝</RouterLink>
     </nav>
   </main>
 </template>
