@@ -22,9 +22,13 @@ function waitForPostRequest() {
   ]);
 }
 const post = (id, title) => ({ id, categoryId: 1, categoryName: '생각', title, excerpt: `${title} 요약`,
-  content: `${title} 본문`, publishedAt: '2026-09-17T14:07:16', views: 1, thumbnailImageUrl: null });
+  content: `${title} 본문`, publishedAt: '2026-09-17T14:07:16', views: 1, thumbnailImageUrl: null,
+  structuredData: { '@context': 'https://schema.org', '@type': 'BlogPosting', headline: title,
+    url: `https://jsjlog.me/posts/${id}`, datePublished: '2026-09-17T14:07:16+09:00',
+    author: { '@type': 'Person', name: '공개 이름' } } });
 const robots = () => page.locator('meta[name="robots"]').getAttribute('content');
 const canonical = () => page.locator('link[rel="canonical"]').getAttribute('href');
+const structuredData = async () => JSON.parse(await page.locator('#post-structured-data').textContent());
 
 before(async () => {
   server = await createServer({ root: fileURLToPath(new URL('..', import.meta.url)), configFile: false,
@@ -65,7 +69,9 @@ async function serveServerRenderedMeta(path) {
     const response = await route.fetch();
     const html = (await response.text()).replace(/<!-- blog-meta:start -->[\s\S]*?<!-- blog-meta:end -->/,
       '<title>서버가 넣은 제목 · 정성주의 기록</title>\n<meta name="robots" content="index,follow" />\n'
-      + `<link rel="canonical" href="https://jsjlog.me${path}" />`);
+      + `<link rel="canonical" href="https://jsjlog.me${path}" />`
+      + '<script id="post-structured-data" type="application/ld+json">'
+      + JSON.stringify(post(6, '서버가 넣은 제목').structuredData) + '</script>');
     return route.fulfill({ response, body: html });
   });
 }
@@ -81,20 +87,52 @@ test('first visit keeps the server metadata even when the post API fails', async
   assert.equal(await page.title(), '서버가 넣은 제목 · 정성주의 기록');
   assert.equal(await robots(), 'index,follow');
   assert.equal(await canonical(), 'https://jsjlog.me/posts/6');
+  assert.equal((await structuredData()).headline, '서버가 넣은 제목');
 });
 
 test('moving to another post inside the app never marks the loading page noindex', async () => {
   await page.goto(`${server.resolvedUrls.local[0]}posts/5`);
   await page.waitForFunction(() => document.title.startsWith('앞의 글'));
+  assert.equal((await structuredData()).headline, '앞의 글');
   await page.getByRole('link', { name: /뒤의 글/ }).click();
   await page.waitForURL('**/posts/6');
   await waitForPostRequest();
   await page.waitForFunction(() => document.title.startsWith('글 불러오는 중'));
   assert.notEqual(await robots(), 'noindex,follow');
   assert.match(await canonical(), /\/posts\/6$/);
+  assert.equal(await page.locator('#post-structured-data').count(), 0);
   await ok(heldPost, post(6, '뒤의 글'));
   await page.waitForFunction(() => document.title.startsWith('뒤의 글'));
   assert.equal(await robots(), 'index,follow');
+  assert.deepEqual(await structuredData(), post(6, '뒤의 글').structuredData);
+  assert.equal(await page.locator('#post-structured-data').count(), 1);
+});
+
+test('article structured data is removed when moving to an ordinary page and recreated on back', async () => {
+  await page.goto(`${server.resolvedUrls.local[0]}posts/5`);
+  await page.waitForFunction(() => document.title.startsWith('앞의 글'));
+  await page.getByRole('link', { name: '개인정보처리방침', exact: true }).click();
+  await page.waitForURL('**/privacy');
+  assert.equal(await page.locator('#post-structured-data').count(), 0);
+  await page.goBack();
+  await page.waitForFunction(() => document.title.startsWith('앞의 글'));
+  assert.deepEqual(await structuredData(), post(5, '앞의 글').structuredData);
+});
+
+test('a missing article removes server structured data and an HTML-looking title remains plain JSON', async () => {
+  await serveServerRenderedMeta('/posts/6');
+  await page.goto(`${server.resolvedUrls.local[0]}posts/6`);
+  await waitForPostRequest();
+  await heldPost.fulfill({ status: 404, json: { success: false, code: 'POST_NOT_FOUND', message: '없는 글' } });
+  await page.getByRole('heading', { name: '찾는 글이 없습니다', exact: true }).waitFor();
+  assert.equal(await page.locator('#post-structured-data').count(), 0);
+  assert.equal(await robots(), 'noindex,follow');
+
+  await page.route('**/api/v1/blog/posts/5', route => ok(route, post(5, '</script><script>window.injected=1</script>')));
+  await page.goto(`${server.resolvedUrls.local[0]}posts/5`);
+  await page.waitForFunction(() => document.querySelector('#post-structured-data'));
+  assert.equal((await structuredData()).headline, '</script><script>window.injected=1</script>');
+  assert.equal(await page.evaluate(() => window.injected), undefined);
 });
 
 test('a later category page removes tracking and fragments without canonicalizing to page one', async () => {

@@ -38,6 +38,7 @@ public class PostService {
     private final PostReactionRepository postReactionRepository;
     private final MemberRepository memberRepository;
     private final SearchLogService searchLogService;
+    private final PostPageService postPageService;
 
     public List<PostSummaryResponse> getPostsForHomePage(String sort, Long size){
         String POPULAR_PARAM = "popular";
@@ -144,7 +145,7 @@ public class PostService {
     @Transactional
     public PostDetailResponse getPostDetail(Long postId, boolean increaseViewCount, Long memberId) {
 
-        findReadablePost(postId);
+        Post post = findReadablePost(postId);
 
         if (increaseViewCount) {
             int updatedRows = postRepository.increaseViewCount(postId, PostStatus.PUBLISHED, LocalDateTime.now());
@@ -157,7 +158,8 @@ public class PostService {
         if (detail == null) {
             throw new BlogException(ErrorCode.POST_NOT_FOUND);
         }
-        return detail.withReactions(reactionResponse(postId, memberId));
+        return detail.withReactions(reactionResponse(postId, memberId))
+                .withStructuredData(postPageService.structuredData(post));
     }
 
     @Transactional

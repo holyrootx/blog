@@ -122,6 +122,7 @@ function loadPostPage(postId) {
         image: postDetail.post.coverImageUrl,
         path: `/posts/${requestedPostId}`,
         type: 'article',
+        structuredData: postDetail.structuredData,
       });
     },
     onError: (error, { showingCached }) => {

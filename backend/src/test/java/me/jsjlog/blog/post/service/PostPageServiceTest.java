@@ -3,6 +3,9 @@ package me.jsjlog.blog.post.service;
 import me.jsjlog.blog.post.domain.Category;
 import me.jsjlog.blog.post.domain.Post;
 import me.jsjlog.blog.post.repository.PostRepository;
+import me.jsjlog.blog.home.domain.BlogProfile;
+import me.jsjlog.blog.home.repository.BlogProfileRepository;
+import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -25,6 +28,8 @@ class PostPageServiceTest {
     Path directory;
 
     private final PostRepository repository = mock(PostRepository.class);
+    private final BlogProfileRepository profiles = mock(BlogProfileRepository.class);
+    private final JsonMapper json = JsonMapper.builder().build();
     private Path index;
     private PostPageService service;
     private Post post;
@@ -35,7 +40,7 @@ class PostPageServiceTest {
         Files.writeString(index, "<html><head><!-- blog-meta:start --><title>기본 제목</title>"
                 + "<!-- blog-meta:end --><script src=\"/assets/current.js\"></script></head>"
                 + "<body><div id=\"app\"></div></body></html>");
-        service = new PostPageService(repository, index.toString(), "https://blog.example");
+        service = new PostPageService(repository, profiles, json, index.toString(), "https://blog.example");
         post = new Post("공개 글", "글 설명", "본문", new Category("테스트", 0L),
                 "/images/cover.webp", null);
         ReflectionTestUtils.setField(post, "id", 1L);
@@ -130,7 +135,7 @@ class PostPageServiceTest {
     void publicOriginCannotContainCredentialsPathsOrQueryParameters() {
         for (String origin : new String[]{"javascript:alert(1)", "https://user:secret@example.com",
                 "https://example.com/path", "https://example.com?host=other"}) {
-            assertThatThrownBy(() -> new PostPageService(repository, index.toString(), origin))
+            assertThatThrownBy(() -> new PostPageService(repository, profiles, json, index.toString(), origin))
                     .isInstanceOf(IllegalArgumentException.class);
         }
     }
@@ -139,5 +144,47 @@ class PostPageServiceTest {
         assertThat(page.found()).isFalse();
         assertThat(page.html()).contains("content=\"noindex,follow\"", "찾는 글이 없습니다")
                 .doesNotContain("공개 글", "글 설명", "cover.webp", "rel=\"canonical\"");
+        assertThat(page.html()).doesNotContain("application/ld+json");
+    }
+
+    @Test
+    void structuredDataMatchesThePublicProfileAndUsesKoreanTimeWithoutAccountDetails() {
+        when(profiles.findById(1L)).thenReturn(Optional.of(new BlogProfile("공개 이름", "소개", "개발자",
+                null, "https://github.com/example", "private@example.com", null)));
+        post.publish(LocalDateTime.of(2026, 10, 10, 9, 30));
+        ReflectionTestUtils.setField(post, "updatedAt", LocalDateTime.of(2026, 10, 11, 10, 0));
+        var data = service.structuredData(post);
+        assertThat(data).containsEntry("@type", "BlogPosting")
+                .containsEntry("headline", "공개 글")
+                .containsEntry("url", "https://blog.example/posts/1")
+                .containsEntry("datePublished", "2026-10-10T09:30:00+09:00")
+                .containsEntry("dateModified", "2026-10-11T10:00:00+09:00");
+        assertThat(json.writeValueAsString(data)).contains("공개 이름").doesNotContain("private@example.com");
+        String html = service.render("1").html();
+        assertThat(readStructuredData(html)).isEqualTo(json.valueToTree(data));
+    }
+
+    @Test
+    void structuredDataEscapesScriptClosersButPreservesTheOriginalTextWhenParsed() {
+        String title = "</script><script>alert(1)</script> & \"제목\"";
+        post.update(title, "설명", "본문", post.getCategory(), null);
+        String html = service.render("1").html();
+        assertThat(html).doesNotContain("<script>alert(1)").contains("\\u003c/script\\u003e");
+        assertThat(readStructuredData(html).get("headline").asText()).isEqualTo(title);
+    }
+
+    @Test
+    void unknownAuthorAndModificationBeforePublicationAreOmitted() {
+        ReflectionTestUtils.setField(post, "updatedAt", post.getPublishedAt().minusDays(1));
+        assertThat(service.structuredData(post)).doesNotContainKeys("author", "dateModified");
+        post.unpublish();
+        assertThat(service.structuredData(post)).isEmpty();
+    }
+
+    private tools.jackson.databind.JsonNode readStructuredData(String html) {
+        var match = java.util.regex.Pattern.compile("<script id=\"post-structured-data\" type=\"application/ld\\+json\">(.*?)</script>")
+                .matcher(html);
+        assertThat(match.find()).isTrue();
+        return json.readTree(match.group(1));
     }
 }

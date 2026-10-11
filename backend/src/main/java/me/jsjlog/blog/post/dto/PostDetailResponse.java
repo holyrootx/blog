@@ -3,6 +3,7 @@ package me.jsjlog.blog.post.dto;
 import me.jsjlog.blog.post.domain.PostStatus;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 public record PostDetailResponse(
         Long id,
@@ -18,7 +19,8 @@ public record PostDetailResponse(
         Long likeCount,
         Long dislikeCount,
         boolean likedByMe,
-        boolean dislikedByMe
+        boolean dislikedByMe,
+        Map<String, Object> structuredData
 ) {
 
     /** QueryDSL 상세 조회가 사용하는 기본 생성자. 반응 정보는 서비스에서 회원 기준으로 채운다. */
@@ -49,7 +51,8 @@ public record PostDetailResponse(
                 likeCount,
                 0L,
                 false,
-                false
+                false,
+                Map.of()
         );
     }
 
@@ -68,7 +71,14 @@ public record PostDetailResponse(
                 reactions.likeCount(),
                 reactions.dislikeCount(),
                 reactions.likedByMe(),
-                reactions.dislikedByMe()
+                reactions.dislikedByMe(),
+                structuredData
         );
+    }
+
+    public PostDetailResponse withStructuredData(Map<String, Object> data) {
+        return new PostDetailResponse(id, title, excerpt, content, categoryId, categoryName,
+                thumbnailImageUrl, status, publishedAt, views, likeCount, dislikeCount,
+                likedByMe, dislikedByMe, data);
     }
 }
