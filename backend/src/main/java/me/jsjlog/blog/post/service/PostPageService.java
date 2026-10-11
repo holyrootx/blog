@@ -2,6 +2,8 @@ package me.jsjlog.blog.post.service;
 
 import me.jsjlog.blog.post.domain.Post;
 import me.jsjlog.blog.post.repository.PostRepository;
+import me.jsjlog.blog.home.repository.BlogProfileRepository;
+import tools.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -15,6 +17,10 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -29,13 +35,19 @@ public class PostPageService {
             "<!-- blog-meta:start -->.*?<!-- blog-meta:end -->", Pattern.DOTALL);
 
     private final PostRepository postRepository;
+    private final BlogProfileRepository profiles;
+    private final ObjectMapper json;
     private final Path indexPath;
     private final URI origin;
 
     public PostPageService(PostRepository postRepository,
+                           BlogProfileRepository profiles,
+                           ObjectMapper json,
                            @Value("${blog.frontend.index-path:/var/www/blog/index.html}") String indexPath,
                            @Value("${blog.frontend.base-url:https://jsjlog.me}") String publicOrigin) {
         this.postRepository = postRepository;
+        this.profiles = profiles;
+        this.json = json;
         this.indexPath = Path.of(indexPath);
         this.origin = URI.create(publicOrigin);
         if (!("https".equals(origin.getScheme()) || "http".equals(origin.getScheme()))
@@ -71,6 +83,12 @@ public class PostPageService {
         if (found) {
             tag(meta, "property", "og:url", url);
             meta.append("<link rel=\"canonical\" href=\"").append(escape(url)).append("\" />\n");
+            // JSON 문자열 안의 </script>도 HTML 파서에는 종료 태그다. 문자 자체를 이스케이프한다.
+            String data = json.writeValueAsString(structuredData(post))
+                    .replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
+                    .replace("\u2028", "\\u2028").replace("\u2029", "\\u2029");
+            meta.append("<script id=\"post-structured-data\" type=\"application/ld+json\">")
+                    .append(data).append("</script>\n");
         }
 
         try {
@@ -85,6 +103,34 @@ public class PostPageService {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
                     "공개 페이지를 준비하지 못했습니다.", exception);
         }
+    }
+
+    /** 최초 HTML과 앱 안에서 이동한 글에 같은 공개 정보를 제공한다. */
+    public Map<String, Object> structuredData(Post post) {
+        if (!post.isPubliclyVisible(LocalDateTime.now())) return Map.of();
+        String url = origin.resolve("/posts/" + post.getId()).toString();
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("@context", "https://schema.org");
+        data.put("@type", "BlogPosting");
+        data.put("@id", url + "#article");
+        data.put("url", url);
+        data.put("mainEntityOfPage", url);
+        data.put("headline", post.getTitle());
+        data.put("description", description(post));
+        data.put("image", imageUrl(post.getThumbnailImageUrl()));
+        data.put("inLanguage", "ko-KR");
+        data.put("datePublished", articleTime(post.getPublishedAt()));
+        if (post.getUpdatedAt() != null && !post.getUpdatedAt().isBefore(post.getPublishedAt())) {
+            data.put("dateModified", articleTime(post.getUpdatedAt()));
+        }
+        // 공개 화면의 글쓴이도 이 프로필을 쓴다. 회원 로그인 정보와 이메일은 포함하지 않는다.
+        profiles.findById(1L).filter(profile -> profile.getName() != null && !profile.getName().isBlank())
+                .ifPresent(profile -> data.put("author", Map.of("@type", "Person", "name", profile.getName())));
+        return data;
+    }
+
+    private String articleTime(LocalDateTime value) {
+        return value.atZone(ZoneId.of("Asia/Seoul")).format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
     }
 
     private Post readablePost(String id) {

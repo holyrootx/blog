@@ -74,4 +74,16 @@ class PostPageControllerTest {
                 .andExpect(content().contentType("text/html;charset=UTF-8"))
                 .andExpect(content().string(containsString("찾는 글이 없습니다")));
     }
+
+    @Test
+    void detailApiAndHtmlProvideArticleStructuredData() throws Exception {
+        mvc.perform(get("/api/v1/blog/posts/" + post.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.structuredData['@type']").value("BlogPosting"))
+                .andExpect(jsonPath("$.data.structuredData.headline").value("공유할 글"))
+                .andExpect(jsonPath("$.data.structuredData.url").value("https://blog.example/posts/" + post.getId()));
+        mvc.perform(get("/posts/" + post.getId()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("application/ld+json")));
+    }
 }
