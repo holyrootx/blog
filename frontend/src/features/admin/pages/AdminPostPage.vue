@@ -1,6 +1,6 @@
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 
 import {
   deleteAdminPost,
@@ -22,6 +22,7 @@ import AdminDataGrid from '../components/AdminDataGrid.vue';
 import AdminPageSize from '../components/AdminPageSize.vue';
 import AdminPagination from '../components/AdminPagination.vue';
 import BaseModal from '../../../shared/components/BaseModal.vue';
+import { readAdminPostListQuery, toAdminPostListQuery } from '../data/adminPostListQuery';
 
 // 댓글 수·좋아요·썸네일은 열에 두지 않는다.
 // 값이 늘 0이거나 비어 있어서 정보가 아니라 잡음이 된다
@@ -62,6 +63,7 @@ const page = ref(1);
 const pageSize = ref(20);
 
 const router = useRouter();
+const route = useRoute();
 const categories = ref([]);
 
 // 확인창. 어떤 동작을 무슨 글에 할지 담아둔다
@@ -101,7 +103,11 @@ const isEmptyBeforeFirstPost = computed(() => statusCounts.value.all === 0
   && applied.value.categoryId === ''
   && applied.value.status === '');
 
+let postsRequest = 0;
 async function loadPosts(searchCondition) {
+  const request = ++postsRequest;
+  const requestedPage = page.value;
+  const requestedSize = pageSize.value;
   loading.value = true;
   loadError.value = '';
 
@@ -111,28 +117,53 @@ async function loadPosts(searchCondition) {
       status: searchCondition.status === 'TRASH' ? '' : searchCondition.status,
       trash: searchCondition.status === 'TRASH',
       // 화면은 1쪽부터, 서버는 0쪽부터 센다
-      page: page.value - 1,
-      size: pageSize.value,
+      page: requestedPage - 1,
+      size: requestedSize,
     });
+
+    // 뒤로가기나 연속 조회 뒤에 도착한 이전 응답으로 새 목록을 덮지 않는다.
+    if (request !== postsRequest) return;
+
+    const lastPage = Math.max(1, result.totalPages);
+    if (requestedPage > lastPage) {
+      await router.replace({ name: 'admin-posts', query: toAdminPostListQuery({
+        ...searchCondition, page: lastPage, pageSize: requestedSize,
+      }) });
+      return;
+    }
 
     posts.value = result.items;
     statusCounts.value = result.statusCounts;
     totalElements.value = result.totalElements;
     totalPages.value = result.totalPages;
   } catch (error) {
+    if (request !== postsRequest) return;
     console.error(error);
     posts.value = [];
     loadError.value = '글 목록을 불러오지 못했습니다.';
   } finally {
-    loading.value = false;
+    if (request === postsRequest) loading.value = false;
   }
 }
 
-// 조회 — 목록이 바뀌는 것은 이 함수를 거칠 때뿐이다
+function restoreList() {
+  const { page: restoredPage, pageSize: restoredSize, ...restoredCondition } = readAdminPostListQuery(route.query);
+  page.value = restoredPage;
+  pageSize.value = restoredSize;
+  Object.assign(condition, restoredCondition);
+  applied.value = restoredCondition;
+  return reload();
+}
+
+function showList(state) {
+  const location = { name: 'admin-posts', query: toAdminPostListQuery(state) };
+  // 같은 조건으로 조회 버튼을 다시 눌러도 서버의 최신 결과를 읽는다.
+  return router.resolve(location).fullPath === route.fullPath ? restoreList() : router.push(location);
+}
+
+// 검색창의 값은 조회를 누를 때만 주소와 실제 조회 조건에 반영한다.
 function search() {
-  page.value = 1;
-  applied.value = { ...condition };
-  return loadPosts(applied.value);
+  return showList({ ...condition, page: 1, pageSize: pageSize.value });
 }
 
 // 쪽 이동·개수 변경은 조건을 그대로 두고 다시 읽는다
@@ -141,14 +172,11 @@ function reload() {
 }
 
 function changePage(nextPage) {
-  page.value = nextPage;
-  return reload();
+  return showList({ ...applied.value, page: nextPage, pageSize: pageSize.value });
 }
 
 function changePageSize(nextSize) {
-  pageSize.value = nextSize;
-  page.value = 1;
-  return reload();
+  return showList({ ...applied.value, page: 1, pageSize: nextSize });
 }
 
 // 초기화 — 입력창만 비운다. 목록은 다음 조회 때 바뀐다
@@ -217,7 +245,9 @@ const confirmText = computed(() => CONFIRM_TEXTS[confirmAction.value] ?? { title
 
 function openPost(post) {
   if (post.deletedAt) return;
-  router.push({ name: 'admin-post-edit', params: { postId: post.id } });
+  router.push({ name: 'admin-post-edit', params: { postId: post.id },
+    query: toAdminPostListQuery({ ...applied.value, page: page.value, pageSize: pageSize.value }),
+  });
 }
 
 function askAction(action, post) {
@@ -262,10 +292,6 @@ async function runAction() {
 
     confirmTarget.value = null;
     await reload();
-    if (!loadError.value && page.value > Math.max(1, totalPages.value)) {
-      page.value = Math.max(1, totalPages.value);
-      await reload();
-    }
 
     // 목록이 새로 그려지는 것만으로는 무엇이 바뀌었는지 알기 어렵다
     notifySuccess(done);
@@ -287,10 +313,11 @@ async function loadCategories() {
   }
 }
 
-onMounted(() => {
-  loadCategories();
-  search();
-});
+onMounted(loadCategories);
+onBeforeUnmount(() => { postsRequest += 1; });
+watch(() => route.fullPath, () => {
+  if (route.name === 'admin-posts') restoreList();
+}, { immediate: true });
 </script>
 
 <template>
