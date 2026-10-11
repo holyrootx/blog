@@ -37,11 +37,10 @@ const listRef = ref(null);
 
 let mediaQuery = null;
 
-// placeholder를 첫 항목으로 둔 실제 목록
-const allOptions = computed(() => [
-  { value: '', label: props.placeholder },
-  ...props.options,
-]);
+// 화면에서 이미 빈 선택지를 넘겼다면 그 이름을 쓴다. "전체"를 한 번 더 붙이지 않는다.
+const allOptions = computed(() => props.options.some((option) => option.value === '')
+  ? props.options
+  : [{ value: '', label: props.placeholder }, ...props.options]);
 
 const selectedLabel = computed(() => {
   const found = allOptions.value.find((option) => option.value === props.modelValue);
