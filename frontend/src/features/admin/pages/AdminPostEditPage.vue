@@ -25,6 +25,7 @@ import AdminPostThumbnailField from '../components/AdminPostThumbnailField.vue';
 import AdminPostDraftDialog from '../components/AdminPostDraftDialog.vue';
 import AdminPostActionDialog from '../components/AdminPostActionDialog.vue';
 import { getFallbackPostImageUrl } from '../../../shared/post/postCardMapper';
+import { readAdminPostListQuery, toAdminPostListQuery } from '../data/adminPostListQuery';
 
 const STATUS_LABELS = {
   PUBLISHED: '발행',
@@ -62,6 +63,7 @@ const loadError = ref('');
 const saving = ref(false);
 const formError = ref('');
 const savedMessage = ref('');
+let active = true;
 
 const confirmAction = ref('');
 
@@ -198,13 +200,26 @@ async function save() {
 
       notifySuccess(`${saveLabel.value}했습니다.`);
     } else {
+      const targetPostId = postId.value;
       await persistForm();
+      if (!active || postId.value !== targetPostId) return;
 
       // 서버가 저장하면서 updatedAt 을 바꾼다.
       // 안 받아오면 두 번째 저장이 옛 값을 보내 충돌로 막힌다
       await refreshServerState();
+      if (!active || postId.value !== targetPostId) return;
 
-      savedMessage.value = '저장했습니다.';
+      if (JSON.stringify({ ...form }) === lastSavedForm.value) {
+        notifySuccess('저장했습니다.');
+        await router.push({ name: 'admin-posts',
+          query: toAdminPostListQuery(readAdminPostListQuery(route.query)),
+        });
+      } else {
+        // 저장 응답을 기다리며 쓴 내용은 아직 서버에 없다. 화면과 보관본을 유지한다.
+        saveDraftNow();
+        savedMessage.value = '저장은 완료했습니다. 저장 중 추가한 내용은 아직 저장되지 않았습니다.';
+        notifySuccess(savedMessage.value);
+      }
     }
   } catch (error) {
     saveDraftNow();
@@ -484,6 +499,7 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  active = false;
   window.removeEventListener('beforeunload', onBeforeUnload);
 });
 
