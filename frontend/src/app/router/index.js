@@ -3,6 +3,7 @@ import { clearAdminSession, ensureAdminSession } from '../../features/admin/data
 import { clearMemberSession } from '../../features/member/data/memberAuthStore';
 import { onUnauthorized } from '../../shared/api/blogApiClient';
 import { applyDocumentMeta } from './documentMeta';
+import { routeDocumentMeta } from './routeDocumentMeta';
 import { scrollToHash } from './scrollToHash';
 
 /*
@@ -302,7 +303,7 @@ router.afterEach((to, from) => {
     return;
   }
 
-  applyDocumentMeta({ title: to.meta.title, path: to.fullPath, robots: to.meta.robots });
+  applyDocumentMeta(routeDocumentMeta(to));
 });
 
 /**

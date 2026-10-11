@@ -1671,6 +1671,9 @@
 
 .post-pager__button,
 .post-pager__number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 36px;
   height: 36px;
   padding: 0 12px;
@@ -1681,6 +1684,7 @@
   font-family: inherit;
   font-size: 13px;
   font-weight: 600;
+  text-decoration: none;
   cursor: pointer;
 }
 

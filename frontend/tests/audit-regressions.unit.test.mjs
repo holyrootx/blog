@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 import { ref, computed, reactive, watch, nextTick } from 'vue';
 import { createMemoryHistory, createRouter } from 'vue-router';
+import { readPostListQuery, toPostListQuery } from '../src/features/post/data/postListQuery.js';
 
 const deferred = () => { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; };
 
@@ -252,6 +253,7 @@ test('stale post list successes, failures and fallback do not replace latest res
   const first = deferred(), second = deferred(), fallback = deferred(); let call = 0;
   const route = reactive({ query: { category: '1' }, fullPath: '/posts?category=1' });
   const p = await load('features/post/pages/PostListPage.vue', ['load', 'posts', 'loading', 'failed', 'fallbackPosts'], {
+    readPostListQuery, toPostListQuery,
     useRoute: () => route, useRouter: () => ({}), watch() {}, getPosts: () => (++call === 1 ? first.promise : second.promise),
     getHomePosts: () => fallback.promise, loadCategories: async () => [], useSectionLoader: await sectionLoader(),
   });
@@ -265,6 +267,7 @@ test('late empty-search fallback cannot overwrite a newer category result', asyn
   const fallback = deferred(); let call = 0;
   const route = reactive({ query: { q: 'search' }, fullPath: '/posts?q=search' });
   const p = await load('features/post/pages/PostListPage.vue', ['load', 'posts', 'fallbackPosts'], {
+    readPostListQuery, toPostListQuery,
     useRoute: () => route, useRouter: () => ({}), watch() {}, getPosts: async () => ({ items: ++call === 1 ? [] : [{ id: 2 }], totalElements: 1, totalPages: 1 }),
     getHomePosts: () => fallback.promise, loadCategories: async () => [], useSectionLoader: await sectionLoader(),
   });
@@ -420,6 +423,7 @@ test('older successful post list response cannot replace the latest category', a
   const first = deferred(), second = deferred(); let call = 0;
   const route = reactive({ query: { category: '1' }, fullPath: '/posts?category=1' });
   const p = await load('features/post/pages/PostListPage.vue', ['load', 'posts', 'loading'], {
+    readPostListQuery, toPostListQuery,
     useRoute: () => route, useRouter: () => ({}), watch() {}, getPosts: () => (++call === 1 ? first.promise : second.promise),
     getHomePosts: async () => [], loadCategories: async () => [], useSectionLoader: await sectionLoader(),
   });
