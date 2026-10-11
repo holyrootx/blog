@@ -74,4 +74,20 @@ class PostPageControllerTest {
                 .andExpect(content().contentType("text/html;charset=UTF-8"))
                 .andExpect(content().string(containsString("찾는 글이 없습니다")));
     }
+
+    @Test
+    void detailApiProvidesTheSameArticleIdentityWithoutChangingModificationTimeOnView() throws Exception {
+        String modified = post.getUpdatedAt().atZone(java.time.ZoneId.of("Asia/Seoul"))
+                .format(java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+        mvc.perform(get("/api/v1/blog/posts/" + post.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.structuredData['@type']").value("BlogPosting"))
+                .andExpect(jsonPath("$.data.structuredData.headline").value("공유할 글"))
+                .andExpect(jsonPath("$.data.structuredData.url").value("https://blog.example/posts/" + post.getId()))
+                .andExpect(jsonPath("$.data.structuredData.dateModified").value(modified));
+        mvc.perform(get("/posts/" + post.getId()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("application/ld+json")))
+                .andExpect(content().string(containsString("\"dateModified\":\"" + modified + "\"")));
+    }
 }

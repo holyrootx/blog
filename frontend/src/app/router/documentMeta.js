@@ -18,6 +18,7 @@ export function applyDocumentMeta({
   path,
   type = 'website',
   robots = 'index,follow',
+  structuredData = null,
 } = {}) {
   const fullTitle = title ? `${title} · ${SITE_NAME}` : SITE_NAME;
   const url = absolute(path ?? location.pathname);
@@ -41,6 +42,22 @@ export function applyDocumentMeta({
   meta('name', 'twitter:image', absolute(image || DEFAULT_IMAGE));
 
   canonical(robots.startsWith('noindex') ? null : url);
+  applyStructuredData(robots.startsWith('noindex') ? null : structuredData);
+}
+
+function applyStructuredData(data) {
+  let tag = document.head.querySelector('script#post-structured-data');
+  if (!data || data['@type'] !== 'BlogPosting') {
+    tag?.remove();
+    return;
+  }
+  if (!tag) {
+    tag = document.createElement('script');
+    tag.id = 'post-structured-data';
+    tag.type = 'application/ld+json';
+    document.head.appendChild(tag);
+  }
+  tag.textContent = JSON.stringify(data).replace(/</g, '\\u003c');
 }
 
 /**

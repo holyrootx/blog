@@ -196,6 +196,7 @@ function toPostDetail(post) {
   const body = toPostBody(post.content);
 
   return {
+    structuredData: post.structuredData ?? null,
     post: {
       id: post.id,
       categoryId: post.categoryId,
