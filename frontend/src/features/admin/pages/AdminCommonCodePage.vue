@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, onScopeDispose, reactive, ref } from 'vue';
 
 import {
   createAdminCommonCode,
@@ -10,6 +10,7 @@ import {
   updateAdminCommonCodeGroup,
 } from '../api/adminApi';
 import { notifyError, notifySuccess } from '../../../shared/toast/toastStore';
+import { useAdminListRequest } from '../composables/useAdminListRequest';
 import AdminPageHeader from '../components/AdminPageHeader.vue';
 import AdminSearchPanel from '../components/AdminSearchPanel.vue';
 import AdminGridToolbar from '../components/AdminGridToolbar.vue';
@@ -71,9 +72,7 @@ const page = ref(1);
 const pageSize = ref(20);
 const totalElements = ref(0);
 const totalPages = ref(0);
-const groupsLoading = ref(false);
 const groupsLoaded = ref(false);
-const groupsError = ref('');
 
 // 오른쪽에 보여 줄 그룹. 목록의 다른 페이지로 넘어가도 보던 그룹은 그대로 둔다
 const selectedGroup = ref(null);
@@ -84,6 +83,11 @@ const codes = ref([]);
 const codesLoading = ref(false);
 const codesError = ref('');
 let codesRequest = 0;
+
+onScopeDispose(() => {
+  codesRequest += 1;
+  codesLoading.value = false;
+});
 
 // ── 팝업 ──
 const groupFormOpen = ref(false);
@@ -108,20 +112,13 @@ const codeInput = computed({
   set: (value) => { codeForm.code = value.toUpperCase(); },
 });
 
-async function loadGroups() {
-  groupsLoading.value = true;
-  groupsError.value = '';
-
-  try {
-    const result = await getAdminCommonCodeGroups({
-      ...applied.value,
-      page: page.value - 1,
-      size: pageSize.value,
-    });
-
+const { loading: groupsLoading, loadError: groupsError, load: requestGroups } = useAdminListRequest({
+  request: getAdminCommonCodeGroups,
+  apply(result) {
     groups.value = result.items;
     totalElements.value = result.totalElements;
     totalPages.value = result.totalPages;
+    groupsLoaded.value = true;
 
     // 보던 그룹이 이 목록에 있으면 최신 값으로 바꾸고, 아무것도 안 보고 있으면 첫 그룹을 연다
     const current = selectedGroup.value && result.items.find((group) => group.groupCode === selectedGroup.value.groupCode);
@@ -130,14 +127,21 @@ async function loadGroups() {
     } else if (!selectedGroup.value && result.items.length) {
       selectGroup(result.items[0]);
     }
-  } catch (error) {
+  },
+  errorMessage: '공통 코드 그룹을 불러오지 못했습니다.',
+  onError(error) {
     console.error(error);
     groups.value = [];
-    groupsError.value = '공통 코드 그룹을 불러오지 못했습니다.';
-  } finally {
-    groupsLoading.value = false;
     groupsLoaded.value = true;
-  }
+  },
+});
+
+function loadGroups() {
+  return requestGroups({
+    ...applied.value,
+    page: page.value - 1,
+    size: pageSize.value,
+  });
 }
 
 function search() {
@@ -145,7 +149,11 @@ function search() {
   applied.value = { ...condition };
   // 새로 검색하면 결과의 첫 그룹을 연다
   selectedGroup.value = null;
+  // 선택을 지웠으므로 이전 그룹의 진행 중인 조회도 더는 유효하지 않다.
+  codesRequest += 1;
   codes.value = [];
+  codesLoading.value = false;
+  codesError.value = '';
   return loadGroups();
 }
 
@@ -198,8 +206,8 @@ async function loadCodes() {
       codes.value = result;
     }
   } catch (error) {
-    console.error(error);
     if (request === codesRequest) {
+      console.error(error);
       codes.value = [];
       codesError.value = '코드를 불러오지 못했습니다.';
     }

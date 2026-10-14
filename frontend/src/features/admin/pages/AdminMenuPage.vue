@@ -10,6 +10,7 @@ import {
 import { sortAdminMenus } from '../data/adminMenus';
 import { reloadAdminSidebarMenus } from '../data/adminSidebarMenuStore';
 import { notifyError, notifySuccess } from '../../../shared/toast/toastStore';
+import { useAdminListRequest } from '../composables/useAdminListRequest';
 import AdminPageHeader from '../components/AdminPageHeader.vue';
 import AdminSearchPanel from '../components/AdminSearchPanel.vue';
 import AdminGridToolbar from '../components/AdminGridToolbar.vue';
@@ -27,8 +28,6 @@ const EMPTY_CONDITION = {
 };
 
 const menus = ref([]);
-const loading = ref(false);
-const loadError = ref('');
 const collapsedGroupIds = ref([]);
 
 // 입력창의 값. 조회를 눌러 서버에 보낼 때까지 목록에는 영향이 없다
@@ -122,23 +121,20 @@ function toggleAllGroups() {
 const groupOptions = computed(() => groups.value
   .map((group) => ({ value: String(group.id), label: group.menuName })));
 
-async function loadMenus(searchCondition) {
-  loading.value = true;
-  loadError.value = '';
-
-  try {
-    menus.value = await getAdminMenus(searchCondition);
+const { loading, loadError, load: loadMenus } = useAdminListRequest({
+  request: getAdminMenus,
+  apply(result) {
+    menus.value = result;
     // 조건이 바뀌면 접힘을 푼다.
     // 접힌 그룹 안의 항목이 걸리면 아무것도 안 보이기 때문
     collapsedGroupIds.value = [];
-  } catch (error) {
+  },
+  errorMessage: '메뉴를 불러오지 못했습니다.',
+  onError(error) {
     console.error(error);
     menus.value = [];
-    loadError.value = '메뉴를 불러오지 못했습니다.';
-  } finally {
-    loading.value = false;
-  }
-}
+  },
+});
 
 // 조회 — 목록이 바뀌는 것은 이 함수를 거칠 때뿐이다
 function search() {

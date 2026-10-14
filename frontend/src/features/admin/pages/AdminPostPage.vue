@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import {
@@ -23,6 +23,7 @@ import AdminPageSize from '../components/AdminPageSize.vue';
 import AdminPagination from '../components/AdminPagination.vue';
 import BaseModal from '../../../shared/components/BaseModal.vue';
 import { readAdminPostListQuery, toAdminPostListQuery } from '../data/adminPostListQuery';
+import { useAdminListRequest } from '../composables/useAdminListRequest';
 
 // 댓글 수·좋아요·썸네일은 열에 두지 않는다.
 // 값이 늘 0이거나 비어 있어서 정보가 아니라 잡음이 된다
@@ -56,8 +57,6 @@ const columns = computed(() => isTrash.value
   : COLUMNS);
 const totalElements = ref(0);
 const totalPages = ref(0);
-const loading = ref(false);
-const loadError = ref('');
 
 const page = ref(1);
 const pageSize = ref(20);
@@ -103,27 +102,18 @@ const isEmptyBeforeFirstPost = computed(() => statusCounts.value.all === 0
   && applied.value.categoryId === ''
   && applied.value.status === '');
 
-let postsRequest = 0;
-async function loadPosts(searchCondition) {
-  const request = ++postsRequest;
-  const requestedPage = page.value;
-  const requestedSize = pageSize.value;
-  loading.value = true;
-  loadError.value = '';
-
-  try {
-    const result = await getAdminPosts({
+const { loading, loadError, load: requestPosts } = useAdminListRequest({
+  request({ page: requestedPage, size, ...searchCondition }) {
+    return getAdminPosts({
       ...searchCondition,
       status: searchCondition.status === 'TRASH' ? '' : searchCondition.status,
       trash: searchCondition.status === 'TRASH',
       // 화면은 1쪽부터, 서버는 0쪽부터 센다
       page: requestedPage - 1,
-      size: requestedSize,
+      size,
     });
-
-    // 뒤로가기나 연속 조회 뒤에 도착한 이전 응답으로 새 목록을 덮지 않는다.
-    if (request !== postsRequest) return;
-
+  },
+  async apply(result, { page: requestedPage, size: requestedSize, ...searchCondition }) {
     const lastPage = Math.max(1, result.totalPages);
     if (requestedPage > lastPage) {
       await router.replace({ name: 'admin-posts', query: toAdminPostListQuery({
@@ -136,14 +126,16 @@ async function loadPosts(searchCondition) {
     statusCounts.value = result.statusCounts;
     totalElements.value = result.totalElements;
     totalPages.value = result.totalPages;
-  } catch (error) {
-    if (request !== postsRequest) return;
+  },
+  errorMessage: '글 목록을 불러오지 못했습니다.',
+  onError(error) {
     console.error(error);
     posts.value = [];
-    loadError.value = '글 목록을 불러오지 못했습니다.';
-  } finally {
-    if (request === postsRequest) loading.value = false;
-  }
+  },
+});
+
+function loadPosts(searchCondition) {
+  return requestPosts({ ...searchCondition, page: page.value, size: pageSize.value });
 }
 
 function restoreList() {
@@ -314,7 +306,6 @@ async function loadCategories() {
 }
 
 onMounted(loadCategories);
-onBeforeUnmount(() => { postsRequest += 1; });
 watch(() => route.fullPath, () => {
   if (route.name === 'admin-posts') restoreList();
 }, { immediate: true });
