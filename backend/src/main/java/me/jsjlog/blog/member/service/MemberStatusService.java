@@ -118,16 +118,18 @@ public class MemberStatusService {
     }
 
     /**
-     * 같은 소셜 계정의 기간 지난 복원 정보를 먼저 정리한다. 새로 가입할 때 부른다.
-     *
-     * <p>정리 작업이 아직 돌지 않았으면 기간 지난 정보가 남아 있다. 새 회원이 나중에 탈퇴하면 그 계정의
-     * 복원 정보를 다시 써야 하는데, 묵은 것이 자리를 차지하고 있으면 겹친다.</p>
+     * 신규 회원 INSERT 뒤, 가입을 확정하기 전에 최신 복원 정보를 확인한다.
+     * 복원 기간 안이면 사용자의 선택이 필요하므로 가입 전체를 롤백한다.
+     * 기간이 지난 정보만 정리해야 나중에 새 회원이 탈퇴할 때도 복원 키가 겹치지 않는다.
      */
     @Transactional
-    public void expireStaleRestore(AuthProvider provider, String providerUserId, LocalDateTime now) {
-        for (Long memberId : statusRepository.findExpiredRestoreIds(provider, providerUserId, now)) {
-            expire(memberId, now);
-        }
+    public void prepareForSignup(AuthProvider provider, String providerUserId, LocalDateTime now) {
+        statusRepository.findRestoreForUpdate(provider, providerUserId).ifPresent(restore -> {
+            if (restore.isRestorable(now)) {
+                throw new BlogException(ErrorCode.OAUTH_SIGNUP_NOT_ALLOWED);
+            }
+            expire(restore.getMemberId(), now);
+        });
     }
 
     private int expire(Long memberId, LocalDateTime now) {

@@ -4,10 +4,12 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import jakarta.persistence.LockModeType;
 import me.jsjlog.blog.member.domain.AuthProvider;
 import me.jsjlog.blog.member.domain.MemberStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -39,15 +41,14 @@ public interface MemberStatusRepository extends JpaRepository<MemberStatus, Long
             """)
     List<Long> findExpiredRestoreIds(@Param("now") LocalDateTime now);
 
-    /** 같은 소셜 계정의 기간 지난 복원 정보. 그 계정이 새로 가입할 때 먼저 정리한다 */
+    /** 가입 트랜잭션의 첫 조회 이후 생긴 복원 정보도 최신 상태로 확인한다. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
-            select s.memberId from MemberStatus s
+            select s from MemberStatus s
             where s.restoreProvider = :provider and s.restoreProviderUserId = :providerUserId
-                and s.restoreExpiresAt <= :now
             """)
-    List<Long> findExpiredRestoreIds(@Param("provider") AuthProvider provider,
-                                     @Param("providerUserId") String providerUserId,
-                                     @Param("now") LocalDateTime now);
+    Optional<MemberStatus> findRestoreForUpdate(@Param("provider") AuthProvider provider,
+                                               @Param("providerUserId") String providerUserId);
 
     /** 복원. 기간 안이고 아직 그 계정의 복원 정보가 남아 있을 때만 활동으로 되돌린다 */
     @Modifying(clearAutomatically = true)
