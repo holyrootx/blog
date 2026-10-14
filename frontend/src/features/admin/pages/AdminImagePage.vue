@@ -4,6 +4,7 @@ import { computed, onMounted, ref } from 'vue';
 import { cleanupAdminImages, getAdminImages } from '../api/adminApi';
 import { collectDraftImageUrls } from '../data/postDraftImages';
 import { notifyError, notifySuccess } from '../../../shared/toast/toastStore';
+import { useAdminListRequest } from '../composables/useAdminListRequest';
 import AdminPageHeader from '../components/AdminPageHeader.vue';
 import AdminGridToolbar from '../components/AdminGridToolbar.vue';
 import AdminDataGrid from '../components/AdminDataGrid.vue';
@@ -53,8 +54,17 @@ const filter = ref('UNUSED');
 /** 주소 → 그 주소를 쓰는 임시저장 글 제목들 */
 const draftUsers = ref(new Map());
 
-const loading = ref(false);
-const loadError = ref('');
+const { loading, loadError, load: requestImages } = useAdminListRequest({
+  request: getAdminImages,
+  apply(result) {
+    images.value = result.items;
+    unusedBytes.value = result.unusedBytes;
+    totalElements.value = result.totalElements;
+    totalPages.value = result.totalPages;
+    selectedIds.value = [];
+  },
+  errorMessage: (error) => error?.message ?? '이미지를 불러오지 못했습니다.',
+});
 const selectedIds = ref([]);
 const deleting = ref(false);
 const confirmOpen = ref(false);
@@ -69,28 +79,13 @@ const selectedInDrafts = computed(() => selected.value
 
 onMounted(load);
 
-async function load() {
-  loading.value = true;
-  loadError.value = '';
+function load() {
   draftUsers.value = collectDraftImageUrls();
-
-  try {
-    const result = await getAdminImages({
-      onlyUnused: filter.value === 'UNUSED',
-      page: page.value - 1,
-      size: pageSize.value,
-    });
-
-    images.value = result.items;
-    unusedBytes.value = result.unusedBytes;
-    totalElements.value = result.totalElements;
-    totalPages.value = result.totalPages;
-    selectedIds.value = [];
-  } catch (error) {
-    loadError.value = error?.message ?? '이미지를 불러오지 못했습니다.';
-  } finally {
-    loading.value = false;
-  }
+  return requestImages({
+    onlyUnused: filter.value === 'UNUSED',
+    page: page.value - 1,
+    size: pageSize.value,
+  });
 }
 
 function changeFilter(next) {
@@ -275,7 +270,7 @@ function formatDate(value) {
       v-if="totalPages > 1"
       :page="page"
       :total-pages="totalPages"
-      @change="changePage"
+      @update:page="changePage"
     />
 
     <BaseModal

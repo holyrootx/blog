@@ -8,6 +8,7 @@ import {
   updateAdminCategory,
 } from '../api/adminApi';
 import { notifyError, notifySuccess } from '../../../shared/toast/toastStore';
+import { useAdminListRequest } from '../composables/useAdminListRequest';
 import AdminPageHeader from '../components/AdminPageHeader.vue';
 import AdminSearchPanel from '../components/AdminSearchPanel.vue';
 import AdminGridToolbar from '../components/AdminGridToolbar.vue';
@@ -40,8 +41,6 @@ const EMPTY_FORM = {
 const condition = reactive({ ...EMPTY_CONDITION });
 const applied = ref({ ...EMPTY_CONDITION });
 const categories = ref([]);
-const loading = ref(false);
-const loadError = ref('');
 
 const page = ref(1);
 const pageSize = ref(10);
@@ -73,25 +72,22 @@ const selectedNames = computed(() => selectedIds.value
   .map((id) => categories.value.find((category) => category.id === id)?.name)
   .filter(Boolean));
 
-async function loadCategories(searchCondition) {
-  loading.value = true;
-  loadError.value = '';
-
-  try {
-    categories.value = await getAdminCategories(searchCondition);
+const { loading, loadError, load: loadCategories } = useAdminListRequest({
+  request: getAdminCategories,
+  apply(result) {
+    categories.value = result;
     selectedIds.value = [];
 
     if (page.value > totalPages.value) {
       page.value = Math.max(1, totalPages.value);
     }
-  } catch (error) {
+  },
+  errorMessage: '카테고리를 불러오지 못했습니다.',
+  onError(error) {
     console.error(error);
     categories.value = [];
-    loadError.value = '카테고리를 불러오지 못했습니다.';
-  } finally {
-    loading.value = false;
-  }
-}
+  },
+});
 
 // 조회 — 목록이 바뀌는 것은 이 함수를 거칠 때뿐이다
 /** 실패도 성공만큼 눈에 띄어야 한다. 인라인 문구는 폼 아래라 화면 밖일 때가 있다 */

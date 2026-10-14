@@ -8,6 +8,7 @@ import {
   unsuspendAdminMember,
 } from '../api/adminApi';
 import { notifySuccess } from '../../../shared/toast/toastStore';
+import { useAdminListRequest } from '../composables/useAdminListRequest';
 import AdminPageHeader from '../components/AdminPageHeader.vue';
 import AdminSearchPanel from '../components/AdminSearchPanel.vue';
 import AdminGridToolbar from '../components/AdminGridToolbar.vue';
@@ -40,8 +41,20 @@ const page = ref(1);
 const pageSize = ref(20);
 const totalElements = ref(0);
 const totalPages = ref(0);
-const loading = ref(false);
-const loadError = ref('');
+const { loading, loadError, load: requestMembers } = useAdminListRequest({
+  request: getAdminMembers,
+  apply(result) {
+    members.value = result.items;
+    statusCounts.value = result.statusCounts;
+    totalElements.value = result.totalElements;
+    totalPages.value = result.totalPages;
+  },
+  errorMessage: '회원 목록을 불러오지 못했습니다.',
+  onError(error) {
+    console.error(error);
+    members.value = [];
+  },
+});
 const actionTarget = ref(null);
 const action = ref('');
 const actionPending = ref(false);
@@ -87,28 +100,12 @@ const confirmText = computed(() => {
   };
 });
 
-async function loadMembers(searchCondition) {
-  loading.value = true;
-  loadError.value = '';
-
-  try {
-    const result = await getAdminMembers({
-      ...searchCondition,
-      page: page.value - 1,
-      size: pageSize.value,
-    });
-
-    members.value = result.items;
-    statusCounts.value = result.statusCounts;
-    totalElements.value = result.totalElements;
-    totalPages.value = result.totalPages;
-  } catch (error) {
-    console.error(error);
-    members.value = [];
-    loadError.value = '회원 목록을 불러오지 못했습니다.';
-  } finally {
-    loading.value = false;
-  }
+function loadMembers(searchCondition) {
+  return requestMembers({
+    ...searchCondition,
+    page: page.value - 1,
+    size: pageSize.value,
+  });
 }
 
 function search() {

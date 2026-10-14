@@ -16,6 +16,7 @@ import AdminSearchPanel from '../components/AdminSearchPanel.vue';
 import AdminSegmented from '../components/AdminSegmented.vue';
 import AdminTextInput from '../components/AdminTextInput.vue';
 import { notifySuccess } from '../../../shared/toast/toastStore';
+import { useAdminListRequest } from '../composables/useAdminListRequest';
 
 const FILTERS = ['ALL', 'UNANSWERED', 'REPORTED', 'HIDDEN'];
 const EMPTY_CONDITION = { status: 'ALL', keyword: '' };
@@ -37,8 +38,20 @@ const totalElements = ref(0);
 const totalPages = ref(0);
 const page = ref(1);
 const pageSize = ref(20);
-const loading = ref(false);
-const loadError = ref('');
+const { loading, loadError, load: requestComments } = useAdminListRequest({
+  request: getAdminComments,
+  apply(result) {
+    comments.value = result.items;
+    statusCounts.value = result.statusCounts;
+    totalElements.value = result.totalElements;
+    totalPages.value = result.totalPages;
+  },
+  errorMessage: '댓글 목록을 불러오지 못했습니다.',
+  onError(error) {
+    console.error(error);
+    comments.value = [];
+  },
+});
 
 const replyTarget = ref(null);
 const visibilityTarget = ref(null);
@@ -86,29 +99,13 @@ onMounted(async () => {
   }
 });
 
-async function loadComments(searchCondition) {
-  loading.value = true;
-  loadError.value = '';
-
-  try {
-    const result = await getAdminComments({
-      ...searchCondition,
-      memberId: memberFilter.value,
-      page: page.value - 1,
-      size: pageSize.value,
-    });
-
-    comments.value = result.items;
-    statusCounts.value = result.statusCounts;
-    totalElements.value = result.totalElements;
-    totalPages.value = result.totalPages;
-  } catch (error) {
-    console.error(error);
-    comments.value = [];
-    loadError.value = '댓글 목록을 불러오지 못했습니다.';
-  } finally {
-    loading.value = false;
-  }
+function loadComments(searchCondition) {
+  return requestComments({
+    ...searchCondition,
+    memberId: memberFilter.value,
+    page: page.value - 1,
+    size: pageSize.value,
+  });
 }
 
 function search() {
