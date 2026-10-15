@@ -50,6 +50,7 @@ public enum ErrorCode {
     // 되돌리려면 DB 를 직접 고쳐야 한다. 화면에서 실수로 누를 수 있는 자리에 두지 않는다
     MEMBER_ADMIN_CANNOT_WITHDRAW(HttpStatus.CONFLICT, "MEMBER_ADMIN_CANNOT_WITHDRAW", "관리자 계정은 탈퇴할 수 없습니다."),
 
+    IMAGE_REFERENCE_UNAVAILABLE(HttpStatus.CONFLICT, "IMAGE_REFERENCE_UNAVAILABLE", "삭제되었거나 사용할 수 없는 이미지가 있습니다. 이미지를 다시 올린 뒤 저장해 주세요."),
     IMAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "IMAGE_NOT_FOUND", "이미지를 찾을 수 없습니다."),
     IMAGE_EMPTY(HttpStatus.BAD_REQUEST, "IMAGE_EMPTY", "이미지 파일이 없습니다."),
     IMAGE_TOO_LARGE(HttpStatus.BAD_REQUEST, "IMAGE_TOO_LARGE", "이미지 용량이 너무 큽니다."),

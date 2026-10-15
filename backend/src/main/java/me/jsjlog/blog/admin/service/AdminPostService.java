@@ -54,6 +54,7 @@ public class AdminPostService {
     private final MemberRepository memberRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final ImageCleanupService imageCleanupService;
+    private final ImageReferenceGuard imageReferenceGuard;
     private final ContentHistoryRepository historyRepository;
     private final PostReactionRepository reactionRepository;
 
@@ -122,6 +123,7 @@ public class AdminPostService {
                 findAuthor(authorId)
         );
 
+        imageReferenceGuard.protect(post.getContent(), post.getThumbnailImageUrl());
         postRepository.save(post);
         return post.getId();
     }
@@ -152,6 +154,7 @@ public class AdminPostService {
 
         // 글쓴이는 여기서 건드리지 않는다. 생성할 때 한 번 정해지는 값이고,
         // 저장할 때마다 바꾸면 남의 글을 고친 사람이 글쓴이가 된다
+        imageReferenceGuard.protect(request.content(), request.thumbnailImageUrl());
         post.update(
                 title,
                 request.excerpt(),
