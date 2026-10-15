@@ -61,6 +61,17 @@ const categories = ref([]);
 const loading = ref(!isNew.value);
 const loadError = ref('');
 const saving = ref(false);
+const imageContext = ref(0);
+const bodyUploads = ref({ pending: 0, failed: 0 });
+const thumbnailUploads = ref({ pending: 0, failed: 0 });
+const imageSaveBlockReason = computed(() => {
+  const pending = bodyUploads.value.pending + thumbnailUploads.value.pending;
+  if (pending) return `이미지 ${pending}개를 업로드하고 있습니다. 완료 후 저장하거나 발행할 수 있습니다.`;
+  if (bodyUploads.value.failed || thumbnailUploads.value.failed) {
+    return '업로드에 실패한 이미지가 있습니다. 다시 올리거나 해당 이미지를 제거해 주세요.';
+  }
+  return '';
+});
 const formError = ref('');
 const savedMessage = ref('');
 let active = true;
@@ -179,7 +190,7 @@ function failWith(message) {
 }
 
 async function save() {
-  if (saving.value || !canSave.value) {
+  if (saving.value || imageSaveBlockReason.value || !canSave.value) {
     return;
   }
 
@@ -209,7 +220,7 @@ async function save() {
       await refreshServerState();
       if (!active || postId.value !== targetPostId) return;
 
-      if (JSON.stringify({ ...form }) === lastSavedForm.value) {
+      if (!imageSaveBlockReason.value && JSON.stringify({ ...form }) === lastSavedForm.value) {
         notifySuccess('저장했습니다.');
         await router.push({ name: 'admin-posts',
           query: toAdminPostListQuery(readAdminPostListQuery(route.query)),
@@ -273,8 +284,7 @@ const ACTION_LABELS = { publish: '발행', unpublish: '내리기' };
 
 /**
  * 저장은 됐는데 상태 변경만 실패한 경우 남는다.
- * 내용은 이미 서버에 있으므로 다시 시도할 때는 상태 변경만 한다 —
- * 저장을 또 보내면 updatedAt 이 어긋나 충돌로 막힌다.
+ * 추가 입력이 없으면 상태 변경만 재시도한다. 입력이 있으면 먼저 저장한다.
  */
 const retryAction = ref('');
 
@@ -298,6 +308,12 @@ async function runConfirmedAction() {
 
   if (action === 'delete') {
     await runDelete();
+    return;
+  }
+
+  if (imageSaveBlockReason.value) {
+    confirmAction.value = '';
+    failWith(imageSaveBlockReason.value);
     return;
   }
 
@@ -325,6 +341,10 @@ async function runConfirmedAction() {
     const targetId = isNew.value ? await createFromForm() : await persistForm();
     saved = true;
 
+    if (imageSaveBlockReason.value) throw new Error(imageSaveBlockReason.value);
+    if (JSON.stringify({ ...form }) !== lastSavedForm.value) {
+      throw new Error('저장 중 추가한 내용이 있습니다. 다시 시도하면 추가한 내용까지 저장합니다.');
+    }
     await changeStatus(action, targetId);
 
     confirmAction.value = '';
@@ -413,17 +433,42 @@ async function cancelSchedule() {
 }
 
 async function retryStatusChange() {
-  if (saving.value || !retryAction.value) {
+  if (saving.value || imageSaveBlockReason.value || !retryAction.value) {
     return;
   }
 
   saving.value = true;
   formError.value = '';
+  const targetId = postId.value;
+  const context = imageContext.value;
 
   try {
     const action = retryAction.value;
-
-    await changeStatus(action);
+    if (JSON.stringify({ ...form }) !== lastSavedForm.value) {
+      const reason = action === 'publish' ? publishBlockReason.value : saveBlockReason.value;
+      if (reason || lengthError.value) throw new Error(reason || lengthError.value);
+      const latest = await getAdminPost(targetId);
+      if (!active || context !== imageContext.value) return;
+      const saved = JSON.parse(lastSavedForm.value);
+      // 첫 저장이 바꾼 버전만 받아온다. 다른 창의 수정까지 최신 버전으로 덮어쓰면 안 된다.
+      if (latest.title !== saved.title.trim()
+        || String(latest.categoryId) !== String(saved.categoryId)
+        || (latest.excerpt || '') !== (saved.excerpt || '')
+        || (latest.content || '') !== (saved.content || '')
+        || (latest.thumbnailImageUrl || '') !== (saved.thumbnailImageUrl || '')) {
+        throw new Error('다른 곳에서 글이 수정되었습니다. 작성 중인 내용은 유지됩니다. 최신 글을 확인해 주세요.');
+      }
+      serverUpdatedAt.value = latest.updatedAt;
+      applyAutomaticThumbnail();
+      await persistForm();
+      if (!active || context !== imageContext.value) return;
+      if (imageSaveBlockReason.value) throw new Error(imageSaveBlockReason.value);
+      if (JSON.stringify({ ...form }) !== lastSavedForm.value) {
+        throw new Error('저장 중 추가한 내용이 있습니다. 다시 시도하면 추가한 내용까지 저장합니다.');
+      }
+    }
+    await changeStatus(action, targetId);
+    if (!active || context !== imageContext.value) return;
     retryAction.value = '';
 
     await refreshServerState();
@@ -459,6 +504,9 @@ async function runDelete() {
 /* ── 생명주기 ─────────────────────────────── */
 
 async function enter() {
+  imageContext.value += 1;
+  bodyUploads.value = { pending: 0, failed: 0 };
+  thumbnailUploads.value = { pending: 0, failed: 0 };
   resetDraftPrompt();
 
   // 앞 글에서 남은 안내와 다시 시도 버튼을 들고 오면 엉뚱한 글을 발행하게 된다
@@ -581,8 +629,8 @@ watch(postId, (id) => {
           <button
             class="admin-button admin-button--ghost"
             type="button"
-            :disabled="saving || !canSave"
-            :title="saveBlockReason"
+            :disabled="saving || !!imageSaveBlockReason || !canSave"
+            :title="imageSaveBlockReason || saveBlockReason"
             @click="save"
           >
             {{ saving ? '저장 중…' : saveLabel }}
@@ -608,14 +656,16 @@ watch(postId, (id) => {
             v-else
             class="admin-button admin-button--solid"
             type="button"
-            :disabled="saving || !canPublish"
-            :title="publishBlockReason"
+            :disabled="saving || !!imageSaveBlockReason || !canPublish"
+            :title="imageSaveBlockReason || publishBlockReason"
             @click="openPublishConfirm"
           >
             발행
           </button>
         </div>
       </div>
+
+      <p v-if="imageSaveBlockReason" class="admin-editor__hint" role="status">{{ imageSaveBlockReason }}</p>
 
       <!-- 발행된 글의 저장은 즉시 공개 반영이다. 확인 다이얼로그 대신 상시 문구를 둔다 —
            오타 하나마다 다이얼로그가 뜨면 반사적으로 확인을 누르게 되어 아무것도 막지 못한다 -->
@@ -652,7 +702,9 @@ watch(postId, (id) => {
         </div>
 
         <AdminPostThumbnailField
+          :key="imageContext"
           v-model="form.thumbnailImageUrl"
+          @upload-state="thumbnailUploads = $event"
           :preview-url="representativeImageUrl"
           :post-title="form.title"
           :disabled="saving"
@@ -665,18 +717,18 @@ watch(postId, (id) => {
           </span>
 
           <!-- 쓰는 자리가 곧 결과다. 미리보기를 따로 두지 않는다 -->
-          <AdminBlockEditor v-model="form.content" />
+          <AdminBlockEditor :key="imageContext" v-model="form.content" @upload-state="bodyUploads = $event" />
         </div>
       </div>
 
-      <!-- 저장까지는 됐는데 발행만 실패한 경우, 저장을 다시 보내지 않고 발행만 다시 시도한다 -->
+      <!-- 발행만 실패했다면 상태 변경을 재시도한다. 추가 입력이 있으면 먼저 저장한다. -->
       <p v-if="formError" class="admin-form-error">
         {{ formError }}
         <button
           v-if="retryAction"
           class="admin-button admin-button--ghost admin-button--small"
           type="button"
-          :disabled="saving"
+          :disabled="saving || !!imageSaveBlockReason"
           @click="retryStatusChange"
         >
           {{ ACTION_LABELS[retryAction] }} 다시 시도

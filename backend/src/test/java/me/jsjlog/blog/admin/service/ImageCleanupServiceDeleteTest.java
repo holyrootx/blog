@@ -9,6 +9,7 @@ import me.jsjlog.blog.admin.repository.ImageUsageRepository;
 import me.jsjlog.blog.common.exception.BlogException;
 import me.jsjlog.blog.common.exception.ErrorCode;
 import me.jsjlog.blog.common.upload.ImageStorage;
+import me.jsjlog.blog.common.upload.StoredImageFiles;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -41,11 +42,14 @@ class ImageCleanupServiceDeleteTest {
     @Mock
     private UploadImage image;
 
+    @Mock
+    private ImageReferenceGuard imageReferenceGuard;
+
     private ImageCleanupService service;
 
     @BeforeEach
     void setUp() {
-        service = new ImageCleanupService(imageUsageRepository, imageStorage);
+        service = new ImageCleanupService(imageUsageRepository, new StoredImageFiles(imageStorage), imageReferenceGuard);
     }
 
     @Test
@@ -53,7 +57,7 @@ class ImageCleanupServiceDeleteTest {
     void deletesActualLegacyThumbnailAndReturnsDeletedCount() {
         givenImageIdentity();
         when(image.getStorageKey()).thenReturn(ORIGINAL_KEY);
-        when(imageUsageRepository.findAllById(Set.of(1L))).thenReturn(List.of(image));
+        when(imageReferenceGuard.lockIds(Set.of(1L))).thenReturn(List.of(image));
         when(imageUsageRepository.findStillUsed(Set.of(LEGACY_THUMBNAIL_URL))).thenReturn(List.of());
 
         var result = service.cleanup(List.of(1L));
@@ -71,7 +75,7 @@ class ImageCleanupServiceDeleteTest {
     @DisplayName("삭제 직전에 사용 중이면 파일을 남기고 건너뜀 건수를 반환한다")
     void skipsImageThatBecameUsed() {
         givenImageIdentity();
-        when(imageUsageRepository.findAllById(Set.of(1L))).thenReturn(List.of(image));
+        when(imageReferenceGuard.lockIds(Set.of(1L))).thenReturn(List.of(image));
         when(imageUsageRepository.findStillUsed(Set.of(LEGACY_THUMBNAIL_URL))).thenReturn(List.of(image));
 
         var result = service.cleanup(List.of(1L));
@@ -87,7 +91,7 @@ class ImageCleanupServiceDeleteTest {
     void reportsStorageDeleteFailure() {
         givenImageIdentity();
         when(image.getStorageKey()).thenReturn(ORIGINAL_KEY);
-        when(imageUsageRepository.findAllById(Set.of(1L))).thenReturn(List.of(image));
+        when(imageReferenceGuard.lockIds(Set.of(1L))).thenReturn(List.of(image));
         when(imageUsageRepository.findStillUsed(Set.of(LEGACY_THUMBNAIL_URL))).thenReturn(List.of());
         doThrow(new BlogException(ErrorCode.IMAGE_DELETE_FAILED))
                 .when(imageStorage).delete(ORIGINAL_KEY);
@@ -102,7 +106,7 @@ class ImageCleanupServiceDeleteTest {
     @Test
     @DisplayName("목록을 띄운 뒤 이미 사라진 ID는 별도로 센다")
     void reportsAlreadyMissingImage() {
-        when(imageUsageRepository.findAllById(Set.of(1L))).thenReturn(List.of());
+        when(imageReferenceGuard.lockIds(Set.of(1L))).thenReturn(List.of());
 
         var result = service.cleanup(Arrays.asList(1L, 1L, null));
 

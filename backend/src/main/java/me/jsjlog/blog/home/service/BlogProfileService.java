@@ -1,6 +1,7 @@
 package me.jsjlog.blog.home.service;
 
 import me.jsjlog.blog.common.exception.BlogException;
+import me.jsjlog.blog.admin.service.ImageReferenceGuard;
 import me.jsjlog.blog.common.exception.ErrorCode;
 import me.jsjlog.blog.home.domain.BlogProfile;
 import me.jsjlog.blog.home.dto.BlogProfileResponse;
@@ -27,6 +28,7 @@ public class BlogProfileService {
     private static final int EMAIL_MAX_LENGTH = 255;
 
     private final BlogProfileRepository blogProfileRepository;
+    private final ImageReferenceGuard imageReferenceGuard;
 
     /**
      * id는 1로 고정 예정(관리자는 1명이기 때문)
@@ -39,6 +41,7 @@ public class BlogProfileService {
     @Transactional
     public BlogProfileResponse updateBlogProfile(UpdateBlogProfileRequest request) {
         validate(request);
+        imageReferenceGuard.protect(null, request.avatarImageUrl());
 
         BlogProfile blogProfile = findProfile(request.id());
         blogProfile.update(

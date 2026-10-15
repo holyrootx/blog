@@ -2,13 +2,10 @@ package me.jsjlog.blog.admin.service;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -20,15 +17,15 @@ import me.jsjlog.blog.admin.dto.AdminImageListResponse;
 import me.jsjlog.blog.admin.dto.AdminImageResponse;
 import me.jsjlog.blog.admin.dto.AdminImageUsage;
 import me.jsjlog.blog.admin.repository.ImageUsageRepository;
-import me.jsjlog.blog.common.upload.ImageStorage;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Isolation;
+import me.jsjlog.blog.common.upload.StoredImageFiles;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
-import org.springframework.util.StringUtils;
 
 /**
  * 글에서 빠진 이미지를 정리한다.
@@ -43,10 +40,6 @@ import org.springframework.util.StringUtils;
 @RequiredArgsConstructor
 public class ImageCleanupService {
 
-    /** 마크다운 ![](url) 과 <img src="url"> 둘 다 찾는다. 붙여넣기로 들어간 태그가 섞여 있다 */
-    private static final Pattern IMAGE_URL = Pattern.compile(
-            "!\\[[^\\]]*\\]\\(([^)\\s]+)[^)]*\\)|<img[^>]+src=[\"']([^\"']+)[\"']");
-
     /**
      * 목록에서 뺄 기간.
      *
@@ -56,7 +49,8 @@ public class ImageCleanupService {
     private static final Duration GRACE_PERIOD = Duration.ofDays(7);
 
     private final ImageUsageRepository imageUsageRepository;
-    private final ImageStorage imageStorage;
+    private final StoredImageFiles storedImageFiles;
+    private final ImageReferenceGuard imageReferenceGuard;
 
     /**
      * 올린 지 일주일 넘은 이미지 목록. 어디에 쓰이는지 같이 채워 준다.
@@ -110,7 +104,7 @@ public class ImageCleanupService {
      * id 로 받아 URL 로 바꿔 deleteUnused 에 넘긴다. 목록을 띄워 둔 사이에 그 사진을
      * 새 글에 넣었을 수 있어서, 지우기 직전에 참조를 한 번 더 본다.
      */
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public AdminImageCleanupResponse cleanup(List<Long> imageIds) {
         if (imageIds == null || imageIds.isEmpty()) {
             return AdminImageCleanupResponse.empty();
@@ -124,7 +118,7 @@ public class ImageCleanupService {
             return AdminImageCleanupResponse.empty();
         }
 
-        List<UploadImage> images = imageUsageRepository.findAllById(requestedIds);
+        List<UploadImage> images = imageReferenceGuard.lockIds(requestedIds);
         Set<String> urls = images.stream()
                 .map(UploadImage::getUrl)
                 .collect(Collectors.toSet());
@@ -162,25 +156,7 @@ public class ImageCleanupService {
 
     /** 글을 건드리기 전에 호출해야 한다. 저장한 뒤에는 원래 뭘 쓰고 있었는지 알 수 없다 */
     public Set<String> collectUsedUrls(String content, String thumbnailImageUrl) {
-        Set<String> urls = new HashSet<>();
-
-        if (StringUtils.hasText(content)) {
-            Matcher matcher = IMAGE_URL.matcher(content);
-
-            while (matcher.find()) {
-                String url = matcher.group(1) != null ? matcher.group(1) : matcher.group(2);
-
-                if (StringUtils.hasText(url)) {
-                    urls.add(url.trim());
-                }
-            }
-        }
-
-        if (StringUtils.hasText(thumbnailImageUrl)) {
-            urls.add(thumbnailImageUrl.trim());
-        }
-
-        return urls;
+        return ImageReferenceGuard.collectUrls(content, thumbnailImageUrl);
     }
 
     /**
@@ -191,19 +167,20 @@ public class ImageCleanupService {
      *
      * deleteUnused 쪽에 붙이면 같은 빈 안에서 호출하는 거라 프록시를 안 타서 소용없다.
      */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional(propagation = Propagation.REQUIRES_NEW, isolation = Isolation.READ_COMMITTED)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onPostImagesReleased(PostImagesReleasedEvent event) {
         deleteUnused(event.urls());
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public void deleteUnused(Set<String> candidates) {
         if (candidates.isEmpty()) {
             return;
         }
 
-        List<UploadImage> known = imageUsageRepository.findByUrlIn(candidates);
+        List<UploadImage> known = imageReferenceGuard.lockIds(imageUsageRepository.findByUrlIn(candidates).stream()
+                .map(UploadImage::getId).toList());
 
         if (known.isEmpty()) {
             // 업로드 API 를 거치지 않은 외부 주소다
@@ -227,13 +204,7 @@ public class ImageCleanupService {
      */
     private boolean delete(UploadImage image) {
         try {
-            String originalKey = image.getStorageKey();
-            String actualThumbnailKey = AdminImageService.storageKeyFromUrl(image.getUrl());
-
-            imageStorage.delete(originalKey);
-            if (!originalKey.equals(actualThumbnailKey)) {
-                imageStorage.delete(actualThumbnailKey);
-            }
+            storedImageFiles.delete(image.getStorageKey(), image.getUrl());
             imageUsageRepository.delete(image);
 
             log.info("안 쓰는 이미지 삭제. key={}", image.getStorageKey());

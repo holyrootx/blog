@@ -3,7 +3,6 @@ package me.jsjlog.blog.admin.service;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URI;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -17,6 +16,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Isolation;
+import me.jsjlog.blog.common.upload.StoredImageFiles;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -68,6 +69,7 @@ public class AdminImageService {
     private final ThumbnailGenerator thumbnailGenerator;
     private final PlatformTransactionManager transactionManager;
     private final ImageUsageRepository imageUsageRepository;
+    private final StoredImageFiles storedImageFiles;
 
     /**
      * 원본은 그대로 두고, 화면에 내보낼 썸네일을 따로 만들어 올린다.
@@ -123,42 +125,15 @@ public class AdminImageService {
      * <p>원본을 먼저 지우면 다음 단계가 실패해도 화면이 참조하는 썸네일은 남는다.
      * DB 기록은 마지막까지 보존하므로 실패한 삭제를 같은 이미지 ID로 다시 시도할 수 있다.</p>
      */
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public void delete(Long imageId) {
-        UploadImage image = uploadImageRepository.findById(imageId)
+        UploadImage image = imageUsageRepository.findLockedById(imageId)
                 .orElseThrow(() -> new BlogException(ErrorCode.IMAGE_NOT_FOUND));
         if (!imageUsageRepository.findStillUsed(List.of(image.getUrl())).isEmpty()) {
             throw new BlogException(ErrorCode.IMAGE_IN_USE);
         }
-        String originalKey = image.getStorageKey();
-        String actualThumbnailKey = storageKeyFromUrl(image.getUrl());
-
-        imageStorage.delete(originalKey);
-        if (!originalKey.equals(actualThumbnailKey)) {
-            imageStorage.delete(actualThumbnailKey);
-        }
+        storedImageFiles.delete(image.getStorageKey(), image.getUrl());
         uploadImageRepository.delete(image);
-    }
-
-    /**
-     * DB 에 저장된 실제 URL에서 삭제할 객체 키를 꺼낸다.
-     *
-     * <p>현재 접미사로 다시 계산하지 않아야 과거 버전의 썸네일도 정확히 지울 수 있다.
-     * URL 은 서버가 생성한 날짜/UUID 키만 사용하므로 경로가 곧 R2 객체 키다.</p>
-     */
-    static String storageKeyFromUrl(String imageUrl) {
-        try {
-            String path = URI.create(imageUrl).getPath();
-            String storageKey = path != null && path.startsWith("/") ? path.substring(1) : path;
-
-            if (storageKey == null || storageKey.isBlank()) {
-                throw new IllegalArgumentException("이미지 URL에 저장소 키가 없습니다.");
-            }
-
-            return storageKey;
-        } catch (IllegalArgumentException exception) {
-            throw new BlogException(ErrorCode.IMAGE_DELETE_FAILED, "삭제할 이미지의 저장소 키를 확인할 수 없습니다.");
-        }
     }
 
     private void validate(MultipartFile file, String contentType) {
