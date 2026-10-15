@@ -225,7 +225,7 @@ function applyPostReaction(reaction) {
           <span class="ui-skeleton"></span>
         </aside>
         <PostAside
-          v-else-if="detail.toc.length > 0 || showAds"
+          v-else
           :toc="detail.toc"
           :ads="detail.asideAds"
           :show-ads="showAds"
