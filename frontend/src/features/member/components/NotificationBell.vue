@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, useId, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { formatExactTime, formatRelativeTime } from '../../../shared/time/relativeTime';
 
@@ -11,6 +11,7 @@ import {
   useNotifications,
 } from '../data/notificationStore';
 import { useMemberAuth } from '../data/memberAuthStore';
+import { notifyError } from '../../../shared/toast/toastStore';
 
 /**
  * 헤더의 종.
@@ -23,11 +24,13 @@ import { useMemberAuth } from '../data/memberAuthStore';
 const route = useRoute();
 const router = useRouter();
 
-const { isSignedIn } = useMemberAuth();
-const { unreadCount, notifications, loading } = useNotifications();
+const { isSignedIn, member } = useMemberAuth();
+const { unreadCount, notifications, loading, loaded, loadError, countError, readError, reading } = useNotifications();
 
 const open = ref(false);
 const root = ref(null);
+const trigger = ref(null);
+const dropdownId = useId();
 
 const badge = computed(() => (unreadCount.value > 99 ? '99+' : String(unreadCount.value)));
 
@@ -65,8 +68,20 @@ async function toggle() {
   open.value = !open.value;
 
   if (open.value) {
-    await loadNotifications();
+    await reload();
   }
+}
+
+async function keepFocus(action) {
+  const focused = document.activeElement;
+  const inside = root.value?.contains(focused);
+  await action();
+  await nextTick();
+  if (open.value && inside && !focused.isConnected && document.activeElement === document.body) trigger.value?.focus();
+}
+
+function reload() {
+  return keepFocus(() => Promise.all([loadNotifications(), refreshUnreadCount()]));
 }
 
 /**
@@ -84,7 +99,9 @@ async function toggle() {
 async function go(notification) {
   open.value = false;
 
-  await readNotification(notification.id);
+  void readNotification(notification.id).then((success) => {
+    if (success === false) notifyError('알림의 읽음 처리를 완료하지 못했습니다.');
+  });
 
   if (notification.type === 'REPORT_RECEIVED') {
     await router.push({ name: 'admin-comments', query: { report: notification.commentId } });
@@ -104,15 +121,24 @@ async function go(notification) {
 }
 
 function closeOnOutside(event) {
-  if (open.value && root.value && !root.value.contains(event.target)) {
+  // 재시도를 누른 순간 오류 버튼이 사라져도 클릭이 시작된 곳은 창 안이다.
+  if (open.value && root.value && !event.composedPath().includes(root.value)) {
     open.value = false;
   }
 }
 
 function closeOnEscape(event) {
-  if (event.key === 'Escape') {
+  if (event.key === 'Escape' && open.value) {
     open.value = false;
+    if (root.value?.contains(event.target)) {
+      event.preventDefault();
+      trigger.value?.focus();
+    }
   }
+}
+
+function closeOnFocusout(event) {
+  if (event.relatedTarget && !root.value?.contains(event.relatedTarget)) open.value = false;
 }
 
 onMounted(() => {
@@ -139,50 +165,60 @@ watch(() => route.fullPath, () => {
 });
 
 // 로그인이 늦게 확인되는 경우가 있다. 그때도 한 번 받아 둔다
-watch(isSignedIn, (signedIn) => {
-  if (signedIn) {
+watch(() => member.value?.id, () => {
+  open.value = false;
+  if (isSignedIn.value) {
     refreshUnreadCount();
   }
 });
 </script>
 
 <template>
-  <div v-if="isSignedIn" ref="root" class="notification-bell">
+  <div v-if="isSignedIn" ref="root" class="notification-bell" @focusout="closeOnFocusout">
     <button
+      ref="trigger"
       class="notification-bell__trigger"
       type="button"
       :aria-label="label"
       :aria-expanded="open"
-      aria-haspopup="menu"
+      :aria-controls="dropdownId"
       @click="toggle"
     >
       <span class="notification-bell__icon" aria-hidden="true">🔔</span>
       <span v-if="unreadCount > 0" class="notification-bell__badge">{{ badge }}</span>
     </button>
 
-    <div v-if="open" class="notification-bell__dropdown" role="menu">
+    <div v-if="open" :id="dropdownId" class="notification-bell__dropdown" role="region" aria-label="알림 목록" :aria-busy="loading">
       <div class="notification-bell__head">
         <span class="notification-bell__title">알림</span>
         <button
           v-if="unreadCount > 0"
           class="notification-bell__read-all"
           type="button"
-          @click="readAllNotifications"
-        >모두 읽음</button>
+          :disabled="reading"
+          @click="keepFocus(readAllNotifications)"
+        >{{ reading ? '읽음 처리 중…' : '모두 읽음' }}</button>
       </div>
 
-      <ul v-if="loading" class="notification-bell__list notification-bell__list--skeleton" aria-hidden="true">
+      <div v-if="loadError || countError" class="notification-bell__feedback">
+        <p v-if="loadError" role="alert">{{ loadError }}</p>
+        <p v-if="countError" role="alert">{{ countError }}</p>
+        <button type="button" class="ui-button" :disabled="loading" @click="reload">다시 시도</button>
+      </div>
+      <p v-if="readError" class="notification-bell__feedback" role="alert">{{ readError }}</p>
+      <p v-if="loading" class="notification-bell__feedback" role="status">알림을 불러오는 중…</p>
+      <ul v-if="loading && !loaded" class="notification-bell__list notification-bell__list--skeleton" aria-hidden="true">
         <li v-for="index in 3" :key="index" class="notification-bell__item">
           <span class="ui-skeleton"></span>
           <span class="ui-skeleton"></span>
           <span class="ui-skeleton"></span>
         </li>
       </ul>
-      <p v-else-if="notifications.length === 0" class="notification-bell__empty">
+      <p v-else-if="loaded && !loadError && notifications.length === 0" class="notification-bell__empty">
         아직 알림이 없습니다.
       </p>
 
-      <ul v-else class="notification-bell__list">
+      <ul v-else-if="notifications.length" class="notification-bell__list">
         <li v-for="notification in notifications" :key="notification.id">
           <!--
             정확한 시각은 브라우저 기본 툴팁(title) 대신 직접 그린다. 기본 툴팁은
@@ -195,7 +231,6 @@ watch(isSignedIn, (signedIn) => {
             class="notification-bell__item"
             :class="{ 'notification-bell__item--unread': notification.unread }"
             type="button"
-            role="menuitem"
             :data-exact-time="formatExactTime(notification.createdAt)"
             @click="go(notification)"
           >

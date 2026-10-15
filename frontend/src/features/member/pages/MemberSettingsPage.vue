@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { RouterLink, useRouter } from 'vue-router';
 
 import { getMyComments } from '../api/memberAuthApi';
@@ -10,6 +10,7 @@ import {
   withdraw,
 } from '../data/memberAuthStore';
 import { notifyError, notifySuccess } from '../../../shared/toast/toastStore';
+import { useSectionLoader } from '../../../shared/composables/useSectionLoader';
 
 /**
  * 내 계정 설정.
@@ -29,8 +30,12 @@ const nicknameError = ref('');
 const nicknameSaved = ref(false);
 
 const comments = ref([]);
-const commentsLoading = ref(true);
+const { loading, load, restart } = useSectionLoader(['comments']);
+const commentsLoaded = ref(false);
+const commentsError = ref('');
 const pageLoading = ref(true);
+let disposed = false;
+onBeforeUnmount(() => { disposed = true; });
 
 const withdrawing = ref(false);
 const withdrawConfirming = ref(false);
@@ -44,6 +49,7 @@ onMounted(async () => {
   // 앱이 뜰 때 시작한 세션 확인을 여기서 기다린다. 기다리지 않으면 아직 응답이 안 온
   // 사이에 "로그인 안 함" 으로 읽혀서, 로그인한 사람도 로그인 화면으로 튕긴다
   await ensureMemberSession();
+  if (disposed) return;
 
   if (!isSignedIn.value) {
     pageLoading.value = false;
@@ -54,15 +60,38 @@ onMounted(async () => {
   nickname.value = member.value?.nickname ?? '';
   pageLoading.value = false;
 
-  try {
-    comments.value = await getMyComments();
-  } catch (error) {
-    // 댓글을 못 불러와도 닉네임 변경과 탈퇴는 쓸 수 있어야 한다
-    console.error(error);
-  } finally {
-    commentsLoading.value = false;
-  }
+  loadMyComments();
 });
+
+function loadMyComments() {
+  commentsError.value = '';
+  return load('comments', {
+    request: getMyComments,
+    apply: (items) => {
+      comments.value = items;
+      commentsLoaded.value = true;
+    },
+    onError: () => {
+      commentsError.value = commentsLoaded.value
+        ? '댓글을 새로 불러오지 못했습니다. 이전에 불러온 목록을 표시합니다.'
+        : '내 댓글을 불러오지 못했습니다.';
+    },
+  });
+}
+
+watch(() => member.value?.id, () => {
+  if (pageLoading.value) return;
+  restart();
+  comments.value = [];
+  commentsLoaded.value = false;
+  commentsError.value = '';
+  if (!isSignedIn.value) {
+    void router.replace({ name: 'member-login' });
+    return;
+  }
+  nickname.value = member.value?.nickname ?? '';
+  loadMyComments();
+}, { flush: 'sync' });
 
 function avatarInitial(name) {
   return Array.from(name ?? '')[0] ?? '';
@@ -197,19 +226,27 @@ async function confirmWithdraw() {
       </p>
     </section>
 
-    <section class="member-settings__section" aria-labelledby="settings-comments">
-      <h2 id="settings-comments" class="member-settings__section-title">내가 쓴 댓글</h2>
+    <section class="member-settings__section" aria-labelledby="settings-comments" :aria-busy="loading.comments">
+      <div class="member-settings__section-head">
+        <h2 id="settings-comments" class="member-settings__section-title">내가 쓴 댓글</h2>
+        <button type="button" class="ui-button" :disabled="loading.comments" @click="loadMyComments">내 댓글 새로고침</button>
+      </div>
+      <div v-if="commentsError" class="member-settings__feedback">
+        <p class="member-settings__error" role="alert">{{ commentsError }}</p>
+        <button type="button" class="ui-button" :disabled="loading.comments" @click="loadMyComments">다시 시도</button>
+      </div>
+      <p v-if="loading.comments" class="member-settings__hint" role="status">댓글을 불러오는 중…</p>
 
-      <ul v-if="commentsLoading" class="member-comments member-comments--skeleton" aria-hidden="true">
+      <ul v-if="loading.comments && !commentsLoaded" class="member-comments member-comments--skeleton" aria-hidden="true">
         <li v-for="index in 3" :key="index" class="member-comments__item">
           <span class="ui-skeleton"></span>
           <span class="ui-skeleton"></span>
           <span class="ui-skeleton"></span>
         </li>
       </ul>
-      <p v-else-if="comments.length === 0" class="member-settings__empty">아직 쓴 댓글이 없습니다.</p>
+      <p v-else-if="commentsLoaded && !commentsError && comments.length === 0" class="member-settings__empty">아직 쓴 댓글이 없습니다.</p>
 
-      <ul v-else class="member-comments">
+      <ul v-else-if="comments.length" class="member-comments">
         <li v-for="comment in comments" :key="comment.id" class="member-comments__item">
           <RouterLink
             class="member-comments__post"
@@ -225,7 +262,7 @@ async function confirmWithdraw() {
           </p>
           <p v-else class="member-comments__content">{{ comment.content }}</p>
 
-          <time class="member-comments__date">{{ formatDate(comment.createdAt) }}</time>
+          <time class="member-comments__date" :datetime="comment.createdAt">{{ formatDate(comment.createdAt) }}</time>
         </li>
       </ul>
     </section>

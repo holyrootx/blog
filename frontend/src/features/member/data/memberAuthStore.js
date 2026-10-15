@@ -41,6 +41,11 @@ export function onMemberSessionCleared(handler) {
   sessionClearedHandler = handler;
 }
 
+function replaceMember(session) {
+  if (member.value?.id !== session?.id) clearNotifications();
+  member.value = session;
+}
+
 export function useMemberAuth() {
   return {
     member,
@@ -60,7 +65,7 @@ export function ensureMemberSession() {
     sessionCheck = getMemberSession()
       .then(async (session) => {
         if (generation !== sessionGeneration) return null;
-        member.value = session;
+        replaceMember(session);
         sessionResolved.value = true;
 
         // 새로고침 뒤에도 쓰기 요청에는 CSRF 토큰이 필요하다. 로그인 세션만 복원하고
@@ -74,7 +79,7 @@ export function ensureMemberSession() {
       .catch(() => {
         if (generation !== sessionGeneration) return null;
         // 서버가 죽었어도 공개 화면은 읽을 수 있어야 한다. 로그인 안 한 것으로 본다
-        member.value = null;
+        replaceMember(null);
         sessionResolved.value = true;
         return null;
       });
@@ -130,7 +135,7 @@ export async function changeNickname(nickname) {
   const session = await changeMemberNickname(nickname);
 
   if (generation === sessionGeneration) {
-    member.value = session;
+    replaceMember(session);
     sessionCheck = Promise.resolve(session);
   }
 
@@ -171,7 +176,7 @@ export async function signOutMember() {
       throw error;
     }
     if (session !== null) {
-      member.value = session;
+      replaceMember(session);
       sessionCheck = Promise.resolve(session);
       throw error;
     }
@@ -199,7 +204,7 @@ async function applySession(session) {
   sessionGeneration += 1;
   // 인증 완료 전에 시작한 요청은 새 로그인 상태와 토큰을 바꾸지 못한다.
   advanceAuthenticationGeneration();
-  member.value = session;
+  replaceMember(session);
   sessionResolved.value = true;
   sessionCheck = Promise.resolve(session);
 

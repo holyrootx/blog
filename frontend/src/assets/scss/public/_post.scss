@@ -922,11 +922,21 @@
 
 .comments__header {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   gap: 10px;
   margin-bottom: 22px;
   padding-bottom: 14px;
   border-bottom: 2px solid var(--post-heading);
+}
+
+.comments__refresh {
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.comments__feedback {
+  margin-bottom: 1rem;
 }
 
 .comments__title {
