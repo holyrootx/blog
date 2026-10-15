@@ -1,6 +1,4 @@
 <script setup>
-import { ref } from 'vue';
-
 /**
  * 닉네임을 정하는 칸. 신규 가입과 "새로 만들기" 가 같이 쓴다.
  *
@@ -10,9 +8,9 @@ const props = defineProps({
   title: { type: String, required: true },
   description: { type: String, default: '' },
   submitLabel: { type: String, default: '시작하기' },
-  initialNickname: { type: String, default: '' },
   cancellable: { type: Boolean, default: false },
   submitting: { type: Boolean, default: false },
+  disabled: { type: Boolean, default: false },
   errorMessage: { type: String, default: '' },
 });
 
@@ -20,14 +18,15 @@ const emit = defineEmits(['submit', 'cancel']);
 
 const MAX_LENGTH = 50;
 
-const nickname = ref(props.initialNickname);
+// 화면을 오가도 작성한 닉네임을 잃지 않도록 부모가 입력값을 보관한다.
+const nickname = defineModel({ type: String, default: '' });
 
 function submit() {
   const trimmed = nickname.value.trim();
 
   // 서버도 막지만 여기서 먼저 걸러 준다. 빈 값으로 눌러 놓고 오류를 보는 것보다
   // 단추가 눌리지 않는 편이 무슨 일이 필요한지 분명하다
-  if (trimmed === '' || props.submitting) {
+  if (trimmed === '' || props.submitting || props.disabled) {
     return;
   }
 
@@ -66,7 +65,7 @@ function submit() {
       <button
         class="ui-button ui-button--accent"
         type="submit"
-        :disabled="submitting || nickname.trim() === ''"
+        :disabled="submitting || disabled || nickname.trim() === ''"
       >{{ submitting ? '처리 중…' : submitLabel }}</button>
     </div>
   </form>

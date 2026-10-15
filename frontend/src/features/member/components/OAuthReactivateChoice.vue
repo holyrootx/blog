@@ -9,6 +9,7 @@
 defineProps({
   previousNickname: { type: String, default: '' },
   submitting: { type: Boolean, default: false },
+  disabled: { type: Boolean, default: false },
   errorMessage: { type: String, default: '' },
 });
 
@@ -28,7 +29,7 @@ const emit = defineEmits(['reactivate', 'rejoin']);
       <button
         class="member-auth__choice"
         type="button"
-        :disabled="submitting"
+        :disabled="submitting || disabled"
         @click="emit('reactivate')"
       >
         <span class="member-auth__choice-title">예전 계정 쓰기</span>
@@ -40,7 +41,7 @@ const emit = defineEmits(['reactivate', 'rejoin']);
       <button
         class="member-auth__choice"
         type="button"
-        :disabled="submitting"
+        :disabled="submitting || disabled"
         @click="emit('rejoin')"
       >
         <span class="member-auth__choice-title">새로 만들기</span>
