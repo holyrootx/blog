@@ -52,7 +52,14 @@ public class OAuthSignupController {
 
     @GetMapping("/pending")
     public ApiResponse<OAuthPendingResponse> pending(HttpServletRequest request) {
-        return ApiResponse.ok(OAuthPendingResponse.from(requiredPendingSession(request)));
+        PendingOAuthSession authenticated = requiredPendingSession(request);
+        PendingOAuthSession current = signupService.refreshPending(authenticated);
+        // 조회는 소셜 인증 결과를 다시 쓰지 않는다. 기다리는 사이 새 로그인·가입·로그아웃이
+        // 끝났다면 이전 인증으로 계산한 선택지도 반환하지 않는다.
+        if (requiredPendingSession(request) != authenticated) {
+            throw new BlogException(ErrorCode.OAUTH_SESSION_EXPIRED);
+        }
+        return ApiResponse.ok(OAuthPendingResponse.from(current));
     }
 
     @PostMapping("/signup")
@@ -125,19 +132,16 @@ public class OAuthSignupController {
     }
 
     private PendingOAuthSession requiredPendingSession(HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-
-        if (session == null) {
-            throw new BlogException(ErrorCode.OAUTH_SESSION_EXPIRED);
+        try {
+            HttpSession session = request.getSession(false);
+            if (session != null
+                    && session.getAttribute(PendingOAuthSession.ATTRIBUTE_NAME) instanceof PendingOAuthSession pending) {
+                return pending;
+            }
+        } catch (IllegalStateException ignored) {
+            // 세션을 읽는 동안 다른 요청에서 로그아웃한 경우도 만료로 처리한다.
         }
-
-        Object value = session.getAttribute(PendingOAuthSession.ATTRIBUTE_NAME);
-
-        if (!(value instanceof PendingOAuthSession pendingSession)) {
-            throw new BlogException(ErrorCode.OAUTH_SESSION_EXPIRED);
-        }
-
-        return pendingSession;
+        throw new BlogException(ErrorCode.OAUTH_SESSION_EXPIRED);
     }
 
     private void completeLogin(

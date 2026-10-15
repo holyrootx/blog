@@ -47,6 +47,8 @@ import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.OAuth2AccessToken;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -62,10 +64,27 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /** 제공자 통신 이후의 실제 HTTP·세션·DB 경계를 검증한다. 외부 OAuth 서버는 호출하지 않는다. */
-@SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:oauth_signup_integrity;MODE=MySQL;DB_CLOSE_DELAY=-1")
+@SpringBootTest
 @AutoConfigureMockMvc
 @Import(OAuthSignupIntegrityTest.ProbeConfiguration.class)
 class OAuthSignupIntegrityTest {
+
+    @DynamicPropertySource
+    static void isolatedDatabase(DynamicPropertyRegistry registry) {
+        String port = System.getenv("OAUTH_TEST_MYSQL_PORT");
+        if (port != null && (!port.matches("[0-9]{4,5}")
+                || Integer.parseInt(port) < 1024 || Integer.parseInt(port) > 65535)) {
+            throw new IllegalArgumentException("A local test MySQL port is required");
+        }
+        registry.add("spring.datasource.url", () -> port == null
+                ? "jdbc:h2:mem:oauth_signup_integrity;MODE=MySQL;DB_CLOSE_DELAY=-1"
+                : "jdbc:mysql://127.0.0.1:" + port + "/blog_oauth_signup_test?allowPublicKeyRetrieval=true&useSSL=false");
+        registry.add("spring.datasource.driver-class-name",
+                () -> port == null ? "org.h2.Driver" : "com.mysql.cj.jdbc.Driver");
+        registry.add("spring.datasource.username", () -> port == null ? "sa" : System.getenv("OAUTH_TEST_DB_USERNAME"));
+        registry.add("spring.datasource.password", () -> port == null ? "" : System.getenv("OAUTH_TEST_DB_PASSWORD"));
+        registry.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
+    }
 
     @Autowired MockMvc mvc;
     @Autowired MemberRepository members;
@@ -153,6 +172,128 @@ class OAuthSignupIntegrityTest {
         assertSignedInAs(winner, memberId);
         assertAnonymous(delayed);
         assertThat(members.findById(memberId).orElseThrow().getNickname()).isEqualTo("먼저 완료");
+    }
+
+    @ParameterizedTest
+    @CsvSource({"reactivate", "rejoin"})
+    void staleSignupReturnsToRecoveryChoiceWithoutCreatingAnotherAccount(String choice) throws Exception {
+        String subject = UUID.randomUUID().toString();
+        MockHttpSession first = pending(AuthProvider.GOOGLE, subject, subject + "@example.test",
+                OAuthLoginState.SIGNUP_REQUIRED);
+        MockHttpSession stale = pending(AuthProvider.GOOGLE, subject, subject + "@example.test",
+                OAuthLoginState.SIGNUP_REQUIRED);
+        long oldId = successfulMemberId(complete("signup", first, "먼저 가입"));
+        Comment original = commentBy(members.findById(oldId).orElseThrow());
+        mvc.perform(post("/api/v1/auth/withdraw").session(first).with(csrf())).andExpect(status().isOk());
+        long countBefore = members.count();
+
+        MvcResult rejected = complete("signup", stale, "오래된 가입 화면");
+        assertThat(rejected.getResponse().getStatus()).isEqualTo(409);
+        assertThat(members.count()).isEqualTo(countBefore);
+        assertThat(identityCount(subject)).isZero();
+        assertThat(memberStatuses.findRestorable(AuthProvider.GOOGLE, subject, LocalDateTime.now())
+                .orElseThrow().getMemberId()).isEqualTo(oldId);
+        assertAnonymous(stale);
+        mvc.perform(get("/api/v1/auth/oauth/pending").session(stale))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.loginState").value("REACTIVATION_REQUIRED"));
+
+        long chosenId = successfulMemberId(complete(choice, stale, "직접 고른 새 계정"));
+        assertThat(chosenId == oldId).isEqualTo(choice.equals("reactivate"));
+        assertSignedInAs(stale, chosenId);
+        editComment(stale, original, "선택 이후 수정", choice.equals("reactivate") ? 200 : 403);
+        mvc.perform(post("/api/v1/auth/withdraw").session(stale).with(csrf())).andExpect(status().isOk());
+        Member withdrawn = members.findById(chosenId).orElseThrow();
+        assertThat(withdrawn.getStatusCode()).isEqualTo(MemberStatusCode.WITHDRAWN);
+        assertThat(withdrawn.getProviderUserId()).isNull();
+        assertThat(withdrawn.getEmail()).isNull();
+        assertThat(withdrawn.getProfileImageUrl()).isNull();
+    }
+
+    @ParameterizedTest
+    @CsvSource({"SIGNUP_REQUIRED", "REACTIVATION_REQUIRED"})
+    void pendingRefreshUsesTheLatestRecoveryStateAndDoesNotExposeTheProviderIdentity(
+            OAuthLoginState initialState) throws Exception {
+        String subject = UUID.randomUUID().toString();
+        Member old = withdrawnMember(subject);
+        MockHttpSession session = pending(AuthProvider.GOOGLE, subject, null, initialState);
+        Object authenticated = session.getAttribute(PendingOAuthSession.ATTRIBUTE_NAME);
+        mvc.perform(get("/api/v1/auth/oauth/pending").session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.loginState").value("REACTIVATION_REQUIRED"))
+                .andExpect(jsonPath("$.data.suggestedNickname").value(old.getNickname()))
+                .andExpect(jsonPath("$.data.providerUserId").doesNotExist());
+        assertThat(session.getAttribute(PendingOAuthSession.ATTRIBUTE_NAME)).isSameAs(authenticated);
+
+        jdbc.update("update member_status set restore_expires_at = ? where member_id = ?",
+                LocalDateTime.now().minusDays(1), old.getId());
+        mvc.perform(get("/api/v1/auth/oauth/pending").session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.loginState").value("SIGNUP_REQUIRED"));
+        long newId = successfulMemberId(complete("signup", session, "만료 후 가입"));
+        assertThat(newId).isNotEqualTo(old.getId());
+        assertThat(memberStatuses.findById(old.getId()).orElseThrow().getRestoreProviderUserId()).isNull();
+        mvc.perform(post("/api/v1/auth/withdraw").session(session).with(csrf())).andExpect(status().isOk());
+    }
+
+    @Test
+    void pendingRefreshCannotAuthenticateAnAccountCreatedInAnotherSession() throws Exception {
+        String subject = UUID.randomUUID().toString();
+        MockHttpSession stale = pending(AuthProvider.GOOGLE, subject, null, OAuthLoginState.SIGNUP_REQUIRED);
+        MockHttpSession other = pending(AuthProvider.GOOGLE, subject, null, OAuthLoginState.SIGNUP_REQUIRED);
+        long id = successfulMemberId(complete("signup", other, "다른 창"));
+        mvc.perform(get("/api/v1/auth/oauth/pending").session(stale))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("OAUTH_SESSION_EXPIRED"));
+        assertAnonymous(stale);
+        assertSignedInAs(other, id);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"reactivate", "rejoin"})
+    void delayedSignupCannotOverwriteACompletedRecoveryChoice(String choice) throws Exception {
+        String subject = UUID.randomUUID().toString();
+        Member old = withdrawnMember(subject);
+        Comment original = commentBy(old);
+        MockHttpSession stale = pending(AuthProvider.GOOGLE, subject, null, OAuthLoginState.SIGNUP_REQUIRED);
+        MockHttpSession recovering = pending(AuthProvider.GOOGLE, subject, null, OAuthLoginState.REACTIVATION_REQUIRED);
+        var outcomes = raceAfterFirstLookup(subject, "signup", stale, choice, recovering);
+        long chosenId = successfulMemberId(outcomes.winner());
+        assertThat(outcomes.delayed().getResponse().getStatus()).isEqualTo(409);
+        assertThat(identityCount(subject)).isEqualTo(1);
+        assertThat(chosenId == old.getId()).isEqualTo(choice.equals("reactivate"));
+        assertAnonymous(stale);
+        editComment(recovering, original, "선택 후 댓글", choice.equals("reactivate") ? 200 : 403);
+    }
+
+    @Test
+    void signupRechecksRecoveryCreatedAfterItsFirstDatabaseRead() throws Exception {
+        String subject = UUID.randomUUID().toString();
+        MockHttpSession delayed = pending(AuthProvider.GOOGLE, subject, null, OAuthLoginState.SIGNUP_REQUIRED);
+        MockHttpSession other = pending(AuthProvider.GOOGLE, subject, null, OAuthLoginState.SIGNUP_REQUIRED);
+        LookupGate gate = new LookupGate(subject);
+        lookupProbe.gate = gate;
+        long withdrawnId;
+        MvcResult rejected;
+        try (var executor = Executors.newSingleThreadExecutor()) {
+            var future = executor.submit(() -> complete("signup", delayed, "조회 후 대기"));
+            try {
+                assertThat(gate.snapshotLoaded.await(10, TimeUnit.SECONDS)).isTrue();
+                withdrawnId = successfulMemberId(complete("signup", other, "다른 창에서 가입"));
+                mvc.perform(post("/api/v1/auth/withdraw").session(other).with(csrf()))
+                        .andExpect(status().isOk());
+            } finally {
+                gate.resume.countDown();
+            }
+            rejected = future.get(10, TimeUnit.SECONDS);
+        } finally {
+            lookupProbe.gate = null;
+        }
+        assertThat(rejected.getResponse().getStatus()).isEqualTo(409);
+        assertThat(identityCount(subject)).isZero();
+        assertThat(memberStatuses.findRestorable(AuthProvider.GOOGLE, subject, LocalDateTime.now())
+                .orElseThrow().getMemberId()).isEqualTo(withdrawnId);
+        assertAnonymous(delayed);
     }
 
     @Test
