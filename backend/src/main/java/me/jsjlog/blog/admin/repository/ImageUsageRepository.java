@@ -3,6 +3,9 @@ package me.jsjlog.blog.admin.repository;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
 
 import me.jsjlog.blog.admin.domain.UploadImage;
 import me.jsjlog.blog.admin.dto.AdminImageUsage;
@@ -13,6 +16,10 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface ImageUsageRepository extends JpaRepository<UploadImage, Long> {
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select u from UploadImage u where u.id = :id")
+    Optional<UploadImage> findLockedById(@Param("id") Long id);
 
     /**
      * 넘긴 URL 중 아직 참조되는 것만 반환한다.

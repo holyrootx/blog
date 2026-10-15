@@ -1,7 +1,10 @@
 <script setup>
+import { RouterLink, useRoute } from 'vue-router';
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 import { SCROLL_OFFSET } from '../../../app/router/scrollToHash';
+
+const route = useRoute();
 
 const props = defineProps({
   toc: {
@@ -108,7 +111,11 @@ watch(() => props.toc, () => nextTick(syncActive), { immediate: true });
 </script>
 
 <template>
-  <aside class="post-aside" :aria-label="showAds ? '목차 및 광고' : '목차'">
+  <aside
+    class="post-aside"
+    :aria-label="showAds ? (toc.length > 0 ? '목차 및 광고' : '광고') : '목차'"
+    :aria-hidden="!showAds && toc.length === 0 ? true : undefined"
+  >
     <div v-if="showAds" class="post-aside__head">
       <span class="post-aside__sponsored">SPONSORED</span>
       <span class="post-aside__rule"></span>
@@ -132,14 +139,14 @@ watch(() => props.toc, () => nextTick(syncActive), { immediate: true });
         </div>
         <ul class="post-toc__list">
           <li v-for="item in toc" :key="item.id">
-            <a
+            <RouterLink
               class="post-toc__link"
               :class="{ 'post-toc__link--active': activeId === item.id }"
-              :href="`#${item.id}`"
+              :to="{ path: route.path, query: route.query, hash: `#${item.id}` }"
               :aria-current="activeId === item.id ? 'location' : undefined"
             >
               {{ item.text }}
-            </a>
+            </RouterLink>
           </li>
         </ul>
       </nav>

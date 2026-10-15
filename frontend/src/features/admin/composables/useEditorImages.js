@@ -13,8 +13,10 @@ export function useEditorImages({ blocks, sync }) {
 
   // 만들어 둔 임시 주소. 화면을 떠날 때 돌려주지 않으면 그림이 메모리에 계속 남는다
   const objectUrls = [];
+  let active = true;
 
   onBeforeUnmount(() => {
+    active = false;
     objectUrls.forEach((url) => URL.revokeObjectURL(url));
     stopResize?.();
   });
@@ -60,12 +62,18 @@ export function useEditorImages({ blocks, sync }) {
     try {
       const image = await uploadAdminImage(file);
 
+      if (!active) return;
+      const current = blocks.value.find((item) => item.id === block.id);
+      if (!current) return;
+      if (!image?.url) throw new Error('업로드한 이미지 주소를 받지 못했습니다. 다시 골라 주세요.');
+      block = current;
       block.url = image.url;
       // 대체 텍스트 기본값을 파일 이름으로 둔다. 비워 두면 화면 낭독기가 읽을 것이 없다
       block.alt = block.alt || image.originalName.replace(/\.[^.]+$/, '');
 
       sync();
     } catch (error) {
+      if (!active || !blocks.value.some((item) => item.id === block.id)) return;
       // 올라가지 않은 그림을 올라간 것처럼 보여주면 안 된다
       block.previewUrl = '';
 
@@ -87,6 +95,7 @@ export function useEditorImages({ blocks, sync }) {
     const probe = new Image();
 
     probe.addEventListener('load', () => {
+      if (!active || !blocks.value.includes(block)) return;
       block.naturalWidth = probe.naturalWidth;
       block.naturalHeight = probe.naturalHeight;
 
@@ -248,6 +257,7 @@ export function useEditorImages({ blocks, sync }) {
   }
 
   return {
+    uploadingIds,
     uploadErrors,
     resizingId,
     isUploading,

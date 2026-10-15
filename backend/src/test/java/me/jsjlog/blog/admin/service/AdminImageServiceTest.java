@@ -9,6 +9,7 @@ import me.jsjlog.blog.common.config.UploadProperties;
 import me.jsjlog.blog.common.exception.BlogException;
 import me.jsjlog.blog.common.exception.ErrorCode;
 import me.jsjlog.blog.common.upload.ImageStorage;
+import me.jsjlog.blog.common.upload.StoredImageFiles;
 import me.jsjlog.blog.common.upload.ImageThumbnail;
 import me.jsjlog.blog.common.upload.StoredImage;
 import me.jsjlog.blog.common.upload.ThumbnailGenerator;
@@ -71,7 +72,8 @@ class AdminImageServiceTest {
                 uploadProperties,
                 thumbnailGenerator,
                 transactionManager,
-                imageUsageRepository
+                imageUsageRepository,
+                new StoredImageFiles(imageStorage)
         );
     }
 
@@ -212,7 +214,7 @@ class AdminImageServiceTest {
     @DisplayName("일반 삭제는 원본, DB URL의 실제 썸네일, DB 기록 순서로 처리한다")
     void deletesOriginalThenThumbnailThenDatabaseRecord() {
         UploadImage image = uploadImage("https://images.example.com/2026/09/image-thumbnail-v0.9.webp");
-        when(uploadImageRepository.findById(1L)).thenReturn(Optional.of(image));
+        when(imageUsageRepository.findLockedById(1L)).thenReturn(Optional.of(image));
 
         adminImageService.delete(1L);
 
@@ -226,7 +228,7 @@ class AdminImageServiceTest {
     @DisplayName("원본 삭제가 실패하면 썸네일과 DB 기록을 삭제하지 않는다")
     void keepsThumbnailAndDatabaseRecordWhenOriginalDeleteFails() {
         UploadImage image = uploadImage("https://images.example.com/2026/09/image-thumbnail-v1.0.webp");
-        when(uploadImageRepository.findById(1L)).thenReturn(Optional.of(image));
+        when(imageUsageRepository.findLockedById(1L)).thenReturn(Optional.of(image));
         doThrow(new BlogException(ErrorCode.IMAGE_DELETE_FAILED))
                 .when(imageStorage).delete("2026/09/image.png");
 
@@ -242,7 +244,7 @@ class AdminImageServiceTest {
     @DisplayName("기존 데이터의 URL이 원본을 가리키면 R2 객체를 한 번만 삭제한다")
     void deletesLegacyOriginalUrlOnlyOnce() {
         UploadImage image = uploadImage("https://images.example.com/2026/09/image.png");
-        when(uploadImageRepository.findById(1L)).thenReturn(Optional.of(image));
+        when(imageUsageRepository.findLockedById(1L)).thenReturn(Optional.of(image));
 
         adminImageService.delete(1L);
 
@@ -254,7 +256,7 @@ class AdminImageServiceTest {
     @DisplayName("DB 이미지 URL에서 객체 키를 찾을 수 없으면 R2와 DB를 삭제하지 않는다")
     void deletesNothingWhenStoredUrlHasNoObjectKey() {
         UploadImage image = uploadImage("https://images.example.com");
-        when(uploadImageRepository.findById(1L)).thenReturn(Optional.of(image));
+        when(imageUsageRepository.findLockedById(1L)).thenReturn(Optional.of(image));
 
         assertThatThrownBy(() -> adminImageService.delete(1L))
                 .isInstanceOfSatisfying(BlogException.class, exception ->

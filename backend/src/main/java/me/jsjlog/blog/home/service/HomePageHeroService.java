@@ -2,6 +2,7 @@ package me.jsjlog.blog.home.service;
 
 
 import me.jsjlog.blog.common.exception.BlogException;
+import me.jsjlog.blog.admin.service.ImageReferenceGuard;
 import me.jsjlog.blog.common.exception.ErrorCode;
 import me.jsjlog.blog.home.domain.HomePageHero;
 import me.jsjlog.blog.home.dto.HomePageHeroResponse;
@@ -22,6 +23,7 @@ public class HomePageHeroService {
     private static final int IMAGE_URL_MAX_LENGTH = 500;
 
     private final HomePageHeroRepository homePageHeroRepository;
+    private final ImageReferenceGuard imageReferenceGuard;
 
     public HomePageHeroResponse getHomePageHero(Long homePageHeroId) {
         return HomePageHeroResponse.from(findHero(homePageHeroId));
@@ -30,6 +32,7 @@ public class HomePageHeroService {
     @Transactional
     public HomePageHeroResponse updateHomePageHero(UpdateHomePageHeroRequest request) {
         validate(request);
+        imageReferenceGuard.protect(null, request.heroImageUrl());
 
         HomePageHero homePageHero = findHero(request.id());
         homePageHero.update(

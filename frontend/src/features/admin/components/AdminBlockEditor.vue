@@ -50,7 +50,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['update:modelValue']);
+const emit = defineEmits(['update:modelValue', 'upload-state']);
 
 const blocks = ref(toEditorBlocks(props.modelValue));
 const editorRef = ref(null);
@@ -59,6 +59,7 @@ const codeRefs = new Map();
 const tableRefs = new Map();
 
 const {
+  uploadingIds,
   uploadErrors,
   resizingId,
   isUploading,
@@ -70,6 +71,12 @@ const {
   onResizeStart,
   onResizeKeydown,
 } = useEditorImages({ blocks, sync });
+
+// 저장 화면도 업로드 완료와 실패 여부를 알아야 빈 이미지 주소를 저장하지 않는다.
+watch(() => ({
+  pending: uploadingIds.value.filter((id) => blocks.value.some((block) => block.id === id)).length,
+  failed: blocks.value.filter((block) => uploadErrors.value[block.id]).length,
+}), (state) => emit('upload-state', state), { immediate: true });
 const selection = useBlockSelection({
   blocks,
   editorRef,

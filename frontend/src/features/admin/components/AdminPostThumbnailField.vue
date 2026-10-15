@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { onBeforeUnmount, ref, watch } from 'vue';
 
 import { uploadAdminImage } from '../api/adminApi';
 import BaseModal from '../../../shared/components/BaseModal.vue';
@@ -29,15 +29,20 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['update:modelValue']);
+const emit = defineEmits(['update:modelValue', 'upload-state']);
 
 const fileInput = ref(null);
 const editorOpen = ref(false);
 const uploading = ref(false);
 const uploadError = ref('');
+let active = true;
+onBeforeUnmount(() => { active = false; });
+watch([uploading, uploadError], () => emit('upload-state', {
+  pending: uploading.value ? 1 : 0,
+  failed: uploadError.value ? 1 : 0,
+}), { immediate: true });
 
 function openEditor() {
-  uploadError.value = '';
   editorOpen.value = true;
 }
 
@@ -53,6 +58,7 @@ async function upload(event) {
 
   try {
     const image = await uploadAdminImage(file);
+    if (!active) return;
 
     if (!image.url) {
       throw new Error('업로드한 이미지 주소를 받지 못했습니다.');
@@ -61,6 +67,7 @@ async function upload(event) {
     emit('update:modelValue', image.url);
     editorOpen.value = false;
   } catch (error) {
+    if (!active) return;
     console.error(error);
     uploadError.value = error.message || '대표 이미지를 업로드하지 못했습니다.';
   } finally {
