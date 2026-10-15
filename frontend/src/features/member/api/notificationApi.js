@@ -11,14 +11,16 @@ const NOTIFICATION_API_BASE = '/api/v1/auth/me/notifications';
 export async function getNotifications() {
   const notifications = await getApiData(NOTIFICATION_API_BASE);
 
-  return Array.isArray(notifications) ? notifications.map(toNotification) : [];
+  if (!Array.isArray(notifications)) throw new Error('알림 응답을 확인하지 못했습니다.');
+  return notifications.map(toNotification);
 }
 
 /** 종에 붙는 숫자. 목록보다 훨씬 자주 부른다 */
 export async function getUnreadCount() {
   const count = await getApiData(`${NOTIFICATION_API_BASE}/unread-count`);
 
-  return typeof count === 'number' ? count : 0;
+  if (!Number.isSafeInteger(count) || count < 0) throw new Error('알림 개수를 확인하지 못했습니다.');
+  return count;
 }
 
 export function markNotificationRead(notificationId) {

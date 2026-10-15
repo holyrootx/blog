@@ -675,6 +675,21 @@
   text-align: center;
 }
 
+.notification-bell__feedback {
+  padding: 0.75rem 1rem;
+  color: var(--text-subtle);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+}
+
+.notification-bell__feedback p {
+  margin: 0 0 0.5rem;
+}
+
+.member-settings__feedback {
+  margin-bottom: 1rem;
+}
+
 .notification-bell__list {
   max-height: 60vh;
   margin: 0;
