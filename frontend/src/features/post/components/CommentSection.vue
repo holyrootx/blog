@@ -27,7 +27,22 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  refreshing: { type: Boolean, default: false },
+  loadError: { type: String, default: '' },
 });
+const emit = defineEmits(['reload', 'cancel-reload']);
+const mutations = ref(0);
+
+async function changeComment(action, ...args) {
+  // 새로고침 전에 받아 둔 목록이 방금 등록·수정·삭제한 내용을 되돌리지 않게 한다.
+  emit('cancel-reload');
+  mutations.value += 1;
+  try {
+    await action(...args);
+  } finally {
+    mutations.value -= 1;
+  }
+}
 
 const route = useRoute();
 const router = useRouter();
@@ -40,6 +55,7 @@ const commentPlaceholder = computed(() => props.comments.placeholder ?? '');
 const commentMaxLength = computed(() => props.comments.maxLength ?? 1000);
 const {
   total, items, hasNext, loading, sentinel, loadMore, loadReplies, replyLoadingIds,
+  loadMoreError, replyErrors,
   mergeTarget, clearTarget, pauseAutoLoad, resumeAutoLoad,
 } = useCommentFeed({
   postId: toRef(props, 'postId'), comments: toRef(props, 'comments'),
@@ -136,13 +152,20 @@ watch(() => props.comments, () => { replyTargetId.value = null; });
 </script>
 
 <template>
-  <section class="comments" aria-labelledby="comments-title" :aria-busy="initialLoading || loading">
+  <section class="comments" aria-labelledby="comments-title" :aria-busy="initialLoading || refreshing || loading">
     <div class="comments__header">
       <h2 id="comments-title" class="comments__title">댓글</h2>
       <span v-if="initialLoading" class="ui-skeleton comments__count-skeleton" aria-hidden="true"></span>
-      <span v-else class="comments__count">{{ total }}</span>
+      <span v-else-if="!loadError || items.length" class="comments__count">{{ total }}</span>
       <span class="comments__note">이 글에 남겨진 이야기</span>
+      <button type="button" class="ui-button comments__refresh" :disabled="initialLoading || refreshing || mutations > 0" @click="emit('reload')">댓글 새로고침</button>
     </div>
+
+    <div v-if="loadError" class="comments__feedback">
+      <p class="comment-reaction__error" role="alert">{{ loadError }}</p>
+      <button type="button" class="ui-button" :disabled="initialLoading || refreshing || mutations > 0" @click="emit('reload')">다시 시도</button>
+    </div>
+    <p v-if="refreshing" class="comments__note" role="status">댓글을 새로 불러오는 중…</p>
 
     <p v-if="targetLoading" class="comments__note" role="status">알림의 댓글을 찾고 있습니다.</p>
     <div v-else-if="targetMessage" role="status">
@@ -183,7 +206,7 @@ watch(() => props.comments, () => { replyTargetId.value = null; });
       :max-length="commentMaxLength"
       :pending="submitting"
       :error="formError"
-      @submit="submitComment"
+      @submit="changeComment(submitComment)"
       @signout="signOut"
     />
 
@@ -221,7 +244,7 @@ watch(() => props.comments, () => { replyTargetId.value = null; });
             <div class="comment__meta">
               <span class="comment__author">{{ comment.author }}</span>
               <span v-if="comment.isAuthor" class="comment__badge">작성자</span>
-              <time class="comment__time">{{ comment.createdAt }}</time>
+              <time class="comment__time" :datetime="comment.createdAtIso">{{ comment.createdAt }}</time>
               <!--
                 말이 오간 뒤에 조용히 바뀌면 뒤에 달린 답글이 엉뚱한 말에 답한 것처럼
                 보인다. 고쳤다는 사실만 남기고 무엇을 고쳤는지는 남기지 않는다
@@ -236,7 +259,7 @@ watch(() => props.comments, () => { replyTargetId.value = null; });
               label="댓글 고치기"
               :pending="editPending"
               :error="editError"
-              @save="saveEdit(comment)"
+              @save="changeComment(saveEdit, comment)"
               @cancel="cancelEdit"
             />
 
@@ -249,12 +272,12 @@ watch(() => props.comments, () => { replyTargetId.value = null; });
               :deleting="deletingId === comment.id"
               :reaction-pending="isReactionPending(comment.id)"
               :delete-pending="deletePending"
-              @react="reactToComment(comment, $event)"
+              @react="changeComment(reactToComment, comment, $event)"
               @reply="toggleReply(comment.id)"
               @report="openReport(comment)"
               @edit="startEdit(comment)"
               @ask-delete="askDelete(comment)"
-              @confirm-delete="confirmDelete(comment)"
+              @confirm-delete="changeComment(confirmDelete, comment)"
               @cancel-delete="cancelDelete"
             />
 
@@ -279,7 +302,7 @@ watch(() => props.comments, () => { replyTargetId.value = null; });
               <div class="comment__meta">
                 <span class="comment__author">{{ reply.author }}</span>
                 <span v-if="reply.isAuthor" class="comment__badge">작성자</span>
-                <time class="comment__time">{{ reply.createdAt }}</time>
+                <time class="comment__time" :datetime="reply.createdAtIso">{{ reply.createdAt }}</time>
                 <span v-if="reply.edited" class="comment__edited">수정됨</span>
               </div>
               <CommentEditForm
@@ -290,7 +313,7 @@ watch(() => props.comments, () => { replyTargetId.value = null; });
                 label="답글 고치기"
                 :pending="editPending"
                 :error="editError"
-                @save="saveEdit(reply)"
+                @save="changeComment(saveEdit, reply)"
                 @cancel="cancelEdit"
               />
 
@@ -303,27 +326,28 @@ watch(() => props.comments, () => { replyTargetId.value = null; });
                 :deleting="deletingId === reply.id"
                 :reaction-pending="isReactionPending(reply.id)"
                 :delete-pending="deletePending"
-                @react="reactToComment(reply, $event)"
+                @react="changeComment(reactToComment, reply, $event)"
                 @report="openReport(reply)"
                 @edit="startEdit(reply)"
                 @ask-delete="askDelete(reply)"
-                @confirm-delete="confirmDelete(reply, comment)"
+                @confirm-delete="changeComment(confirmDelete, reply, comment)"
                 @cancel-delete="cancelDelete"
               />
             </div>
           </div>
 
+          <p v-if="replyErrors.get(comment.id)" class="comment-reaction__error" role="alert">{{ replyErrors.get(comment.id) }}</p>
           <button
             v-if="comment.replyHasNext"
             class="comment__more"
             type="button"
             :disabled="replyLoadingIds.has(comment.id)"
             @click="loadReplies(comment)"
-          >{{ replyLoadingIds.has(comment.id) ? '답글 불러오는 중…' : '답글 더 보기' }}</button>
+          >{{ replyLoadingIds.has(comment.id) ? '답글 불러오는 중…' : replyErrors.has(comment.id) ? '답글 다시 시도' : '답글 더 보기' }}</button>
           <form
             v-if="replyTargetId === comment.id"
             class="reply-form"
-            @submit.prevent="submitReply(comment.id)"
+            @submit.prevent="changeComment(submitReply, comment.id)"
           >
             <p class="reply-form__target">{{ comment.author }} 님에게 답글 쓰는 중</p>
             <textarea
@@ -357,13 +381,14 @@ watch(() => props.comments, () => { replyTargetId.value = null; });
     </ul>
 
     <!-- 스크롤이 닿으면 자동으로 불러오고, 버튼은 키보드 사용자를 위한 대체 수단 -->
-    <div v-if="!initialLoading" ref="sentinel" class="comments__sentinel">
+    <div v-if="!initialLoading && !loadError" ref="sentinel" class="comments__sentinel">
+      <p v-if="loadMoreError" class="comment-reaction__error" role="alert">{{ loadMoreError }}</p>
       <div v-if="loading" class="comments__more-skeleton" aria-hidden="true">
         <span class="ui-skeleton ui-skeleton--circle"></span>
         <span class="ui-skeleton"></span>
       </div>
       <button v-else-if="hasNext" class="comments__more" type="button" @click="loadMore">
-        댓글 더 보기
+        {{ loadMoreError ? '댓글 다시 시도' : '댓글 더 보기' }}
       </button>
       <span v-else>{{ items.length === 0 ? '아직 댓글이 없습니다' : '마지막 댓글입니다' }}</span>
     </div>

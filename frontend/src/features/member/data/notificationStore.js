@@ -7,83 +7,125 @@ import {
   markNotificationRead,
 } from '../api/notificationApi';
 
-/**
- * 알림 상태.
- *
- * <p>실시간으로 밀어 받지 않는다. 앱이 뜰 때와 화면을 옮길 때 개수를 한 번씩 확인하고,
- * 목록은 종을 열었을 때만 가져온다. 답글은 몇 시간 늦게 봐도 아무 문제가 없고,
- * 폴링이나 SSE 는 이 규모에서 서버만 축낸다.</p>
- *
- * <p>개수와 목록을 따로 두는 이유는 부르는 빈도가 다르기 때문이다. 숫자는 자주,
- * 목록은 가끔이다.</p>
- */
+// 최근 30개 목록과 전체 미확인 수는 서로 다른 조회 결과다.
 const unreadCount = ref(0);
 const notifications = ref([]);
 const loading = ref(false);
+const loaded = ref(false);
+const loadError = ref('');
+const countError = ref('');
+const readError = ref('');
+const reading = ref(false);
 let sessionGeneration = 0;
+let listRequest = 0;
+let countRequest = 0;
+let readRevision = 0;
+const pendingReads = new Map();
 
 export function useNotifications() {
-  return { unreadCount, notifications, loading };
+  return { unreadCount, notifications, loading, loaded, loadError, countError, readError, reading };
 }
 
-/**
- * 종에 붙는 숫자만 갱신한다.
- *
- * 로그인하지 않았으면 서버가 401 을 준다. 그건 오류가 아니라 정상이라 조용히 0 으로 둔다.
- */
 export async function refreshUnreadCount() {
+  // 읽음 요청 도중의 집계는 곧 낡는다. 마지막 읽음 요청이 끝난 뒤 다시 확인한다.
+  if (pendingReads.size) return;
   const generation = sessionGeneration;
+  const request = ++countRequest;
+  const revision = readRevision;
+  const current = () => generation === sessionGeneration && request === countRequest && revision === readRevision;
   try {
     const count = await getUnreadCount();
-    if (generation === sessionGeneration) unreadCount.value = count;
+    if (!current()) return;
+    unreadCount.value = count;
+    countError.value = '';
   } catch {
-    if (generation === sessionGeneration) unreadCount.value = 0;
+    if (current()) countError.value = '미확인 알림 수를 갱신하지 못했습니다.';
   }
 }
 
 export async function loadNotifications() {
   const generation = sessionGeneration;
+  const request = ++listRequest;
+  const revision = readRevision;
+  const current = () => generation === sessionGeneration && request === listRequest;
   loading.value = true;
-
+  loadError.value = '';
   try {
     const items = await getNotifications();
-    if (generation !== sessionGeneration) return;
+    if (!current() || revision !== readRevision || pendingReads.size) return;
     notifications.value = items;
-    unreadCount.value = notifications.value.filter((item) => item.unread).length;
+    loaded.value = true;
   } catch {
-    if (generation === sessionGeneration) notifications.value = [];
+    if (current() && revision === readRevision) {
+      loadError.value = loaded.value
+        ? '알림을 새로 불러오지 못했습니다. 이전에 불러온 목록을 표시합니다.'
+        : '알림을 불러오지 못했습니다.';
+    }
   } finally {
-    if (generation === sessionGeneration) loading.value = false;
+    if (current()) loading.value = false;
   }
 }
 
-/**
- * 알림 하나를 읽음으로 바꾼다.
- *
- * 서버 응답을 기다리지 않고 화면부터 바꾼다 — 누르면 글로 이동하기 때문에, 기다리면
- * 화면이 넘어간 뒤에 숫자가 줄어 눈에 띄지 않는다. 실패해도 다음 갱신에서 제자리를 찾는다.
- */
-export async function readNotification(notificationId) {
-  const target = notifications.value.find((item) => item.id === notificationId);
-
-  if (target?.unread) {
-    target.unread = false;
-    unreadCount.value = Math.max(0, unreadCount.value - 1);
-  }
-
-  await markNotificationRead(notificationId).catch(() => null);
+export function readNotification(notificationId) {
+  return markRead(notificationId, () => markNotificationRead(notificationId), () => {
+    const target = notifications.value.find((item) => item.id === notificationId);
+    if (target?.unread) {
+      target.unread = false;
+      unreadCount.value = Math.max(0, unreadCount.value - 1);
+    }
+  });
 }
 
-export async function readAllNotifications() {
-  notifications.value = notifications.value.map((item) => ({ ...item, unread: false }));
-  unreadCount.value = 0;
+export function readAllNotifications() {
+  if (pendingReads.size) return Promise.resolve(null);
+  return markRead('all', markAllNotificationsRead, () => {
+    notifications.value = notifications.value.map((item) => ({ ...item, unread: false }));
+    unreadCount.value = 0;
+  });
+}
 
-  await markAllNotificationsRead().catch(() => null);
+function markRead(key, request, apply) {
+  if (pendingReads.has('all')) return pendingReads.get('all');
+  if (pendingReads.has(key)) return pendingReads.get(key);
+  const generation = sessionGeneration;
+  readRevision += 1;
+  reading.value = true;
+  readError.value = '';
+
+  // 실패한 쓰기를 성공한 것처럼 표시하지 않는다. 화면 이동은 호출 쪽에서 즉시 진행한다.
+  const operation = Promise.resolve().then(() => {
+    if (generation === sessionGeneration) return request();
+  }).then(() => {
+    if (generation !== sessionGeneration) return null;
+    apply();
+    return true;
+  }).catch(() => {
+    if (generation !== sessionGeneration) return null;
+    readError.value = '읽음 처리를 완료하지 못했습니다. 다시 시도해 주세요.';
+    return false;
+  }).finally(() => {
+    if (generation !== sessionGeneration) return;
+    pendingReads.delete(key);
+    reading.value = pendingReads.size > 0;
+    if (!reading.value) {
+      // 응답을 잃은 쓰기와 다른 화면에서 읽은 알림까지 서버 값으로 맞춘다.
+      void refreshUnreadCount();
+      void loadNotifications();
+    }
+  });
+  pendingReads.set(key, operation);
+  return operation;
 }
 
 export function clearNotifications() {
   sessionGeneration += 1;
+  pendingReads.clear();
   unreadCount.value = 0;
   notifications.value = [];
   loading.value = false;
+  loaded.value = false;
+  loadError.value = '';
+  countError.value = '';
+  readError.value = '';
+  reading.value = false;
 }
