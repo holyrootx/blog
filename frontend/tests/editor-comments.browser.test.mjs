@@ -372,9 +372,10 @@ test('reply paging offers retry and merges duplicate local replies once', async 
   await showComments(pageOf([comment(1, { replies: [comment(2), comment(5)], replyHasNext: true, replyNextCursor: 2 })]));
   handleApi = fail;
   await page.getByRole('button', { name: '답글 더 보기', exact: true }).click();
-  await page.getByRole('button', { name: '답글 더 보기', exact: true }).waitFor();
+  await page.getByText('답글을 불러오지 못했습니다. 다시 시도해 주세요.').waitFor();
+  await page.getByRole('button', { name: '답글 다시 시도', exact: true }).waitFor();
   handleApi = route => ok(route, { items: [comment(3), comment(5)], hasNext: false, nextCursor: null });
-  await page.getByRole('button', { name: '답글 더 보기', exact: true }).click();
+  await page.getByRole('button', { name: '답글 다시 시도', exact: true }).click();
   await page.locator('#comment-3').waitFor();
   assert.equal(await page.locator('#comment-5').count(), 1);
   assert.equal(await page.getByRole('button', { name: '답글 더 보기', exact: true }).count(), 0);

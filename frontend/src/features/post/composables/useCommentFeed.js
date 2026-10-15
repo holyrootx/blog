@@ -1,6 +1,5 @@
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { getCommentReplies, getPostComments } from '../api/postApi';
-import { notifyError } from '../../../shared/toast/toastStore';
 import { mergeCommentItems } from '../data/commentItems';
 
 export function useCommentFeed({ postId, comments }) {
@@ -11,13 +10,17 @@ export function useCommentFeed({ postId, comments }) {
   const loading = ref(false);
   const sentinel = ref(null);
   const replyLoadingIds = ref(new Set());
+  const loadMoreError = ref('');
+  const replyErrors = ref(new Map());
   let observer = null;
   let revision = 0;
   let targetOverlay = null;
   let autoLoadPaused = false;
 
-  async function loadMore() {
+  async function loadMore({ automatic = false } = {}) {
     if (loading.value || !hasNext.value || nextCursor.value === null) return;
+    if (automatic && loadMoreError.value) return;
+    loadMoreError.value = '';
     loading.value = true;
     const requestedRevision = revision;
     try {
@@ -35,8 +38,8 @@ export function useCommentFeed({ postId, comments }) {
         nextCursor.value = nextPage.nextCursor;
         hasNext.value = nextPage.hasNext;
       });
-    } catch (error) {
-      if (requestedRevision === revision) console.error(error);
+    } catch {
+      if (requestedRevision === revision) loadMoreError.value = '다음 댓글을 불러오지 못했습니다. 다시 시도해 주세요.';
     } finally {
       if (requestedRevision === revision) loading.value = false;
     }
@@ -45,6 +48,7 @@ export function useCommentFeed({ postId, comments }) {
   async function loadReplies(comment) {
     if (!comment.replyHasNext || replyLoadingIds.value.has(comment.id)) return;
     const requestedRevision = revision;
+    replyErrors.value.delete(comment.id);
     replyLoadingIds.value = new Set([...replyLoadingIds.value, comment.id]);
     try {
       const page = await getCommentReplies(postId.value, comment.id, { cursor: comment.replyNextCursor });
@@ -57,8 +61,8 @@ export function useCommentFeed({ postId, comments }) {
         .sort((a, b) => a.id - b.id);
       comment.replyHasNext = page.hasNext;
       comment.replyNextCursor = page.nextCursor;
-    } catch (error) {
-      if (requestedRevision === revision) notifyError(error?.message ?? '답글을 불러오지 못했습니다. 다시 시도해 주세요.');
+    } catch {
+      if (requestedRevision === revision) replyErrors.value.set(comment.id, '답글을 불러오지 못했습니다. 다시 시도해 주세요.');
     } finally {
       if (requestedRevision === revision) {
         const ids = new Set(replyLoadingIds.value);
@@ -72,12 +76,14 @@ export function useCommentFeed({ postId, comments }) {
     revision += 1;
     targetOverlay = null;
     replyLoadingIds.value = new Set();
+    replyErrors.value = new Map();
+    loadMoreError.value = '';
     total.value = page.total ?? 0;
     items.value = [...(page.items ?? [])];
     nextCursor.value = page.nextCursor ?? null;
     hasNext.value = Boolean(page.hasNext);
     loading.value = false;
-  }, { immediate: true });
+  }, { immediate: true, flush: 'sync' });
 
   function observeSentinel() {
     observer?.disconnect();
@@ -86,7 +92,7 @@ export function useCommentFeed({ postId, comments }) {
 
   onMounted(() => {
     observer = new IntersectionObserver((entries) => {
-      if (entries[0]?.isIntersecting && !autoLoadPaused) loadMore();
+      if (entries[0]?.isIntersecting && !autoLoadPaused) loadMore({ automatic: true });
     });
     observeSentinel();
   });
@@ -106,7 +112,7 @@ export function useCommentFeed({ postId, comments }) {
     if (!autoLoadPaused) return;
     autoLoadPaused = false;
     const rect = sentinel.value?.getBoundingClientRect();
-    if (rect && rect.top < window.innerHeight && rect.bottom > 0) loadMore();
+    if (rect && rect.top < window.innerHeight && rect.bottom > 0) loadMore({ automatic: true });
   }
 
   /**
@@ -179,6 +185,7 @@ export function useCommentFeed({ postId, comments }) {
 
   return {
     total, items, hasNext, loading, sentinel, loadMore, loadReplies, replyLoadingIds,
+    loadMoreError, replyErrors,
     mergeTarget, clearTarget, pauseAutoLoad, resumeAutoLoad,
   };
 }

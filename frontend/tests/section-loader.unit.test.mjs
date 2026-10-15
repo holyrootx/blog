@@ -47,6 +47,20 @@ test('a failed refresh tells the screen whether a cached value is already showin
   assert.deepEqual(seen, [true, false]);
 });
 
+test('retrying the same section invalidates previous success, errors and loading', async () => {
+  const { useSectionLoader } = await loader();
+  const { load, loading } = useSectionLoader(['comments']);
+  const first = deferred(), second = deferred(); const applied = [], errors = [];
+  const a = load('comments', { request: () => first.promise, apply: x => applied.push(x), onError: e => errors.push(e) });
+  const b = load('comments', { request: () => second.promise, apply: x => applied.push(x) });
+  first.reject(Error('old')); await a;
+  assert.equal(loading.comments, true); assert.deepEqual(errors, []);
+  second.resolve('new'); await b;
+  assert.deepEqual(applied, ['new']); assert.equal(loading.comments, false);
+  await load('comments', { request: () => { throw Error('synchronous failure'); }, apply() {}, onError: e => errors.push(e) });
+  assert.equal(errors.length, 1); assert.equal(loading.comments, false);
+});
+
 test('the cache forgets the least recently read entry beyond its limit', async () => {
   const { cache } = await loader();
   for (let index = 0; index < 50; index += 1) cache.writeCachedResponse(`key:${index}`, index);
@@ -55,6 +69,17 @@ test('the cache forgets the least recently read entry beyond its limit', async (
   assert.equal(cache.readCachedResponse('key:0'), 0);
   assert.equal(cache.readCachedResponse('key:1'), undefined);
   assert.equal(cache.readCachedResponse('key:50'), 50);
+});
+
+test('cancelling a refresh before a write discards its result without resetting other sections', async () => {
+  const { useSectionLoader } = await loader();
+  const { load, loading, cancel } = useSectionLoader(['comments', 'post']);
+  const response = deferred(); const applied = [];
+  const pending = load('comments', { request: () => response.promise, apply: value => applied.push(value) });
+  cancel('comments');
+  assert.equal(loading.comments, false); assert.equal(loading.post, true);
+  response.resolve('before write'); await pending;
+  assert.deepEqual(applied, []);
 });
 
 // 실제 모듈을 그대로 돌린다. 화면 밖이라 onBeforeUnmount 만 빈 함수로 넣는다

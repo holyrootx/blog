@@ -13,6 +13,7 @@ import NotFoundPage from './NotFoundPage.vue';
 import { blogProfile, blogProfileLoading } from '../../home/data/blogProfileStore';
 import { useSectionLoader } from '../../../shared/composables/useSectionLoader';
 import { mergeDefined } from '../../../shared/data/mergeDefined';
+import { useMemberAuth } from '../../member/data/memberAuthStore';
 import {
   getAdjacentPosts,
   getPostComments,
@@ -65,7 +66,7 @@ const detail = reactive({
   ...structuredClone(EMPTY_DETAIL),
   comments: { ...EMPTY_COMMENTS },
 });
-const { loading, load, restart } = useSectionLoader(['post', 'adjacent', 'related', 'comments']);
+const { loading, load, restart, cancel } = useSectionLoader(['post', 'adjacent', 'related', 'comments']);
 
 // 글쓴이는 블로그 주인 한 사람이라 헤더와 같은 프로필을 쓴다. 글을 옮길 때마다 다시 받지 않는다
 const EMPTY_AUTHOR = {
@@ -76,6 +77,9 @@ const EMPTY_AUTHOR = {
 const author = computed(() => mergeDefined(EMPTY_AUTHOR, blogProfile.value));
 const notFound = ref(false);
 const postLoadError = ref(false);
+const commentsError = ref('');
+const commentsLoaded = ref(false);
+const { member } = useMemberAuth();
 const showAds = false;
 
 watch(
@@ -92,6 +96,8 @@ function loadPostPage(postId) {
   restart();
   notFound.value = false;
   postLoadError.value = false;
+  commentsError.value = '';
+  commentsLoaded.value = false;
   Object.assign(detail, structuredClone({
     ...EMPTY_DETAIL,
     comments: EMPTY_COMMENTS,
@@ -154,17 +160,35 @@ function loadPostPage(postId) {
     },
   });
   // 댓글은 들고 있지 않는다. 쓰고 지우는 자리라 전에 받은 목록을 먼저 보이면 지운 댓글이 잠깐 되살아난다
-  load('comments', {
+  loadComments(postId);
+}
+
+function loadComments(postId = route.params.id) {
+  commentsError.value = '';
+  return load('comments', {
     request: () => getPostComments(postId),
     apply: (comments) => {
       detail.comments = comments;
+      commentsLoaded.value = true;
       detail.post = {
         ...detail.post,
         commentCount: comments.total,
       };
     },
+    onError: () => {
+      commentsError.value = commentsLoaded.value
+        ? '댓글을 새로 불러오지 못했습니다. 이전에 불러온 목록을 표시합니다.'
+        : '댓글을 불러오지 못했습니다.';
+    },
   });
 }
+
+watch(() => member.value?.id, () => {
+  if (!/^[1-9]\d*$/.test(String(route.params.id))) return;
+  detail.comments = { ...EMPTY_COMMENTS };
+  commentsLoaded.value = false;
+  loadComments();
+}, { flush: 'sync' });
 
 function applyPostReaction(reaction) {
   detail.post = {
@@ -209,7 +233,11 @@ function applyPostReaction(reaction) {
             ref="commentSection"
             :post-id="route.params.id"
             :comments="detail.comments"
-            :initial-loading="loading.comments"
+            :initial-loading="loading.comments && !commentsLoaded"
+            :refreshing="loading.comments && commentsLoaded"
+            :load-error="commentsError"
+            @reload="loadComments()"
+            @cancel-reload="cancel('comments')"
           />
 
           <PostRelated
