@@ -48,12 +48,12 @@ class ThumbnailGeneratorTest {
     }
 
     @Test
-    @DisplayName("깨진 파일은 썸네일 변환 실패로 업로드를 중단한다")
+    @DisplayName("깨진 파일은 잘못된 이미지 오류로 업로드를 중단한다")
     void rejectsBrokenInput() {
         assertThatThrownBy(() -> generator.generate("이건 이미지가 아니다".getBytes(), "image/png"))
                 .isInstanceOfSatisfying(BlogException.class, exception ->
                         assertThat(exception.getErrorCode())
-                                .isEqualTo(ErrorCode.IMAGE_THUMBNAIL_GENERATION_FAILED));
+                                .isEqualTo(ErrorCode.IMAGE_INVALID));
     }
 
     /** 단색이 아니라 그라데이션으로 만든다. 단색은 너무 잘 눌려서 크기 비교가 뜻을 잃는다 */
