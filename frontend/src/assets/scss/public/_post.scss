@@ -1938,3 +1938,82 @@
 .comment__action--reported .comment-icon {
   color: var(--text-subtle);
 }
+
+/* 이어서 읽기. 화면 아래에 띄워서 받아 오는 순간 본문이 밀리지 않게 한다 */
+.post-resume {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  padding: 10px 10px 10px 20px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  transform: translateX(-50%);
+}
+
+.post-resume__text {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  margin: 0;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.post-resume__time {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.post-resume__action {
+  flex: 0 0 auto;
+}
+
+.post-resume__close {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.post-resume__close:hover {
+  background: var(--surface-muted);
+  color: var(--text);
+}
+
+/* 폰에서는 화면 폭을 다 쓰고, 홈 표시줄에 가리지 않게 기기 안전 영역만큼 띄운다 */
+@include bp.upto(sm) {
+  .post-resume {
+    right: 16px;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    left: 16px;
+    width: auto;
+    max-width: none;
+    padding: 10px 6px 10px 16px;
+    border-radius: 16px;
+    transform: none;
+  }
+
+  .post-resume__text {
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+}

@@ -2,6 +2,8 @@
 import { computed } from 'vue';
 import { RouterLink } from 'vue-router';
 
+import ViewedPostBadge from '../../member/components/ViewedPostBadge.vue';
+
 const props = defineProps({
   title: {
     type: String,
@@ -74,6 +76,7 @@ const moreQuery = computed(() => (props.sort === 'popular' ? { sort: 'popular' }
             <span>조회 {{ post.views }}</span>
           </div>
         </div>
+        <ViewedPostBadge :post-id="post.id" />
       </RouterLink>
     </div>
   </section>

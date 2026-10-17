@@ -10,6 +10,7 @@ import me.jsjlog.blog.post.domain.PostView;
 import me.jsjlog.blog.post.repository.CategoryRepository;
 import me.jsjlog.blog.post.repository.PostRepository;
 import me.jsjlog.blog.post.repository.PostViewRepository;
+import me.jsjlog.blog.support.MySqlTestDatabase;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -42,8 +43,7 @@ class AdminPostViewApiTest {
 
     @DynamicPropertySource
     static void isolatedDatabase(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", () -> "jdbc:h2:mem:admin_post_view;"
-                + "MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1");
+        MySqlTestDatabase.configure(registry, "admin_post_view");
     }
 
     @Autowired private MockMvc mockMvc;

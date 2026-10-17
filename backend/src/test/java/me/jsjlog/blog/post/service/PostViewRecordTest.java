@@ -10,6 +10,7 @@ import me.jsjlog.blog.post.domain.PostView;
 import me.jsjlog.blog.post.repository.CategoryRepository;
 import me.jsjlog.blog.post.repository.PostRepository;
 import me.jsjlog.blog.post.repository.PostViewRepository;
+import me.jsjlog.blog.support.MySqlTestDatabase;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -56,8 +57,7 @@ class PostViewRecordTest {
 
     @DynamicPropertySource
     static void isolatedDatabase(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", () -> "jdbc:h2:mem:post_view_record;"
-                + "MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1;LOCK_TIMEOUT=10000");
+        MySqlTestDatabase.configure(registry, "post_view_record");
     }
 
     @Autowired private MockMvc mockMvc;

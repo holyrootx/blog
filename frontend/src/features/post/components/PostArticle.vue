@@ -155,7 +155,8 @@ onBeforeUnmount(() => clearTimeout(noticeTimer));
       />
     </figure>
 
-    <PostBody :body="body" :show-inline-ads="showInlineAds" />
+    <!-- 이어서 읽기가 본문 덩어리를 찾는 표식. 토글 안쪽의 본문에는 붙이지 않는다 -->
+    <PostBody data-reading-root :body="body" :show-inline-ads="showInlineAds" />
 
     <div v-if="showTags && post.tags?.length" class="post-tags">
       <span v-for="tag in post.tags" :key="tag" class="post-tags__item">#{{ tag }}</span>

@@ -9,7 +9,10 @@ import PostArticleSkeleton from '../components/PostArticleSkeleton.vue';
 import PostAside from '../components/PostAside.vue';
 import CommentSection from '../components/CommentSection.vue';
 import PostRelated from '../components/PostRelated.vue';
+import PostResumeBar from '../components/PostResumeBar.vue';
 import NotFoundPage from './NotFoundPage.vue';
+import { useReadingPosition } from '../composables/useReadingPosition';
+import { markPostViewed } from '../../member/data/viewedPostStore';
 import { blogProfile, blogProfileLoading } from '../../home/data/blogProfileStore';
 import { useSectionLoader } from '../../../shared/composables/useSectionLoader';
 import { mergeDefined } from '../../../shared/data/mergeDefined';
@@ -81,6 +84,20 @@ const commentsError = ref('');
 const commentsLoaded = ref(false);
 const { member } = useMemberAuth();
 const showAds = false;
+
+// 본문이 화면에 그려진 뒤에야 덩어리를 셀 수 있다
+const readingReady = computed(() => !loading.post && !notFound.value && !postLoadError.value
+  && detail.post.id !== null);
+const { resume, resumeReading, dismissResume } = useReadingPosition({
+  postId: computed(() => route.params.id),
+  ready: readingReady,
+  signedIn: computed(() => Boolean(member.value)),
+});
+
+// 카드 목록으로 돌아갔을 때 방금 연 글에도 "최근 본 글" 이 붙어 있게 한다
+watch(() => [member.value?.id, detail.post.id], ([memberId, postId]) => {
+  if (memberId && postId) markPostViewed(memberId, postId);
+});
 
 watch(
   () => route.params.id,
@@ -260,6 +277,13 @@ function applyPostReaction(reaction) {
         />
       </div>
     </main>
+
+    <PostResumeBar
+      v-if="resume && member"
+      :saved-at="resume.savedAt ?? ''"
+      @resume="resumeReading"
+      @dismiss="dismissResume"
+    />
 
     <!-- 모바일 전용 하단 고정 광고 (시안 2a) -->
     <div v-if="showAds" class="anchor-ad">

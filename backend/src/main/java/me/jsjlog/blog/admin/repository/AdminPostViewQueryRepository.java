@@ -8,15 +8,14 @@ import me.jsjlog.blog.admin.dto.AdminPostViewCounts;
 import me.jsjlog.blog.admin.dto.AdminPostViewResponse;
 import me.jsjlog.blog.admin.dto.AdminPostViewSearchCondition;
 import me.jsjlog.blog.admin.dto.AdminPostViewerType;
+import me.jsjlog.blog.common.time.ServerTime;
 import me.jsjlog.blog.member.domain.MemberRole;
 import me.jsjlog.blog.member.domain.QMember;
 import me.jsjlog.blog.member.domain.QMemberStatus;
 import me.jsjlog.blog.post.domain.QPostView;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.Objects;
 
@@ -52,7 +51,7 @@ public class AdminPostViewQueryRepository {
         return rows.stream()
                 .map(row -> new AdminPostViewResponse(
                         row.get(view.id),
-                        toOffset(row.get(view.viewedAt)),
+                        ServerTime.toOffset(row.get(view.viewedAt)),
                         AdminPostViewerType.of(row.get(view.memberId), row.get(member.role)),
                         row.get(view.memberId),
                         row.get(member.nickname),
@@ -118,7 +117,7 @@ public class AdminPostViewQueryRepository {
     public OffsetDateTime findRecordingStartedAt() {
         QPostView view = QPostView.postView;
 
-        return toOffset(jpaQueryFactory
+        return ServerTime.toOffset(jpaQueryFactory
                 .select(view.viewedAt)
                 .from(view)
                 .orderBy(view.id.asc())
@@ -139,10 +138,5 @@ public class AdminPostViewQueryRepository {
             case ADMIN -> member.role.eq(MemberRole.ADMIN);
             case MEMBER -> view.memberId.isNotNull().and(member.role.isNull().or(member.role.ne(MemberRole.ADMIN)));
         };
-    }
-
-    /** 저장된 시각은 서버 시간대의 값이다. 그 시간대를 붙여 내보내야 받는 쪽이 같은 순간으로 읽는다 */
-    private static OffsetDateTime toOffset(LocalDateTime value) {
-        return value == null ? null : value.atZone(ZoneId.systemDefault()).toOffsetDateTime();
     }
 }

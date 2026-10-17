@@ -110,6 +110,9 @@ async function signOut() {
     </button>
 
     <div v-if="open" class="member-menu__dropdown" role="menu">
+      <RouterLink class="member-menu__item" role="menuitem" :to="{ name: 'member-settings', hash: '#recent-posts' }">
+        최근 본 글
+      </RouterLink>
       <RouterLink class="member-menu__item" role="menuitem" :to="{ name: 'member-settings' }">
         내 설정
       </RouterLink>
