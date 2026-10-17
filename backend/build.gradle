@@ -50,6 +50,11 @@ dependencies {
 	testAnnotationProcessor 'org.projectlombok:lombok'
 }
 
+// 이미지 검사도 GUI 없이 실행한다. macOS에서 단독 실행할 때도 서버와 같은 조건을 쓴다.
+tasks.withType(Test).configureEach {
+    systemProperty 'java.awt.headless', 'true'
+}
+
 tasks.named('test') {
 	useJUnitPlatform()
 	exclude '**/AdminPostBrowserIntegrationTest.class'
