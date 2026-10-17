@@ -1,6 +1,7 @@
 package me.jsjlog.blog.admin.service;
 
 import java.io.InputStream;
+import java.io.IOException;
 import java.util.Optional;
 import me.jsjlog.blog.admin.domain.UploadImage;
 import me.jsjlog.blog.admin.repository.UploadImageRepository;
@@ -13,6 +14,8 @@ import me.jsjlog.blog.common.upload.StoredImageFiles;
 import me.jsjlog.blog.common.upload.ImageThumbnail;
 import me.jsjlog.blog.common.upload.StoredImage;
 import me.jsjlog.blog.common.upload.ThumbnailGenerator;
+import me.jsjlog.blog.common.upload.ImageInputValidator;
+import me.jsjlog.blog.support.ImageTestFiles;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -73,7 +76,8 @@ class AdminImageServiceTest {
                 thumbnailGenerator,
                 transactionManager,
                 imageUsageRepository,
-                new StoredImageFiles(imageStorage)
+                new StoredImageFiles(imageStorage),
+                new ImageInputValidator()
         );
     }
 
@@ -191,6 +195,34 @@ class AdminImageServiceTest {
     }
 
     @Test
+    @DisplayName("픽셀 상한을 넘은 헤더는 썸네일 디코딩과 저장 전에 거절한다")
+    void rejectsLargeDimensionsBeforeThumbnailGeneration() {
+        when(uploadProperties.maxSizeBytes()).thenReturn(5L * 1024 * 1024);
+        when(uploadProperties.allows("image/png")).thenReturn(true);
+        var file = new MockMultipartFile("file", "huge.png", "image/png", ImageTestFiles.pngHeader(6000, 5000));
+        assertThatThrownBy(() -> adminImageService.upload(file)).isInstanceOfSatisfying(BlogException.class,
+                error -> assertThat(error.getErrorCode()).isEqualTo(ErrorCode.IMAGE_DIMENSIONS_TOO_LARGE));
+        verify(thumbnailGenerator, never()).generate(any(byte[].class), anyString());
+        verify(imageStorage, never()).store(anyString(), anyString(), anyLong(), any(InputStream.class));
+        verify(uploadImageRepository, never()).saveAndFlush(any(UploadImage.class));
+    }
+
+    @Test
+    @DisplayName("바이트 상한과 같은 크기는 허용한다")
+    void acceptsExactByteLimit() {
+        givenThumbnail();
+        givenTransaction();
+        var file = file();
+        when(uploadProperties.maxSizeBytes()).thenReturn(file.getSize());
+        when(imageStorage.store(anyString(), anyString(), anyLong(), any(InputStream.class)))
+                .thenAnswer(call -> stored(call.getArgument(0)));
+        when(uploadImageRepository.saveAndFlush(any(UploadImage.class)))
+                .thenAnswer(call -> call.getArgument(0));
+        adminImageService.upload(file);
+        verify(uploadImageRepository).saveAndFlush(any(UploadImage.class));
+    }
+
+    @Test
     @DisplayName("신규 업로드는 원본 키를 보관하고 썸네일 URL을 반환한다")
     void storesOriginalKeyAndReturnsThumbnailUrl() {
         givenThumbnail();
@@ -280,11 +312,17 @@ class AdminImageServiceTest {
         when(uploadProperties.maxSizeBytes()).thenReturn(5L * 1024L * 1024L);
         when(uploadProperties.allows("image/png")).thenReturn(true);
 
+        byte[] content;
+        try {
+            content = ImageTestFiles.image("png", 32, 24);
+        } catch (IOException exception) {
+            throw new AssertionError(exception);
+        }
         return new MockMultipartFile(
                 "file",
                 "sample.png",
                 "image/png",
-                new byte[]{1, 2, 3}
+                content
         );
     }
 

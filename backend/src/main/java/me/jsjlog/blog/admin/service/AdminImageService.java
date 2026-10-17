@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -30,6 +31,7 @@ import me.jsjlog.blog.common.exception.BlogException;
 import me.jsjlog.blog.common.exception.ErrorCode;
 import me.jsjlog.blog.common.upload.ImageStorage;
 import me.jsjlog.blog.common.upload.ImageThumbnail;
+import me.jsjlog.blog.common.upload.ImageInputValidator;
 import me.jsjlog.blog.common.upload.StoredImage;
 import me.jsjlog.blog.common.upload.ThumbnailGenerator;
 
@@ -70,6 +72,7 @@ public class AdminImageService {
     private final PlatformTransactionManager transactionManager;
     private final ImageUsageRepository imageUsageRepository;
     private final StoredImageFiles storedImageFiles;
+    private final ImageInputValidator imageInputValidator;
 
     /**
      * 원본은 그대로 두고, 화면에 내보낼 썸네일을 따로 만들어 올린다.
@@ -82,6 +85,7 @@ public class AdminImageService {
         validate(file, contentType);
 
         byte[] original = read(file);
+        contentType = imageInputValidator.validate(original, contentType);
         ImageThumbnail thumbnail = thumbnailGenerator.generate(original, contentType);
         String originalKey = storageKey(contentType);
         String thumbnailKey = thumbnailKey(originalKey);
@@ -154,7 +158,7 @@ public class AdminImageService {
      * 파일을 통째로 메모리에 읽는다.
      *
      * <p>스트림을 두 번 쓸 수 없어서다 — 저장소에 올리는 데 한 번, 썸네일을 만드는 데
-     * 한 번 필요하다. 업로드 용량 상한이 걸려 있으므로 여기서 메모리가 터질 일은 없다.</p>
+     * 한 번 필요하다. 파일 용량과 디코딩할 픽셀 수는 각각 별도로 제한한다.</p>
      */
     private byte[] read(MultipartFile file) {
         try (InputStream content = file.getInputStream()) {
@@ -208,7 +212,7 @@ public class AdminImageService {
     private String normalizeContentType(MultipartFile file) {
         String contentType = file.getContentType();
 
-        return contentType == null ? "" : contentType.toLowerCase();
+        return contentType == null ? "" : contentType.toLowerCase(Locale.ROOT);
     }
 
     /**

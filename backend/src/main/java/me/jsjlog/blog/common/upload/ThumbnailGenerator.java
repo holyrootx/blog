@@ -3,6 +3,8 @@ package me.jsjlog.blog.common.upload;
 import java.io.IOException;
 
 import com.sksamuel.scrimage.ImmutableImage;
+import com.sksamuel.scrimage.ImageParseException;
+import com.sksamuel.scrimage.ScaleMethod;
 import com.sksamuel.scrimage.webp.WebpWriter;
 import org.springframework.stereotype.Component;
 
@@ -44,11 +46,16 @@ public class ThumbnailGenerator {
     private static final int QUALITY = 85;
 
     public ImageThumbnail generate(byte[] original, String contentType) {
+        ImmutableImage source;
         try {
-            ImmutableImage source = ImmutableImage.loader().fromBytes(original);
-            ImmutableImage resized = source.width > MAX_WIDTH
-                    ? source.scaleToWidth(MAX_WIDTH)
-                    : source;
+            source = ImmutableImage.loader().fromBytes(original);
+        } catch (ImageParseException exception) {
+            throw new BlogException(ErrorCode.IMAGE_INVALID);
+        } catch (IOException | RuntimeException exception) {
+            throw new BlogException(ErrorCode.IMAGE_THUMBNAIL_GENERATION_FAILED);
+        }
+        try {
+            ImmutableImage resized = resize(source);
 
             byte[] content = resized.bytes(WebpWriter.DEFAULT.withQ(QUALITY));
 
@@ -56,5 +63,13 @@ public class ThumbnailGenerator {
         } catch (IOException | RuntimeException exception) {
             throw new BlogException(ErrorCode.IMAGE_THUMBNAIL_GENERATION_FAILED);
         }
+    }
+
+    private ImmutableImage resize(ImmutableImage source) {
+        if (source.width <= MAX_WIDTH) return source;
+        int height = Math.max(1, (int) (MAX_WIDTH / (double) source.width * source.height));
+        // Bicubic 필터는 주변 행도 참조하므로 높이 5px 미만에서는 FastScale을 사용한다.
+        ScaleMethod method = height < 5 ? ScaleMethod.FastScale : ScaleMethod.Bicubic;
+        return source.scaleTo(MAX_WIDTH, height, method);
     }
 }
