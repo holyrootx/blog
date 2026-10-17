@@ -52,6 +52,7 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
+	exclude '**/AdminPostBrowserIntegrationTest.class'
 }
 
 // H2 기본 검사는 유지하고, 같은 핵심 경로를 격리 MySQL에서도 실행한다.
@@ -78,4 +79,22 @@ tasks.register('mysqlTest', Test) {
 			throw new GradleException('mysqlTest requires BLOG_TEST_MYSQL_PORT and BLOG_TEST_MYSQL_PASSWORD; H2 fallback is not allowed')
 		}
 	}
+}
+
+// 실제 HTTP + 브라우저 검사는 별도 명령으로 실행하고 H2로 대체하지 않는다.
+tasks.register('browserIntegrationTest', Test) {
+    group = 'verification'
+    description = 'Run the administrator browser flow against real Spring and isolated MySQL'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform()
+    maxParallelForks = 1
+    outputs.upToDateWhen { false }
+    filter { includeTestsMatching '*AdminPostBrowserIntegrationTest' }
+    testLogging { showStandardStreams = true }
+    doFirst {
+        if (!System.getenv('BLOG_TEST_MYSQL_PORT') || !System.getenv('BLOG_TEST_MYSQL_PASSWORD')) {
+            throw new GradleException('browserIntegrationTest requires BLOG_TEST_MYSQL_PORT and BLOG_TEST_MYSQL_PASSWORD; H2 fallback is not allowed')
+        }
+    }
 }

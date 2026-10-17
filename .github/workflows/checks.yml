@@ -40,6 +40,19 @@ jobs:
       - name: Verify MySQL transactions and persistence across restart
         working-directory: backend
         run: ./gradlew --no-daemon mysqlTest
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install browser integration dependencies
+        working-directory: frontend
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Verify administrator flow through real HTTP and MySQL
+        working-directory: backend
+        run: ./gradlew --no-daemon browserIntegrationTest
       - name: Retain MySQL test reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -48,6 +61,9 @@ jobs:
           path: |
             backend/build/reports/tests/mysqlTest/
             backend/build/test-results/mysqlTest/
+            backend/build/reports/tests/browserIntegrationTest/
+            backend/build/test-results/browserIntegrationTest/
+            frontend/reports/integration/
           if-no-files-found: error
           retention-days: 14
   verify:
