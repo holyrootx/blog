@@ -13,16 +13,17 @@
 //    docs/2026-006-admin-screen-spec.md §9 에서 폐기된 결정이다.
 //    이유: 검증·보호 로직이 화면과 모달 두 곳으로 갈라지고,
 //    ESC·바깥클릭이라는 내용 유실 경로가 새로 생긴다.
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 // 확인창이 폼 모달 위에 겹쳐 뜨는 경우가 있어서 열린 모달을 스택으로 센다.
 // 이게 없으면 (1) Esc 가 겹친 모달을 한꺼번에 닫고
 // (2) 위 모달만 닫아도 아래가 열려 있는데 배경 스크롤 잠금이 풀린다
 import {
-  hasNoOpenModal,
   isTopModal,
+  modalIndex,
   popModal,
   pushModal,
+  topModalPanel,
 } from './modalStack';
 
 const props = defineProps({
@@ -42,6 +43,11 @@ const props = defineProps({
   closeOnBackdrop: {
     type: Boolean,
     default: true,
+  },
+  // 검색창처럼 열자마자 입력할 곳이 정해져 있으면 패널 안의 선택자를 받는다.
+  initialFocus: {
+    type: String,
+    default: '',
   },
   size: {
     type: String,
@@ -65,60 +71,113 @@ const panelRef = ref(null);
 // 이 인스턴스를 스택에서 식별할 표식
 const modalId = Symbol('modal');
 
+let returnTarget = null;
+let lastFocused = null;
+let focusVersion = 0;
+
+function canFocus(element) {
+  return element instanceof HTMLElement && element.isConnected
+    && !element.matches(':disabled') && !element.closest('[inert]')
+    && element.getClientRects().length > 0 && getComputedStyle(element).visibility === 'visible';
+}
+
+function focusInside() {
+  const panel = panelRef.value;
+  if (!panel || !props.open || !isTopModal(modalId)) return;
+  const preferred = props.initialFocus ? panel.querySelector(props.initialFocus) : null;
+  const target = panel.contains(lastFocused) && canFocus(lastFocused) ? lastFocused : preferred;
+  (canFocus(target) ? target : panel).focus({ preventScroll: true });
+}
+
 function close() {
-  emit('close');
+  if (isTopModal(modalId)) emit('close');
 }
 
 function onBackdrop() {
-  if (props.closeOnBackdrop) {
-    close();
-  }
+  if (props.closeOnBackdrop) close();
+}
+
+function onFocusin(event) {
+  if (!props.open || !isTopModal(modalId)) return;
+  if (panelRef.value?.contains(event.target)) lastFocused = event.target;
+  else focusInside();
 }
 
 function onKeydown(event) {
-  if (event.key !== 'Escape' || !props.open) {
+  if (!props.open || !isTopModal(modalId) || event.defaultPrevented || event.isComposing) return;
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    close();
     return;
   }
+  if (event.key !== 'Tab') return;
 
-  // 겹쳐 있으면 맨 위 것만 닫는다
-  if (!isTopModal(modalId)) {
-    return;
+  // 매번 다시 찾는다. 검색 결과나 조건부 입력칸이 나타나도 현재 화면 순서로 이동한다.
+  const controls = [...panelRef.value.querySelectorAll(
+    'a[href], area[href], button, input, select, textarea, iframe, [tabindex], [contenteditable="true"]',
+  )].filter(element => element.tabIndex >= 0 && canFocus(element))
+    .sort((a, b) => (a.tabIndex || Infinity) - (b.tabIndex || Infinity));
+  const first = controls[0];
+  const last = controls.at(-1);
+  const active = document.activeElement;
+  if (!first) {
+    event.preventDefault();
+    panelRef.value.focus({ preventScroll: true });
+  } else if (!controls.includes(active) || (event.shiftKey ? active === first : active === last)) {
+    event.preventDefault();
+    (event.shiftKey ? last : first).focus();
   }
-
-  close();
 }
 
 function leaveStack() {
+  const wasTop = isTopModal(modalId);
+  const target = returnTarget;
+  const closingPanel = panelRef.value;
+  const version = ++focusVersion;
   popModal(modalId);
+  lastFocused = null;
+  returnTarget = null;
+  if (!wasTop) return;
 
-  // 아직 열려 있는 모달이 남았으면 잠금을 유지한다
-  if (hasNoOpenModal()) {
-    document.body.style.overflow = '';
-  }
+  nextTick(() => {
+    if (version !== focusVersion) return;
+    const top = topModalPanel();
+    const active = document.activeElement;
+    // 닫는 사이 다른 화면이 초점을 정했다면 뒤늦게 빼앗지 않는다.
+    if (active !== document.body && active?.isConnected && !closingPanel?.contains(active)) return;
+    if (canFocus(target) && (!top || top.contains(target))) target.focus({ preventScroll: true });
+    else top?.focus({ preventScroll: true });
+  });
 }
 
 watch(
   () => props.open,
   (isOpen) => {
-    if (isOpen) {
-      pushModal(modalId);
-
-      // 모달 뒤 본문이 스크롤되지 않게
-      document.body.style.overflow = 'hidden';
-      requestAnimationFrame(() => panelRef.value?.focus());
+    if (!isOpen) {
+      leaveStack();
       return;
     }
-
-    leaveStack();
+    returnTarget = document.activeElement;
+    lastFocused = null;
+    const version = ++focusVersion;
+    pushModal(modalId, () => panelRef.value);
+    nextTick(() => {
+      if (version !== focusVersion || !props.open || !isTopModal(modalId)) return;
+      // 신고 사유처럼 자식이 이미 초점을 정했다면 유지한다.
+      if (!panelRef.value?.contains(document.activeElement)) focusInside();
+    });
   },
-  // 열린 채로 마운트되는 경우에도 잠가야 한다
   { immediate: true },
 );
 
-onMounted(() => document.addEventListener('keydown', onKeydown));
+onMounted(() => {
+  document.addEventListener('keydown', onKeydown);
+  document.addEventListener('focusin', onFocusin);
+});
 
 onBeforeUnmount(() => {
   document.removeEventListener('keydown', onKeydown);
+  document.removeEventListener('focusin', onFocusin);
   leaveStack();
 });
 </script>
@@ -126,7 +185,11 @@ onBeforeUnmount(() => {
 <template>
   <Teleport to="body">
     <div v-if="open" class="modal"
-      :class="`modal--${variant}`" @click.self="onBackdrop">
+      :class="`modal--${variant}`"
+      :style="{ zIndex: 100 + modalIndex(modalId) }"
+      :inert="!isTopModal(modalId)"
+      :aria-hidden="!isTopModal(modalId) || undefined"
+      @click.self="onBackdrop">
       <div
         ref="panelRef"
         class="modal__panel"
