@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { RouterLink, useRouter } from 'vue-router';
 
 import { getMyComments } from '../api/memberAuthApi';
+import { getRecentPosts } from '../api/memberReadingApi';
 import {
   changeNickname,
   ensureMemberSession,
@@ -11,18 +12,23 @@ import {
 } from '../data/memberAuthStore';
 import { notifyError, notifySuccess } from '../../../shared/toast/toastStore';
 import { useSectionLoader } from '../../../shared/composables/useSectionLoader';
+import { formatSeoulDateTime } from '../../../shared/time/seoulTime';
 
 /**
  * 내 계정 설정.
  *
  * <p>대시보드가 아니다. 회원이 가진 것은 닉네임과 댓글뿐이고 프로필 사진은 제공자가 주는
- * 값이라 여기서 바꿀 수 없다. 그래서 할 수 있는 일만 세 가지 올려 둔다 —
- * 닉네임 변경, 내가 쓴 댓글 보기, 탈퇴.</p>
+ * 값이라 여기서 바꿀 수 없다. 그래서 할 수 있는 일만 올려 둔다 —
+ * 닉네임 변경, 최근 본 글, 내가 쓴 댓글 보기, 탈퇴.</p>
+ *
+ * <p>최근 본 글을 따로 주소로 두지 않고 여기에 둔다. 새 주소는 운영 서버의 Nginx 에 경로를
+ * 손으로 더해야 새로고침해도 열리는데, 배포는 Nginx 를 건드리지 않는다.</p>
  */
 const router = useRouter();
 const { member, isSignedIn } = useMemberAuth();
 
 const NICKNAME_MAX_LENGTH = 50;
+const RECENT_PAGE_SIZE = 10;
 
 const nickname = ref('');
 const savingNickname = ref(false);
@@ -30,9 +36,14 @@ const nicknameError = ref('');
 const nicknameSaved = ref(false);
 
 const comments = ref([]);
-const { loading, load, restart } = useSectionLoader(['comments']);
+const { loading, load, restart } = useSectionLoader(['comments', 'recent']);
 const commentsLoaded = ref(false);
 const commentsError = ref('');
+const recentPosts = ref([]);
+const recentPage = ref(0);
+const recentTotalPages = ref(0);
+const recentLoaded = ref(false);
+const recentError = ref('');
 const pageLoading = ref(true);
 let disposed = false;
 onBeforeUnmount(() => { disposed = true; });
@@ -60,8 +71,31 @@ onMounted(async () => {
   nickname.value = member.value?.nickname ?? '';
   pageLoading.value = false;
 
+  // 둘은 따로 온다. 한쪽이 늦어도 먼저 온 칸부터 보인다
+  loadRecentPosts();
   loadMyComments();
 });
+
+/** 처음이면 첫 쪽을, 더 보기면 다음 쪽을 받아 아래에 붙인다 */
+function loadRecentPosts({ more = false } = {}) {
+  const nextPage = more ? recentPage.value + 1 : 1;
+  recentError.value = '';
+  return load('recent', {
+    request: () => getRecentPosts({ page: nextPage, size: RECENT_PAGE_SIZE }),
+    apply: (result) => {
+      // 쪽을 넘기는 사이에 다른 글을 열면 순서가 바뀌어 같은 글이 두 번 올 수 있다
+      const shown = new Set(more ? recentPosts.value.map((post) => post.id) : []);
+      const items = result.items.filter((post) => !shown.has(post.id));
+      recentPosts.value = more ? [...recentPosts.value, ...items] : items;
+      recentPage.value = result.page;
+      recentTotalPages.value = result.totalPages;
+      recentLoaded.value = true;
+    },
+    onError: () => {
+      recentError.value = more ? '최근 본 글을 더 불러오지 못했습니다.' : '최근 본 글을 불러오지 못했습니다.';
+    },
+  });
+}
 
 function loadMyComments() {
   commentsError.value = '';
@@ -85,11 +119,17 @@ watch(() => member.value?.id, () => {
   comments.value = [];
   commentsLoaded.value = false;
   commentsError.value = '';
+  recentPosts.value = [];
+  recentPage.value = 0;
+  recentTotalPages.value = 0;
+  recentLoaded.value = false;
+  recentError.value = '';
   if (!isSignedIn.value) {
     void router.replace({ name: 'member-login' });
     return;
   }
   nickname.value = member.value?.nickname ?? '';
+  loadRecentPosts();
   loadMyComments();
 }, { flush: 'sync' });
 
@@ -156,7 +196,7 @@ async function confirmWithdraw() {
       <span class="ui-skeleton member-settings-skeleton__back"></span>
     </header>
 
-    <section v-for="index in 3" :key="index" class="member-settings__section" aria-hidden="true">
+    <section v-for="index in 4" :key="index" class="member-settings__section" aria-hidden="true">
       <span class="ui-skeleton member-settings-skeleton__heading"></span>
       <div class="member-settings-skeleton__body">
         <span class="ui-skeleton ui-skeleton--circle"></span>
@@ -224,6 +264,71 @@ async function confirmWithdraw() {
       <p class="member-settings__note">
         프로필 사진은 로그인한 소셜 계정에서 가져옵니다. 바꾸려면 그쪽에서 바꾼 뒤 다시 로그인해 주세요.
       </p>
+    </section>
+
+    <section
+      id="recent-posts"
+      class="member-settings__section"
+      aria-labelledby="settings-recent"
+      :aria-busy="loading.recent"
+    >
+      <div class="member-settings__section-head">
+        <h2 id="settings-recent" class="member-settings__section-title">최근 본 글</h2>
+      </div>
+      <p class="member-settings__hint">로그인한 채로 연 글이 마지막으로 본 순서대로 남습니다. 끝까지 읽었는지는 따로 적지 않습니다.</p>
+
+      <div v-if="recentError" class="member-settings__feedback">
+        <p class="member-settings__error" role="alert">{{ recentError }}</p>
+        <button
+          type="button"
+          class="ui-button"
+          :disabled="loading.recent"
+          @click="loadRecentPosts({ more: recentLoaded })"
+        >다시 시도</button>
+      </div>
+
+      <ul v-if="loading.recent && !recentLoaded" class="member-recent member-recent--skeleton" aria-hidden="true">
+        <li v-for="index in 3" :key="index" class="member-recent__item">
+          <span class="member-recent__link">
+            <span class="ui-skeleton member-recent__image"></span>
+            <span class="member-recent__body">
+              <span class="ui-skeleton"></span>
+              <span class="ui-skeleton"></span>
+              <span class="ui-skeleton"></span>
+            </span>
+          </span>
+        </li>
+      </ul>
+      <p v-else-if="recentLoaded && recentPosts.length === 0" class="member-settings__empty">아직 본 글이 없습니다.</p>
+
+      <ul v-else-if="recentPosts.length" class="member-recent">
+        <li v-for="post in recentPosts" :key="post.id" class="member-recent__item">
+          <RouterLink class="member-recent__link" :to="{ name: 'post-detail', params: { id: post.id } }">
+            <img
+              class="member-recent__image"
+              :src="post.imageUrl"
+              alt=""
+              width="96"
+              height="54"
+              loading="lazy"
+              decoding="async"
+            />
+            <span class="member-recent__body">
+              <span class="member-recent__category">{{ post.category }}</span>
+              <span class="member-recent__title">{{ post.title }}</span>
+              <time class="member-recent__date" :datetime="post.lastViewedAt">
+                {{ formatSeoulDateTime(post.lastViewedAt) }}에 마지막으로 봄
+              </time>
+            </span>
+          </RouterLink>
+        </li>
+      </ul>
+
+      <div v-if="recentLoaded && recentPage < recentTotalPages" class="member-recent__more">
+        <button type="button" class="ui-button" :disabled="loading.recent" @click="loadRecentPosts({ more: true })">
+          {{ loading.recent ? '불러오는 중…' : '더 보기' }}
+        </button>
+      </div>
     </section>
 
     <section class="member-settings__section" aria-labelledby="settings-comments" :aria-busy="loading.comments">

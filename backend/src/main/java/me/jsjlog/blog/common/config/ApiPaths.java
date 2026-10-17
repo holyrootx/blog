@@ -29,6 +29,10 @@ public final class ApiPaths {
         public static final String MEMBER_NOTIFICATIONS = "/api/v1/auth/me/notifications";
         public static final String MEMBER_NOTIFICATIONS_ALL = "/api/v1/auth/me/notifications/**";
         public static final String MEMBER_COMMENTS = "/api/v1/auth/me/comments";
+        /** 내가 읽은 글. 본인 기록이라 전부 로그인이 필요하다 */
+        public static final String MEMBER_RECENT_POSTS = "/api/v1/auth/me/recent-posts";
+        public static final String MEMBER_VIEWED_POSTS = "/api/v1/auth/me/viewed-posts";
+        public static final String MEMBER_READING_POSITION = "/api/v1/auth/me/reading-positions/*";
         public static final String MEMBER_WITHDRAW = "/api/v1/auth/withdraw";
         public static final String OAUTH_PENDING = "/api/v1/auth/oauth/pending";
         public static final String OAUTH_SIGNUP = "/api/v1/auth/oauth/signup";

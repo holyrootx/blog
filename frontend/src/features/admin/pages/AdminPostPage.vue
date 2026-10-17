@@ -22,6 +22,7 @@ import AdminDataGrid from '../components/AdminDataGrid.vue';
 import AdminPageSize from '../components/AdminPageSize.vue';
 import AdminPagination from '../components/AdminPagination.vue';
 import BaseModal from '../../../shared/components/BaseModal.vue';
+import AdminPostViewsDialog from '../components/AdminPostViewsDialog.vue';
 import { readAdminPostListQuery, toAdminPostListQuery } from '../data/adminPostListQuery';
 import { useAdminListRequest } from '../composables/useAdminListRequest';
 
@@ -32,9 +33,10 @@ const COLUMNS = [
   { key: 'categoryName', label: '카테고리', width: '110px' },
   { key: 'status', label: '상태', width: '90px', align: 'center' },
   { key: 'date', label: '날짜', width: '150px' },
-  { key: 'views', label: '조회', width: '90px', align: 'right' },
+  // 조회 기록 팝업의 건수와 기준이 달라서 "누적" 을 붙인다
+  { key: 'views', label: '누적 조회', width: '90px', align: 'right' },
   // 액션이 셋뿐이라 더보기(⋯) 드롭다운을 두지 않는다. 한 번 더 여는 것보다 버튼 셋이 짧다
-  { key: 'actions', label: '관리', width: '190px', align: 'right' },
+  { key: 'actions', label: '관리', width: '270px', align: 'right' },
 ];
 
 const EMPTY_CONDITION = {
@@ -73,6 +75,9 @@ const actionError = ref('');
 const purgeTitle = ref('');
 const canConfirm = computed(() => !working.value && confirmTarget.value !== null
   && (confirmAction.value !== 'purge' || purgeTitle.value === confirmTarget.value.title));
+
+// 조회 기록 팝업을 열어 둔 글
+const viewsTarget = ref(null);
 
 const categoryOptions = computed(() => [
   { value: '', label: '전체' },
@@ -386,6 +391,15 @@ watch(() => route.fullPath, () => {
       <template #cell-actions="{ row }">
         <span class="admin-post__actions" @click.stop>
           <button
+            v-if="!row.deletedAt"
+            class="admin-button admin-button--ghost admin-button--small"
+            type="button"
+            :aria-label="`${row.title} 조회 기록`"
+            @click="viewsTarget = row"
+          >
+            조회 기록
+          </button>
+          <button
             v-if="row.deletedAt"
             class="admin-button admin-button--ghost admin-button--small"
             type="button"
@@ -433,6 +447,8 @@ watch(() => route.fullPath, () => {
     </AdminDataGrid>
 
     <AdminPagination :page="page" :total-pages="totalPages" @update:page="changePage" />
+
+    <AdminPostViewsDialog :post="viewsTarget" @close="viewsTarget = null" />
 
     <!-- 발행·내리기·삭제 확인. 셋 다 공개 화면에 바로 영향을 준다 -->
     <BaseModal variant="admin"

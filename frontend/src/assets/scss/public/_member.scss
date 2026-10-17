@@ -503,6 +503,101 @@
   color: var(--on-accent);
 }
 
+/* 최근 본 글. 그림 자리를 먼저 정해 두고 글은 옆에서 줄바꿈한다 — 폰에서도 그림이 줄지 않는다 */
+.member-recent {
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.member-recent__item {
+  border-top: 1px solid var(--line);
+}
+
+.member-recent__item:first-child {
+  border-top: 0;
+}
+
+.member-recent__link {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 12px 0;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.member-recent__item:first-child .member-recent__link {
+  padding-top: 0;
+}
+
+.member-recent__image {
+  flex: 0 0 96px;
+  width: 96px;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.member-recent__body {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 3px;
+  min-width: 0;
+}
+
+.member-recent__category {
+  color: var(--accent-dark);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.member-recent__title {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.member-recent__link:hover .member-recent__title,
+.member-recent__link:focus-visible .member-recent__title {
+  color: var(--accent-dark);
+  text-decoration: underline;
+}
+
+.member-recent__date {
+  color: var(--text-subtle);
+  font-size: 12px;
+}
+
+.member-recent__more {
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
+}
+
+/* 뼈대는 실제 줄과 같은 높이를 잡는다. 분류·제목·시각 세 줄이다 */
+.member-recent--skeleton .ui-skeleton:nth-child(1) {
+  width: 52px;
+  height: 14px;
+}
+
+.member-recent--skeleton .ui-skeleton:nth-child(2) {
+  width: 80%;
+  height: 20px;
+}
+
+.member-recent--skeleton .ui-skeleton:nth-child(3) {
+  width: 140px;
+  height: 14px;
+}
+
 .member-comments {
   margin: 0;
   padding: 0;

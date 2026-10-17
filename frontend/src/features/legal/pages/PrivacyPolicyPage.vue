@@ -3,7 +3,7 @@ import LegalDocumentLayout from '../components/LegalDocumentLayout.vue';
 </script>
 
 <template>
-  <LegalDocumentLayout title="개인정보처리방침" effective-date="2026년 10월 9일">
+  <LegalDocumentLayout title="개인정보처리방침" effective-date="2026년 10월 17일">
     <p>
       JSJ.log(이하 "서비스")는 댓글 작성과 회원 식별을 위한 소셜 로그인 기능을 제공합니다.
       서비스는 필요한 범위에서만 개인정보를 처리하며, 아래 목적 이외의 용도로 사용하지 않습니다.
@@ -17,6 +17,10 @@ import LegalDocumentLayout from '../components/LegalDocumentLayout.vue';
         <li>선택: 닉네임, 이메일 주소, 프로필 이미지 URL</li>
         <li>자동 생성: 로그인 세션 쿠키, 가입·수정 일시와 같은 서비스 이용 기록</li>
         <li>자동 생성: 댓글 작성·수정·삭제 기록 (수정·삭제 전 댓글 내용 포함)</li>
+        <li>
+          자동 생성: 글 열람 기록 — 연 글과 시각, 기기 구분(휴대폰·태블릿·PC·검색 봇). 로그인한 상태라면
+          회원 번호와 이어서 읽기 위치도 남습니다. IP 주소와 브라우저 정보 원문은 저장하지 않습니다.
+        </li>
       </ul>
       <p>소셜 계정의 비밀번호는 서비스가 수집하거나 저장하지 않습니다.</p>
     </section>
@@ -26,6 +30,7 @@ import LegalDocumentLayout from '../components/LegalDocumentLayout.vue';
       <ul>
         <li>회원 가입, 로그인, 계정 상태 확인</li>
         <li>댓글 작성자 식별과 닉네임·프로필 표시</li>
+        <li>최근 본 글·이어서 읽기 제공과 글별 조회 통계</li>
         <li>부정 이용 방지, 오류 확인, 보안 대응</li>
         <li>신고된 댓글 확인과 분쟁 대응</li>
         <li>회원 문의와 권리 행사 처리</li>
@@ -57,6 +62,12 @@ import LegalDocumentLayout from '../components/LegalDocumentLayout.vue';
         적용합니다. 댓글 원문을 파기할 때에는 남은 변경 기록도 함께 파기하며, 신고·조치 기록은
         처리 내역을 확인할 수 있도록 남깁니다. 파기 작업은 기한이 지난 뒤 매일 새벽에 실행합니다.
       </p>
+      <p>
+        글 열람 기록은 최근 본 글·이어서 읽기와 조회 통계를 위해 서비스를 운영하는 동안 보관합니다. 탈퇴하면
+        연락처와 로그인 정보는 지우고, 열람 기록은 닉네임과 함께 남습니다. 복원 기간 30일이 지나 제공자
+        식별자를 파기하면, 서비스도 그 기록을 로그인 계정과 이을 수 없습니다. 열람 기록을 지우기를 원하면
+        아래 연락처로 요청할 수 있습니다.
+      </p>
     </section>
 
     <section>
@@ -71,8 +82,9 @@ import LegalDocumentLayout from '../components/LegalDocumentLayout.vue';
     <section>
       <h2>5. 쿠키와 세션</h2>
       <p>
-        로그인 상태 유지와 보안을 위해 필수 세션 쿠키를 사용합니다. 브라우저 설정에서 쿠키를 차단할 수
-        있으나, 이 경우 로그인과 댓글 기능을 사용할 수 없습니다.
+        로그인 상태 유지와 보안을 위해 필수 세션 쿠키를 사용합니다. 같은 글을 짧은 시간에 여러 번 열어도
+        조회를 한 번만 세는 데에도 이 쿠키를 쓰며, 로그인하지 않은 방문자에게도 발급됩니다. 브라우저 설정에서
+        쿠키를 차단할 수 있으나, 이 경우 로그인과 댓글 기능을 사용할 수 없습니다.
       </p>
     </section>
 

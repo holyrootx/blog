@@ -77,6 +77,14 @@ public class SecurityConfig {
                         .hasAnyRole(MemberRole.USER.name(), MemberRole.ADMIN.name())
                         .requestMatchers(HttpMethod.GET, ApiPaths.Auth.MEMBER_COMMENTS)
                         .hasAnyRole(MemberRole.USER.name(), MemberRole.ADMIN.name())
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                ApiPaths.Auth.MEMBER_RECENT_POSTS,
+                                ApiPaths.Auth.MEMBER_VIEWED_POSTS,
+                                ApiPaths.Auth.MEMBER_READING_POSITION
+                        ).hasAnyRole(MemberRole.USER.name(), MemberRole.ADMIN.name())
+                        .requestMatchers(HttpMethod.PUT, ApiPaths.Auth.MEMBER_READING_POSITION)
+                        .hasAnyRole(MemberRole.USER.name(), MemberRole.ADMIN.name())
                         .requestMatchers(HttpMethod.POST, ApiPaths.Auth.MEMBER_WITHDRAW)
                         .hasAnyRole(MemberRole.USER.name(), MemberRole.ADMIN.name())
                         // 알림은 로그인한 사람에게만 존재하는 개념이라 조회도 인증을 건다

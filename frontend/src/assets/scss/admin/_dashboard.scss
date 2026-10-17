@@ -636,3 +636,333 @@
   }
 
 }
+
+/* ── 조회 통계 ─────────────────────────────── */
+
+.admin-view-stats {
+  margin-top: 14px;
+}
+
+.admin-view-stats__summary,
+.admin-view-stats__posts {
+  transition: opacity 0.15s ease;
+}
+
+/* 기간을 바꾸는 동안 그려 둔 숫자를 흐리게 남긴다. 뼈대로 갈아 끼우면 자리가 깜빡인다 */
+.admin-view-stats__summary--refreshing,
+.admin-view-stats__posts--refreshing {
+  opacity: 0.55;
+}
+
+.admin-view-stats__note {
+  margin: 0 0 12px;
+  color: var(--admin-meta);
+  font-size: 12px;
+}
+
+.admin-view-stats__error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  color: var(--admin-danger);
+  font-size: 13px;
+}
+
+.admin-view-stats__tiles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
+.admin-view-stats__tile {
+  min-height: 104px;
+  padding: 14px 16px;
+  border: 1px solid var(--admin-card-line);
+  border-radius: 8px;
+  background: var(--admin-surface-subtle);
+}
+
+.admin-view-stats__tile dt {
+  color: var(--admin-text);
+  font-size: 12px;
+}
+
+.admin-view-stats__tile-value {
+  margin: 6px 0 0;
+  color: var(--admin-title);
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.admin-view-stats__tile-helper {
+  margin: 4px 0 0;
+  color: var(--admin-meta);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.admin-view-stats__charts {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(260px, 1fr);
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.admin-view-stats__chart-card {
+  min-width: 0;
+  min-height: 282px;
+  padding: 16px 18px;
+  border: 1px solid var(--admin-card-line);
+  border-radius: 8px;
+}
+
+.admin-view-stats__chart-card h3,
+.admin-view-stats__posts-head h3 {
+  color: var(--admin-title);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.admin-view-stats__skeleton-label {
+  width: 72px;
+  height: 14px;
+}
+
+.admin-view-stats__skeleton-value {
+  width: 96px;
+  height: 30px;
+  margin-top: 8px;
+}
+
+.admin-view-stats__skeleton-helper {
+  width: 80%;
+  height: 14px;
+  margin-top: 8px;
+}
+
+.admin-view-stats__skeleton-chart {
+  width: 100%;
+  height: 248px;
+}
+
+.admin-view-stats__devices {
+  display: grid;
+  gap: 12px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-view-stats__device-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--admin-text-strong);
+  font-size: 13px;
+}
+
+.admin-view-stats__device-row span:last-child {
+  color: var(--admin-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-view-stats__device-track {
+  height: 8px;
+  margin-top: 6px;
+  border-radius: 4px;
+  background: var(--admin-surface-subtle);
+  overflow: hidden;
+}
+
+.admin-view-stats__device-track span {
+  display: block;
+  height: 100%;
+  border-radius: 0 4px 4px 0;
+  background: var(--admin-chart-bar);
+}
+
+.admin-view-stats__hint {
+  margin: 14px 0 0;
+  color: var(--admin-meta);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.admin-view-stats__posts {
+  margin-top: 18px;
+}
+
+.admin-view-stats__posts-head {
+  margin-bottom: 10px;
+}
+
+.admin-view-stats__posts-head p {
+  margin: 4px 0 0;
+  color: var(--admin-meta);
+  font-size: 12px;
+}
+
+.admin-view-stats__post-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* 날짜별 막대. 막대는 칸을 다 채우지 않고 24px 에서 멈춘다 — 남는 폭이 막대 사이를 띄운다 */
+.admin-daily-chart {
+  margin: 14px 0 0;
+}
+
+.admin-daily-chart__plot {
+  position: relative;
+  height: 180px;
+  margin-left: 36px;
+  border-bottom: 1px solid var(--admin-card-line);
+  background: linear-gradient(var(--admin-card-line), var(--admin-card-line)) top / 100% 1px no-repeat;
+}
+
+.admin-daily-chart__tick {
+  position: absolute;
+  left: -36px;
+  width: 30px;
+  color: var(--admin-meta);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.admin-daily-chart__tick--top {
+  top: -7px;
+}
+
+.admin-daily-chart__tick--zero {
+  bottom: -7px;
+}
+
+.admin-daily-chart__columns,
+.admin-daily-chart__axis {
+  display: grid;
+  grid-template-columns: repeat(var(--columns), minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-daily-chart__columns {
+  height: 100%;
+}
+
+/* 칸 전체가 마우스·키보드 대상이다. 2px 짜리 막대를 겨누게 하지 않는다 */
+.admin-daily-chart__column {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 100%;
+  outline: none;
+}
+
+.admin-daily-chart__column:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--admin-accent-line);
+  border-radius: 4px;
+}
+
+.admin-daily-chart__stack {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.admin-daily-chart__bar {
+  display: block;
+  width: min(24px, 70%);
+  height: 100%;
+  border-radius: 4px 4px 0 0;
+  background: var(--admin-chart-bar);
+}
+
+.admin-daily-chart__column--active .admin-daily-chart__bar {
+  filter: brightness(1.12);
+}
+
+.admin-daily-chart__value {
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  color: var(--admin-text-strong);
+  font-size: 11px;
+  font-weight: 700;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.admin-daily-chart__tooltip {
+  position: absolute;
+  top: 4px;
+  z-index: 2;
+  display: grid;
+  gap: 2px;
+  min-width: 120px;
+  padding: 8px 10px;
+  border: 1px solid var(--admin-card-line);
+  border-radius: 6px;
+  background: var(--admin-card);
+  box-shadow: var(--admin-shadow);
+  color: var(--admin-text);
+  font-size: 12px;
+  pointer-events: none;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.admin-daily-chart__tooltip strong {
+  color: var(--admin-title);
+  font-size: 14px;
+}
+
+.admin-daily-chart__axis {
+  margin-left: 36px;
+  padding-top: 6px;
+  color: var(--admin-meta);
+  font-size: 11px;
+  text-align: center;
+}
+
+.admin-daily-chart__table {
+  margin-top: 12px;
+  color: var(--admin-text);
+  font-size: 12px;
+}
+
+.admin-daily-chart__table summary {
+  cursor: pointer;
+}
+
+.admin-daily-chart__table table {
+  width: 100%;
+  margin-top: 8px;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-daily-chart__table th,
+.admin-daily-chart__table td {
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--admin-card-line);
+  text-align: right;
+}
+
+.admin-daily-chart__table th:first-child {
+  text-align: left;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-view-stats__summary,
+  .admin-view-stats__posts {
+    transition: none;
+  }
+}
