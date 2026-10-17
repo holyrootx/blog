@@ -1,5 +1,6 @@
 package me.jsjlog.blog.post.service;
 
+import me.jsjlog.blog.support.MySqlTestDatabase;
 import me.jsjlog.blog.admin.dto.AdminCommentVisibilityRequest;
 import me.jsjlog.blog.admin.service.AdminCommentService;
 import me.jsjlog.blog.common.exception.BlogException;
@@ -38,15 +39,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * 파기와 되살리기가 겹칠 때.
  *
  * 실제로 커밋하고 스레드를 나눠야 잠금이 걸린다. 그래서 롤백하는 테스트로 두지 않고
- * 따로 만든 DB 를 쓴다. H2 결과이므로 운영 MySQL 에서의 동작을 대신 보증하지는 않는다.
+ * 따로 만든 DB 를 쓴다. H2 기본 검사와 CI의 격리 MySQL 검사에서 같은 동작을 확인한다.
  */
 @SpringBootTest
 class CommentRetentionConcurrencyTest {
 
     @DynamicPropertySource
     static void isolatedDatabase(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", () -> "jdbc:h2:mem:comment_retention_concurrency;"
-                + "MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1;LOCK_TIMEOUT=10000");
+        MySqlTestDatabase.configure(registry, "comment_retention_concurrency");
     }
 
     @Autowired private CommentRetention retention;

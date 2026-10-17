@@ -53,3 +53,29 @@ dependencies {
 tasks.named('test') {
 	useJUnitPlatform()
 }
+
+// H2 기본 검사는 유지하고, 같은 핵심 경로를 격리 MySQL에서도 실행한다.
+tasks.register('mysqlTest', Test) {
+	group = 'verification'
+	description = 'Run core transaction, concurrency and restart checks against isolated MySQL'
+	testClassesDirs = sourceSets.test.output.classesDirs
+	classpath = sourceSets.test.runtimeClasspath
+	useJUnitPlatform()
+	maxParallelForks = 1
+	outputs.upToDateWhen { false }
+	filter {
+		includeTestsMatching '*MenuCategoryConcurrencyTest'
+		includeTestsMatching '*ImageReferenceConcurrencyTest'
+		includeTestsMatching '*PostTrashHistoryTest'
+		includeTestsMatching '*CommentRetentionTest'
+		includeTestsMatching '*CommentRetentionConcurrencyTest'
+		includeTestsMatching '*MemberStatusLifecycleTest'
+		includeTestsMatching '*OAuthSignupIntegrityTest'
+		includeTestsMatching '*MySqlRestartPersistenceTest'
+	}
+	doFirst {
+		if (!System.getenv('BLOG_TEST_MYSQL_PORT') || !System.getenv('BLOG_TEST_MYSQL_PASSWORD')) {
+			throw new GradleException('mysqlTest requires BLOG_TEST_MYSQL_PORT and BLOG_TEST_MYSQL_PASSWORD; H2 fallback is not allowed')
+		}
+	}
+}
