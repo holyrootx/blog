@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check local DB-backed reads plus the public HTML, JS and deployed revision."""
+"""Check DB reads, public API/SEO/404 routes, assets and the deployed revision."""
 import argparse
 from collections import Counter
 from html.parser import HTMLParser
@@ -7,15 +7,25 @@ import json
 from pathlib import Path
 import time
 from urllib.parse import urljoin, urlsplit, urlunsplit
+from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 
-def fetch(url):
+def fetch(url, expected_status=200):
     request = Request(url, headers={
         "Cache-Control": "no-cache",
         "User-Agent": "jsjlog-deployment-check/1.0 (+https://github.com/holyrootx/blog)",
     })
-    with urlopen(request, timeout=5) as response:
+    try:
+        response = urlopen(request, timeout=5)
+    except HTTPError as error:
+        if error.code != expected_status:
+            error.close()
+            raise
+        response = error
+    with response:
+        if response.getcode() != expected_status or response.geturl() != url:
+            raise ValueError("Public route returned an unexpected status or redirect")
         return response.read(), response.headers.get("Content-Type", "")
 
 
@@ -79,6 +89,77 @@ def check_index_assets(expected, actual, public):
             raise ValueError("Public HTML has unexpected application asset references")
 
 
+class PostMetadata(HTMLParser):
+    def __init__(self, html):
+        super().__init__(convert_charrefs=True)
+        self.canonical = []
+        self.meta = {}
+        self.title = ""
+        self.structured = []
+        self.in_title = False
+        self.in_json = False
+        self.feed(html.decode("utf-8"))
+        self.close()
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        if tag == "link" and "canonical" in (attrs.get("rel") or "").lower().split():
+            self.canonical.append(attrs.get("href"))
+        if tag == "meta":
+            key = attrs.get("name") or attrs.get("property")
+            self.meta.setdefault(key, []).append(attrs.get("content", ""))
+        if tag == "title":
+            self.in_title = True
+        if tag == "script" and attrs.get("type") == "application/ld+json":
+            self.in_json = True
+            self.structured.append("")
+
+    def handle_endtag(self, tag):
+        if tag == "title":
+            self.in_title = False
+        if tag == "script":
+            self.in_json = False
+
+    def handle_data(self, data):
+        if self.in_title:
+            self.title += data
+        if self.in_json:
+            self.structured[-1] += data
+
+
+def check_public_routes(public, nonce):
+    posts = read_json(f"{public}/api/v1/blog/posts?size=1&deployment_check={nonce}")
+    items = posts.get("data", {}).get("items")
+    if posts.get("success") is not True or not isinstance(items, list):
+        raise ValueError("Public post list check failed")
+    if items:
+        post = items[0]
+        post_id, title = post.get("id"), post.get("title")
+        if type(post_id) is not int or post_id < 1 or not isinstance(title, str) or not title.strip():
+            raise ValueError("Public post list contains an invalid post")
+        url = f"{public}/posts/{post_id}"
+        html, content_type = fetch(f"{url}?deployment_check={nonce}")
+        if "text/html" not in content_type:
+            raise ValueError("Public post did not return HTML")
+        metadata = PostMetadata(html)
+        if metadata.canonical != [url] or metadata.meta.get("og:url") != [url]:
+            raise ValueError("Public post canonical or og:url does not match the requested post")
+        if title not in metadata.title or metadata.meta.get("og:title") != [title]:
+            raise ValueError("Public post title does not match the requested post")
+        if metadata.meta.get("og:type") != ["article"] or not any(
+                value.strip() for value in metadata.meta.get("description", [])):
+            raise ValueError("Public post is missing article metadata")
+        robots = ",".join(metadata.meta.get("robots", [])).lower().replace(" ", ",").split(",")
+        if "noindex" in robots or "none" in robots:
+            raise ValueError("Public post unexpectedly disallows indexing")
+        data = [json.loads(value) for value in metadata.structured]
+        if not any(isinstance(value, dict) and value.get("@type") == "BlogPosting"
+                   and value.get("url") == url and value.get("headline") == title for value in data):
+            raise ValueError("Public post is missing matching structured data")
+    # A random, non-application path must not fall through to a 200 SPA response.
+    fetch(f"{public}/__deployment-not-found-{nonce}", expected_status=404)
+
+
 def verify(backend, public, revision=None, index_file=None):
     public = normalize_url(public + "/", "./").rstrip("/")
     nonce = str(time.time_ns())
@@ -106,6 +187,7 @@ def verify(backend, public, revision=None, index_file=None):
         marker = read_json(f"{public}/deployment.json?deployment_check={nonce}")
         if marker.get("revision") != revision:
             raise ValueError("Public frontend revision does not match this deployment")
+    check_public_routes(public, nonce)
 
 
 def main():
@@ -122,7 +204,7 @@ def main():
     for attempt in range(args.attempts):
         try:
             verify(args.backend.rstrip("/"), args.public.rstrip("/"), args.revision, args.index_file)
-            print("Backend, DB query, public HTML and script checks passed.")
+            print("Backend, DB, public API, post metadata, 404, assets and revision checks passed.")
             return
         except Exception as error:
             # HTTP bodies and connection settings may contain operational details.
