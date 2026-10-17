@@ -204,6 +204,7 @@ function toPostDetail(post) {
       title: post.title,
       excerpt: post.excerpt,
       publishedAt: formatDate(post.publishedAt),
+      publishedAtIso: post.publishedAt,
       views: formatNumber(post.views),
       likeCount: Number(post.likeCount ?? 0),
       dislikeCount: Number(post.dislikeCount ?? 0),

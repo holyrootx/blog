@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>팝업 키보드 회귀 검사</title></head>
+<body><div id="app"></div><script type="module">
+import { createApp } from 'vue';
+import { createRouter, createMemoryHistory } from 'vue-router';
+import Fixture from './ModalFocusFixture.vue';
+const router = createRouter({ history: createMemoryHistory(), routes: [
+  { path: '/', component: { template: '<div />' } },
+  { path: '/posts', name: 'post-list', component: { template: '<div />' } },
+  { path: '/posts/:id', name: 'post-detail', component: { template: '<div />' } },
+] });
+createApp(Fixture).use(router).mount('#app');
+</script></body></html>

@@ -1,6 +1,7 @@
 import { after, afterEach, before, beforeEach, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
+import { mkdir } from 'node:fs/promises';
 import { createServer } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import { chromium } from 'playwright';
@@ -94,6 +95,8 @@ test('moving to another post inside the app never marks the loading page noindex
   await page.goto(`${server.resolvedUrls.local[0]}posts/5`);
   await page.waitForFunction(() => document.title.startsWith('앞의 글'));
   assert.equal((await structuredData()).headline, '앞의 글');
+  assert.equal(await page.locator('.post-article__meta time').getAttribute('datetime'), '2026-09-17T14:07:16');
+  assert.equal(await page.locator('.post-article__meta time').textContent(), '2026. 09. 17');
   await page.getByRole('link', { name: /뒤의 글/ }).click();
   await page.waitForURL('**/posts/6');
   await waitForPostRequest();
@@ -208,3 +211,35 @@ test('static pages and article pages keep clean canonical and share URLs', async
   assert.equal(await canonical(), new URL('/posts/5', page.url()).href);
   assert.equal(await page.locator('meta[property="og:type"]').getAttribute('content'), 'article');
 });
+
+for (const width of [1280, 390]) {
+  for (const theme of ['light', 'dark']) {
+    test(`${width}px ${theme} article search accepts typing and returns to its header button`, async () => {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto(`${server.resolvedUrls.local[0]}posts/5`);
+      await page.getByRole('heading', { name: '앞의 글', exact: true }).waitFor();
+      await page.evaluate(theme => { document.documentElement.dataset.theme = theme; }, theme);
+      const opener = page.getByRole('button', { name: '검색', exact: true });
+      await opener.focus();
+      await page.keyboard.press('Enter');
+      const modal = page.getByRole('dialog', { name: '검색', exact: true });
+      const input = modal.getByRole('combobox', { name: '검색어' });
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      assert.equal(await input.evaluate(element => element === document.activeElement), true);
+      await page.keyboard.type('Spring');
+      assert.equal(await input.inputValue(), 'Spring');
+      await modal.getByRole('button', { name: '닫기', exact: true }).focus();
+      await page.keyboard.press('Shift+Tab');
+      assert.equal(await modal.getByRole('button', { name: /전체 결과 보기/ }).evaluate(element => element === document.activeElement), true);
+      const box = await modal.boundingBox();
+      assert.ok(box.x >= 0 && box.x + box.width <= width && box.y >= 0 && box.y + box.height <= 900);
+      if (process.env.QA_SCREENSHOT_DIR) {
+        await mkdir(process.env.QA_SCREENSHOT_DIR, { recursive: true });
+        await page.screenshot({ path: `${process.env.QA_SCREENSHOT_DIR}/search-${width}-${theme}.png` });
+      }
+      await page.keyboard.press('Escape');
+      await modal.waitFor({ state: 'hidden' });
+      assert.equal(await opener.evaluate(element => element === document.activeElement), true);
+    });
+  }
+}

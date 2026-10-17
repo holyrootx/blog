@@ -111,7 +111,7 @@ onBeforeUnmount(() => clearTimeout(noticeTimer));
     <header class="post-article__header">
       <div class="post-article__meta">
         <span class="post-article__category">{{ post.category }}</span>
-        <time>{{ post.publishedAt }}</time>
+        <time :datetime="post.publishedAtIso">{{ post.publishedAt }}</time>
         <span class="post-article__dot">·</span>
         <span>조회 {{ post.views }}</span>
       </div>
