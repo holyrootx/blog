@@ -81,6 +81,7 @@ tasks.register('mysqlTest', Test) {
 		includeTestsMatching '*PostViewRecordTest'
 		includeTestsMatching '*AdminPostViewApiTest'
 		includeTestsMatching '*MemberReadingApiTest'
+		includeTestsMatching '*AdminViewStatsTest'
 	}
 	doFirst {
 		if (!System.getenv('BLOG_TEST_MYSQL_PORT') || !System.getenv('BLOG_TEST_MYSQL_PASSWORD')) {

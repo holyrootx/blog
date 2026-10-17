@@ -2,6 +2,7 @@
 import { computed, onMounted, reactive, ref } from 'vue';
 import { getAdminDashboard } from '../api/adminApi';
 import AdminPageHeader from '../components/AdminPageHeader.vue';
+import AdminViewStatsPanel from '../components/AdminViewStatsPanel.vue';
 
 const dashboard = reactive(createEmptyDashboard());
 const loading = ref(true);
@@ -19,7 +20,8 @@ const summaryCards = computed(() => [
     id: 'views',
     label: '누적 조회',
     value: formatCount(dashboard.totalViews, '회'),
-    helper: '글별 조회수 합계',
+    // 아래 조회 통계와 세는 기준이 달라 무엇의 합인지 적는다
+    helper: '세션당 1회씩 오른 조회수 합계(기록 시작 전 포함)',
     tone: 'quiet',
   },
   {
@@ -245,5 +247,8 @@ function getCategoryPercent(category) {
             </div>
           </article>
         </section>
+
+        <!-- 대시보드 요약과 따로 받는다. 한쪽이 늦거나 실패해도 다른 쪽은 그대로 보인다 -->
+        <AdminViewStatsPanel />
   </div>
 </template>

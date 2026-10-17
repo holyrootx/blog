@@ -5,6 +5,7 @@ import me.jsjlog.blog.member.domain.AuthProvider;
 import me.jsjlog.blog.member.domain.Member;
 import me.jsjlog.blog.member.repository.MemberRepository;
 import me.jsjlog.blog.post.domain.Category;
+import me.jsjlog.blog.post.domain.DeviceType;
 import me.jsjlog.blog.post.domain.Post;
 import me.jsjlog.blog.post.domain.PostView;
 import me.jsjlog.blog.post.repository.CategoryRepository;
@@ -154,7 +155,7 @@ class PostViewRecordTest {
         Post post = publishedPost();
         MockHttpSession session = new MockHttpSession();
 
-        runConcurrently(8, index -> postViewService.getPostDetail(post.getId(), session, null));
+        runConcurrently(8, index -> postViewService.getPostDetail(post.getId(), session, null, DeviceType.UNKNOWN));
 
         assertThat(viewsOf(post)).hasSize(1);
         assertThat(postRepository.findById(post.getId()).orElseThrow().getViews()).isEqualTo(1L);
@@ -165,7 +166,7 @@ class PostViewRecordTest {
     void concurrentDifferentSessionsAllRecorded() throws Exception {
         Post post = publishedPost();
 
-        runConcurrently(8, index -> postViewService.getPostDetail(post.getId(), new MockHttpSession(), null));
+        runConcurrently(8, index -> postViewService.getPostDetail(post.getId(), new MockHttpSession(), null, DeviceType.UNKNOWN));
 
         assertThat(viewsOf(post)).hasSize(8);
         assertThat(postRepository.findById(post.getId()).orElseThrow().getViews()).isEqualTo(8L);
@@ -198,13 +199,13 @@ class PostViewRecordTest {
         MovableClock clock = new MovableClock(Instant.parse("2026-10-17T03:00:00Z"));
         PostViewService service = new PostViewService(postService, postViewRecorder, clock);
 
-        service.getPostDetail(post.getId(), session, null);
+        service.getPostDetail(post.getId(), session, null, DeviceType.UNKNOWN);
         clock.advance(Duration.ofMinutes(10));
-        service.getPostDetail(post.getId(), session, null);
+        service.getPostDetail(post.getId(), session, null, DeviceType.UNKNOWN);
         assertThat(viewsOf(post)).hasSize(1);
 
         clock.advance(Duration.ofMinutes(21));
-        service.getPostDetail(post.getId(), session, null);
+        service.getPostDetail(post.getId(), session, null, DeviceType.UNKNOWN);
 
         assertThat(viewsOf(post))
                 .extracting(PostView::getViewedAt)

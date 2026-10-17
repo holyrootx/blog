@@ -2,6 +2,8 @@ package me.jsjlog.blog.post.domain;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -38,7 +40,9 @@ import java.time.LocalDateTime;
                 // 관리자 글별 기록을 최근순으로 읽는다
                 @Index(name = "idx_post_view_post", columnList = "post_id, viewed_at"),
                 // 회원의 최근 본 글과 카드 표시가 회원·글 단위로 마지막 시각을 찾는다
-                @Index(name = "idx_post_view_member", columnList = "member_id, post_id, viewed_at")
+                @Index(name = "idx_post_view_member", columnList = "member_id, post_id, viewed_at"),
+                // 관리자 통계가 최근 7일·30일을 잘라 센다
+                @Index(name = "idx_post_view_viewed_at", columnList = "viewed_at")
         }
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -58,13 +62,29 @@ public class PostView {
     @Column(name = "viewed_at", nullable = false, updatable = false)
     private LocalDateTime viewedAt;
 
-    private PostView(Long postId, Long memberId, LocalDateTime viewedAt) {
+    /** 넷으로 접은 기기 분류. 원래 브라우저 정보는 남기지 않는다 */
+    @Enumerated(EnumType.STRING)
+    @Column(
+            name = "device_type",
+            nullable = false,
+            updatable = false,
+            length = 10,
+            columnDefinition = "varchar(10) not null default 'UNKNOWN'"
+    )
+    private DeviceType deviceType;
+
+    private PostView(Long postId, Long memberId, LocalDateTime viewedAt, DeviceType deviceType) {
         this.postId = postId;
         this.memberId = memberId;
         this.viewedAt = viewedAt;
+        this.deviceType = deviceType == null ? DeviceType.UNKNOWN : deviceType;
     }
 
     public static PostView of(Long postId, Long memberId, LocalDateTime viewedAt) {
-        return new PostView(postId, memberId, viewedAt);
+        return new PostView(postId, memberId, viewedAt, DeviceType.UNKNOWN);
+    }
+
+    public static PostView of(Long postId, Long memberId, LocalDateTime viewedAt, DeviceType deviceType) {
+        return new PostView(postId, memberId, viewedAt, deviceType);
     }
 }

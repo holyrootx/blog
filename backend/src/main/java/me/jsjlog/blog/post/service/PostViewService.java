@@ -2,6 +2,7 @@ package me.jsjlog.blog.post.service;
 
 import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
+import me.jsjlog.blog.post.domain.DeviceType;
 import me.jsjlog.blog.post.dto.PostDetailResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -30,7 +31,7 @@ public class PostViewService {
         this.clock = clock;
     }
 
-    public PostDetailResponse getPostDetail(Long postId, HttpSession session, Long memberId) {
+    public PostDetailResponse getPostDetail(Long postId, HttpSession session, Long memberId, DeviceType deviceType) {
         PostViewHistory history = getOrCreateHistory(session);
 
         // 같은 세션에서 동시에 같은 글을 요청해도 한 요청만 증가시키도록 이력 객체를 잠근다.
@@ -42,7 +43,7 @@ public class PostViewService {
             if (firstView) {
                 history.record(postId);
             }
-            recordVisit(history, postId, memberId);
+            recordVisit(history, postId, memberId, deviceType);
 
             return detail;
         }
@@ -54,14 +55,14 @@ public class PostViewService {
      * <p>저장에 성공했을 때만 세션에 표시한다. 실패한 기록을 표시하면 30분 동안 다시 시도하지 않는다.
      * 빠진 기록은 로그로만 알 수 있으므로 경고로 남긴다.</p>
      */
-    private void recordVisit(PostViewHistory history, Long postId, Long memberId) {
+    private void recordVisit(PostViewHistory history, Long postId, Long memberId, DeviceType deviceType) {
         Instant now = clock.instant();
         if (!history.shouldRecordVisit(postId, memberId, now)) {
             return;
         }
 
         try {
-            postViewRecorder.record(postId, memberId, LocalDateTime.ofInstant(now, clock.getZone()));
+            postViewRecorder.record(postId, memberId, LocalDateTime.ofInstant(now, clock.getZone()), deviceType);
             history.markVisitRecorded(postId, memberId, now);
         } catch (RuntimeException e) {
             log.warn("[recordVisit] 조회 기록 실패. postId={}, memberId={}", postId, memberId, e);

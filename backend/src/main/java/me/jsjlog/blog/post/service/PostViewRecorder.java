@@ -1,6 +1,7 @@
 package me.jsjlog.blog.post.service;
 
 import lombok.RequiredArgsConstructor;
+import me.jsjlog.blog.post.domain.DeviceType;
 import me.jsjlog.blog.post.domain.PostView;
 import me.jsjlog.blog.post.repository.PostViewRepository;
 import org.springframework.stereotype.Service;
@@ -23,7 +24,7 @@ public class PostViewRecorder {
      * 실패는 여기서 삼키지 않고 부르는 쪽이 로그를 남기고 넘긴다.</p>
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void record(Long postId, Long memberId, LocalDateTime viewedAt) {
-        postViewRepository.save(PostView.of(postId, memberId, viewedAt));
+    public void record(Long postId, Long memberId, LocalDateTime viewedAt, DeviceType deviceType) {
+        postViewRepository.save(PostView.of(postId, memberId, viewedAt, deviceType));
     }
 }
