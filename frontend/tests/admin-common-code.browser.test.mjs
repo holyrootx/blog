@@ -1,6 +1,7 @@
 import { after, afterEach, before, beforeEach, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
+import { mkdir } from 'node:fs/promises';
 import { createServer } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import { chromium } from 'playwright';
@@ -171,8 +172,7 @@ test('editing a code sends the loaded timestamp; a conflict keeps the dialog ope
   await groupRow('회원 상태').first().click();
   await codeRows().filter({ hasText: 'WITHDRAWN' }).click();
   await dialog('코드 수정').waitFor();
-  // 관리자 입력칸(AdminTextInput)은 label 과 input 이 연결돼 있지 않아 이름으로 찾지 못한다. 첫 칸이 이름이다
-  await dialog('코드 수정').locator('input').first().fill('탈퇴 회원');
+  await dialog('코드 수정').getByRole('textbox', { name: '이름', exact: true }).fill('탈퇴 회원');
 
   failNextCodeUpdate = true;
   await dialog('코드 수정').getByRole('button', { name: '저장', exact: true }).click();
@@ -218,3 +218,36 @@ test('member list uses common code names for rows and the status combo', async (
   await page.getByRole('button', { name: '조회', exact: true }).click();
   await searched;
 });
+
+// 실제 관리자 화면에서도 마우스로 한 번 더 입력칸을 찾을 필요가 없는지 확인한다.
+for (const width of [1280, 390]) {
+  test(`${width}px admin dialog supports label clicks, keyboard cycling and return to its opener`, async () => {
+    await page.setViewportSize({ width, height: 900 });
+    await open('admin/codes');
+    await codeRows().filter({ hasText: 'SELF' }).waitFor();
+    const opener = page.getByRole('button', { name: '+ 그룹 추가' });
+    await opener.focus();
+    await page.keyboard.press('Enter');
+    const modal = dialog('그룹 추가');
+    await modal.waitFor();
+    await modal.locator('label').filter({ hasText: /^이름$/ }).click();
+    assert.equal(await modal.getByRole('textbox', { name: '이름', exact: true }).evaluate(element => element === document.activeElement), true);
+    await page.keyboard.type('테스트 그룹');
+    const closeButtons = modal.getByRole('button', { name: '닫기', exact: true });
+    await closeButtons.first().focus();
+    await page.keyboard.press('Shift+Tab');
+    assert.equal(await closeButtons.last().evaluate(element => element === document.activeElement), true);
+    await page.keyboard.press('Tab');
+    assert.equal(await closeButtons.first().evaluate(element => element === document.activeElement), true);
+    const box = await modal.boundingBox();
+    assert.ok(box.x >= 0 && box.x + box.width <= width && box.y >= 0 && box.y + box.height <= 900);
+    if (process.env.QA_SCREENSHOT_DIR) {
+      await mkdir(process.env.QA_SCREENSHOT_DIR, { recursive: true });
+      await page.screenshot({ path: `${process.env.QA_SCREENSHOT_DIR}/admin-group-${width}.png` });
+    }
+    await page.keyboard.press('Escape');
+    await modal.waitFor({ state: 'hidden' });
+    assert.equal(await opener.evaluate(element => element === document.activeElement), true);
+    assert.equal(requests.some(request => request.method === 'POST'), false);
+  });
+}

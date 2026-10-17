@@ -1,4 +1,8 @@
 <script setup>
+import { useId } from 'vue';
+
+const inputId = useId();
+
 defineProps({
   label: {
     type: String,
@@ -19,8 +23,9 @@ defineEmits(['update:modelValue']);
 
 <template>
   <div class="admin-field">
-    <label class="admin-field__label">{{ label }}</label>
+    <label :for="inputId" class="admin-field__label">{{ label }}</label>
     <input
+      :id="inputId"
       class="admin-field__input"
       type="text"
       :value="modelValue"

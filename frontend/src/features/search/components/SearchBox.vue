@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import BaseModal from '../../../shared/components/BaseModal.vue';
@@ -66,10 +66,6 @@ const hint = computed(() => {
 
 function openBox() {
   open.value = true;
-
-  nextTick(() => {
-    field.value?.focus();
-  });
 }
 
 function closeBox() {
@@ -211,15 +207,7 @@ function goToPost(postId) {
 // 화면을 옮기면 닫는다. 열어 둔 채 이동하면 새 화면 위에 그대로 덮여 있다
 watch(() => route.fullPath, closeBox);
 
-watch(open, (isOpen) => {
-  // 열려 있는 동안 뒤 화면이 같이 굴러다니면 어디를 보는지 알 수 없다
-  document.body.style.overflow = isOpen ? 'hidden' : '';
-});
-
-onBeforeUnmount(() => {
-  cancelPending();
-  document.body.style.overflow = '';
-});
+onBeforeUnmount(cancelPending);
 </script>
 
 <template>
@@ -229,7 +217,7 @@ onBeforeUnmount(() => {
     덮개·제목·× 는 공용 모달이 만든다. 전에는 여기서 직접 만들어서 제목이 없었고
     닫는 자리도 "닫기" 글자였다 — 팝업마다 손으로 지키면 이렇게 빠진다
   -->
-  <BaseModal :open="open" title="검색" :close-on-backdrop="true" @close="closeBox">
+  <BaseModal :open="open" title="검색" initial-focus=".search-panel__input" :close-on-backdrop="true" @close="closeBox">
     <input
       ref="field"
       class="search-panel__input"
