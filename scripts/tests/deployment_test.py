@@ -9,6 +9,11 @@ import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
+from urllib.error import HTTPError
+from io import BytesIO
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from threading import Thread
+from urllib.parse import urlsplit
 
 SCRIPTS = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location("smoke", SCRIPTS / "check-deployment.py")
@@ -36,6 +41,8 @@ class SmokeTest(unittest.TestCase):
             (self.INDEX, "text/html"),
             (b"window.ready = true", script_type),
             (json.dumps({"revision": revision}).encode(), "application/json"),
+            (json.dumps({"success": True, "data": {"items": []}}).encode(), "application/json"),
+            (b"Not found", "text/html"),
         ]
 
     def test_matching_release_passes(self):
@@ -44,7 +51,10 @@ class SmokeTest(unittest.TestCase):
 
     def test_requests_identify_checker_and_bypass_cache(self):
         with patch.object(SMOKE, "urlopen") as opener:
-            response = opener.return_value.__enter__.return_value
+            response = opener.return_value
+            response.__enter__.return_value = response
+            response.getcode.return_value = 200
+            response.geturl.return_value = "https://public/"
             response.read.return_value = b"ok"
             response.headers = {"Content-Type": "text/plain"}
             SMOKE.fetch("https://public/")
@@ -120,6 +130,146 @@ class SmokeTest(unittest.TestCase):
     def test_stale_html_is_rejected_even_when_revision_marker_is_current(self):
         with self.assertRaisesRegex(ValueError, "HTML"):
             self.verify_html(self.INDEX.replace(b'app.js', b'old-build.js'))
+
+
+class PublicRoutesTest(unittest.TestCase):
+    URL = "https://public/posts/7"
+    POST = {"id": 7, "title": "한글 & <제목>"}
+    HTML = ('''<html><head><title>한글 &amp; &lt;제목&gt; · 블로그</title>
+<link rel="canonical" href="https://public/posts/7">
+<meta name="description" content="공개 글 설명"><meta name="robots" content="index,follow">
+<meta property="og:type" content="article"><meta property="og:title" content="한글 &amp; &lt;제목&gt;">
+<meta property="og:url" content="https://public/posts/7">
+<script type="application/ld+json">''' + json.dumps({"@type": "BlogPosting", "url": URL,
+"headline": POST["title"]}) + "</script></head></html>").encode()
+
+    def responses(self, items=None, html=None, content_type="text/html"):
+        items = [self.POST] if items is None else items
+        responses = [(json.dumps({"success": True, "data": {"items": items}}).encode(), "application/json")]
+        if items:
+            responses.append((self.HTML if html is None else html, content_type))
+        return responses + [(b"not found", "text/html")]
+
+    def check(self, responses):
+        with patch.object(SMOKE, "fetch", side_effect=responses) as fetch:
+            SMOKE.check_public_routes("https://public", "nonce")
+        return fetch
+
+    def test_public_post_metadata_and_expected_404(self):
+        fetch = self.check(self.responses())
+        self.assertEqual("https://public/api/v1/blog/posts?size=1&deployment_check=nonce", fetch.call_args_list[0].args[0])
+        self.assertEqual(self.URL + "?deployment_check=nonce", fetch.call_args_list[1].args[0])
+        self.assertEqual({"expected_status": 404}, fetch.call_args_list[2].kwargs)
+
+    def test_empty_blog_still_checks_public_list_and_404(self):
+        fetch = self.check(self.responses(items=[]))
+        self.assertEqual(2, fetch.call_count)
+
+    def test_internal_health_does_not_hide_public_api_failure(self):
+        responses = SmokeTest().responses()
+        for bad in [(b"<html>SPA</html>", "text/html"),
+                    (b'{"success":false,"data":{"items":[]}}', "application/json"),
+                    (b'{"success":true,"data":{}}', "application/json"),
+                    (b"broken JSON", "application/json"),
+                    HTTPError("https://public/api/v1/blog/posts", 502, "Bad Gateway", {}, BytesIO())]:
+            with self.subTest(bad=type(bad).__name__), patch.object(SMOKE, "fetch", side_effect=responses[:5] + [bad]):
+                with self.assertRaises((ValueError, HTTPError)):
+                    SMOKE.verify("http://backend", "https://public", "current")
+
+    def test_public_post_rejects_spa_wrong_metadata_and_content_type(self):
+        for html in [SmokeTest.INDEX,
+                     self.HTML.replace(b'/posts/7', b'/posts/8'),
+                     self.HTML.replace(b'rel="canonical"', b'rel="alternate"'),
+                     self.HTML.replace(b'index,follow', b'noindex,follow'),
+                     self.HTML.replace(b'og:title', b'wrong:title'),
+                     self.HTML.replace(b'BlogPosting', b'WebSite'),
+                     self.HTML.replace(b'"@type"', b'BROKEN_JSON'),
+                     self.HTML.replace(b'name="description"', b'name="other"')]:
+            with self.subTest(html=html[:60]), self.assertRaises(ValueError):
+                self.check(self.responses(html=html))
+        with self.assertRaisesRegex(ValueError, "HTML"):
+            self.check(self.responses(content_type="application/json"))
+
+    def test_post_id_cannot_inject_a_route(self):
+        for value in ["../admin", -1, 0, True]:
+            with self.subTest(value=value), self.assertRaisesRegex(ValueError, "invalid post"):
+                self.check(self.responses(items=[{**self.POST, "id": value}]))
+
+    def test_real_fetch_accepts_only_expected_status_without_redirect(self):
+        url = "https://public/missing"
+        with patch.object(SMOKE, "urlopen", side_effect=HTTPError(url, 404, "Not Found", {"Content-Type": "text/html"}, BytesIO(b"missing"))):
+            self.assertEqual((b"missing", "text/html"), SMOKE.fetch(url, expected_status=404))
+        with patch.object(SMOKE, "urlopen", side_effect=HTTPError(url, 503, "Unavailable", {}, BytesIO())):
+            with self.assertRaises(HTTPError):
+                SMOKE.fetch(url, expected_status=404)
+        with patch.object(SMOKE, "urlopen") as opener:
+            response = opener.return_value
+            response.__enter__.return_value = response
+            response.getcode.return_value = 200
+            response.geturl.return_value = url
+            with self.assertRaises(ValueError):
+                SMOKE.fetch(url, expected_status=404)
+            response.getcode.return_value = 404
+            response.geturl.return_value = "https://public/redirected"
+            with self.assertRaises(ValueError):
+                SMOKE.fetch(url, expected_status=404)
+            self.assertEqual("GET", opener.call_args.args[0].get_method())
+
+
+class PublicHttpContractTest(unittest.TestCase):
+    def test_real_http_status_content_type_and_proxy_failures(self):
+        faults = {}
+        methods = []
+        origin = None
+
+        class Handler(BaseHTTPRequestHandler):
+            def log_message(self, *args):
+                pass
+
+            def do_GET(self):
+                methods.append(self.command)
+                path = urlsplit(self.path).path
+                if path == "/api/health":
+                    status, kind, body = 200, "application/json", b'{"success":true,"data":{"status":"ok"}}'
+                elif path == "/api/v1/blog/posts":
+                    status, kind, body = 200, "application/json", json.dumps({"success": True, "data": {"items": [PublicRoutesTest.POST]}}).encode()
+                elif path == "/posts/7":
+                    status, kind, body = 200, "text/html", PublicRoutesTest.HTML.replace(b"https://public", origin.encode())
+                elif path == "/":
+                    status, kind, body = 200, "text/html", SmokeTest.INDEX
+                elif path == "/assets/app.js":
+                    status, kind, body = 200, "application/javascript", b"window.ready = true"
+                else:
+                    status, kind, body = 404, "text/html", b"not found"
+                status, kind, body = faults.get(path if path != "/api/v1/blog/posts" or "deployment_check=" in self.path else "internal-list", (status, kind, body))
+                if path.startswith("/__deployment-not-found-") and "404" in faults:
+                    status, kind, body = faults["404"]
+                self.send_response(status)
+                self.send_header("Content-Type", kind)
+                self.end_headers()
+                self.wfile.write(body)
+
+        with ThreadingHTTPServer(("127.0.0.1", 0), Handler) as server:
+            origin = f"http://127.0.0.1:{server.server_port}"
+            thread = Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                SMOKE.verify(origin, origin)
+                for path, result in [
+                    ("/api/v1/blog/posts", (502, "text/html", b"proxy failed")),
+                    ("/api/v1/blog/posts", (200, "text/html", SmokeTest.INDEX)),
+                    ("/posts/7", (200, "text/html", SmokeTest.INDEX)),
+                    ("404", (200, "text/html", SmokeTest.INDEX)),
+                    ("404", (503, "text/html", b"unavailable")),
+                ]:
+                    faults.clear()
+                    faults[path] = result
+                    with self.subTest(path=path, status=result[0]), self.assertRaises((HTTPError, ValueError)):
+                        SMOKE.verify(origin, origin)
+                self.assertEqual({"GET"}, set(methods))
+            finally:
+                server.shutdown()
+                thread.join(timeout=5)
 
 
 class RecoveryTest(unittest.TestCase):
