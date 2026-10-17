@@ -1,5 +1,6 @@
 package me.jsjlog.blog.admin.service;
 
+import me.jsjlog.blog.support.MySqlTestDatabase;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -40,6 +41,10 @@ import static org.mockito.Mockito.*;
 class ImageReferenceConcurrencyTest {
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry properties) {
+        if (MySqlTestDatabase.enabled()) {
+            MySqlTestDatabase.configure(properties, "image_concurrency");
+            return;
+        }
         String url = System.getenv("BLOG_IMAGE_TEST_JDBC_URL");
         if (url != null && !url.matches("jdbc:mysql://127\\.0\\.0\\.1:13339/blog_image_test(?:\\?.*)?"))
             throw new IllegalArgumentException("이미지 검증 전용 로컬 DB만 사용할 수 있습니다.");

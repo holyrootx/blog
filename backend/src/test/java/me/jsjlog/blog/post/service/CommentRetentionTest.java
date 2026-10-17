@@ -1,5 +1,6 @@
 package me.jsjlog.blog.post.service;
 
+import me.jsjlog.blog.support.MySqlTestDatabase;
 import jakarta.persistence.EntityManager;
 import me.jsjlog.blog.admin.dto.AdminCommentVisibilityRequest;
 import me.jsjlog.blog.admin.service.AdminCommentService;
@@ -50,8 +51,7 @@ class CommentRetentionTest {
 
     @DynamicPropertySource
     static void isolatedDatabase(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url",
-                () -> "jdbc:h2:mem:comment_retention;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1");
+        MySqlTestDatabase.configure(registry, "comment_retention");
     }
 
     @Autowired private CommentRetention retention;

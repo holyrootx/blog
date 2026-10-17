@@ -11,6 +11,45 @@ permissions:
   contents: read
 
 jobs:
+  mysql:
+    name: MySQL transactions and restart
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      mysql:
+        image: mysql:8.0.46
+        env:
+          MYSQL_ROOT_PASSWORD: blog-ci-test-only
+        ports:
+          - 13342:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -pblog-ci-test-only --silent"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=30
+    env:
+      BLOG_TEST_MYSQL_PORT: '13342'
+      BLOG_TEST_MYSQL_USERNAME: root
+      BLOG_TEST_MYSQL_PASSWORD: blog-ci-test-only
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Verify MySQL transactions and persistence across restart
+        working-directory: backend
+        run: ./gradlew --no-daemon mysqlTest
+      - name: Retain MySQL test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mysql-test-reports
+          path: |
+            backend/build/reports/tests/mysqlTest/
+            backend/build/test-results/mysqlTest/
+          if-no-files-found: error
+          retention-days: 14
   verify:
     name: Test and build
     runs-on: ubuntu-latest

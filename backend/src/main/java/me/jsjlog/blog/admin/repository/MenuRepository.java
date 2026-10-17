@@ -1,11 +1,18 @@
 package me.jsjlog.blog.admin.repository;
 
+import jakarta.persistence.LockModeType;
+import java.util.Optional;
 import me.jsjlog.blog.admin.domain.Menu;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface MenuRepository extends JpaRepository<Menu,Long>, MenuRepositoryCustom {
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select menu from Menu menu where menu.id = :menuId")
+    Optional<Menu> findLockedById(@Param("menuId") Long menuId);
 
     /**
      * 그룹 삭제 가능 여부 판단용.

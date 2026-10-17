@@ -63,10 +63,10 @@ public class AdminCategoryService {
      */
     @Transactional
     public void updateCategory(Long categoryId, AdminCategoryRequest request) {
-        Category category = categoryRepository.findById(categoryId)
+        Category category = categoryRepository.findLockedById(categoryId)
                 .orElseThrow(() -> new BlogException(ErrorCode.CATEGORY_NOT_FOUND));
 
-        // 화면이 불러온 뒤 다른 곳에서 바뀌었으면 덮어쓰지 않는다
+        // 잠금을 얻은 뒤 비교해야 동시에 들어온 두 요청이 같은 시각 검사를 통과하지 않는다.
         ConcurrencyGuard.check(request.updatedAt(), category.getUpdatedAt());
 
         String name = requireName(request.name());

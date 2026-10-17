@@ -1,5 +1,6 @@
 package me.jsjlog.blog.admin.service;
 
+import me.jsjlog.blog.support.MySqlTestDatabase;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -52,6 +53,11 @@ class PostTrashHistoryTest {
 
     @DynamicPropertySource
     static void isolatedDatabase(DynamicPropertyRegistry registry) {
+        registry.add("blog.scheduled-publish.interval-ms", () -> "3600000");
+        if (MySqlTestDatabase.enabled()) {
+            MySqlTestDatabase.configure(registry, "trash_history");
+            return;
+        }
         String url = System.getenv("TRASH_TEST_DB_URL");
         if (url != null && !url.startsWith("jdbc:mysql://127.0.0.1:3306/blog_trash_verify_20261003")) {
             throw new IllegalArgumentException("Only the dedicated local verification database is allowed");
@@ -65,7 +71,6 @@ class PostTrashHistoryTest {
         registry.add("spring.datasource.password",
                 () -> url == null ? "" : System.getenv("TRASH_TEST_DB_PASSWORD"));
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
-        registry.add("blog.scheduled-publish.interval-ms", () -> "3600000");
     }
 
     @Autowired AdminPostService adminPosts;

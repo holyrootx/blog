@@ -152,10 +152,10 @@ public class MenuService {
      */
     @Transactional
     public void updateMenu(Long menuId, MenuRequest request) {
-        Menu menu = menuRepository.findById(menuId)
+        Menu menu = menuRepository.findLockedById(menuId)
                 .orElseThrow(() -> new BlogException(ErrorCode.MENU_NOT_FOUND));
 
-        // 화면이 불러온 뒤 다른 곳에서 바뀌었으면 덮어쓰지 않는다
+        // 잠금을 얻은 뒤 비교해야 동시에 들어온 두 요청이 같은 시각 검사를 통과하지 않는다.
         ConcurrencyGuard.check(request.updatedAt(), menu.getUpdatedAt());
 
         if (!StringUtils.hasText(request.menuName())) {
