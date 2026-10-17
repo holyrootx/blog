@@ -136,6 +136,23 @@ class PostViewRecordTest {
     }
 
     @Test
+    @DisplayName("브라우저 정보는 저장하지 않고 기기 분류로만 남기며, 검색 봇은 봇으로 남긴다")
+    void deviceTypeFromRequestHeaders() throws Exception {
+        Post post = publishedPost();
+
+        mockMvc.perform(get("/api/v1/blog/posts/{postId}", post.getId()).session(new MockHttpSession())
+                        .header("User-Agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Mobile/15E148"))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/blog/posts/{postId}", post.getId()).session(new MockHttpSession())
+                        .header("User-Agent", "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"))
+                .andExpect(status().isOk());
+
+        assertThat(viewsOf(post))
+                .extracting(PostView::getDeviceType)
+                .containsExactlyInAnyOrder(DeviceType.MOBILE, DeviceType.BOT);
+    }
+
+    @Test
     @DisplayName("공개되지 않은 글과 없는 글은 기록하지 않는다")
     void unreadablePostIsNotRecorded() throws Exception {
         Post draft = postRepository.saveAndFlush(new Post("공개 전", "요약", "본문", category, null, null));

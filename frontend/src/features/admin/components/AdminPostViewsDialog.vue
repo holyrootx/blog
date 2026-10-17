@@ -37,12 +37,13 @@ const VIEWER_LABELS = {
   MEMBER: '회원',
   ADMIN: '관리자',
   ANONYMOUS: '비회원',
+  BOT: '검색 봇',
 };
 
 const EMPTY_RESULT = {
   totalViews: 0,
   recordingStartedAt: null,
-  counts: { all: 0, member: 0, admin: 0, anonymous: 0 },
+  counts: { all: 0, member: 0, admin: 0, anonymous: 0, bot: 0 },
   items: [],
   totalElements: 0,
   totalPages: 0,
@@ -61,6 +62,7 @@ const viewerOptions = computed(() => [
   { value: 'MEMBER', label: `회원 ${formatCount(result.value.counts.member)}` },
   { value: 'ANONYMOUS', label: `비회원 ${formatCount(result.value.counts.anonymous)}` },
   { value: 'ADMIN', label: `관리자 ${formatCount(result.value.counts.admin)}` },
+  { value: 'BOT', label: `검색 봇 ${formatCount(result.value.counts.bot)}` },
 ]);
 
 const emptyText = computed(() => {
@@ -178,12 +180,13 @@ function formatCount(count) {
         <template #cell-viewerType="{ value }">
           <span
             class="admin-badge"
-            :class="value === 'ANONYMOUS' ? 'admin-badge--off' : 'admin-badge--on'"
+            :class="value === 'ANONYMOUS' || value === 'BOT' ? 'admin-badge--off' : 'admin-badge--on'"
           >{{ VIEWER_LABELS[value] ?? value }}</span>
         </template>
 
         <template #cell-member="{ row }">
           <span v-if="row.viewerType === 'ANONYMOUS'" class="admin-post-views__anonymous">비회원 방문</span>
+          <span v-else-if="row.viewerType === 'BOT'" class="admin-post-views__anonymous">검색 봇 방문</span>
           <span v-else class="admin-post-views__member">
             <span>{{ row.nickname || '알 수 없는 회원' }}</span>
             <em>#{{ row.memberId }}</em>

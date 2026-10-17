@@ -112,6 +112,9 @@ class AdminViewStatsTest {
         record(quiet, null, seoul(10, 15, 8, 40), DeviceType.UNKNOWN);
         record(popular, admin, seoul(10, 16, 10, 0), DeviceType.DESKTOP);
         record(popular, null, seoul(10, 17, 23, 59), DeviceType.MOBILE);
+        // 검색 봇은 기록에 남지만 통계 숫자에서 빠진다
+        record(popular, null, seoul(10, 14, 3, 0), DeviceType.BOT);
+        record(quiet, null, seoul(10, 14, 3, 5), DeviceType.BOT);
         record(popular, null, seoul(10, 18, 0, 0), DeviceType.MOBILE);
         // 30일 경계 바깥과 안쪽
         record(quiet, second, seoul(9, 17, 23, 59), DeviceType.DESKTOP);
@@ -126,7 +129,7 @@ class AdminViewStatsTest {
     }
 
     @Test
-    @DisplayName("최근 7일은 서울 자정 기준 오늘 포함 7일이고, 관리자 본인 조회는 빼고 따로 센다")
+    @DisplayName("최근 7일은 서울 자정 기준 오늘 포함 7일이고, 관리자 본인 조회와 검색 봇은 빼고 따로 센다")
     void sevenDaySummary() {
         AdminViewStatsResponse summary = service.getSummary(7);
 
@@ -137,6 +140,7 @@ class AdminViewStatsTest {
         assertThat(summary.anonymousViews()).isEqualTo(3);
         assertThat(summary.uniqueMembers()).isEqualTo(2);
         assertThat(summary.excludedAdminViews()).isEqualTo(1);
+        assertThat(summary.excludedBotViews()).isEqualTo(2);
         assertThat(summary.recordingStartedAt()).isNotNull();
 
         assertThat(summary.daily()).extracting(AdminDailyViewResponse::date)

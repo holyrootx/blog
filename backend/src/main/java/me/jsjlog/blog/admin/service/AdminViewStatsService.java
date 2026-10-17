@@ -97,8 +97,11 @@ public class AdminViewStatsService {
                 totals.pageViews() - totals.memberViews(),
                 totals.uniqueMembers(),
                 statsQueryRepository.adminViews(period.from(), period.to()),
+                statsQueryRepository.botViews(period.from(), period.to()),
                 dailyViews,
                 Arrays.stream(DeviceType.values())
+                        // 검색 봇은 기기가 아니라 따로 센 건수로 보인다
+                        .filter(type -> type != DeviceType.BOT)
                         .map(type -> new AdminDeviceViewResponse(type, devices.getOrDefault(type, 0L)))
                         .toList()
         );

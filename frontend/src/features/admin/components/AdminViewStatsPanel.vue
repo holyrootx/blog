@@ -75,8 +75,9 @@ const tiles = computed(() => {
       helper: `회원 조회 ${formatCount(value.memberViews)}건` },
     { id: 'anonymous', label: '비회원 방문', value: `${formatCount(value.anonymousViews)}건`,
       helper: '사람 수가 아니라 방문 건수' },
-    { id: 'admin', label: '뺀 관리자 조회', value: `${formatCount(value.excludedAdminViews)}건`,
-      helper: '블로그 주인이 연 기록은 숫자에 넣지 않음' },
+    { id: 'excluded', label: '통계에서 뺀 조회',
+      value: `${formatCount(value.excludedAdminViews + value.excludedBotViews)}건`,
+      helper: `관리자 본인 ${formatCount(value.excludedAdminViews)}건 · 검색 봇 ${formatCount(value.excludedBotViews)}건` },
   ];
 });
 
@@ -175,7 +176,7 @@ function formatCount(value) {
         <h2 id="admin-view-stats-title">조회 통계</h2>
         <p>
           새 조회 기록 기준입니다. 같은 사람이 같은 글을 30분 안에 다시 연 것은 한 번으로 세고,
-          관리자 본인 조회는 뺐습니다. 위의 누적 조회와는 세는 기준이 다릅니다.
+          관리자 본인 조회와 검색 봇은 뺐습니다. 위의 누적 조회와는 세는 기준이 다릅니다.
         </p>
       </div>
       <AdminSegmented
@@ -249,7 +250,7 @@ function formatCount(value) {
             </ul>
             <p class="admin-view-stats__hint">
               브라우저 정보로 거칠게 나눈 값입니다. 아이패드는 데스크톱으로 잡힐 수 있고,
-              검색 봇처럼 기기를 밝히지 않는 요청은 알 수 없음으로 셉니다.
+              기기를 밝히지 않는 요청은 알 수 없음으로 셉니다. 검색 봇은 여기에 넣지 않습니다.
             </p>
           </div>
         </div>

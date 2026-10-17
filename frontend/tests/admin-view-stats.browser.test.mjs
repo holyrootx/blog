@@ -19,7 +19,7 @@ const summary = (days, fields = {}) => {
     memberViews: index === 1 ? 5 : 0, anonymousViews: index === 1 ? 7 : index % 3 }));
   return { days, from: daily[0].date, to: daily.at(-1).date, recordingStartedAt: '2026-09-01T00:00:00Z',
     pageViews: daily.reduce((sum, day) => sum + day.pageViews, 0), memberViews: 5, anonymousViews: 10,
-    uniqueMembers: 3, excludedAdminViews: 4, daily,
+    uniqueMembers: 3, excludedAdminViews: 4, excludedBotViews: 2, daily,
     devices: [{ deviceType: 'MOBILE', pageViews: 6 }, { deviceType: 'TABLET', pageViews: 1 },
       { deviceType: 'DESKTOP', pageViews: 8 }, { deviceType: 'UNKNOWN', pageViews: 0 }], ...fields };
 };
@@ -72,13 +72,14 @@ const openDashboard = async () => {
 
 test('요약 숫자와 날짜별 막대, 기기 비율을 보여 주고 누적 조회와 기준이 다르다고 적는다', async () => {
   await openDashboard();
-  await panel().locator('.admin-view-stats__tile').nth(3).getByText('4건').waitFor();
+  await panel().locator('.admin-view-stats__tile').nth(3).getByText('6건').waitFor();
 
   const tiles = await panel().locator('.admin-view-stats__tile').allInnerTexts();
   assert.match(tiles[0], /조회 기록\s*\d+건/);
   assert.match(tiles[1], /로그인 회원\s*3명\s*회원 조회 5건/);
   assert.match(tiles[2], /비회원 방문\s*10건\s*사람 수가 아니라 방문 건수/);
-  assert.match(tiles[3], /뺀 관리자 조회\s*4건/);
+  assert.match(tiles[3], /통계에서 뺀 조회\s*6건\s*관리자 본인 4건 · 검색 봇 2건/);
+  assert.match(await panel().locator('.admin-panel__header').innerText(), /관리자 본인 조회와 검색 봇은 뺐습니다/);
   assert.match(await panel().locator('.admin-panel__header').innerText(), /누적 조회와는 세는 기준이 다릅니다/);
   assert.match(await page.locator('.admin-summary-card').filter({ hasText: '누적 조회' }).innerText(), /기록 시작 전 포함/);
 
@@ -186,6 +187,7 @@ test('요약과 글 목록은 서로 기다리지 않고, 각자 실패하면 �
 test('기록이 없으면 0 과 빈 목록을 보여 주고 "아직 기록이 없다" 고 말한다', async () => {
   summaryHandler = (route, url) => ok(route, summary(Number(url.searchParams.get('days')), {
     recordingStartedAt: null, pageViews: 0, memberViews: 0, anonymousViews: 0, uniqueMembers: 0, excludedAdminViews: 0,
+    excludedBotViews: 0,
     daily: dates(7).map(date => ({ date, pageViews: 0, memberViews: 0, anonymousViews: 0 })),
     devices: ['MOBILE', 'TABLET', 'DESKTOP', 'UNKNOWN'].map(deviceType => ({ deviceType, pageViews: 0 })),
   }));

@@ -25,7 +25,8 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
- * 기간 조회 통계. 관리자 본인 조회는 모든 숫자에서 뺀다 — 블로그 주인이 자기 글을 연 것은 독자가 아니다.
+ * 기간 조회 통계. 관리자 본인 조회와 검색 봇은 모든 숫자에서 뺀다 — 둘 다 독자가 아니다.
+ * 뺀 건수는 따로 세어 화면이 알린다.
  *
  * <p>기간은 [시작, 끝) 으로 받는다. 경계 시각은 서비스가 서울 자정으로 계산해 넘긴다.</p>
  */
@@ -55,7 +56,7 @@ public class AdminViewStatsQueryRepository {
                 .select(VIEW.count(), VIEW.memberId.count(), VIEW.memberId.countDistinct())
                 .from(VIEW)
                 .leftJoin(MEMBER).on(MEMBER.id.eq(VIEW.memberId))
-                .where(inRange(from, to), notAdmin())
+                .where(inRange(from, to), readers())
                 .fetchOne();
 
         return row == null ? new Totals(0, 0, 0) : new Totals(
@@ -71,6 +72,15 @@ public class AdminViewStatsQueryRepository {
                 .from(VIEW)
                 .join(MEMBER).on(MEMBER.id.eq(VIEW.memberId))
                 .where(inRange(from, to), MEMBER.role.eq(MemberRole.ADMIN))
+                .fetchOne());
+    }
+
+    /** 스스로 봇이라고 밝힌 비회원 기록 */
+    public long botViews(LocalDateTime from, LocalDateTime to) {
+        return orZero(jpaQueryFactory
+                .select(VIEW.count())
+                .from(VIEW)
+                .where(inRange(from, to), VIEW.memberId.isNull(), VIEW.deviceType.eq(DeviceType.BOT))
                 .fetchOne());
     }
 
@@ -90,7 +100,7 @@ public class AdminViewStatsQueryRepository {
                 .select(year, month, day, VIEW.count(), VIEW.memberId.count())
                 .from(VIEW)
                 .leftJoin(MEMBER).on(MEMBER.id.eq(VIEW.memberId))
-                .where(inRange(from, to), notAdmin())
+                .where(inRange(from, to), readers())
                 .groupBy(year, month, day)
                 .fetch()
                 .stream()
@@ -107,7 +117,7 @@ public class AdminViewStatsQueryRepository {
                 .select(VIEW.deviceType, VIEW.count())
                 .from(VIEW)
                 .leftJoin(MEMBER).on(MEMBER.id.eq(VIEW.memberId))
-                .where(inRange(from, to), notAdmin())
+                .where(inRange(from, to), readers())
                 .groupBy(VIEW.deviceType)
                 .fetch()
                 .stream()
@@ -120,7 +130,7 @@ public class AdminViewStatsQueryRepository {
                 .select(VIEW.postId, VIEW.count(), VIEW.memberId.countDistinct(), VIEW.memberId.count())
                 .from(VIEW)
                 .leftJoin(MEMBER).on(MEMBER.id.eq(VIEW.memberId))
-                .where(inRange(from, to), notAdmin())
+                .where(inRange(from, to), readers())
                 .groupBy(VIEW.postId)
                 .orderBy(VIEW.count().desc(), VIEW.postId.desc())
                 .offset((long) page * size)
@@ -141,7 +151,7 @@ public class AdminViewStatsQueryRepository {
                 .select(VIEW.postId.countDistinct())
                 .from(VIEW)
                 .leftJoin(MEMBER).on(MEMBER.id.eq(VIEW.memberId))
-                .where(inRange(from, to), notAdmin())
+                .where(inRange(from, to), readers())
                 .fetchOne());
     }
 
@@ -195,9 +205,10 @@ public class AdminViewStatsQueryRepository {
         return VIEW.viewedAt.goe(from).and(VIEW.viewedAt.lt(to));
     }
 
-    /** 회원 행이 없는 기록(비회원)은 남기고, 관리자 기록만 뺀다 */
-    private static BooleanExpression notAdmin() {
-        return MEMBER.role.isNull().or(MEMBER.role.ne(MemberRole.ADMIN));
+    /** 독자의 기록만. 관리자 기록과 검색 봇 기록을 뺀다. 회원 행이 없는 기록(비회원)은 남긴다 */
+    private static BooleanExpression readers() {
+        return MEMBER.role.isNull().or(MEMBER.role.ne(MemberRole.ADMIN))
+                .and(VIEW.deviceType.ne(DeviceType.BOT));
     }
 
     private static long orZero(Long value) {

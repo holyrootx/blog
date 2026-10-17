@@ -221,7 +221,7 @@ export function purgeAdminPost(postId, confirmation) {
 /**
  * 글 하나의 조회 기록. 화면은 1쪽부터, 서버는 0쪽부터 센다.
  *
- * viewer 는 MEMBER·ADMIN·ANONYMOUS 중 하나이고 비우면 전체다.
+ * viewer 는 MEMBER·ADMIN·ANONYMOUS·BOT 중 하나이고 비우면 전체다.
  */
 export async function getAdminPostViews(postId, { viewer = '', page = 1, size = 20 } = {}) {
   const result = await getApiData(withQuery(`${ADMIN_BLOG_API_BASE}/posts/${postId}/views`, {
@@ -239,6 +239,7 @@ export async function getAdminPostViews(postId, { viewer = '', page = 1, size = 
       member: toNumber(result?.counts?.member),
       admin: toNumber(result?.counts?.admin),
       anonymous: toNumber(result?.counts?.anonymous),
+      bot: toNumber(result?.counts?.bot),
     },
     items: Array.isArray(result?.items) ? result.items.map(toAdminPostView) : [],
     page: toNumber(result?.page) + 1,
@@ -264,6 +265,7 @@ export async function getAdminViewStats(days) {
     anonymousViews: toNumber(result?.anonymousViews),
     uniqueMembers: toNumber(result?.uniqueMembers),
     excludedAdminViews: toNumber(result?.excludedAdminViews),
+    excludedBotViews: toNumber(result?.excludedBotViews),
     daily: Array.isArray(result?.daily) ? result.daily.map((day) => ({
       date: day.date,
       pageViews: toNumber(day.pageViews),

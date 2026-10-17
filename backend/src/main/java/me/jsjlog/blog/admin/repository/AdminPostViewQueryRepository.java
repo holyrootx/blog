@@ -12,6 +12,7 @@ import me.jsjlog.blog.common.time.ServerTime;
 import me.jsjlog.blog.member.domain.MemberRole;
 import me.jsjlog.blog.member.domain.QMember;
 import me.jsjlog.blog.member.domain.QMemberStatus;
+import me.jsjlog.blog.post.domain.DeviceType;
 import me.jsjlog.blog.post.domain.QPostView;
 import org.springframework.stereotype.Repository;
 
@@ -37,7 +38,8 @@ public class AdminPostViewQueryRepository {
                         view.memberId,
                         member.nickname,
                         member.role,
-                        status.memberStatusCode
+                        status.memberStatusCode,
+                        view.deviceType
                 )
                 .from(view)
                 .leftJoin(member).on(member.id.eq(view.memberId))
@@ -52,7 +54,7 @@ public class AdminPostViewQueryRepository {
                 .map(row -> new AdminPostViewResponse(
                         row.get(view.id),
                         ServerTime.toOffset(row.get(view.viewedAt)),
-                        AdminPostViewerType.of(row.get(view.memberId), row.get(member.role)),
+                        AdminPostViewerType.of(row.get(view.memberId), row.get(member.role), row.get(view.deviceType)),
                         row.get(view.memberId),
                         row.get(member.nickname),
                         row.get(status.memberStatusCode),
@@ -77,7 +79,7 @@ public class AdminPostViewQueryRepository {
 
     /**
      * 구분별 건수. 회원 역할로 묶으면 비회원과 "회원 행을 못 찾은 회원" 이 같은 칸에 섞이므로
-     * 비회원만 따로 세서 뺀다.
+     * 회원 번호가 없는 기록(비회원·검색 봇)을 따로 세서 뺀다.
      */
     public AdminPostViewCounts countByViewer(Long postId) {
         QPostView view = QPostView.postView;
@@ -109,8 +111,9 @@ public class AdminPostViewQueryRepository {
         }
 
         long anonymous = countViews(postId, AdminPostViewerType.ANONYMOUS);
+        long bot = countViews(postId, AdminPostViewerType.BOT);
 
-        return new AdminPostViewCounts(all, user + withoutRole - anonymous, admin, anonymous);
+        return new AdminPostViewCounts(all, user + withoutRole - anonymous - bot, admin, anonymous, bot);
     }
 
     /** 블로그 전체에서 가장 오래된 기록. 번호가 시간 순으로 늘어나므로 기본 키 첫 줄만 읽는다 */
@@ -134,7 +137,8 @@ public class AdminPostViewQueryRepository {
         QMember member = QMember.member;
 
         return switch (viewer) {
-            case ANONYMOUS -> view.memberId.isNull();
+            case ANONYMOUS -> view.memberId.isNull().and(view.deviceType.ne(DeviceType.BOT));
+            case BOT -> view.memberId.isNull().and(view.deviceType.eq(DeviceType.BOT));
             case ADMIN -> member.role.eq(MemberRole.ADMIN);
             case MEMBER -> view.memberId.isNotNull().and(member.role.isNull().or(member.role.ne(MemberRole.ADMIN)));
         };

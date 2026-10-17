@@ -24,12 +24,13 @@ const fullResult = (query) => {
     view(3, 'MEMBER', { memberId: 9, nickname: '떠난다람쥐', memberStatus: 'WITHDRAWN', memberStatusName: '탈퇴' }),
     view(2, 'MEMBER', { memberId: 8, nickname: '읽는너구리', memberStatus: 'ACTIVE', memberStatusName: '활동' }),
     view(1, 'ANONYMOUS'),
+    view(0, 'BOT', { viewedAt: '2026-10-17T01:00:00Z' }),
   ];
   const items = viewer ? all.filter(item => item.viewerType === viewer) : all;
   const page = Number(query.get('page') ?? 0);
   const size = Number(query.get('size') ?? 20);
   return { postId: 1, postTitle: '조회 기록 검증 글', totalViews: 41, recordingStartedAt: '2026-10-16T15:00:00Z',
-    counts: { all: 5, member: 2, admin: 1, anonymous: 2 },
+    counts: { all: 6, member: 2, admin: 1, anonymous: 2, bot: 1 },
     items: items.slice(page * size, (page + 1) * size), page, size,
     totalElements: items.length, totalPages: Math.ceil(items.length / size) };
 };
@@ -85,17 +86,19 @@ test('조회 기록은 누적 조회수와 기준을 나눠 보여 주고, 시�
   await page.waitForFunction(() => document.querySelector('.admin-post-views__figure dd')?.textContent.trim() === '41');
   const summary = await dialog().locator('.admin-post-views__summary').innerText();
   assert.match(summary, /누적 조회수\s*41/);
-  assert.match(summary, /조회 기록\s*5건/);
+  assert.match(summary, /조회 기록\s*6건/);
   assert.match(summary, /30분 안에 다시 열면 한 번/);
   assert.match(await dialog().locator('.admin-post-views__since').innerText(), /2026\.10\.17 00:00부터 기록했습니다/);
 
   const rows = await dialog().locator('tbody tr').allInnerTexts();
-  assert.equal(rows.length, 5);
+  assert.equal(rows.length, 6);
   assert.match(rows[0], /2026\.10\.18 00:10\s+비회원\s+비회원 방문/);
   assert.match(rows[1], /관리자\s+블로그주인\s+#1/);
   assert.match(rows[2], /떠난다람쥐\s+#9\s+탈퇴/);
   assert.doesNotMatch(rows[3], /활동/, '활동 중인 회원에게는 상태 표시를 붙이지 않는다');
   assert.match(rows[4], /2026\.10\.17 12:30/);
+  assert.match(rows[5], /검색 봇\s+검색 봇 방문/);
+  await dialog().getByRole('button', { name: '검색 봇 1' }).waitFor();
   assert.deepEqual(viewRequests, [{ page: '0', size: '20' }]);
 });
 
@@ -105,7 +108,7 @@ test('구분을 고르면 첫 쪽부터 다시 받고, 쪽을 넘기면 서버 �
     return ok(route, { ...result, totalPages: 2 });
   };
   await openViews('조회 기록 검증 글');
-  await dialog().locator('tbody tr').nth(4).waitFor();
+  await dialog().locator('tbody tr').nth(5).waitFor();
 
   await dialog().getByRole('button', { name: '2', exact: true }).click();
   await page.waitForFunction(() => document.querySelectorAll('.admin-post-views tbody tr').length >= 1);

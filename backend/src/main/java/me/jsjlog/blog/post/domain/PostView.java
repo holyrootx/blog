@@ -62,7 +62,7 @@ public class PostView {
     @Column(name = "viewed_at", nullable = false, updatable = false)
     private LocalDateTime viewedAt;
 
-    /** 넷으로 접은 기기 분류. 원래 브라우저 정보는 남기지 않는다 */
+    /** 거칠게 접은 기기 분류(검색 봇 포함). 원래 브라우저 정보는 남기지 않는다 */
     @Enumerated(EnumType.STRING)
     @Column(
             name = "device_type",

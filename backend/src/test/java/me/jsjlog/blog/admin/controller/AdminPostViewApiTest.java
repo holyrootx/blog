@@ -5,6 +5,7 @@ import me.jsjlog.blog.member.domain.AuthProvider;
 import me.jsjlog.blog.member.domain.Member;
 import me.jsjlog.blog.member.repository.MemberRepository;
 import me.jsjlog.blog.post.domain.Category;
+import me.jsjlog.blog.post.domain.DeviceType;
 import me.jsjlog.blog.post.domain.Post;
 import me.jsjlog.blog.post.domain.PostView;
 import me.jsjlog.blog.post.repository.CategoryRepository;
@@ -74,6 +75,7 @@ class AdminPostViewApiTest {
         withdrawn = memberRepository.save(withdrawn);
         admin = memberRepository.save(Member.ofLocalAdmin("view-admin-" + System.nanoTime(), "hash", "블로그주인"));
 
+        record(null, BASE.minusMinutes(1), DeviceType.BOT);
         record(null, BASE);
         record(reader.getId(), BASE.plusMinutes(1));
         record(withdrawn.getId(), BASE.plusMinutes(2));
@@ -101,7 +103,7 @@ class AdminPostViewApiTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.postTitle").value("조회 기록을 볼 글"))
                 .andExpect(jsonPath("$.data.totalViews").value(0))
-                .andExpect(jsonPath("$.data.totalElements").value(5))
+                .andExpect(jsonPath("$.data.totalElements").value(6))
                 .andExpect(jsonPath("$.data.totalPages").value(3))
                 .andExpect(jsonPath("$.data.items.length()").value(2))
                 .andExpect(jsonPath("$.data.items[0].viewerType").value("ANONYMOUS"))
@@ -114,16 +116,17 @@ class AdminPostViewApiTest {
     }
 
     @Test
-    @DisplayName("구분별 건수를 주고, 회원·비회원·관리자로 거를 수 있다")
+    @DisplayName("구분별 건수를 주고, 회원·비회원·관리자·검색 봇으로 거를 수 있다")
     void countsAndFilters() throws Exception {
         mockMvc.perform(get(VIEWS, post.getId())
                         .param("viewer", "MEMBER")
                         .with(user(MemberPrincipal.ofLocal(admin))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.counts.all").value(5))
+                .andExpect(jsonPath("$.data.counts.all").value(6))
                 .andExpect(jsonPath("$.data.counts.member").value(2))
                 .andExpect(jsonPath("$.data.counts.admin").value(1))
                 .andExpect(jsonPath("$.data.counts.anonymous").value(2))
+                .andExpect(jsonPath("$.data.counts.bot").value(1))
                 .andExpect(jsonPath("$.data.totalElements").value(2))
                 .andExpect(jsonPath("$.data.items[0].memberId").value(withdrawn.getId()))
                 .andExpect(jsonPath("$.data.items[1].memberId").value(reader.getId()));
@@ -135,6 +138,13 @@ class AdminPostViewApiTest {
                 .andExpect(jsonPath("$.data.totalElements").value(2))
                 .andExpect(jsonPath("$.data.items[0].memberId").doesNotExist())
                 .andExpect(jsonPath("$.data.items[1].memberId").doesNotExist());
+
+        mockMvc.perform(get(VIEWS, post.getId())
+                        .param("viewer", "BOT")
+                        .with(user(MemberPrincipal.ofLocal(admin))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalElements").value(1))
+                .andExpect(jsonPath("$.data.items[0].viewerType").value("BOT"));
     }
 
     @Test
@@ -169,6 +179,10 @@ class AdminPostViewApiTest {
     }
 
     private void record(Long memberId, LocalDateTime viewedAt) {
-        postViewRepository.saveAndFlush(PostView.of(post.getId(), memberId, viewedAt));
+        record(memberId, viewedAt, DeviceType.DESKTOP);
+    }
+
+    private void record(Long memberId, LocalDateTime viewedAt, DeviceType deviceType) {
+        postViewRepository.saveAndFlush(PostView.of(post.getId(), memberId, viewedAt, deviceType));
     }
 }
