@@ -63,6 +63,8 @@
   --admin-card-line: #e6e0d6;
   --admin-list-line: #f0ebe3;
   --admin-accent: #d2762f;
+  /* 통계 막대. 다크 모드 값은 강조색보다 한 단계 어둡다 — 밝은 막대가 어두운 바탕에서 번져 보이지 않게 */
+  --admin-chart-bar: #d2762f;
   --admin-accent-strong: #a84f1b;
   --admin-accent-dark: #8a4c1e;
   --admin-accent-muted: var(--admin-accent-dark);
@@ -245,6 +247,7 @@
   --admin-card-line: #332e29;
   --admin-list-line: #2a2622;
   --admin-accent: #e48a48;
+  --admin-chart-bar: #d27a3d;
   --admin-accent-strong: #ec9f68;
   --admin-accent-dark: #f2b27f;
   --admin-accent-line: #5c3d24;

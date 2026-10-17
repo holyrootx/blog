@@ -418,9 +418,26 @@
 }
 
 .post-card {
+  position: relative;
   display: block;
   min-width: 0;
   color: inherit;
+}
+
+/* 회원이 연 적 있는 글. 이미지 위에 겹쳐서 표시가 와도 글줄이 밀리지 않는다.
+   바탕과 글자를 본문 색의 반대로 둬서 밝은 사진과 어두운 사진 어느 쪽에서도 읽힌다 */
+.post-card__viewed {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--text);
+  color: var(--surface);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.5;
+  pointer-events: none;
 }
 
 .post-card:hover .post-card__title,

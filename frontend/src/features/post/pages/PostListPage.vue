@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 
 import HighlightedText from '../../search/components/HighlightedText.vue';
+import ViewedPostBadge from '../../member/components/ViewedPostBadge.vue';
 import { getPosts } from '../api/postApi';
 import { loadCategories } from '../data/categoryStore';
 import { readPostListQuery, toPostListQuery } from '../data/postListQuery';
@@ -254,6 +255,7 @@ loadCategories().then((found) => {
                 <span>조회 {{ post.views }}</span>
               </div>
             </div>
+            <ViewedPostBadge :post-id="post.id" />
           </RouterLink>
         </div>
       </section>
@@ -283,6 +285,7 @@ loadCategories().then((found) => {
             <span>조회 {{ post.views }}</span>
           </div>
         </div>
+        <ViewedPostBadge :post-id="post.id" />
       </RouterLink>
     </div>
 

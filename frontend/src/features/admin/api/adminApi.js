@@ -218,6 +218,106 @@ export function purgeAdminPost(postId, confirmation) {
   });
 }
 
+/**
+ * 글 하나의 조회 기록. 화면은 1쪽부터, 서버는 0쪽부터 센다.
+ *
+ * viewer 는 MEMBER·ADMIN·ANONYMOUS·BOT 중 하나이고 비우면 전체다.
+ */
+export async function getAdminPostViews(postId, { viewer = '', page = 1, size = 20 } = {}) {
+  const result = await getApiData(withQuery(`${ADMIN_BLOG_API_BASE}/posts/${postId}/views`, {
+    viewer,
+    page: Math.max(0, page - 1),
+    size,
+  }));
+
+  return {
+    postTitle: result?.postTitle ?? '',
+    totalViews: toNumber(result?.totalViews),
+    recordingStartedAt: result?.recordingStartedAt ?? null,
+    counts: {
+      all: toNumber(result?.counts?.all),
+      member: toNumber(result?.counts?.member),
+      admin: toNumber(result?.counts?.admin),
+      anonymous: toNumber(result?.counts?.anonymous),
+      bot: toNumber(result?.counts?.bot),
+    },
+    items: Array.isArray(result?.items) ? result.items.map(toAdminPostView) : [],
+    page: toNumber(result?.page) + 1,
+    totalElements: toNumber(result?.totalElements),
+    totalPages: toNumber(result?.totalPages),
+  };
+}
+
+/**
+ * 기간 조회 통계 요약. days 는 7 또는 30 이다.
+ * 날짜는 서울 기준 'YYYY-MM-DD' 문자열 그대로 둔다 — Date 로 바꾸면 브라우저 시간대에 따라 하루가 밀린다.
+ */
+export async function getAdminViewStats(days) {
+  const result = await getApiData(withQuery(`${ADMIN_BLOG_API_BASE}/stats/views`, { days }));
+
+  return {
+    days: toNumber(result?.days),
+    from: result?.from ?? '',
+    to: result?.to ?? '',
+    recordingStartedAt: result?.recordingStartedAt ?? null,
+    pageViews: toNumber(result?.pageViews),
+    memberViews: toNumber(result?.memberViews),
+    anonymousViews: toNumber(result?.anonymousViews),
+    uniqueMembers: toNumber(result?.uniqueMembers),
+    excludedAdminViews: toNumber(result?.excludedAdminViews),
+    excludedBotViews: toNumber(result?.excludedBotViews),
+    daily: Array.isArray(result?.daily) ? result.daily.map((day) => ({
+      date: day.date,
+      pageViews: toNumber(day.pageViews),
+      memberViews: toNumber(day.memberViews),
+      anonymousViews: toNumber(day.anonymousViews),
+    })) : [],
+    devices: Array.isArray(result?.devices) ? result.devices.map((device) => ({
+      deviceType: device.deviceType,
+      pageViews: toNumber(device.pageViews),
+    })) : [],
+  };
+}
+
+/** 기간 안 조회 기록이 많은 글부터. 화면은 1쪽부터, 서버는 0쪽부터 센다 */
+export async function getAdminViewStatsPosts({ days, page = 1, size = 10 } = {}) {
+  const result = await getApiData(withQuery(`${ADMIN_BLOG_API_BASE}/stats/views/posts`, {
+    days,
+    page: Math.max(0, page - 1),
+    size,
+  }));
+
+  return {
+    items: Array.isArray(result?.items) ? result.items.map((post) => ({
+      id: post.postId,
+      title: post.title ?? '찾을 수 없는 글',
+      status: post.status ?? null,
+      deleted: post.deleted === true,
+      pageViews: toNumber(post.pageViews),
+      uniqueMembers: toNumber(post.uniqueMembers),
+      anonymousViews: toNumber(post.anonymousViews),
+      totalViews: toNumber(post.totalViews),
+      commentCount: toNumber(post.commentCount),
+      likeCount: toNumber(post.likeCount),
+    })) : [],
+    page: toNumber(result?.page) + 1,
+    totalElements: toNumber(result?.totalElements),
+    totalPages: toNumber(result?.totalPages),
+  };
+}
+
+function toAdminPostView(view) {
+  return {
+    id: view.id,
+    viewedAt: view.viewedAt ?? null,
+    viewerType: view.viewerType ?? 'ANONYMOUS',
+    memberId: view.memberId ?? null,
+    nickname: view.nickname ?? '',
+    memberStatus: view.memberStatus ?? null,
+    memberStatusName: view.memberStatusName ?? '',
+  };
+}
+
 export async function getAdminComments(condition = {}) {
   const result = await getApiData(withQuery(`${ADMIN_BLOG_API_BASE}/comments`, condition));
 

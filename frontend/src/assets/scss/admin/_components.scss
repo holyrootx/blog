@@ -1337,6 +1337,76 @@
   justify-content: flex-end;
 }
 
+/* 조회 기록 팝업. 기준이 다른 두 숫자를 나란히 두고 각자의 기준을 바로 아래 적는다 */
+.admin-post-views {
+  display: grid;
+  gap: 14px;
+}
+
+.admin-post-views__summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
+.admin-post-views__figure {
+  padding: 14px 16px;
+  border: 1px solid var(--admin-card-line);
+  border-radius: 8px;
+  background: var(--admin-surface-subtle);
+}
+
+.admin-post-views__figure dt {
+  color: var(--admin-meta);
+  font-size: 12px;
+}
+
+.admin-post-views__figure dd {
+  margin: 4px 0 0;
+  color: var(--admin-text-strong);
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-post-views__figure dd.admin-post-views__hint {
+  margin-top: 6px;
+  color: var(--admin-text-muted);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.5;
+  word-break: keep-all;
+}
+
+/* 숫자 한 줄과 같은 높이를 미리 잡는다. 값이 오면 카드 높이가 그대로다 */
+.admin-post-views__value-skeleton {
+  width: 72px;
+  height: 30px;
+}
+
+.admin-post-views__since {
+  margin: 0;
+  color: var(--admin-meta);
+  font-size: 12px;
+}
+
+.admin-post-views__anonymous {
+  color: var(--admin-text-muted);
+}
+
+.admin-post-views__member {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.admin-post-views__member em {
+  color: var(--admin-meta);
+  font-size: 11px;
+  font-style: normal;
+}
+
 .admin-post__confirm {
   margin: 0;
   color: var(--admin-text-strong);

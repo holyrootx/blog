@@ -5,10 +5,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import me.jsjlog.blog.common.response.ApiResponse;
 import me.jsjlog.blog.common.security.MemberPrincipal;
+import me.jsjlog.blog.post.domain.DeviceType;
 import me.jsjlog.blog.post.domain.PostReactionType;
 import me.jsjlog.blog.post.dto.*;
 import me.jsjlog.blog.post.service.PostService;
 import me.jsjlog.blog.post.service.PostViewService;
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -61,14 +63,21 @@ public class PostController {
         return ApiResponse.ok(postService.getPostSuggestions(q, size));
     }
 
+    /**
+     * 글 상세. 조회 기록에 남길 기기 분류는 브라우저 정보에서 여기서 바로 접는다 —
+     * 원래 문자열은 아래로 내려보내지 않는다.
+     */
     @GetMapping("/blog/posts/{postId}")
     public ApiResponse<PostDetailResponse> getPostDetail(
             @PathVariable Long postId,
             HttpSession session,
-            @AuthenticationPrincipal MemberPrincipal principal
+            @AuthenticationPrincipal MemberPrincipal principal,
+            @RequestHeader(value = HttpHeaders.USER_AGENT, required = false) String userAgent,
+            @RequestHeader(value = "Sec-CH-UA-Mobile", required = false) String mobileHint
     ) {
         Long memberId = principal == null ? null : principal.getId();
-        PostDetailResponse postDetail = postViewService.getPostDetail(postId, session, memberId);
+        PostDetailResponse postDetail = postViewService.getPostDetail(
+                postId, session, memberId, DeviceType.from(userAgent, mobileHint));
         return ApiResponse.ok(postDetail);
     }
 

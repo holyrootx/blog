@@ -2,6 +2,8 @@
 import { computed } from 'vue';
 import { RouterLink } from 'vue-router';
 
+import ViewedPostBadge from '../../member/components/ViewedPostBadge.vue';
+
 const props = defineProps({
   posts: {
     type: Array,
@@ -72,6 +74,7 @@ const moreQuery = computed(() => (props.categoryId ? { category: String(props.ca
             <span>조회 {{ post.views }}</span>
           </div>
         </div>
+        <ViewedPostBadge :post-id="post.id" />
       </RouterLink>
     </div>
   </section>

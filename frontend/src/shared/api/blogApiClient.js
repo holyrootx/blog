@@ -148,9 +148,10 @@ export async function sendApiFile(path, formData) {
   return payload?.data ?? null;
 }
 
-function sendOnce(path, method, body) {
+function sendOnce(path, method, body, keepalive) {
   return fetch(path, {
     method,
+    keepalive,
     headers: {
       Accept: 'application/json',
       'Content-Type': 'application/json',
@@ -163,10 +164,13 @@ function sendOnce(path, method, body) {
 /**
  * 값을 바꾸는 요청(POST·PUT·DELETE).
  * 실패하면 서버가 준 메시지를 그대로 던진다 — 화면에서 왜 실패했는지 보여줘야 하기 때문.
+ *
+ * {@code keepalive} 는 화면을 떠나는 순간 보내는 작은 저장에만 쓴다. 켜지 않으면 탭을 닫거나
+ * 다른 앱으로 넘어갈 때 브라우저가 요청을 끊는다.
  */
-export async function sendApiData(path, { method, body } = {}) {
+export async function sendApiData(path, { method, body, keepalive = false } = {}) {
   const generation = authenticationGeneration;
-  let response = await sendOnce(path, method, body);
+  let response = await sendOnce(path, method, body, keepalive);
 
   // 서버가 재시작되거나 로그인·로그아웃으로 토큰이 새로 발급되면 화면이 든 값이 낡는다.
   // 그대로 두면 새로고침 전까지 저장·등록이 전부 막히므로, 한 번만 다시 받아 재시도한다
@@ -174,7 +178,7 @@ export async function sendApiData(path, { method, body } = {}) {
     await refreshCsrf().catch(() => null);
 
     // 재인증 중 끝난 이전 요청을 새 계정의 세션으로 재실행하지 않는다.
-    if (generation === authenticationGeneration) response = await sendOnce(path, method, body);
+    if (generation === authenticationGeneration) response = await sendOnce(path, method, body, keepalive);
   }
 
   // 에러 응답도 본문이 있으므로 먼저 읽는다. 본문이 없을 수도 있어 실패는 삼킨다
