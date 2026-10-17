@@ -306,6 +306,32 @@ test('signed-out UI and mobile/desktop comments retain layout and avatar fallbac
   assert.equal(requests.length, 0);
 });
 
+test('signed-out reply asks for login in place and returns to that comment', async () => {
+  await showComments(pageOf([comment(1), comment(2)]));
+  await page.evaluate(() => window.fixture.member(null));
+  const replyButton = page.locator('#comment-1').getByRole('button', { name: '답글', exact: true });
+  const login = page.locator('#comment-1').getByRole('button', { name: '로그인하고 답글 쓰기' });
+
+  await replyButton.click();
+  await login.waitFor();
+  assert.equal(await page.locator('.reply-form').count(), 0);
+  await page.waitForFunction(() => document.activeElement?.textContent.trim() === '로그인하고 답글 쓰기');
+
+  await page.locator('#comment-1').getByRole('button', { name: '취소', exact: true }).click();
+  await count('.comment-signin--reply', 0);
+
+  await replyButton.click();
+  await login.click();
+  assert.equal(await page.evaluate(() => window.fixture.route()), 'member-login');
+  assert.equal(await page.evaluate(() => sessionStorage.getItem('blog.member.returnPath')), '/#comment-1');
+
+  // 로그인이 확인되면 같은 자리에 답글 칸이 열린다
+  await page.evaluate(() => window.fixture.member({ id: 1, nickname: '테스트 회원', role: 'USER' }));
+  await page.locator('#comment-1 .reply-form textarea').waitFor();
+  await count('.comment-signin--reply', 0);
+  assert.equal(requests.length, 0);
+});
+
 test('late edit A response preserves the open B draft', async () => {
   let release;
   handleApi = route => new Promise(resolve => { release = async () => { await ok(route); resolve(); }; });

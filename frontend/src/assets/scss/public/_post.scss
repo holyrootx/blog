@@ -1117,6 +1117,13 @@
   font-size: 14px;
 }
 
+/* 답글 칸 자리에 놓인다. 답글 폼과 같은 크기로 맞춘다 */
+.comment-signin--reply {
+  margin-bottom: 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+}
+
 .comment-form__input,
 .reply-form__input {
   flex: 1;

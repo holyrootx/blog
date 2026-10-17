@@ -142,6 +142,16 @@ function goToLogin() {
   router.push({ name: 'member-login' });
 }
 
+function goToLoginToReply(commentId) {
+  // 돌아오면 답하려던 댓글로 바로 간다. 알림과 같은 #comment- 주소라 위치를 찾는 일은 그쪽이 맡는다
+  rememberReturnPath(router.resolve({
+    path: route.path,
+    query: route.query,
+    hash: `#comment-${commentId}`,
+  }).fullPath);
+  router.push({ name: 'member-login' });
+}
+
 function focusCommentInput() {
   const target = composer.value?.$el ?? signinBox.value;
   target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -344,8 +354,29 @@ watch(() => props.comments, () => { replyTargetId.value = null; });
             :disabled="replyLoadingIds.has(comment.id)"
             @click="loadReplies(comment)"
           >{{ replyLoadingIds.has(comment.id) ? '답글 불러오는 중…' : replyErrors.has(comment.id) ? '답글 다시 시도' : '답글 더 보기' }}</button>
+          <!-- 로그인하지 않았으면 답글 칸 대신 로그인으로 보낸다. 맨 위 댓글 칸과 같은 이유다.
+               커서는 입력칸이 놓일 자리의 로그인 단추로 옮긴다 — 그래서 같은 ref 를 쓴다 -->
+          <div
+            v-if="replyTargetId === comment.id && !isSignedIn"
+            class="comment-signin comment-signin--reply"
+          >
+            <p class="comment-signin__text">답글을 달려면 로그인이 필요합니다.</p>
+            <div class="comment-form__actions">
+              <button class="ui-button" type="button" @click="toggleReply(comment.id)">
+                취소
+              </button>
+              <button
+                ref="replyInput"
+                class="ui-button ui-button--accent"
+                type="button"
+                @click="goToLoginToReply(comment.id)"
+              >
+                로그인하고 답글 쓰기
+              </button>
+            </div>
+          </div>
           <form
-            v-if="replyTargetId === comment.id"
+            v-else-if="replyTargetId === comment.id"
             class="reply-form"
             @submit.prevent="changeComment(submitReply, comment.id)"
           >
