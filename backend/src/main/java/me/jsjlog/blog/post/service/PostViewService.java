@@ -1,16 +1,34 @@
 package me.jsjlog.blog.post.service;
 
 import jakarta.servlet.http.HttpSession;
-import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import me.jsjlog.blog.post.dto.PostDetailResponse;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-/** 글 상세 조회와 세션당 1회 조회수 반영을 함께 조정한다. */
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDateTime;
+
+/** 글 상세 조회와 세션당 1회 조회수 반영, 조회 기록을 함께 조정한다. */
+@Slf4j
 @Service
-@RequiredArgsConstructor
 public class PostViewService {
 
     private final PostService postService;
+    private final PostViewRecorder postViewRecorder;
+    private final Clock clock;
+
+    @Autowired
+    public PostViewService(PostService postService, PostViewRecorder postViewRecorder) {
+        this(postService, postViewRecorder, Clock.systemDefaultZone());
+    }
+
+    PostViewService(PostService postService, PostViewRecorder postViewRecorder, Clock clock) {
+        this.postService = postService;
+        this.postViewRecorder = postViewRecorder;
+        this.clock = clock;
+    }
 
     public PostDetailResponse getPostDetail(Long postId, HttpSession session, Long memberId) {
         PostViewHistory history = getOrCreateHistory(session);
@@ -24,8 +42,29 @@ public class PostViewService {
             if (firstView) {
                 history.record(postId);
             }
+            recordVisit(history, postId, memberId);
 
             return detail;
+        }
+    }
+
+    /**
+     * 조회 기록은 덤이다. 이것 때문에 글을 못 읽으면 본말이 뒤집힌다.
+     *
+     * <p>저장에 성공했을 때만 세션에 표시한다. 실패한 기록을 표시하면 30분 동안 다시 시도하지 않는다.
+     * 빠진 기록은 로그로만 알 수 있으므로 경고로 남긴다.</p>
+     */
+    private void recordVisit(PostViewHistory history, Long postId, Long memberId) {
+        Instant now = clock.instant();
+        if (!history.shouldRecordVisit(postId, memberId, now)) {
+            return;
+        }
+
+        try {
+            postViewRecorder.record(postId, memberId, LocalDateTime.ofInstant(now, clock.getZone()));
+            history.markVisitRecorded(postId, memberId, now);
+        } catch (RuntimeException e) {
+            log.warn("[recordVisit] 조회 기록 실패. postId={}, memberId={}", postId, memberId, e);
         }
     }
 

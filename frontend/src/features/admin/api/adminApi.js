@@ -218,6 +218,47 @@ export function purgeAdminPost(postId, confirmation) {
   });
 }
 
+/**
+ * 글 하나의 조회 기록. 화면은 1쪽부터, 서버는 0쪽부터 센다.
+ *
+ * viewer 는 MEMBER·ADMIN·ANONYMOUS 중 하나이고 비우면 전체다.
+ */
+export async function getAdminPostViews(postId, { viewer = '', page = 1, size = 20 } = {}) {
+  const result = await getApiData(withQuery(`${ADMIN_BLOG_API_BASE}/posts/${postId}/views`, {
+    viewer,
+    page: Math.max(0, page - 1),
+    size,
+  }));
+
+  return {
+    postTitle: result?.postTitle ?? '',
+    totalViews: toNumber(result?.totalViews),
+    recordingStartedAt: result?.recordingStartedAt ?? null,
+    counts: {
+      all: toNumber(result?.counts?.all),
+      member: toNumber(result?.counts?.member),
+      admin: toNumber(result?.counts?.admin),
+      anonymous: toNumber(result?.counts?.anonymous),
+    },
+    items: Array.isArray(result?.items) ? result.items.map(toAdminPostView) : [],
+    page: toNumber(result?.page) + 1,
+    totalElements: toNumber(result?.totalElements),
+    totalPages: toNumber(result?.totalPages),
+  };
+}
+
+function toAdminPostView(view) {
+  return {
+    id: view.id,
+    viewedAt: view.viewedAt ?? null,
+    viewerType: view.viewerType ?? 'ANONYMOUS',
+    memberId: view.memberId ?? null,
+    nickname: view.nickname ?? '',
+    memberStatus: view.memberStatus ?? null,
+    memberStatusName: view.memberStatusName ?? '',
+  };
+}
+
 export async function getAdminComments(condition = {}) {
   const result = await getApiData(withQuery(`${ADMIN_BLOG_API_BASE}/comments`, condition));
 
