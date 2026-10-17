@@ -1,5 +1,6 @@
 package me.jsjlog.blog.common.security.oauth;
 
+import me.jsjlog.blog.support.MySqlTestDatabase;
 import java.time.LocalDateTime;
 import java.time.Instant;
 import java.util.List;
@@ -71,6 +72,10 @@ class OAuthSignupIntegrityTest {
 
     @DynamicPropertySource
     static void isolatedDatabase(DynamicPropertyRegistry registry) {
+        if (MySqlTestDatabase.enabled()) {
+            MySqlTestDatabase.configure(registry, "oauth_signup_integrity");
+            return;
+        }
         String port = System.getenv("OAUTH_TEST_MYSQL_PORT");
         if (port != null && (!port.matches("[0-9]{4,5}")
                 || Integer.parseInt(port) < 1024 || Integer.parseInt(port) > 65535)) {

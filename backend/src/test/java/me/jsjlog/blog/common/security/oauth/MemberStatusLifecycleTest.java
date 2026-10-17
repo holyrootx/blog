@@ -1,5 +1,8 @@
 package me.jsjlog.blog.common.security.oauth;
 
+import me.jsjlog.blog.support.MySqlTestDatabase;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -50,9 +53,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
  * 가입·복원·새로 만들기는 실제 HTTP 요청으로 하고, 소셜 로그인 판단은 제공자 응답만 고정한 채 실제 서비스로 한다.
  * 기간이 지난 상황은 복원 기한을 과거로 당겨서 만든다.</p>
  */
-@SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:member_status_lifecycle;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1")
+@SpringBootTest
 @AutoConfigureMockMvc
 class MemberStatusLifecycleTest {
+
+    @DynamicPropertySource
+    static void database(DynamicPropertyRegistry registry) {
+        MySqlTestDatabase.configure(registry, "member_status_lifecycle");
+    }
 
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
