@@ -118,6 +118,11 @@ public class AdminCommentService {
 
         // delete() 가 아니다. 그건 글쓴이가 지울 때 쓰는 자리라, 여기서 부르면
         // 가려진 사람이 자기가 지운 줄 알게 된다
+        // 작성자가 지운 댓글은 되살리지 않는다. 운영자는 자기가 가린 댓글만 되돌린다
+        if (!request.hidden() && comment.isDeletedByWriter()) {
+            throw new BlogException(ErrorCode.COMMENT_DELETED_BY_WRITER);
+        }
+
         if (request.hidden()) {
             comment.hideByAdmin();
 

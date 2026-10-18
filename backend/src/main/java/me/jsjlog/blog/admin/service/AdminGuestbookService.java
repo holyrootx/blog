@@ -112,6 +112,11 @@ public class AdminGuestbookService {
         Member admin = findActiveAdmin(adminId);
         GuestbookEntry entry = lockEntry(entryId);
 
+        // 쓴 사람이 지운 글은 되살리지 않는다. 운영자는 자기가 가린 글만 되돌린다
+        if (!hidden && entry.isDeletedByWriter()) {
+            throw new BlogException(ErrorCode.GUESTBOOK_DELETED_BY_WRITER);
+        }
+
         if (hidden) {
             // 보이던 글을 가릴 때만 알린다. 쓴 사람이 이미 지운 글이나 이미 가린 글을 다시 가리는 것은
             // 쓴 사람에게 새로 일어난 일이 아니다
@@ -144,8 +149,9 @@ public class AdminGuestbookService {
         }
     }
 
+    /** 쓴 사람이 지운 글의 원문 파기 예정일. 지운 뒤 운영자가 가렸어도 지운 시각부터 센다 */
     private LocalDateTime retainedUntil(GuestbookEntry entry) {
-        if (entry.isContentPurged() || entry.getDeletedAt() == null || entry.isHiddenByAdmin()) {
+        if (entry.isContentPurged() || entry.getDeletedAt() == null) {
             return null;
         }
 

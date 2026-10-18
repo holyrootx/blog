@@ -38,6 +38,13 @@ public record AdminCommentSummaryResponse(
 
         /** 글쓴이가 지운 원문을 보관 기간이 지나 파기했는가. 목록에 빈 줄 대신 까닭을 쓴다 */
         boolean contentPurged,
-        boolean postPurged
+        boolean postPurged,
+
+        /**
+         * 글쓴이가 지운 댓글인가. 지운 뒤 운영자가 가린 것도 포함한다.
+         *
+         * <p>운영자는 자기가 가린 댓글만 되돌린다. 화면은 이 값으로 되돌리기 단추를 감춘다.</p>
+         */
+        boolean deletedByWriter
 ) {
 }

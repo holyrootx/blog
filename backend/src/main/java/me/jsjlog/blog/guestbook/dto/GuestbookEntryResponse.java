@@ -40,20 +40,24 @@ public record GuestbookEntryResponse(
     ) {
         boolean mine = entry.isWrittenBy(viewerId);
         boolean readable = !entry.isSecret() || mine || viewerIsAdmin;
+        // 운영자가 가린 글은 쓴 사람에게 자리만 남기고 본문과 답글은 싣지 않는다. 가린 동안 내용은
+        // 관리자만 본다(개인정보 처리방침). 댓글도 가린 본문은 쓴 사람 목록에서 비워 둔다
+        boolean hidden = entry.isDeleted() && entry.isHiddenByAdmin();
+        boolean showContent = readable && !hidden;
 
         return new GuestbookEntryResponse(
                 entry.getId(),
                 entry.getMember().getNickname(),
                 entry.getMember().getRole() == MemberRole.ADMIN,
-                readable ? entry.getContent() : null,
+                showContent ? entry.getContent() : null,
                 entry.isSecret(),
                 readable,
                 mine,
                 entry.isEdited(),
-                entry.isDeleted() && entry.isHiddenByAdmin(),
+                hidden,
                 reportedByMe,
                 entry.getCreatedAt(),
-                readable && entry.hasReply() ? reply(entry) : null
+                showContent && entry.hasReply() ? reply(entry) : null
         );
     }
 

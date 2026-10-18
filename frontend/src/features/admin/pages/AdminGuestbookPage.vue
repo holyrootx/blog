@@ -127,8 +127,9 @@ async function onChanged(message) {
 
 function stateLabel(row) {
   if (row.contentPurged) return '파기됨';
+  // 쓴 사람이 지운 뒤 운영자가 가린 글도 "지움" 이다. 되살릴 수 없는 글이라 "가림" 과 갈라 둔다
+  if (row.deletedByWriter) return '지움';
   if (row.hiddenByAdmin) return '가림';
-  if (row.deleted) return '지움';
   return '공개';
 }
 
