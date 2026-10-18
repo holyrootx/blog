@@ -14,7 +14,8 @@ import { loadCategories } from '../../post/data/categoryStore';
  * 씌울 값어치가 없고, 덮으면 보던 글이 가려져서 "어디로 가지" 를 고르는 동안 맥락을
  * 잃는다. 헤더의 회원 메뉴도 같은 방식이다.</p>
  *
- * <p>약관 같은 것은 담지 않는다. 여기는 글을 찾아가는 자리이고, 그것들은 푸터에 있다.</p>
+ * <p>약관 같은 것은 담지 않는다. 여기는 글을 찾아가는 자리이고, 그것들은 푸터에 있다.
+ * 방명록은 담는다 — 읽으러 온 사람이 찾아가는 곳이라 푸터 구석보다 여기가 맞다.</p>
  */
 const route = useRoute();
 
@@ -80,6 +81,9 @@ watch(() => route.fullPath, close);
         class="site-menu__link"
         :to="{ name: 'post-list', query: { category: String(category.id) } }"
       >{{ category.name }}</RouterLink>
+
+      <!-- 글이 아니라 블로그 주인에게 남기는 자리라 분류 아래에 따로 둔다 -->
+      <RouterLink class="site-menu__link site-menu__link--separated" :to="{ name: 'guestbook' }">방명록</RouterLink>
     </nav>
   </div>
 </template>

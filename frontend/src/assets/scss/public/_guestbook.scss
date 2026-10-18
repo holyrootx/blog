@@ -1,0 +1,151 @@
+@use '../base/breakpoints' as bp;
+
+/* ── 방명록 ─────────────────────────────────
+   글 댓글의 생김새(.comment · .reply · .comment-form)를 그대로 쓴다.
+   여기에는 방명록에만 있는 것 — 쪽 틀, 비밀글 표시, 비밀글 고르기 — 만 둔다 */
+
+/* 카드 바탕은 .public-shell__main 이 깐다. 글 목록과 같은 바깥 여백을 쓴다 */
+.guestbook {
+  padding: 32px 48px 64px;
+}
+
+/* 한 줄이 너무 길면 읽기 어렵다. 본문 폭(약관 화면 760px)에 가깝게 가운데에 둔다 */
+.guestbook__inner {
+  width: min(100%, 820px);
+  margin: 0 auto;
+}
+
+.guestbook__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 12px;
+  margin-bottom: 24px;
+  padding-bottom: 18px;
+  border-bottom: 2px solid var(--post-heading);
+}
+
+.guestbook__title {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.guestbook__count {
+  margin: 0;
+  color: var(--accent-dark);
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.guestbook__count-skeleton {
+  width: 36px;
+  height: 20px;
+}
+
+.guestbook__note {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--text-subtle);
+  font-size: 13px;
+}
+
+/* 쓰는 칸과 같은 높이를 잡아 둔다. 로그인 확인이 끝나도 아래 목록이 밀리지 않는다 */
+.guestbook__form-skeleton {
+  margin-bottom: 28px;
+}
+
+.guestbook__feedback {
+  margin-top: 20px;
+}
+
+.guestbook__empty {
+  padding: 56px 0;
+  color: var(--text-subtle);
+  font-size: 14px;
+  text-align: center;
+}
+
+/* 다른 쪽을 받는 동안 보던 목록을 흐리게 남긴다. 비우면 화면이 접혔다 다시 펴진다 */
+.guestbook__list--refreshing {
+  opacity: 0.55;
+  transition: opacity 0.15s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .guestbook__list--refreshing {
+    transition: none;
+  }
+}
+
+/* 줄바꿈을 살린다. 방명록은 인사말이라 행을 나눠 쓰는 사람이 많다 */
+.guestbook-entry__text {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+/* 비밀글 표시. 운영자 표시(.comment__badge)와 같은 자리·크기로, 색만 가라앉힌다 */
+.guestbook-entry__secret {
+  padding: 2px 6px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--text-muted);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+/* 비밀글 고르기. 등록 단추 옆에 놓인다 */
+.guestbook-secret {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.guestbook-secret input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--accent-strong);
+  cursor: pointer;
+}
+
+/* 고치는 칸에서는 취소·저장 앞에 놓는다. 단추와 붙지 않게 오른쪽 틈을 둔다 */
+.guestbook-secret--edit {
+  margin-right: auto;
+}
+
+/* 알림으로 찾아온 글. 글 댓글의 :target 강조와 같은 모양이다.
+   라우터가 주소만 바꾸면 :target 이 따라오지 않아서 클래스로 붙인다 */
+.guestbook-entry--target {
+  border-radius: 8px;
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 8px var(--accent-soft);
+}
+
+.guestbook-entry .comment__meta {
+  flex-wrap: wrap;
+}
+
+@include bp.upto(sm) {
+  .guestbook {
+    padding: 24px 16px 48px;
+  }
+
+  .guestbook__title {
+    font-size: 24px;
+  }
+
+  /* 폰에서는 답글 들여쓰기를 줄인다. 52px 를 다 쓰면 답글 한 줄에 몇 글자 안 들어간다 */
+  .guestbook-entry .comment__replies {
+    margin-left: 0;
+  }
+
+  .guestbook-entry .comment__main {
+    gap: 10px;
+  }
+}

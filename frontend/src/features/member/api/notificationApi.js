@@ -37,8 +37,10 @@ function toNotification(notification) {
     type: notification?.type ?? '',
     actorNickname: notification?.actorNickname ?? '',
     postId: notification?.postId ?? null,
-    postTitle: notification?.postTitle ?? '',
+    // 방명록 알림은 글이 없다. 알림 아래 "어디서" 자리에 방명록이라고 적는다
+    postTitle: notification?.postTitle ?? (notification?.guestbookEntryId ? '방명록' : ''),
     commentId: notification?.commentId ?? null,
+    guestbookEntryId: notification?.guestbookEntryId ?? null,
     preview: notification?.preview ?? '',
     createdAt: notification?.createdAt ?? '',
     unread: Boolean(notification?.unread),

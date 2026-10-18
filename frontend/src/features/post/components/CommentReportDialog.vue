@@ -39,6 +39,11 @@ const props = defineProps({
     type: String,
     default: '',
   },
+  /** 무엇을 신고하는지. 방명록에서는 "방명록 글" 로 준다. 받침이 있는 말이라 "~이" 가 맞는다 */
+  subject: {
+    type: String,
+    default: '댓글',
+  },
 });
 
 const emit = defineEmits(['submit', 'close']);
@@ -82,8 +87,8 @@ function submit() {
   <!-- 덮개·제목·× 는 공용 모달이 만든다. 여기는 안에 들어갈 것만 안다 -->
   <BaseModal
     :open="open"
-    title="댓글 신고"
-    :description="target ? `${target} 님의 댓글` : ''"
+    :title="`${subject} 신고`"
+    :description="target ? `${target} 님의 ${subject}` : ''"
     size="small"
     @close="emit('close')"
   >
@@ -117,7 +122,7 @@ function submit() {
     ></textarea>
 
     <p class="report-dialog__note">
-      신고해도 댓글이 바로 숨겨지지는 않습니다. 확인 후 조치하며 개별 회신은 드리지 않습니다.
+      신고해도 {{ subject }}이 바로 숨겨지지는 않습니다. 확인 후 조치하며 개별 회신은 드리지 않습니다.
     </p>
 
     <p v-if="error" class="report-dialog__error" role="alert">{{ error }}</p>

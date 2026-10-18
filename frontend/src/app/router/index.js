@@ -24,6 +24,7 @@ const OAuthCallbackPage = () => import('../../features/member/pages/OAuthCallbac
 const MemberSettingsPage = () => import('../../features/member/pages/MemberSettingsPage.vue');
 const PrivacyPolicyPage = () => import('../../features/legal/pages/PrivacyPolicyPage.vue');
 const TermsPage = () => import('../../features/legal/pages/TermsPage.vue');
+const GuestbookPage = () => import('../../features/guestbook/pages/GuestbookPage.vue');
 const PublicLayout = () => import('../PublicLayout.vue');
 const AdminLayout = () => import('../../features/admin/components/AdminLayout.vue');
 const AdminLoginPage = () => import('../../features/admin/pages/AdminLoginPage.vue');
@@ -33,6 +34,7 @@ const AdminCategoryPage = () => import('../../features/admin/pages/AdminCategory
 const AdminPostPage = () => import('../../features/admin/pages/AdminPostPage.vue');
 const AdminPostEditPage = () => import('../../features/admin/pages/AdminPostEditPage.vue');
 const AdminCommentPage = () => import('../../features/admin/pages/AdminCommentPage.vue');
+const AdminGuestbookPage = () => import('../../features/admin/pages/AdminGuestbookPage.vue');
 const AdminHomeSettingsPage = () => import('../../features/admin/pages/AdminHomeSettingsPage.vue');
 const AdminMemberPage = () => import('../../features/admin/pages/AdminMemberPage.vue');
 const AdminImagePage = () => import('../../features/admin/pages/AdminImagePage.vue');
@@ -105,6 +107,16 @@ const router = createRouter({
           meta: {
             title: '내 설정',
             robots: 'noindex,follow',
+          },
+        },
+        // 운영 Nginx 의 SPA 경로 허용 목록(scripts/nginx/blog-spa-routes.conf)에도 있어야
+        // 새로고침·직접 접속이 404 로 떨어지지 않는다
+        {
+          path: 'guestbook',
+          name: 'guestbook',
+          component: GuestbookPage,
+          meta: {
+            title: '방명록',
           },
         },
         {
@@ -231,6 +243,15 @@ const router = createRouter({
           component: AdminCommentPage,
           meta: {
             title: '댓글 관리',
+            group: '콘텐츠',
+          },
+        },
+        {
+          path: 'guestbook',
+          name: 'admin-guestbook',
+          component: AdminGuestbookPage,
+          meta: {
+            title: '방명록 관리',
             group: '콘텐츠',
           },
         },

@@ -18,6 +18,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import me.jsjlog.blog.common.domain.BaseEntity;
+import me.jsjlog.blog.guestbook.domain.GuestbookEntry;
 import me.jsjlog.blog.member.domain.Member;
 import me.jsjlog.blog.post.domain.Comment;
 
@@ -57,13 +58,23 @@ public class Notification extends BaseEntity {
     private NotificationType type;
 
     /**
-     * 이 알림을 만든 댓글. 답글이면 답글 자신이다.
+     * 이 알림을 만든 댓글. 답글이면 답글 자신이다. 방명록 알림이면 비어 있다.
      *
      * 화면은 이걸 따라가서 누가 무슨 말을 했는지, 어느 글인지 읽는다.
      */
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "comment_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "comment_id")
     private Comment comment;
+
+    /**
+     * 이 알림을 만든 방명록 글. 댓글 알림이면 비어 있다.
+     *
+     * <p>둘 중 하나만 채운다. 표를 따로 두면 종 하나에 두 목록을 섞어 정렬해야 하고,
+     * 읽음 처리도 두 갈래가 된다.</p>
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "guestbook_entry_id")
+    private GuestbookEntry guestbookEntry;
 
     /** 읽은 시각. 널이면 안 읽은 것이다 */
     @Column(name = "read_at")
@@ -73,6 +84,12 @@ public class Notification extends BaseEntity {
         this.recipient = recipient;
         this.type = type;
         this.comment = comment;
+    }
+
+    public Notification(Member recipient, NotificationType type, GuestbookEntry guestbookEntry) {
+        this.recipient = recipient;
+        this.type = type;
+        this.guestbookEntry = guestbookEntry;
     }
 
     /** 이미 읽은 알림을 다시 읽어도 처음 읽은 시각을 유지한다 */
