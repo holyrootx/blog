@@ -2,6 +2,7 @@ package me.jsjlog.blog.notification.dto;
 
 import java.time.LocalDateTime;
 
+import me.jsjlog.blog.guestbook.domain.GuestbookEntry;
 import me.jsjlog.blog.notification.domain.Notification;
 import me.jsjlog.blog.notification.domain.NotificationType;
 import me.jsjlog.blog.post.domain.Comment;
@@ -25,9 +26,15 @@ public record NotificationResponse(
          * <b>받는 사람 자신</b>이라 화면에서 쓰지 않는다.</p>
          */
         String actorNickname,
+        /** 댓글 알림일 때만 채운다. 방명록 알림이면 아래 셋이 비어 있다 */
         Long postId,
         String postTitle,
         Long commentId,
+        /**
+         * 방명록 알림일 때만 채운다. {@code actorNickname} 은 새 글·신고면 그 글을 쓴 사람,
+         * 답글이면 답을 단 운영자다.
+         */
+        Long guestbookEntryId,
         /** 목록에서 미리 보여 줄 만큼만 */
         String preview,
         LocalDateTime createdAt,
@@ -37,6 +44,26 @@ public record NotificationResponse(
     private static final int PREVIEW_LENGTH = 60;
 
     public static NotificationResponse from(Notification notification) {
+        GuestbookEntry entry = notification.getGuestbookEntry();
+
+        if (entry != null) {
+            // 답글 알림의 상대는 답을 단 운영자이고 미리 보기도 답글이다. 내가 쓴 글을 다시 보여 줄 까닭이 없다
+            boolean replied = notification.getType() == NotificationType.GUESTBOOK_REPLIED;
+
+            return new NotificationResponse(
+                    notification.getId(),
+                    notification.getType(),
+                    replied ? replierNickname(entry) : entry.getMember().getNickname(),
+                    null,
+                    null,
+                    null,
+                    entry.getId(),
+                    preview(replied ? entry.getReplyContent() : entry.getContent()),
+                    notification.getCreatedAt(),
+                    notification.isUnread()
+            );
+        }
+
         Comment comment = notification.getComment();
 
         return new NotificationResponse(
@@ -46,10 +73,15 @@ public record NotificationResponse(
                 comment.getPost().getId(),
                 comment.getPost().getTitle(),
                 comment.getId(),
+                null,
                 preview(comment.getContent()),
                 notification.getCreatedAt(),
                 notification.isUnread()
         );
+    }
+
+    private static String replierNickname(GuestbookEntry entry) {
+        return entry.getReplyMember() == null ? "" : entry.getReplyMember().getNickname();
     }
 
     private static String preview(String content) {

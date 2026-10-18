@@ -112,6 +112,14 @@ public class SecurityConfig {
                         .hasAnyRole(MemberRole.USER.name(), MemberRole.ADMIN.name())
                         .requestMatchers(HttpMethod.DELETE, ApiPaths.Comment.ITEM)
                         .hasAnyRole(MemberRole.USER.name(), MemberRole.ADMIN.name())
+                        // 방명록 쓰기·고치기·지우기·신고. 댓글과 같이 로그인까지만 가리고,
+                        // 내 글인지는 서비스가 본다
+                        .requestMatchers(HttpMethod.POST, ApiPaths.Guestbook.ROOT, ApiPaths.Guestbook.REPORT)
+                        .hasAnyRole(MemberRole.USER.name(), MemberRole.ADMIN.name())
+                        .requestMatchers(HttpMethod.PUT, ApiPaths.Guestbook.ITEM)
+                        .hasAnyRole(MemberRole.USER.name(), MemberRole.ADMIN.name())
+                        .requestMatchers(HttpMethod.DELETE, ApiPaths.Guestbook.ITEM)
+                        .hasAnyRole(MemberRole.USER.name(), MemberRole.ADMIN.name())
                         .requestMatchers(ApiPaths.Admin.ALL).hasRole(MemberRole.ADMIN.name())
                         .anyRequest().denyAll()
                 )

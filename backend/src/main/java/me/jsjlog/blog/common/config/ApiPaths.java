@@ -78,4 +78,16 @@ public final class ApiPaths {
         private Post() {
         }
     }
+
+    public static final class Guestbook {
+
+        /** 읽기(GET)는 공개 블로그 묶음으로 열려 있다. 여기서는 쓰기만 건다 */
+        public static final String ROOT = "/api/v1/blog/guestbook";
+        /** 내 글 하나. 별 하나는 한 마디만 받으므로 {@code .../reports} 와 겹치지 않는다 */
+        public static final String ITEM = "/api/v1/blog/guestbook/*";
+        public static final String REPORT = "/api/v1/blog/guestbook/*/reports";
+
+        private Guestbook() {
+        }
+    }
 }

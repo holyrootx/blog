@@ -64,11 +64,12 @@ def main():
                         raise
                     time.sleep(0.1)
             valid = ['/', '/posts', '/posts/', '/posts?page=2&category=3', '/posts?q=검색',
-                     '/login', '/oauth/callback?result=success', '/settings', '/privacy/', '/terms',
+                     '/login', '/oauth/callback?result=success', '/settings', '/guestbook', '/guestbook?page=2',
+                     '/privacy/', '/terms',
                      '/admin', '/admin/login', '/admin/dashboard', '/admin/menus', '/admin/posts',
                      '/admin/posts/new', '/admin/posts/42', '/admin/images', '/admin/categories',
-                     '/admin/comments', '/admin/members', '/admin/codes', '/admin/home']
-            invalid = ['/missing', '/missing/nested', '/posts/6/extra', '/admin/missing',
+                     '/admin/comments', '/admin/guestbook', '/admin/members', '/admin/codes', '/admin/home']
+            invalid = ['/missing', '/missing/nested', '/posts/6/extra', '/admin/missing', '/guestbook/3',
                        '/admin/posts/42/extra', '/assets/missing.js', '/missing.css', '/404.html']
             for path in valid:
                 status, html = response(origin, path.replace('검색', '%EA%B2%80%EC%83%89'))

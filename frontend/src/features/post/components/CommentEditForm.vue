@@ -22,6 +22,8 @@ const emit = defineEmits(['update:modelValue', 'save', 'cancel']);
     ></textarea>
     <p v-if="error" class="comment-edit__error" role="alert">{{ error }}</p>
     <div class="comment-edit__actions">
+      <!-- 방명록의 비밀글 고르기처럼 고칠 때만 쓰는 선택지 자리 -->
+      <slot name="options" />
       <button class="comment__action" type="button" @click="emit('cancel')">취소</button>
       <button
         class="comment__action comment__action--strong"

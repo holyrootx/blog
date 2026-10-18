@@ -449,6 +449,80 @@ function toAdminComment(comment) {
   };
 }
 
+export async function getAdminGuestbook(condition = {}) {
+  const result = await getApiData(withQuery(`${ADMIN_BLOG_API_BASE}/guestbook`, condition));
+
+  return {
+    items: Array.isArray(result?.items) ? result.items.map(toAdminGuestbookEntry) : [],
+    statusCounts: {
+      all: toNumber(result?.statusCounts?.all),
+      reported: toNumber(result?.statusCounts?.reported),
+      hidden: toNumber(result?.statusCounts?.hidden),
+      deleted: toNumber(result?.statusCounts?.deleted),
+    },
+    page: toNumber(result?.page),
+    size: toNumber(result?.size),
+    totalElements: toNumber(result?.totalElements),
+    totalPages: toNumber(result?.totalPages),
+  };
+}
+
+/** 방명록 글 하나와 신고 목록. 신고한 사람은 서버가 내보내지 않는다 */
+export async function getAdminGuestbookDetail(entryId) {
+  const detail = await getApiData(`${ADMIN_BLOG_API_BASE}/guestbook/${entryId}`);
+
+  return {
+    entry: toAdminGuestbookEntry(detail?.entry ?? { id: entryId }),
+    deletedAt: detail?.deletedAt ?? null,
+    retainedUntil: detail?.retainedUntil ?? null,
+    reports: Array.isArray(detail?.reports) ? detail.reports : [],
+  };
+}
+
+/** 운영자 답글. 글마다 하나라 달기와 고치기가 같은 요청이다 */
+export function saveAdminGuestbookReply(entryId, content) {
+  return sendApiData(`${ADMIN_BLOG_API_BASE}/guestbook/${entryId}/reply`, {
+    method: 'PUT',
+    body: { content },
+  });
+}
+
+export function deleteAdminGuestbookReply(entryId) {
+  return sendApiData(`${ADMIN_BLOG_API_BASE}/guestbook/${entryId}/reply`, { method: 'DELETE' });
+}
+
+/** 가리거나 되돌린다. 걸린 신고는 서버가 같이 처리한다 */
+export function updateAdminGuestbookVisibility(entryId, hidden) {
+  return sendApiData(`${ADMIN_BLOG_API_BASE}/guestbook/${entryId}/visibility`, {
+    method: 'PUT',
+    body: { hidden },
+  });
+}
+
+export function dismissAdminGuestbookReports(entryId) {
+  return sendApiData(`${ADMIN_BLOG_API_BASE}/guestbook/${entryId}/reports/dismiss`, { method: 'POST' });
+}
+
+function toAdminGuestbookEntry(entry) {
+  return {
+    id: entry.id,
+    memberId: entry.memberId ?? null,
+    nickname: entry.nickname ?? '알 수 없는 회원',
+    writtenByAdmin: Boolean(entry.writtenByAdmin),
+    content: entry.content ?? '',
+    secret: Boolean(entry.secret),
+    edited: Boolean(entry.edited),
+    createdAt: entry.createdAt ?? null,
+    deleted: Boolean(entry.deleted),
+    hiddenByAdmin: Boolean(entry.hiddenByAdmin),
+    contentPurged: Boolean(entry.contentPurged),
+    replyContent: entry.replyContent ?? null,
+    repliedAt: entry.repliedAt ?? null,
+    reportCount: toNumber(entry.reportCount),
+    unhandledReportCount: toNumber(entry.unhandledReportCount),
+  };
+}
+
 // 메뉴 등록. 수정과 달리 menuType 을 보낸다 (만들 때만 정할 수 있다)
 export function createAdminMenu(request) {
   return sendApiData(`${ADMIN_BLOG_API_BASE}/menus`, {
