@@ -85,10 +85,11 @@ class CommentRetentionConcurrencyTest {
     }
 
     @Test
-    @DisplayName("운영자가 되살리는 중에 정리가 돌면, 되살린 댓글을 파기하지 않는다")
-    void restoreHoldingTheLockWins() throws Exception {
+    @DisplayName("글쓴이가 지운 댓글은 잠금을 쥐고 되살리려 해도 거절되고, 정리는 잠금이 풀린 뒤 파기한다")
+    void restoreOfWriterDeletedIsRefusedUnderLock() throws Exception {
         CountDownLatch locked = new CountDownLatch(1);
 
+        // 운영자는 자기가 가린 댓글만 되돌린다(2026-10-18). 예전에는 여기서 되살리기가 이겼다
         CompletableFuture<Void> restoring = CompletableFuture.runAsync(() -> tx.executeWithoutResult(status -> {
             Comment comment = comments.findLockedById(commentId).orElseThrow();
             locked.countDown();
@@ -98,13 +99,15 @@ class CommentRetentionConcurrencyTest {
 
         assertThat(locked.await(5, TimeUnit.SECONDS)).isTrue();
         CommentRetention.Result result = retention.purgeExpired(LocalDateTime.now());
-        restoring.get(10, TimeUnit.SECONDS);
+
+        assertThatThrownBy(() -> restoring.get(10, TimeUnit.SECONDS))
+                .hasRootCauseInstanceOf(IllegalStateException.class);
 
         Comment saved = load();
-        assertThat(result.purgedComments()).isZero();
-        assertThat(saved.isDeleted()).isFalse();
-        assertThat(saved.getContent()).isEqualTo("지운 말");
-        assertThat(saved.isContentPurged()).isFalse();
+        assertThat(result.purgedComments()).isEqualTo(1);
+        assertThat(saved.isDeleted()).isTrue();
+        assertThat(saved.getContent()).isEmpty();
+        assertThat(saved.isContentPurged()).isTrue();
     }
 
     @Test

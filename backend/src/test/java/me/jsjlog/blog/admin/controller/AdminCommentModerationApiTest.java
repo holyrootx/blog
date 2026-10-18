@@ -202,6 +202,61 @@ class AdminCommentModerationApiTest {
     }
 
     @Test
+    @DisplayName("글쓴이가 지운 댓글은 되살리지 않는다 — 운영자는 자기가 가린 댓글만 되돌린다")
+    void writerDeletedCommentCannotBeRestored() throws Exception {
+        comment.delete();
+
+        mockMvc.perform(put(url("/visibility")).with(user(admin)).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"hidden":false,"reason":"되살려 달라는 요청"}
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("COMMENT_DELETED_BY_WRITER"));
+
+        assertThat(commentRepository.findById(comment.getId()))
+                .get()
+                .satisfies(found -> assertThat(found.isDeleted()).isTrue());
+        mockMvc.perform(get(COMMENTS).param("status", "HIDDEN").with(user(admin)))
+                .andExpect(jsonPath("$.data.items[0].deletedByWriter").value(true));
+    }
+
+    @Test
+    @DisplayName("글쓴이가 지운 뒤 운영자가 가려도 되돌리기로 되살릴 수 없다")
+    void hidingWriterDeletedCommentDoesNotOpenRestore() throws Exception {
+        comment.delete();
+
+        mockMvc.perform(put(url("/visibility")).with(user(admin)).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"hidden":true,"reason":null}
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(put(url("/visibility")).with(user(admin)).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"hidden":false,"reason":null}
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("COMMENT_DELETED_BY_WRITER"));
+
+        assertThat(commentRepository.findById(comment.getId()))
+                .get()
+                .satisfies(found -> assertThat(found.isDeleted()).isTrue());
+    }
+
+    @Test
+    @DisplayName("운영자가 가린 댓글은 목록에서 되돌릴 수 있는 것으로 보인다")
+    void adminHiddenCommentIsRestorable() throws Exception {
+        comment.hideByAdmin();
+
+        mockMvc.perform(get(COMMENTS).param("status", "HIDDEN").with(user(admin)))
+                .andExpect(jsonPath("$.data.items[0].hidden").value(true))
+                .andExpect(jsonPath("$.data.items[0].deletedByWriter").value(false));
+    }
+
+    @Test
     @DisplayName("되돌리면 그것도 이력에 남는다")
     void restoreIsRecorded() throws Exception {
         String body = """

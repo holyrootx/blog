@@ -110,7 +110,8 @@ public class AdminGuestbookQueryRepository {
                 entry.getReplyContent(),
                 entry.getRepliedAt(),
                 reportCount,
-                unhandledReportCount
+                unhandledReportCount,
+                entry.isDeletedByWriter()
         );
     }
 

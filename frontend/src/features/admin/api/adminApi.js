@@ -446,6 +446,8 @@ function toAdminComment(comment) {
     unhandledReportCount: Number(comment.unhandledReportCount ?? 0),
     contentPurged: Boolean(comment.contentPurged),
     postPurged: Boolean(comment.postPurged),
+    // 글쓴이가 지운 댓글(지운 뒤 가린 것 포함). 운영자는 자기가 가린 댓글만 되돌린다
+    deletedByWriter: Boolean(comment.deletedByWriter),
   };
 }
 
@@ -520,6 +522,7 @@ function toAdminGuestbookEntry(entry) {
     repliedAt: entry.repliedAt ?? null,
     reportCount: toNumber(entry.reportCount),
     unhandledReportCount: toNumber(entry.unhandledReportCount),
+    deletedByWriter: Boolean(entry.deletedByWriter),
   };
 }
 

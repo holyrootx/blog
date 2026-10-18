@@ -1,5 +1,5 @@
 <script setup>
-import { canReply, commentState } from '../data/adminCommentRules';
+import { canReply, canRestore, commentState } from '../data/adminCommentRules';
 
 /**
  * 댓글 관리 목록의 한 줄. 댓글을 안 주면 같은 크기의 불러오는 중 자리를 그린다.
@@ -114,13 +114,15 @@ function formatDateTime(value) {
       >
         답글
       </button>
-      <!-- 원문을 파기한 댓글은 되살릴 내용이 없다. 서버도 거절한다 -->
+      <!-- 되돌리기는 관리자가 가린 댓글에만 둔다. 글쓴이가 지운 댓글과 원문을 파기한 댓글에는 단추가 없다.
+           서버도 같은 기준으로 거절한다 -->
       <button
+        v-if="!comment.hidden || canRestore(comment)"
         class="admin-button admin-button--small"
         :class="{ 'admin-button--danger': !comment.hidden }"
         type="button"
-        :disabled="comment.contentPurged || comment.postPurged"
-        :title="comment.postPurged ? '원글이 영구 삭제되어 댓글 상태를 변경할 수 없습니다' : comment.contentPurged ? '원문을 파기해 되살릴 수 없습니다' : undefined"
+        :disabled="comment.postPurged"
+        :title="comment.postPurged ? '원글이 영구 삭제되어 댓글 상태를 변경할 수 없습니다' : undefined"
         @click="emit('visibility', comment)"
       >
         {{ comment.hidden ? '복구' : '숨김' }}

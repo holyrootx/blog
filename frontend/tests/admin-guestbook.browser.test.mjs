@@ -129,3 +129,30 @@ test('a guestbook notification opens the entry in the admin screen', async () =>
   await page.waitForURL('**/admin/guestbook');
   await dialog().getByText('운영자님께만 드리는 말').waitFor();
 });
+
+test('restore is offered only for entries the operator hid', async () => {
+  rows = [
+    row(9, { content: '운영자가 가린 글', deleted: true, hiddenByAdmin: true }),
+    row(8, { content: '쓴 사람이 지운 글', deleted: true, deletedByWriter: true }),
+    row(7, { content: '지운 뒤 가린 글', deleted: true, hiddenByAdmin: true, deletedByWriter: true }),
+  ];
+  const retention = { 8: '2027-04-18T10:00:00', 7: '2027-04-18T10:00:00' };
+  const baseDetail = detail;
+  detail = id => ({ ...baseDetail(id), deletedAt: retention[id] ? '2026-10-18T10:00:00' : null, retainedUntil: retention[id] ?? null });
+  await page.goto(`${server.resolvedUrls.local[0]}admin/guestbook`);
+
+  await page.getByRole('row').filter({ hasText: '운영자가 가린 글' }).click();
+  await dialog().getByRole('button', { name: '다시 공개' }).waitFor();
+  assert.match(await page.getByRole('row').filter({ hasText: '운영자가 가린 글' }).textContent(), /가림/);
+  await dialog().getByRole('button', { name: '닫기', exact: true }).last().click();
+
+  for (const text of ['쓴 사람이 지운 글', '지운 뒤 가린 글']) {
+    assert.match(await page.getByRole('row').filter({ hasText: text }).textContent(), /지움/);
+    await page.getByRole('row').filter({ hasText: text }).click();
+    await dialog().getByText('되살릴 수 없습니다', { exact: false }).waitFor();
+    assert.equal(await dialog().getByRole('button', { name: '다시 공개' }).count(), 0);
+    assert.equal(await dialog().getByRole('button', { name: '가리기' }).count(), 0);
+    await dialog().getByRole('button', { name: '닫기', exact: true }).last().click();
+    await dialog().waitFor({ state: 'detached' });
+  }
+});

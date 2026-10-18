@@ -44,7 +44,9 @@ public class AdminCommentQueryRepository {
                         comment.createdAt,
                         comment.deleted,
                         comment.contentPurgedAt,
-                        comment.post.contentPurgedAt
+                        comment.post.contentPurgedAt,
+                        comment.deletedAt,
+                        comment.hiddenByAdmin
                 )
                 .from(comment)
                 .join(comment.post)
@@ -83,7 +85,11 @@ public class AdminCommentQueryRepository {
                         reportCounts.getOrDefault(row.get(comment.id), 0L),
                         unhandledReportCounts.getOrDefault(row.get(comment.id), 0L),
                         row.get(comment.contentPurgedAt) != null,
-                        row.get(comment.post.contentPurgedAt) != null
+                        row.get(comment.post.contentPurgedAt) != null,
+                        // Comment.isDeletedByWriter 와 같은 판단. 지운 뒤 가려도 지운 시각은 남는다
+                        row.get(comment.deletedAt) != null
+                                || (Boolean.TRUE.equals(row.get(comment.deleted))
+                                    && !Boolean.TRUE.equals(row.get(comment.hiddenByAdmin)))
                 ))
                 .toList();
     }

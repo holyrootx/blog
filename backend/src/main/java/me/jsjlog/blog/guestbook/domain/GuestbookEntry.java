@@ -120,12 +120,26 @@ public class GuestbookEntry extends BaseEntity {
         this.hiddenByAdmin = true;
     }
 
-    /** 운영자가 되돌린다. 쓴 사람이 지운 것도 되살릴 수 있다 — 잘못 지웠다는 요청이 올 수 있다 */
+    /**
+     * 운영자가 자기가 가린 글을 되돌린다. 쓴 사람이 지운 글은 되살리지 않는다(2026-10-18 결정) —
+     * 지운 것은 쓴 사람의 뜻이다.
+     */
     public void restore() {
         requireNotPurged();
+        if (isDeletedByWriter()) {
+            throw new IllegalStateException("쓴 사람이 지운 방명록은 되살릴 수 없다");
+        }
         this.deleted = false;
         this.hiddenByAdmin = false;
         this.deletedAt = null;
+    }
+
+    /**
+     * 쓴 사람이 지운 적이 있는가. 지운 뒤 운영자가 가려도 지운 시각은 남으므로 그것까지 본다 —
+     * {@code hiddenByAdmin} 만 보면 "운영자가 가린 글" 로 보여 되살리기가 통과한다.
+     */
+    public boolean isDeletedByWriter() {
+        return deletedAt != null || (deleted && !hiddenByAdmin);
     }
 
     /** 운영자 답글을 달거나 고친다. 답글은 한 줄에 하나라 새로 쓰면 앞의 것을 바꾼다 */

@@ -220,6 +220,7 @@ class AdminGuestbookApiTest {
                 .andExpect(jsonPath("$.data.items.length()").value(0));
         mockMvc.perform(get(ADMIN_GUESTBOOK).param("status", "HIDDEN").with(asAdmin()))
                 .andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.items[0].deletedByWriter").value(false))
                 .andExpect(jsonPath("$.data.statusCounts.reported").value(0));
 
         mockMvc.perform(put(url("/visibility")).with(asAdmin()).with(csrf())
@@ -264,6 +265,16 @@ class AdminGuestbookApiTest {
         assertThat(notificationRepository.findAll().stream()
                 .filter(notification -> notification.getRecipient().getId().equals(writer.getId())))
                 .isEmpty();
+
+        // 지운 뒤 가린 글을 "운영자가 가린 글" 로 보고 되살리면 안 된다
+        mockMvc.perform(put(url("/visibility")).with(asAdmin()).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"hidden":false}
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("GUESTBOOK_DELETED_BY_WRITER"));
+        assertThat(entryRepository.findById(entry.getId()).orElseThrow().isDeleted()).isTrue();
     }
 
     @Test
@@ -313,16 +324,19 @@ class AdminGuestbookApiTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("GUESTBOOK_DELETED"));
 
-        // 잘못 지웠다는 요청이 오면 운영자가 되살릴 수 있다
+        // 쓴 사람이 지운 글은 되살리지 않는다. 운영자는 자기가 가린 글만 되돌린다
         mockMvc.perform(put(url("/visibility")).with(asAdmin()).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"hidden":false}
                                 """))
-                .andExpect(status().isOk());
-        GuestbookEntry restored = entryRepository.findById(entry.getId()).orElseThrow();
-        assertThat(restored.isDeleted()).isFalse();
-        assertThat(restored.getDeletedAt()).isNull();
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("GUESTBOOK_DELETED_BY_WRITER"));
+        GuestbookEntry kept = entryRepository.findById(entry.getId()).orElseThrow();
+        assertThat(kept.isDeleted()).isTrue();
+        assertThat(kept.getDeletedAt()).isEqualTo(deletedAt);
+        mockMvc.perform(get(ADMIN_GUESTBOOK).param("status", "DELETED").with(asAdmin()))
+                .andExpect(jsonPath("$.data.items[0].deletedByWriter").value(true));
     }
 
     @Test

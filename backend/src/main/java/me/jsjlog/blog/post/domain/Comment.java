@@ -155,12 +155,19 @@ public class Comment extends BaseEntity {
         this.hiddenByAdmin = true;
     }
 
-    /** 운영자가 되돌린다. 글쓴이가 지운 글까지 되살릴 수 있는 것은 의도한 바다 —
-        잘못 지웠다는 요청이 올 수 있고, 되돌린 사실은 조치 이력에 남는다 */
+    /**
+     * 운영자가 자기가 가린 댓글을 되돌린다.
+     *
+     * <p>글쓴이가 지운 댓글은 되살리지 않는다(2026-10-18 결정). 지운 것은 글쓴이의 뜻이라,
+     * 운영자가 되살리면 본인이 내린 말을 남이 다시 올리는 셈이 된다.</p>
+     */
     public void restore() {
         // 파기한 원문은 돌아오지 않는다. 빈 본문으로 다시 공개되는 것도 막는다
         if (isContentPurged()) {
             throw new IllegalStateException("원문을 파기한 댓글은 되살릴 수 없다");
+        }
+        if (isDeletedByWriter()) {
+            throw new IllegalStateException("글쓴이가 지운 댓글은 되살릴 수 없다");
         }
         this.deleted = false;
         this.hiddenByAdmin = false;
@@ -169,6 +176,17 @@ public class Comment extends BaseEntity {
 
     public boolean isContentPurged() {
         return contentPurgedAt != null;
+    }
+
+    /**
+     * 글쓴이가 지운 적이 있는가.
+     *
+     * <p>{@code hiddenByAdmin} 만 보지 않는다. 글쓴이가 지운 뒤 운영자가 가리면 그 칸이 켜지지만
+     * 지운 시각은 남는다 — 그 칸만 보면 "운영자가 가린 글" 로 보여 되살리기가 통과한다.
+     * 지운 시각 기능이 생기기 전에 지운 댓글은 시각이 비어 있어서 {@code deleted && !hiddenByAdmin} 로 본다.</p>
+     */
+    public boolean isDeletedByWriter() {
+        return deletedAt != null || (deleted && !hiddenByAdmin);
     }
 
     /**
