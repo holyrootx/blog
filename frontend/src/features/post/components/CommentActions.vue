@@ -10,8 +10,14 @@ const props = defineProps({
   deleting: Boolean,
   reactionPending: Boolean,
   deletePending: Boolean,
+  // 방명록처럼 좋아요·답글 단추가 없는 자리에서 끈다
+  reactions: { type: Boolean, default: true },
+  replyable: { type: Boolean, default: true },
+  // 신고 단추가 읽어 주는 이름. 비우면 답글/댓글로 고른다
+  subject: { type: String, default: '' },
 });
 const emit = defineEmits(['react', 'reply', 'report', 'edit', 'ask-delete', 'confirm-delete', 'cancel-delete']);
+const subjectName = computed(() => props.subject || (props.reply ? '답글' : '댓글'));
 const canReport = computed(() => props.signedIn && !props.comment.deleted && !props.comment.mine);
 const canManage = computed(() => props.signedIn && !props.comment.deleted && props.comment.mine);
 const reported = computed(() => Boolean(props.comment.reportedByMe));
@@ -19,34 +25,36 @@ const reported = computed(() => Boolean(props.comment.reportedByMe));
 
 <template>
   <div class="comment__actions">
+    <template v-if="reactions">
+      <button
+        class="comment__action comment__action--icon"
+        :class="{ 'comment__action--active': comment.likedByMe }"
+        type="button"
+        :disabled="reactionPending"
+        :aria-pressed="comment.likedByMe"
+        aria-label="좋아요"
+        title="좋아요"
+        @click="emit('react', 'LIKE')"
+      >
+        <CommentActionIcon name="like" />
+        {{ comment.likeCount }}
+      </button>
+      <button
+        class="comment__action comment__action--icon"
+        :class="{ 'comment__action--active': comment.dislikedByMe }"
+        type="button"
+        :disabled="reactionPending"
+        :aria-pressed="comment.dislikedByMe"
+        aria-label="싫어요"
+        title="싫어요"
+        @click="emit('react', 'DISLIKE')"
+      >
+        <CommentActionIcon name="dislike" />
+        {{ comment.dislikeCount }}
+      </button>
+    </template>
     <button
-      class="comment__action comment__action--icon"
-      :class="{ 'comment__action--active': comment.likedByMe }"
-      type="button"
-      :disabled="reactionPending"
-      :aria-pressed="comment.likedByMe"
-      aria-label="좋아요"
-      title="좋아요"
-      @click="emit('react', 'LIKE')"
-    >
-      <CommentActionIcon name="like" />
-      {{ comment.likeCount }}
-    </button>
-    <button
-      class="comment__action comment__action--icon"
-      :class="{ 'comment__action--active': comment.dislikedByMe }"
-      type="button"
-      :disabled="reactionPending"
-      :aria-pressed="comment.dislikedByMe"
-      aria-label="싫어요"
-      title="싫어요"
-      @click="emit('react', 'DISLIKE')"
-    >
-      <CommentActionIcon name="dislike" />
-      {{ comment.dislikeCount }}
-    </button>
-    <button
-      v-if="!reply"
+      v-if="!reply && replyable"
       class="comment__action comment__action--strong"
       type="button"
       @click="emit('reply')"
@@ -59,8 +67,8 @@ const reported = computed(() => Boolean(props.comment.reportedByMe));
       :class="{ 'comment__action--reported': reported }"
       type="button"
       :disabled="reported"
-      :aria-label="reported ? `이미 신고한 ${reply ? '답글' : '댓글'}` : '신고'"
-      :title="reported ? `이미 신고한 ${reply ? '답글' : '댓글'}입니다` : '신고'"
+      :aria-label="reported ? `이미 신고한 ${subjectName}` : '신고'"
+      :title="reported ? `이미 신고한 ${subjectName}입니다` : '신고'"
       @click="emit('report')"
     >
       <CommentActionIcon name="report" />

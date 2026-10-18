@@ -55,6 +55,8 @@ defineExpose({ focus: (options) => commentInput.value?.focus(options) });
         <button class="comment-form__signout" type="button" @click="emit('signout')">로그아웃</button>
       </span>
       <div class="comment-form__actions">
+        <!-- 방명록의 비밀글 고르기처럼 쓰는 자리마다 다른 선택지를 등록 단추 옆에 둔다 -->
+        <slot name="options" />
         <span class="comment-form__counter">{{ modelValue.length }} / {{ maxLength }}</span>
         <button
           class="ui-button ui-button--accent"

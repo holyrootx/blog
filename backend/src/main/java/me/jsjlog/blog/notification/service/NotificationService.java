@@ -7,6 +7,7 @@ import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import me.jsjlog.blog.common.exception.BlogException;
 import me.jsjlog.blog.common.exception.ErrorCode;
+import me.jsjlog.blog.guestbook.domain.GuestbookEntry;
 import me.jsjlog.blog.member.domain.Member;
 import me.jsjlog.blog.member.domain.MemberRole;
 import me.jsjlog.blog.member.repository.MemberRepository;
@@ -138,6 +139,76 @@ public class NotificationService {
 
         notificationRepository.save(
                 new Notification(author, NotificationType.COMMENT_HIDDEN, comment));
+    }
+
+    /**
+     * 방명록에 새 글이 왔다고 운영자에게 알린다.
+     *
+     * <p>운영자가 직접 쓴 글은 알리지 않는다. 방금 내가 한 일을 돌려받을 이유가 없다 —
+     * 글 댓글의 {@link #notify} 와 같은 판단이다.</p>
+     */
+    @Transactional
+    public void notifyGuestbookWritten(GuestbookEntry entry) {
+        for (Member admin : memberRepository.findAllByRole(MemberRole.ADMIN)) {
+            if (entry.isWrittenBy(admin.getId())) {
+                continue;
+            }
+
+            notificationRepository.save(new Notification(admin, NotificationType.GUESTBOOK_WRITTEN, entry));
+        }
+    }
+
+    /**
+     * 방명록 글이 신고됐다고 운영자에게 알린다. {@link #notifyReportReceived} 와 같은 규칙이다 —
+     * 쓴 사람과 받는 사람의 관계를 따지지 않고, 안 본 알림이 있으면 더 울리지 않는다.
+     */
+    @Transactional
+    public void notifyGuestbookReported(GuestbookEntry entry) {
+        for (Member admin : memberRepository.findAllByRole(MemberRole.ADMIN)) {
+            boolean alreadyWaiting = notificationRepository
+                    .existsByRecipientIdAndTypeAndGuestbookEntryIdAndReadAtIsNull(
+                            admin.getId(), NotificationType.GUESTBOOK_REPORTED, entry.getId());
+
+            if (alreadyWaiting) {
+                continue;
+            }
+
+            notificationRepository.save(new Notification(admin, NotificationType.GUESTBOOK_REPORTED, entry));
+        }
+    }
+
+    /**
+     * 방명록 글에 운영자 답글이 달렸다고 쓴 사람에게 알린다.
+     *
+     * <p>운영자가 자기 글에 답한 경우는 보내지 않는다. 방금 내가 한 일을 돌려받을 이유가 없다.
+     * 처음 달 때만 부른다 — 고칠 때마다 울리면 같은 답을 여러 번 알리게 된다.</p>
+     */
+    @Transactional
+    public void notifyGuestbookReplied(GuestbookEntry entry) {
+        Member writer = entry.getMember();
+        Member replier = entry.getReplyMember();
+
+        if (replier != null && Objects.equals(writer.getId(), replier.getId())) {
+            return;
+        }
+
+        notificationRepository.save(new Notification(writer, NotificationType.GUESTBOOK_REPLIED, entry));
+    }
+
+    /**
+     * 방명록 글을 가렸다고 쓴 사람에게 알린다. 사유는 싣지 않는다 — {@link #notifyCommentHidden} 과 같다.
+     *
+     * <p>운영자가 자기 글을 가린 경우는 보내지 않는다. 되돌릴 때도 보내지 않는다 — 받는 사람이 할 일이 없다.</p>
+     */
+    @Transactional
+    public void notifyGuestbookHidden(GuestbookEntry entry, Member admin) {
+        Member writer = entry.getMember();
+
+        if (admin != null && Objects.equals(writer.getId(), admin.getId())) {
+            return;
+        }
+
+        notificationRepository.save(new Notification(writer, NotificationType.GUESTBOOK_HIDDEN, entry));
     }
 
     private void notify(Member recipient, NotificationType type, Comment comment) {

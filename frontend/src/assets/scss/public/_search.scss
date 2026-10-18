@@ -129,6 +129,13 @@
   color: var(--accent-dark);
 }
 
+/* 분류 묶음과 떨어진 항목. 선 하나로 다른 갈래임을 보인다 */
+.site-menu__link--separated {
+  margin-top: 6px;
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+
 /* "분류" 는 누를 것이 아니라 아래 항목들을 묶는 이름이다 */
 .site-menu__label {
   margin: 8px 0 2px;

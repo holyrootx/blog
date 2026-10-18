@@ -60,6 +60,23 @@ function messageOf(notification) {
     return `${notification.actorNickname} 님의 댓글이 신고되었습니다`;
   }
 
+  if (notification.type === 'GUESTBOOK_WRITTEN') {
+    return `${notification.actorNickname} 님이 방명록을 남겼습니다`;
+  }
+
+  if (notification.type === 'GUESTBOOK_REPORTED') {
+    return `${notification.actorNickname} 님의 방명록 글이 신고되었습니다`;
+  }
+
+  if (notification.type === 'GUESTBOOK_REPLIED') {
+    return `${notification.actorNickname} 님이 내 방명록에 답글을 남겼습니다`;
+  }
+
+  // 사유는 서버가 보내지 않는다. 댓글 가림과 같은 까닭이다
+  if (notification.type === 'GUESTBOOK_HIDDEN') {
+    return '내 방명록 글이 운영 기준에 따라 가려졌습니다';
+  }
+
   // 사유는 서버가 보내지 않는다. 어떤 댓글에 누가 왜 신고했는지가 좁혀지기 때문이다
   return '내 댓글이 운영 기준에 따라 가려졌습니다';
 }
@@ -105,6 +122,20 @@ async function go(notification) {
 
   if (notification.type === 'REPORT_RECEIVED') {
     await router.push({ name: 'admin-comments', query: { report: notification.commentId } });
+    return;
+  }
+
+  // 방명록 알림은 운영자에게만 온다. 비밀글도 그대로 보이고 답글·가리기·신고 판단을
+  // 한 창에서 하는 관리자 화면으로 바로 연다
+  if (notification.type === 'GUESTBOOK_WRITTEN' || notification.type === 'GUESTBOOK_REPORTED') {
+    await router.push({ name: 'admin-guestbook', query: { entry: notification.guestbookEntryId } });
+    return;
+  }
+
+  // 답글·가림 알림은 공개 방명록의 내 글로 간다. 가린 글도 쓴 사람에게는 안내 문구로 남아 있다.
+  // 오래된 글이면 뒤쪽에 있어서, 몇 쪽인지는 방명록 화면이 서버에 묻는다
+  if (notification.type === 'GUESTBOOK_REPLIED' || notification.type === 'GUESTBOOK_HIDDEN') {
+    await router.push({ name: 'guestbook', query: { entry: notification.guestbookEntryId } });
     return;
   }
 
