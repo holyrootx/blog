@@ -321,15 +321,29 @@ class GuestbookApiTest {
         mockMvc.perform(get(GUESTBOOK))
                 .andExpect(jsonPath("$.data.items.length()").value(0));
 
+        // 자리는 남기되 본문은 싣지 않는다. 가린 동안 내용은 관리자만 본다
         mockMvc.perform(get(GUESTBOOK).with(as(writer)))
                 .andExpect(jsonPath("$.data.items.length()").value(1))
-                .andExpect(jsonPath("$.data.items[0].hiddenByAdmin").value(true));
+                .andExpect(jsonPath("$.data.items[0].hiddenByAdmin").value(true))
+                .andExpect(jsonPath("$.data.items[0].content").doesNotExist());
 
         mockMvc.perform(put(GUESTBOOK + "/" + hidden.getId()).with(as(writer)).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body("되살리기", false)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("GUESTBOOK_HIDDEN_BY_ADMIN"));
+    }
+
+    @Test
+    @DisplayName("내가 지운 뒤 운영자가 가린 글은 내 목록에 다시 나타나지 않는다")
+    void writerDeletedThenHiddenStaysGone() throws Exception {
+        GuestbookEntry gone = entry(writer, "지웠는데 가려진 글", false);
+        gone.delete(LocalDateTime.now());
+        gone.hideByAdmin();
+
+        mockMvc.perform(get(GUESTBOOK).with(as(writer)))
+                .andExpect(jsonPath("$.data.items.length()").value(0))
+                .andExpect(jsonPath("$.data.totalElements").value(0));
     }
 
     @Test

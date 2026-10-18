@@ -160,7 +160,7 @@ function close() {
           <template v-else>
             <p class="admin-moderation__quote admin-guestbook-detail__text">{{ entry.content }}</p>
             <p v-if="detail.retainedUntil" class="admin-guestbook-detail__notice">
-              쓴 사람이 지운 글이라 공개 화면에는 보이지 않습니다. 원문은
+              쓴 사람이 지운 글이라 공개 화면에 보이지 않고 되살릴 수 없습니다. 원문은
               {{ formatExactTime(detail.retainedUntil) }}까지 관리자만 볼 수 있고, 그 뒤 새벽 정리 때 파기합니다.
             </p>
           </template>
@@ -235,9 +235,9 @@ function close() {
         :disabled="pending || loading"
         @click="dismiss"
       >문제 없음</button>
-      <!-- 쓴 사람이 지운 글도 되살릴 수 있다. 잘못 지웠다는 요청이 올 수 있다 -->
+      <!-- 되돌리기는 운영자가 가린 글에만 둔다. 쓴 사람이 지운 글은 되살리지 않는다(서버도 거절한다) -->
       <button
-        v-if="entry && !entry.contentPurged"
+        v-if="entry && !entry.contentPurged && (!entry.deleted || !entry.deletedByWriter)"
         class="admin-button"
         :class="entry.deleted ? 'admin-button--solid' : 'admin-button--danger'"
         type="button"

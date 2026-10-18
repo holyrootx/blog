@@ -18,6 +18,8 @@ public record AdminGuestbookSummaryResponse(
         String replyContent,
         LocalDateTime repliedAt,
         long reportCount,
-        long unhandledReportCount
+        long unhandledReportCount,
+        /** 쓴 사람이 지운 글인가(지운 뒤 운영자가 가린 것 포함). 운영자는 자기가 가린 글만 되돌린다 */
+        boolean deletedByWriter
 ) {
 }

@@ -98,6 +98,19 @@ class GuestbookRetentionTest {
     }
 
     @Test
+    @DisplayName("쓴 사람이 지운 뒤 운영자가 가려도 지운 날부터 세어 파기한다 — 가리기로 보관 기간이 늘지 않는다")
+    void writerDeletedThenHiddenIsStillPurged() {
+        GuestbookEntry entry = deletedEntry("지운 뒤 가린 글");
+        entry.hideByAdmin();
+        em.flush();
+
+        assertThat(retention.purgeExpired(EXPIRES_AT.plusSeconds(1))).isEqualTo(1);
+        em.clear();
+
+        assertThat(entries.findById(entry.getId()).orElseThrow().isContentPurged()).isTrue();
+    }
+
+    @Test
     @DisplayName("운영자가 가린 글과 보이는 글은 정리하지 않는다")
     void keepsHiddenAndVisible() {
         GuestbookEntry hidden = entries.save(new GuestbookEntry(writer, "가린 글", false));

@@ -4,6 +4,8 @@ import me.jsjlog.blog.support.MySqlTestDatabase;
 import jakarta.persistence.EntityManager;
 import me.jsjlog.blog.admin.dto.AdminCommentVisibilityRequest;
 import me.jsjlog.blog.admin.service.AdminCommentService;
+import me.jsjlog.blog.common.exception.BlogException;
+import me.jsjlog.blog.common.exception.ErrorCode;
 import me.jsjlog.blog.history.domain.ContentHistory;
 import me.jsjlog.blog.history.repository.ContentHistoryRepository;
 import me.jsjlog.blog.member.domain.AuthProvider;
@@ -34,6 +36,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * 글쓴이가 지운 원문은 지운 시각부터, 변경 기록은 기록된 시각부터 6개월이 지나면 파기한다.
@@ -202,24 +205,20 @@ class CommentRetentionTest {
     }
 
     @Test
-    @DisplayName("파기 전에 되살리면 파기하지 않고, 다시 지우면 그때부터 다시 센다")
-    void restoreAndDeleteAgainRestartsTheClock() {
+    @DisplayName("글쓴이가 지운 댓글은 운영자가 되살릴 수 없고, 지운 날부터 센 기한에 파기한다")
+    void writerDeletedCommentKeepsItsClock() {
         Long id = commentService.createComment(post.getId(), new CommentCreateRequest("말", null), writer.getId()).id();
         commentService.deleteComment(id, writer.getId());
-        adminComments.updateVisibility(id, new AdminCommentVisibilityRequest(false, "되돌림"), admin.getId());
-        em.flush();
+        LocalDateTime deletedAt = reload(comments.findById(id).orElseThrow()).getDeletedAt();
 
-        Comment restored = comments.findById(id).orElseThrow();
-        assertThat(restored.getDeletedAt()).isNull();
-        assertThat(retention.purgeExpired(LocalDateTime.now().plusYears(1)).purgedComments()).isZero();
+        // 운영자는 자기가 가린 댓글만 되돌린다(2026-10-18). 예전에는 되살린 뒤 다시 지우면 기한을 새로 셌다
+        assertThatThrownBy(() -> adminComments.updateVisibility(
+                id, new AdminCommentVisibilityRequest(false, "되돌림"), admin.getId()))
+                .isInstanceOfSatisfying(BlogException.class,
+                        error -> assertThat(error.getErrorCode()).isEqualTo(ErrorCode.COMMENT_DELETED_BY_WRITER));
 
-        em.clear();
-        commentService.deleteComment(id, writer.getId());
-        LocalDateTime redeletedAt = reload(comments.findById(id).orElseThrow()).getDeletedAt();
-        assertThat(redeletedAt).isNotNull();
-
-        assertThat(retention.purgeExpired(redeletedAt.plus(CommentRetention.RETENTION)).purgedComments()).isZero();
-        assertThat(retention.purgeExpired(redeletedAt.plus(CommentRetention.RETENTION).plusSeconds(1)).purgedComments())
+        assertThat(retention.purgeExpired(deletedAt.plus(CommentRetention.RETENTION)).purgedComments()).isZero();
+        assertThat(retention.purgeExpired(deletedAt.plus(CommentRetention.RETENTION).plusSeconds(1)).purgedComments())
                 .isEqualTo(1);
     }
 
