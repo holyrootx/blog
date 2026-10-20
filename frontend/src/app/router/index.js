@@ -2,6 +2,7 @@ import { START_LOCATION, createRouter, createWebHistory } from 'vue-router';
 import { clearAdminSession, ensureAdminSession } from '../../features/admin/data/adminAuthStore';
 import { clearMemberSession } from '../../features/member/data/memberAuthStore';
 import { onUnauthorized } from '../../shared/api/blogApiClient';
+import { trackRoute } from '../../shared/analytics/googleAnalytics';
 import { applyDocumentMeta } from './documentMeta';
 import { routeDocumentMeta } from './routeDocumentMeta';
 import { scrollToHash } from './scrollToHash';
@@ -316,15 +317,22 @@ router.beforeEach(async (to) => {
  * 글 API 가 늦거나 실패했을 때 검색엔진이 보는 화면에 엉뚱한 제목이 남는다.
  * 앱 안에서 옮겨 온 경우에도 불러오는 동안 noindex 를 넣지 않는다 — 실패하면 그대로 남는다.
  */
-router.afterEach((to, from) => {
+router.afterEach((to, from, failure) => {
   if (to.name === 'post-detail') {
     if (from !== START_LOCATION) {
       applyDocumentMeta({ title: '글 불러오는 중', path: `/posts/${to.params.id}` });
+    }
+    // 방문 기록도 제목이 정해진 뒤 글 화면이 보낸다
+    if (!failure) {
+      trackRoute(to, { waitForTitle: true });
     }
     return;
   }
 
   applyDocumentMeta(routeDocumentMeta(to));
+  if (!failure) {
+    trackRoute(to);
+  }
 });
 
 /**

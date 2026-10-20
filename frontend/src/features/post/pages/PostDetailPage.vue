@@ -3,6 +3,7 @@ import { computed, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 
 import { applyDocumentMeta, summarize } from '../../../app/router/documentMeta';
+import { trackPendingPage } from '../../../shared/analytics/googleAnalytics';
 
 import PostArticle from '../components/PostArticle.vue';
 import PostArticleSkeleton from '../components/PostArticleSkeleton.vue';
@@ -124,6 +125,7 @@ function loadPostPage(postId) {
     notFound.value = true;
     loading.post = false;
     applyDocumentMeta({ title: '찾는 글이 없습니다', robots: 'noindex,follow' });
+    trackPendingPage();
     return;
   }
 
@@ -147,15 +149,19 @@ function loadPostPage(postId) {
         type: 'article',
         structuredData: postDetail.structuredData,
       });
+      trackPendingPage();
     },
     onError: (error, { showingCached }) => {
       // 그사이 글이 내려갔으면 전에 본 내용이 있어도 없는 글로 바꾼다
       if (error.status === 404) {
         notFound.value = true;
         applyDocumentMeta({ title: '찾는 글이 없습니다', robots: 'noindex,follow' });
+        trackPendingPage();
         return;
       }
 
+      // 글을 못 받아도 방문은 있었다. 제목은 바꾸지 않은 그대로 보낸다
+      trackPendingPage();
       console.error(error);
       if (!showingCached) {
         postLoadError.value = true;
