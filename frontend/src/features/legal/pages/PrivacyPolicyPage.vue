@@ -3,7 +3,7 @@ import LegalDocumentLayout from '../components/LegalDocumentLayout.vue';
 </script>
 
 <template>
-  <LegalDocumentLayout title="개인정보처리방침" effective-date="2026년 10월 18일">
+  <LegalDocumentLayout title="개인정보처리방침" effective-date="2026년 10월 19일">
     <p>
       JSJ.log(이하 "서비스")는 댓글·방명록 작성과 회원 식별을 위한 소셜 로그인 기능을 제공합니다.
       서비스는 필요한 범위에서만 개인정보를 처리하며, 아래 목적 이외의 용도로 사용하지 않습니다.
@@ -22,6 +22,11 @@ import LegalDocumentLayout from '../components/LegalDocumentLayout.vue';
           자동 생성: 글 열람 기록 — 연 글과 시각, 기기 구분(휴대폰·태블릿·PC·검색 봇). 로그인한 상태라면
           회원 번호와 이어서 읽기 위치도 남습니다. IP 주소와 브라우저 정보 원문은 저장하지 않습니다.
         </li>
+        <li>
+          자동 생성(Google 애널리틱스): 연 화면의 주소와 제목, 들어온 경로(검색엔진·링크한 사이트), 기기·브라우저·운영체제
+          종류, 대략적인 지역(국가·도시), 방문 시각과 머문 시간, 방문자를 구분하는 쿠키 식별자. 회원 번호·닉네임·이메일은
+          보내지 않습니다.
+        </li>
       </ul>
       <p>소셜 계정의 비밀번호는 서비스가 수집하거나 저장하지 않습니다.</p>
     </section>
@@ -32,6 +37,7 @@ import LegalDocumentLayout from '../components/LegalDocumentLayout.vue';
         <li>회원 가입, 로그인, 계정 상태 확인</li>
         <li>댓글·방명록 작성자 식별과 닉네임·프로필 표시</li>
         <li>최근 본 글·이어서 읽기 제공과 글별 조회 통계</li>
+        <li>방문 경로와 검색 유입 등 방문 통계(Google 애널리틱스)</li>
         <li>부정 이용 방지, 오류 확인, 보안 대응</li>
         <li>신고된 댓글·방명록 글 확인과 분쟁 대응</li>
         <li>회원 문의와 권리 행사 처리</li>
@@ -80,6 +86,9 @@ import LegalDocumentLayout from '../components/LegalDocumentLayout.vue';
         식별자를 파기하면, 서비스도 그 기록을 로그인 계정과 이을 수 없습니다. 열람 기록을 지우기를 원하면
         아래 연락처로 요청할 수 있습니다.
       </p>
+      <p>
+        Google 애널리틱스에 남는 방문 기록은 수집일부터 14개월이 지나면 Google이 자동으로 삭제합니다.
+      </p>
     </section>
 
     <section>
@@ -89,6 +98,22 @@ import LegalDocumentLayout from '../components/LegalDocumentLayout.vue';
         이용자가 선택한 Google, Kakao 또는 Naver의 인증 화면에서 진행되며, 각 제공자의 개인정보처리방침이
         함께 적용됩니다. 법령에 근거한 요청이 있는 경우에는 예외로 합니다.
       </p>
+      <p>
+        방문 통계를 위해 Google 애널리틱스를 사용하며, 위 1번의 Google 애널리틱스 항목이 국외로 전송됩니다.
+        광고 맞춤 설정과 Google 신호 기능은 사용하지 않고, 관리자 화면에서는 전송하지 않습니다.
+      </p>
+      <ul>
+        <li>이전받는 자: Google LLC (문의: <a href="https://support.google.com/policies" rel="noopener noreferrer" target="_blank">support.google.com/policies</a>)</li>
+        <li>이전 국가: 미국 등 Google 데이터 센터가 있는 국가</li>
+        <li>이전 시기와 방법: 서비스 화면을 열 때마다 네트워크로 전송</li>
+        <li>이용 목적: 방문 경로와 이용 흐름 통계</li>
+        <li>보유 기간: 수집일부터 14개월</li>
+        <li>
+          거부 방법: 브라우저에서 쿠키를 차단하거나
+          <a href="https://tools.google.com/dlpage/gaoptout" rel="noopener noreferrer" target="_blank">Google 애널리틱스 차단 부가 기능</a>을
+          설치하면 전송되지 않습니다. 거부해도 글 읽기와 댓글·방명록 이용에는 지장이 없습니다.
+        </li>
+      </ul>
     </section>
 
     <section>
@@ -97,6 +122,10 @@ import LegalDocumentLayout from '../components/LegalDocumentLayout.vue';
         로그인 상태 유지와 보안을 위해 필수 세션 쿠키를 사용합니다. 같은 글을 짧은 시간에 여러 번 열어도
         조회를 한 번만 세는 데에도 이 쿠키를 쓰며, 로그인하지 않은 방문자에게도 발급됩니다. 브라우저 설정에서
         쿠키를 차단할 수 있으나, 이 경우 로그인과 댓글·방명록 기능을 사용할 수 없습니다.
+      </p>
+      <p>
+        방문 통계를 위해 Google 애널리틱스 쿠키(_ga, _ga_로 시작하는 이름)도 사용합니다. 방문자를 구분하고 방문
+        횟수를 세는 데 쓰며 최대 2년 동안 브라우저에 남습니다. 이 쿠키는 차단해도 서비스 이용에 지장이 없습니다.
       </p>
     </section>
 
