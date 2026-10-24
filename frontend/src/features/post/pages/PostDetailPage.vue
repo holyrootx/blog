@@ -88,11 +88,11 @@ const showAds = false;
 
 // 본문이 화면에 그려진 뒤에야 덩어리를 셀 수 있다
 const readingReady = computed(() => !loading.post && !notFound.value && !postLoadError.value
-  && detail.post.id !== null);
+  && detail.post.id !== null && String(detail.post.id) === String(route.params.id));
 const { resume, resumeReading, dismissResume } = useReadingPosition({
   postId: computed(() => route.params.id),
   ready: readingReady,
-  signedIn: computed(() => Boolean(member.value)),
+  memberId: computed(() => member.value?.id ?? null),
 });
 
 // 카드 목록으로 돌아갔을 때 방금 연 글에도 "최근 본 글" 이 붙어 있게 한다

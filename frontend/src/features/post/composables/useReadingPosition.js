@@ -19,7 +19,7 @@ const SAVE_INTERVAL_MS = 15_000;
 const START_THRESHOLD = 50;
 const FINGERPRINT_TEXT_LIMIT = 500;
 
-export function useReadingPosition({ postId, ready, signedIn }) {
+export function useReadingPosition({ postId, ready, memberId }) {
   const resume = ref(null);
 
   let latest = null;
@@ -32,22 +32,22 @@ export function useReadingPosition({ postId, ready, signedIn }) {
   let resumeCheckedFor = null;
 
   watch(
-    () => [String(postId.value ?? ''), Boolean(ready.value), Boolean(signedIn.value)],
-    ([id, isReady, isSignedIn], previous) => {
-      const [previousId] = previous ?? [];
-      if (previousId && previousId !== id) {
+    () => [String(postId.value ?? ''), Boolean(ready.value), memberId.value ?? null],
+    ([id, isReady, owner], previous) => {
+      const [previousId, , previousOwner] = previous ?? [];
+      if (previousOwner === owner && previousId && previousId !== id) {
         // 다른 글로 옮겨 가기 전에 보던 글의 자리를 남긴다. 측정은 이미 해 둔 값을 쓴다
         flush({ keepalive: true });
       }
-      if (previousId !== id || !isSignedIn) {
+      if (previousId !== id || previousOwner !== owner || !owner) {
         reset();
       }
-      if (id && isReady && isSignedIn && resumeCheckedFor !== id) {
+      if (id && isReady && owner && resumeCheckedFor !== id) {
         resumeCheckedFor = id;
         loadResume(id);
       }
     },
-    { immediate: true },
+    { immediate: true, flush: 'sync' },
   );
 
   onMounted(() => {
@@ -123,11 +123,11 @@ export function useReadingPosition({ postId, ready, signedIn }) {
   }
 
   function track() {
-    if (!postId.value || !ready.value || !signedIn.value) return;
+    if (!postId.value || !ready.value || !memberId.value) return;
 
     const position = measure(String(postId.value));
     if (!position) return;
-    latest = position;
+    latest = { ...position, memberId: memberId.value };
 
     // 스스로 그 자리까지 내려왔으면 단추는 할 일이 없다
     if (resume.value && position.blockIndex >= resume.value.blockIndex) {
@@ -150,13 +150,14 @@ export function useReadingPosition({ postId, ready, signedIn }) {
   function flush({ keepalive = false } = {}) {
     clearTimeout(saveTimer);
     const position = latest;
-    if (!position || isStart(position.blockIndex, position.blockOffset) || samePosition(position, lastSent)) return;
+    if (!position || position.memberId !== memberId.value
+      || isStart(position.blockIndex, position.blockOffset) || samePosition(position, lastSent)) return;
 
     lastSent = position;
     lastSentAt = Date.now();
     saveReadingPosition(position.postId, position, { keepalive }).catch((error) => {
       // 저장 실패를 알림으로 띄우면 읽는 중에 방해가 된다. 다음 스크롤이나 화면을 떠날 때 다시 보낸다
-      lastSent = null;
+      if (lastSent === position) lastSent = null;
       console.warn(error);
     });
   }
@@ -164,6 +165,8 @@ export function useReadingPosition({ postId, ready, signedIn }) {
   function reset() {
     loadGeneration += 1;
     resumeCheckedFor = null;
+    cancelAnimationFrame(frame);
+    frame = 0;
     clearTimeout(saveTimer);
     resume.value = null;
     latest = null;
