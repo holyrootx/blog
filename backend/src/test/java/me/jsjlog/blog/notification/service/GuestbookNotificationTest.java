@@ -121,6 +121,9 @@ class GuestbookNotificationTest {
         assertThat(notifications.findMine(admin.getId()))
                 .extracting(NotificationResponse::type)
                 .containsExactly(NotificationType.GUESTBOOK_REPORTED);
+        assertThat(notifications.findMine(admin.getId()))
+                .extracting(NotificationResponse::preview)
+                .containsExactly("방명록 인사");
         assertThat(notifications.countUnread(admin.getId())).isEqualTo(1);
     }
 
@@ -173,8 +176,9 @@ class GuestbookNotificationTest {
     }
 
     @Test
-    @DisplayName("가림 알림은 쓴 사람에게 가려진 동안만 보이고, 다시 공개하면 빠진다")
+    @DisplayName("가림 알림에는 원문이 없고, 관리자만 본문과 답글을 본다. 다시 공개하면 알림은 빠진다")
     void hiddenNotificationFollowsVisibility() throws Exception {
+        entry.reply(admin, "관리자 답글 원문", LocalDateTime.now());
         entry.hideByAdmin();
         notifications.notifyGuestbookHidden(entry, admin);
         em.flush();
@@ -182,8 +186,22 @@ class GuestbookNotificationTest {
 
         mockMvc.perform(get("/api/v1/auth/me/notifications").with(user(MemberPrincipal.ofSocial(guest))))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(1))
                 .andExpect(jsonPath("$.data[0].type").value("GUESTBOOK_HIDDEN"))
+                .andExpect(jsonPath("$.data[0].preview").value(""))
                 .andExpect(jsonPath("$.data[0].guestbookEntryId").value(entry.getId()));
+        assertThat(notifications.countUnread(guest.getId())).isEqualTo(1);
+
+        mockMvc.perform(get("/api/v1/blog/guestbook").with(user(MemberPrincipal.ofSocial(guest))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items[0].hiddenByAdmin").value(true))
+                .andExpect(jsonPath("$.data.items[0].content").doesNotExist())
+                .andExpect(jsonPath("$.data.items[0].reply").doesNotExist());
+        mockMvc.perform(get("/api/v1/admin/blog/guestbook/" + entry.getId())
+                        .with(user(MemberPrincipal.ofLocal(admin))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.entry.content").value("방명록 인사"))
+                .andExpect(jsonPath("$.data.entry.replyContent").value("관리자 답글 원문"));
         assertThat(notifications.findMine(admin.getId())).isEmpty();
 
         GuestbookEntry restored = entries.findById(entry.getId()).orElseThrow();
