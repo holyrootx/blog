@@ -15,6 +15,11 @@ const longContent = Array.from({ length: 40 }, (_, index) => `문단 ${index + 1
 const visit = path => page.goto(`${server.resolvedUrls.local[0]}${path.replace(/^\//, '')}`);
 const requestsTo = pattern => requests.filter(request => pattern.test(request.path));
 const resumeBar = () => page.getByRole('region', { name: '이어서 읽기' });
+const refreshSession = () => page.evaluate(async () => {
+  const { refreshMemberSession } = await import('/src/features/member/data/memberAuthStore.js');
+  await refreshMemberSession();
+});
+const settleFrame = () => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 
 before(async () => {
   server = await createServer({ root: fileURLToPath(new URL('..', import.meta.url)), configFile: false,
@@ -110,6 +115,65 @@ test('비회원에게는 표시도 요청도 없고, 로그아웃하면 표시�
   await page.locator('.post-card__viewed').waitFor({ state: 'detached' });
 });
 
+test('늦게 도착한 카드 조회가 그사이 직접 읽은 글의 표시와 최신 시각을 지우지 않는다', async () => {
+  let held;
+  let requested;
+  const pending = new Promise(resolve => { requested = resolve; });
+  viewedHandler = route => {
+    if (!held) { held = route; requested(); return; }
+    return ok(route, []);
+  };
+  await openPage();
+  await visit('/posts');
+  await pending;
+  await page.getByText('카드 글 1', { exact: true }).click();
+  await page.getByRole('heading', { name: '긴 글 1', exact: true }).waitFor();
+  await page.goBack();
+  const badge = page.locator('.post-card').filter({ hasText: '카드 글 1' }).locator('.post-card__viewed');
+  await badge.waitFor();
+  const latestTitle = await badge.getAttribute('title');
+
+  const response = page.waitForResponse(response => response.url() === held.request().url());
+  await ok(held, []);
+  await (await response).finished();
+  await settleFrame();
+
+  assert.equal(await badge.count(), 1);
+  assert.equal(await badge.getAttribute('title'), latestTitle);
+});
+
+test('계정을 바꿨다가 돌아와도 전 로그인에서 지연된 카드 응답은 적용하지 않는다', async () => {
+  const held = [];
+  viewedHandler = route => { held.push(route); };
+  await openPage();
+  await visit('/posts');
+  await page.getByText('카드 글 3').waitFor();
+  const firstMember = member;
+  viewedHandler = route => ok(route, []);
+  member = { id: 8, nickname: '다른독자', role: 'USER' };
+  await refreshSession();
+  const before = requestsTo(/\/viewed-posts$/).length;
+
+  viewedHandler = route => { held.push(route); };
+  member = firstMember;
+  const nextRequest = page.waitForRequest(request => request.url().includes('/viewed-posts?'));
+  await refreshSession();
+  await nextRequest;
+  await settleFrame();
+  assert.equal(requestsTo(/\/viewed-posts$/).length, before + 1);
+  assert.equal(held.length, 2);
+
+  const oldResponse = page.waitForResponse(response => response.url() === held[0].request().url());
+  await ok(held[0], [{ postId: 1, lastViewedAt: '2026-10-17T12:30:00Z' }]);
+  await (await oldResponse).finished();
+  await settleFrame();
+  assert.equal(await page.locator('.post-card__viewed').count(), 0);
+
+  await ok(held[1], [{ postId: 2, lastViewedAt: '2026-10-17T13:00:00Z' }]);
+  await page.locator('.post-card__viewed').waitFor();
+  assert.match(await page.locator('.post-card').filter({ has: page.locator('.post-card__viewed') }).innerText(), /카드 글 2/);
+});
+
 test('읽던 자리가 있으면 저절로 옮기지 않고 단추를 띄우며, 누르면 그 덩어리로 간다', async () => {
   await openPage();
   await visit('/posts/9');
@@ -134,6 +198,55 @@ test('읽던 자리가 있으면 저절로 옮기지 않고 단추를 띄우며,
     return Math.abs(rect.top + rect.height / 2 - 88) < 40;
   });
   assert.equal(await page.evaluate(() => document.activeElement === document.querySelector('[data-reading-root]').children[20]), true);
+});
+
+test('같은 글에서 계정을 바꾸면 이전 회원의 이어서 읽기를 지우고 새 회원의 자리를 조회한다', async () => {
+  await openPage();
+  await visit('/posts/9');
+  await page.locator('[data-reading-root] > *').nth(20).waitFor();
+  const hash = await page.evaluate(async () => {
+    const { fingerprint } = await import('/src/features/post/composables/useReadingPosition.js');
+    return fingerprint(document.querySelector('[data-reading-root]').children[20]);
+  });
+  positionHandler = route => ok(route, { postId: 9, blockIndex: 20, blockOffset: 500, blockHash: hash,
+    savedAt: '2026-10-16T12:00:00Z' });
+  await visit('/posts/9');
+  await resumeBar().waitFor();
+  const before = requestsTo(/\/reading-positions\/9$/).filter(request => request.method === 'GET').length;
+
+  member = { id: 8, nickname: '다른독자', role: 'USER' };
+  positionHandler = route => ok(route, null);
+  await refreshSession();
+  await resumeBar().waitFor({ state: 'detached' });
+  await page.waitForFunction(() => performance.getEntriesByType('resource')
+    .filter(entry => entry.name.includes('/reading-positions/9')).length >= 2);
+  assert.equal(requestsTo(/\/reading-positions\/9$/).filter(request => request.method === 'GET').length, before + 1);
+  assert.equal(savedPosition, null);
+});
+
+test('계정 전환과 로그아웃은 이전 회원의 예약된 읽기 위치를 저장하지 않는다', async () => {
+  await openPage();
+  await visit('/posts/9');
+  await page.locator('[data-reading-root] > *').nth(20).waitFor();
+  const firstSave = page.waitForResponse(response => response.request().method() === 'PUT'
+    && response.url().includes('/reading-positions/9'));
+  await page.locator('[data-reading-root] > *').nth(10).scrollIntoViewIfNeeded();
+  await firstSave;
+  await page.locator('[data-reading-root] > *').nth(20).scrollIntoViewIfNeeded();
+  await settleFrame();
+  const before = requestsTo(/\/reading-positions\/9$/).filter(request => request.method === 'PUT').length;
+
+  member = { id: 8, nickname: '다른독자', role: 'USER' };
+  await refreshSession();
+  await page.evaluate(() => window.dispatchEvent(new Event('pagehide')));
+  await settleFrame();
+  assert.equal(requestsTo(/\/reading-positions\/9$/).filter(request => request.method === 'PUT').length, before);
+
+  member = null;
+  await refreshSession();
+  await page.evaluate(() => window.dispatchEvent(new Event('pagehide')));
+  await settleFrame();
+  assert.equal(requestsTo(/\/reading-positions\/9$/).filter(request => request.method === 'PUT').length, before);
 });
 
 test('글이 고쳐져 그 덩어리가 없으면 단추를 띄우지 않는다', async () => {
@@ -183,6 +296,19 @@ test('비회원과 없는 글은 읽던 자리를 묻지 않는다', async () =>
   await page.getByText('찾는 글이 없습니다').first().waitFor().catch(() => null);
   await page.waitForTimeout(200);
   assert.equal(requestsTo(/\/reading-positions\//).length, 0);
+});
+
+test('열려 있는 글에서 없는 글로 이동할 때 이전 본문으로 읽기 위치를 조회하지 않는다', async () => {
+  await openPage();
+  await visit('/posts/9');
+  await page.locator('[data-reading-root] > *').nth(20).waitFor();
+  await page.evaluate(async () => {
+    const app = document.querySelector('#app').__vue_app__;
+    await app.config.globalProperties.$router.push('/posts/404');
+  });
+  await page.getByRole('heading', { name: '찾는 글이 없습니다', exact: true }).waitFor();
+  await settleFrame();
+  assert.equal(requestsTo(/\/reading-positions\/404$/).length, 0);
 });
 
 test('휴대폰 폭에서도 단추가 화면 안에 있고 누르기 넉넉하며 가로 스크롤이 생기지 않는다', async () => {

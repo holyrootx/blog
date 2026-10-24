@@ -13,6 +13,7 @@ import me.jsjlog.blog.post.repository.PostReadPositionRepository;
 import me.jsjlog.blog.post.repository.PostRepository;
 import me.jsjlog.blog.post.repository.PostViewRepository;
 import me.jsjlog.blog.post.service.MemberReadingService;
+import me.jsjlog.blog.post.service.PostViewRecorder;
 import me.jsjlog.blog.support.MySqlTestDatabase;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -21,6 +22,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -71,6 +73,8 @@ class MemberReadingApiTest {
     @Autowired private CategoryRepository categoryRepository;
     @Autowired private MemberRepository memberRepository;
     @Autowired private MemberReadingService memberReadingService;
+    @Autowired private PostViewRecorder postViewRecorder;
+    @Autowired private JdbcTemplate jdbcTemplate;
 
     private Post first;
     private Post second;
@@ -161,6 +165,37 @@ class MemberReadingApiTest {
         mockMvc.perform(get(VIEWED).with(user(MemberPrincipal.ofSocial(reader))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.length()").value(0));
+    }
+
+    @Test
+    @DisplayName("기존 기록은 최초 시각으로 표시하고, 재방문한 글만 최신 시각과 순서로 바뀐다")
+    void legacyRecordsRemainReadableAndUpdateOnRevisit() throws Exception {
+        jdbcTemplate.update("update post_view set last_viewed_at = null where member_id = ?", reader.getId());
+
+        assertThat(memberReadingService.getViewedPosts(reader.getId(), List.of(first.getId())))
+                .singleElement().satisfies(item -> assertThat(item.lastViewedAt().toLocalDateTime())
+                        .isEqualTo(BASE.plusMinutes(3)));
+        mockMvc.perform(get(RECENT).with(user(MemberPrincipal.ofSocial(reader))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items[0].postId").value(first.getId()));
+
+        postViewRecorder.updateLastViewedAt(second.getId(), reader.getId(), BASE.plusMinutes(8));
+        postViewRecorder.updateLastViewedAt(hidden.getId(), reader.getId(), BASE.plusMinutes(9));
+        postViewRecorder.updateLastViewedAt(deleted.getId(), reader.getId(), BASE.plusMinutes(10));
+
+        mockMvc.perform(get(RECENT).with(user(MemberPrincipal.ofSocial(reader))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalElements").value(2))
+                .andExpect(jsonPath("$.data.items[0].postId").value(second.getId()))
+                .andExpect(jsonPath("$.data.items[1].postId").value(first.getId()));
+        assertThat(memberReadingService.getViewedPosts(reader.getId(), List.of(second.getId())))
+                .singleElement().satisfies(item -> assertThat(item.lastViewedAt().toLocalDateTime())
+                        .isEqualTo(BASE.plusMinutes(8)));
+        assertThat(memberReadingService.getViewedPosts(other.getId(), List.of(second.getId())))
+                .singleElement().satisfies(item -> assertThat(item.lastViewedAt().toLocalDateTime())
+                        .isEqualTo(BASE.plusMinutes(6)));
+        assertThat(memberReadingService.getViewedPosts(reader.getId(), List.of(hidden.getId(), deleted.getId())))
+                .isEmpty();
     }
 
     @Test

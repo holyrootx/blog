@@ -65,6 +65,7 @@ class PostViewRecordTest {
     @Autowired private PostService postService;
     @Autowired private PostViewService postViewService;
     @Autowired private PostViewRecorder postViewRecorder;
+    @Autowired private MemberReadingService memberReadingService;
     @Autowired private PostRepository postRepository;
     @Autowired private PostViewRepository postViewRepository;
     @Autowired private CategoryRepository categoryRepository;
@@ -230,6 +231,153 @@ class PostViewRecordTest {
                         LocalDateTime.of(2026, 10, 17, 12, 0),
                         LocalDateTime.of(2026, 10, 17, 12, 31)
                 );
+        assertThat(postRepository.findById(post.getId()).orElseThrow().getViews()).isEqualTo(1L);
+    }
+
+    @Test
+    @DisplayName("30분 안에 다시 연 글은 최근 본 글 맨 앞으로 옮기고 실제 열람 시각을 표시한다")
+    void memberRevisitUpdatesReadingTimeAndOrderWithoutAnotherVisit() {
+        Member reader = member("재방문독자");
+        Post first = publishedPost();
+        Post second = publishedPost();
+        MockHttpSession session = new MockHttpSession();
+        MovableClock clock = new MovableClock(Instant.parse("2026-10-17T03:00:00Z"));
+        PostViewService service = new PostViewService(postService, postViewRecorder, clock);
+
+        service.getPostDetail(first.getId(), session, reader.getId(), DeviceType.DESKTOP);
+        clock.advance(Duration.ofMinutes(5));
+        service.getPostDetail(second.getId(), session, reader.getId(), DeviceType.MOBILE);
+        clock.advance(Duration.ofMinutes(5));
+        service.getPostDetail(first.getId(), session, reader.getId(), DeviceType.MOBILE);
+
+        var recent = memberReadingService.getRecentPosts(reader.getId(), 0, 1);
+        assertThat(recent.totalElements()).isEqualTo(2);
+        assertThat(recent.items()).singleElement().satisfies(item -> {
+            assertThat(item.postId()).isEqualTo(first.getId());
+            assertThat(item.lastViewedAt().toLocalDateTime()).isEqualTo(LocalDateTime.of(2026, 10, 17, 12, 10));
+        });
+        assertThat(memberReadingService.getRecentPosts(reader.getId(), 1, 1).items())
+                .singleElement().satisfies(item -> assertThat(item.postId()).isEqualTo(second.getId()));
+        assertThat(memberReadingService.getViewedPosts(reader.getId(), List.of(first.getId())))
+                .singleElement().satisfies(item -> assertThat(item.lastViewedAt().toLocalDateTime())
+                        .isEqualTo(LocalDateTime.of(2026, 10, 17, 12, 10)));
+        assertThat(viewsOf(first)).singleElement().satisfies(view -> {
+            assertThat(view.getViewedAt()).isEqualTo(LocalDateTime.of(2026, 10, 17, 12, 0));
+            assertThat(view.getDeviceType()).isEqualTo(DeviceType.DESKTOP);
+        });
+        assertThat(viewsOf(second)).hasSize(1);
+        assertThat(postRepository.findById(first.getId()).orElseThrow().getViews()).isEqualTo(1L);
+    }
+
+    @Test
+    @DisplayName("마지막 열람 시각 갱신은 30분 집계 창을 연장하지 않고 경계 뒤에도 계속 갱신된다")
+    void memberRevisitDoesNotExtendVisitWindow() {
+        Member reader = member("경계독자");
+        Post post = publishedPost();
+        MockHttpSession session = new MockHttpSession();
+        MovableClock clock = new MovableClock(Instant.parse("2026-10-17T03:00:00Z"));
+        PostViewService service = new PostViewService(postService, postViewRecorder, clock);
+
+        service.getPostDetail(post.getId(), session, reader.getId(), DeviceType.UNKNOWN);
+        clock.advance(Duration.ofMinutes(30).minusSeconds(1));
+        service.getPostDetail(post.getId(), session, reader.getId(), DeviceType.UNKNOWN);
+        assertThat(viewsOf(post)).hasSize(1);
+        assertThat(memberReadingService.getViewedPosts(reader.getId(), List.of(post.getId())))
+                .singleElement().satisfies(item -> assertThat(item.lastViewedAt().toLocalDateTime())
+                        .isEqualTo(LocalDateTime.of(2026, 10, 17, 12, 29, 59)));
+
+        clock.advance(Duration.ofSeconds(1));
+        service.getPostDetail(post.getId(), session, reader.getId(), DeviceType.UNKNOWN);
+        clock.advance(Duration.ofSeconds(1));
+        service.getPostDetail(post.getId(), session, reader.getId(), DeviceType.UNKNOWN);
+
+        assertThat(viewsOf(post)).extracting(PostView::getViewedAt).containsExactlyInAnyOrder(
+                LocalDateTime.of(2026, 10, 17, 12, 0), LocalDateTime.of(2026, 10, 17, 12, 30));
+        assertThat(memberReadingService.getViewedPosts(reader.getId(), List.of(post.getId())))
+                .singleElement().satisfies(item -> assertThat(item.lastViewedAt().toLocalDateTime())
+                        .isEqualTo(LocalDateTime.of(2026, 10, 17, 12, 30, 1)));
+        assertThat(postRepository.findById(post.getId()).orElseThrow().getViews()).isEqualTo(1L);
+    }
+
+    @Test
+    @DisplayName("계정 전환과 로그아웃 뒤 재방문은 그때 로그인한 회원의 마지막 열람만 갱신한다")
+    void lastViewedAtFollowsCurrentMember() {
+        Member first = member("첫독자");
+        Member second = member("다음독자");
+        Post post = publishedPost();
+        MockHttpSession session = new MockHttpSession();
+        MovableClock clock = new MovableClock(Instant.parse("2026-10-17T03:00:00Z"));
+        PostViewService service = new PostViewService(postService, postViewRecorder, clock);
+
+        service.getPostDetail(post.getId(), session, first.getId(), DeviceType.UNKNOWN);
+        clock.advance(Duration.ofMinutes(2));
+        service.getPostDetail(post.getId(), session, second.getId(), DeviceType.UNKNOWN);
+        clock.advance(Duration.ofMinutes(2));
+        service.getPostDetail(post.getId(), session, first.getId(), DeviceType.UNKNOWN);
+        clock.advance(Duration.ofMinutes(2));
+        service.getPostDetail(post.getId(), session, null, DeviceType.UNKNOWN);
+        clock.advance(Duration.ofMinutes(2));
+        service.getPostDetail(post.getId(), session, null, DeviceType.UNKNOWN);
+
+        assertThat(memberReadingService.getViewedPosts(first.getId(), List.of(post.getId())))
+                .singleElement().satisfies(item -> assertThat(item.lastViewedAt().toLocalDateTime())
+                        .isEqualTo(LocalDateTime.of(2026, 10, 17, 12, 4)));
+        assertThat(memberReadingService.getViewedPosts(second.getId(), List.of(post.getId())))
+                .singleElement().satisfies(item -> assertThat(item.lastViewedAt().toLocalDateTime())
+                        .isEqualTo(LocalDateTime.of(2026, 10, 17, 12, 2)));
+        assertThat(viewsOf(post)).hasSize(3);
+        assertThat(viewsOf(post).stream().filter(view -> view.getMemberId() == null))
+                .singleElement().satisfies(view -> assertThat(view.getLastViewedAt()).isNull());
+        assertThat(postRepository.findById(post.getId()).orElseThrow().getViews()).isEqualTo(1L);
+    }
+
+    @Test
+    @DisplayName("여러 창의 갱신이 뒤섞이고 늦은 요청이 끝나도 마지막 열람 시각은 뒤로 가지 않는다")
+    void concurrentAndDelayedUpdatesKeepLatestTime() throws Exception {
+        Member reader = member("여러창독자");
+        Post post = publishedPost();
+        LocalDateTime initial = LocalDateTime.of(2026, 10, 17, 12, 0);
+        postViewRecorder.record(post.getId(), reader.getId(), initial, DeviceType.DESKTOP);
+
+        runConcurrently(8, index -> postViewRecorder.updateLastViewedAt(
+                post.getId(), reader.getId(), initial.plusMinutes(index + 1)));
+        postViewRecorder.updateLastViewedAt(post.getId(), reader.getId(), initial.plusMinutes(2));
+
+        assertThat(viewsOf(post)).singleElement().satisfies(view -> {
+            assertThat(view.getViewedAt()).isEqualTo(initial);
+            assertThat(view.getLastViewedAt()).isEqualTo(initial.plusMinutes(8));
+        });
+        assertThat(memberReadingService.getViewedPosts(reader.getId(), List.of(post.getId())))
+                .singleElement().satisfies(item -> assertThat(item.lastViewedAt().toLocalDateTime())
+                        .isEqualTo(initial.plusMinutes(8)));
+    }
+
+    @Test
+    @DisplayName("마지막 열람 갱신이 실패해도 글은 열리고 다음 재방문에서 다시 갱신한다")
+    void lastViewedUpdateFailureDoesNotBlockPostOrRetry() {
+        Member reader = member("갱신재시도독자");
+        Post post = publishedPost();
+        MockHttpSession session = new MockHttpSession();
+        MovableClock clock = new MovableClock(Instant.parse("2026-10-17T03:00:00Z"));
+        PostViewService service = new PostViewService(postService, postViewRecorder, clock);
+        service.getPostDetail(post.getId(), session, reader.getId(), DeviceType.UNKNOWN);
+        jdbcTemplate.execute("alter table post_view add constraint post_view_last_read_test_reject"
+                + " check (post_id <> " + post.getId() + " or last_viewed_at = viewed_at)");
+
+        try {
+            clock.advance(Duration.ofMinutes(1));
+            assertThat(service.getPostDetail(post.getId(), session, reader.getId(), DeviceType.UNKNOWN).title())
+                    .isEqualTo(post.getTitle());
+            assertThat(viewsOf(post)).singleElement().satisfies(view -> assertThat(view.getLastViewedAt())
+                    .isEqualTo(LocalDateTime.of(2026, 10, 17, 12, 0)));
+        } finally {
+            jdbcTemplate.execute("alter table post_view drop constraint post_view_last_read_test_reject");
+        }
+
+        clock.advance(Duration.ofMinutes(1));
+        service.getPostDetail(post.getId(), session, reader.getId(), DeviceType.UNKNOWN);
+        assertThat(viewsOf(post)).singleElement().satisfies(view -> assertThat(view.getLastViewedAt())
+                .isEqualTo(LocalDateTime.of(2026, 10, 17, 12, 2)));
         assertThat(postRepository.findById(post.getId()).orElseThrow().getViews()).isEqualTo(1L);
     }
 
