@@ -146,9 +146,11 @@ public class AdminGuestbookQueryRepository {
         if (filter == AdminGuestbookFilter.REPORTED) {
             builder.and(hasUnhandledReport(entry));
         } else if (filter == AdminGuestbookFilter.HIDDEN) {
-            builder.and(entry.deleted.isTrue().and(entry.hiddenByAdmin.isTrue()));
+            builder.and(entry.deleted.isTrue().and(entry.hiddenByAdmin.isTrue()).and(entry.deletedAt.isNull()));
         } else if (filter == AdminGuestbookFilter.DELETED) {
-            builder.and(entry.deleted.isTrue().and(entry.hiddenByAdmin.isFalse()));
+            // GuestbookEntry.isDeletedByWriter와 같이 삭제 뒤 가린 글과 삭제 시각이 없는 기존 글도 포함한다.
+            builder.and(entry.deletedAt.isNotNull()
+                    .or(entry.deleted.isTrue().and(entry.hiddenByAdmin.isFalse())));
         }
 
         return builder;

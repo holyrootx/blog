@@ -25,6 +25,7 @@ import me.jsjlog.blog.notification.domain.Notification;
 import me.jsjlog.blog.notification.domain.NotificationType;
 import me.jsjlog.blog.notification.repository.NotificationRepository;
 import me.jsjlog.blog.post.domain.CommentReportReason;
+import me.jsjlog.blog.support.MySqlTestDatabase;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -32,6 +33,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
@@ -48,6 +51,11 @@ import org.springframework.transaction.annotation.Transactional;
 class AdminGuestbookApiTest {
 
     private static final String ADMIN_GUESTBOOK = "/api/v1/admin/blog/guestbook";
+
+    @DynamicPropertySource
+    static void isolatedDatabase(DynamicPropertyRegistry registry) {
+        MySqlTestDatabase.configure(registry, "admin_guestbook");
+    }
 
     @Autowired private MockMvc mockMvc;
     @Autowired private MemberRepository memberRepository;
@@ -337,6 +345,77 @@ class AdminGuestbookApiTest {
         assertThat(kept.getDeletedAt()).isEqualTo(deletedAt);
         mockMvc.perform(get(ADMIN_GUESTBOOK).param("status", "DELETED").with(asAdmin()))
                 .andExpect(jsonPath("$.data.items[0].deletedByWriter").value(true));
+    }
+
+    @Test
+    @DisplayName("쓴 사람이 지운 뒤 가려도 지움 목록과 집계에 남고 보관 기한은 바뀌지 않는다")
+    void writerDeletedThenHiddenKeepsDeletedClassification() throws Exception {
+        LocalDateTime deletedAt = LocalDateTime.now().minusDays(1).withSecond(15).withNano(0);
+        entry.delete(deletedAt);
+        GuestbookEntry deleted = entryRepository.save(new GuestbookEntry(writer, "지운 글", false));
+        deleted.delete(deletedAt);
+        GuestbookEntry hidden = entryRepository.save(new GuestbookEntry(writer, "운영자가 가린 글", false));
+        hidden.hideByAdmin();
+        entryRepository.save(new GuestbookEntry(writer, "공개 글", false));
+
+        mockMvc.perform(put(url("/visibility")).with(asAdmin()).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"hidden":true}
+                                """))
+                .andExpect(status().isOk());
+        em.flush();
+        em.clear();
+
+        mockMvc.perform(get(ADMIN_GUESTBOOK).param("status", "DELETED").with(asAdmin()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items.length()").value(2))
+                .andExpect(jsonPath("$.data.items[0].id").value(deleted.getId()))
+                .andExpect(jsonPath("$.data.items[1].id").value(entry.getId()))
+                .andExpect(jsonPath("$.data.items[1].deletedByWriter").value(true))
+                .andExpect(jsonPath("$.data.totalElements").value(2))
+                .andExpect(jsonPath("$.data.statusCounts.all").value(4))
+                .andExpect(jsonPath("$.data.statusCounts.deleted").value(2))
+                .andExpect(jsonPath("$.data.statusCounts.hidden").value(1));
+        mockMvc.perform(get(ADMIN_GUESTBOOK).param("status", "HIDDEN").with(asAdmin()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.items[0].id").value(hidden.getId()))
+                .andExpect(jsonPath("$.data.items[0].deletedByWriter").value(false))
+                .andExpect(jsonPath("$.data.totalElements").value(1))
+                .andExpect(jsonPath("$.data.statusCounts.deleted").value(2))
+                .andExpect(jsonPath("$.data.statusCounts.hidden").value(1));
+        mockMvc.perform(get(url("")).with(asAdmin()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.entry.deletedByWriter").value(true))
+                .andExpect(jsonPath("$.data.entry.hiddenByAdmin").value(true))
+                .andExpect(jsonPath("$.data.deletedAt").value(deletedAt.toString()))
+                .andExpect(jsonPath("$.data.retainedUntil").value(deletedAt.plusMonths(6).toString()));
+
+        mockMvc.perform(put(url("/visibility")).with(asAdmin()).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"hidden":false}
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("GUESTBOOK_DELETED_BY_WRITER"));
+        assertThat(entryRepository.findById(entry.getId()).orElseThrow().getDeletedAt()).isEqualTo(deletedAt);
+    }
+
+    @Test
+    @DisplayName("지운 시각이 없는 기존 작성자 삭제 글도 지움으로 분류한다")
+    void writerDeletedWithoutTimestampKeepsDeletedClassification() throws Exception {
+        ReflectionTestUtils.setField(entry, "deleted", true);
+        em.flush();
+        em.clear();
+
+        mockMvc.perform(get(ADMIN_GUESTBOOK).param("status", "DELETED").with(asAdmin()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.items[0].id").value(entry.getId()))
+                .andExpect(jsonPath("$.data.items[0].deletedByWriter").value(true))
+                .andExpect(jsonPath("$.data.statusCounts.deleted").value(1))
+                .andExpect(jsonPath("$.data.statusCounts.hidden").value(0));
     }
 
     @Test
