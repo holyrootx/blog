@@ -225,13 +225,14 @@ test('a notification for an entry that is gone says so instead of showing an une
 
 test('a hide notification leads the writer to their own hidden entry', async () => {
   notices = [{ id: 2, type: 'GUESTBOOK_HIDDEN', actorNickname: '테스터', postId: null, postTitle: null, commentId: null,
-    guestbookEntryId: 5, preview: '가려진 내 글', createdAt: '2026-10-17T22:30:00', unread: true }];
-  entries = [entry(5, { nickname: '테스터', mine: true, hiddenByAdmin: true })];
+    guestbookEntryId: 5, preview: '', createdAt: '2026-10-17T22:30:00', unread: true }];
+  entries = [entry(5, { nickname: '테스터', mine: true, hiddenByAdmin: true, content: null, readable: false })];
   await visit('privacy');
   await page.locator('.notification-bell__trigger').click();
   const item = page.locator('button.notification-bell__item').first();
   await item.waitFor();
   assert.match(await item.textContent(), /내 방명록 글이 운영 기준에 따라 가려졌습니다/);
+  assert.equal(await item.locator('.notification-bell__preview').textContent(), '');
   await item.click();
 
   await page.waitForURL('**/guestbook#guestbook-5');

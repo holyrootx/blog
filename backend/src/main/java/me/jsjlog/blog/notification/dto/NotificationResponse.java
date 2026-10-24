@@ -58,7 +58,8 @@ public record NotificationResponse(
                     null,
                     null,
                     entry.getId(),
-                    preview(replied ? entry.getReplyContent() : entry.getContent()),
+                    notification.getType() == NotificationType.GUESTBOOK_HIDDEN
+                            ? "" : preview(replied ? entry.getReplyContent() : entry.getContent()),
                     notification.getCreatedAt(),
                     notification.isUnread()
             );

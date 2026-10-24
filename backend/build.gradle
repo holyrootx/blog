@@ -84,6 +84,7 @@ tasks.register('mysqlTest', Test) {
 		includeTestsMatching '*AdminViewStatsTest'
 		includeTestsMatching '*GuestbookRetentionTest'
 		includeTestsMatching '*GuestbookNotificationTest'
+		includeTestsMatching '*AdminGuestbookApiTest'
 	}
 	doFirst {
 		if (!System.getenv('BLOG_TEST_MYSQL_PORT') || !System.getenv('BLOG_TEST_MYSQL_PASSWORD')) {
