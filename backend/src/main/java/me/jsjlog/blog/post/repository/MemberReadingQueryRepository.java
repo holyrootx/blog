@@ -33,7 +33,7 @@ public class MemberReadingQueryRepository {
         QPostView view = QPostView.postView;
         QPost post = QPost.post;
         QCategory category = QCategory.category;
-        DateTimeExpression<LocalDateTime> lastViewedAt = view.viewedAt.max();
+        DateTimeExpression<LocalDateTime> lastViewedAt = view.lastViewedAt.coalesce(view.viewedAt).max();
 
         List<Tuple> rows = jpaQueryFactory
                 .select(view.postId, post.title, category.name, post.thumbnailImageUrl, lastViewedAt)
@@ -72,11 +72,11 @@ public class MemberReadingQueryRepository {
         return Objects.requireNonNullElse(count, 0L);
     }
 
-    /** 글 목록 한 화면의 카드를 한 번에 본다. (회원, 글, 시각) 인덱스만으로 끝난다 */
+    /** 글 목록 한 화면의 카드를 한 번에 조회한다. 기존 행은 최초 기록 시각을 사용한다. */
     public List<ViewedPostResponse> getViewedPosts(Long memberId, Collection<Long> postIds) {
         QPostView view = QPostView.postView;
         QPost post = QPost.post;
-        DateTimeExpression<LocalDateTime> lastViewedAt = view.viewedAt.max();
+        DateTimeExpression<LocalDateTime> lastViewedAt = view.lastViewedAt.coalesce(view.viewedAt).max();
 
         return jpaQueryFactory
                 .select(view.postId, lastViewedAt)

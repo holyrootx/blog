@@ -57,13 +57,14 @@ public class PostViewService {
      */
     private void recordVisit(PostViewHistory history, Long postId, Long memberId, DeviceType deviceType) {
         Instant now = clock.instant();
-        if (!history.shouldRecordVisit(postId, memberId, now)) {
-            return;
-        }
-
         try {
-            postViewRecorder.record(postId, memberId, LocalDateTime.ofInstant(now, clock.getZone()), deviceType);
-            history.markVisitRecorded(postId, memberId, now);
+            LocalDateTime viewedAt = LocalDateTime.ofInstant(now, clock.getZone());
+            if (history.shouldRecordVisit(postId, memberId, now)) {
+                postViewRecorder.record(postId, memberId, viewedAt, deviceType);
+                history.markVisitRecorded(postId, memberId, now);
+            } else if (memberId != null) {
+                postViewRecorder.updateLastViewedAt(postId, memberId, viewedAt);
+            }
         } catch (RuntimeException e) {
             log.warn("[recordVisit] 조회 기록 실패. postId={}, memberId={}", postId, memberId, e);
         }
