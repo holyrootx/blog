@@ -57,8 +57,14 @@ beforeEach(async () => {
     if (path.endsWith('/notifications')) return ok(route, notices);
     if (path === '/api/v1/admin/blog/guestbook') {
       const status = url.searchParams.get('status');
-      const items = status === 'REPORTED' ? rows.filter(item => item.unhandledReportCount > 0) : rows;
-      return ok(route, { items, statusCounts: { all: rows.length, reported: 1, hidden: 0, deleted: 0 },
+      const statusRows = {
+        REPORTED: rows.filter(item => item.unhandledReportCount > 0),
+        HIDDEN: rows.filter(item => item.hiddenByAdmin && !item.deletedByWriter),
+        DELETED: rows.filter(item => item.deletedByWriter),
+      };
+      const items = statusRows[status] ?? rows;
+      return ok(route, { items, statusCounts: { all: rows.length, reported: statusRows.REPORTED.length,
+        hidden: statusRows.HIDDEN.length, deleted: statusRows.DELETED.length },
         page: 0, size: 20, totalElements: items.length, totalPages: 1 });
     }
     const one = /^\/api\/v1\/admin\/blog\/guestbook\/(\d+)$/.exec(path);
@@ -140,16 +146,26 @@ test('restore is offered only for entries the operator hid', async () => {
   const baseDetail = detail;
   detail = id => ({ ...baseDetail(id), deletedAt: retention[id] ? '2026-10-18T10:00:00' : null, retainedUntil: retention[id] ?? null });
   await page.goto(`${server.resolvedUrls.local[0]}admin/guestbook`);
+  await page.getByRole('button', { name: /^전체 3$/ }).waitFor();
+  await page.getByRole('button', { name: /^가림 1$/ }).waitFor();
+  await page.getByRole('button', { name: /^지움 2$/ }).waitFor();
 
   await page.getByRole('row').filter({ hasText: '운영자가 가린 글' }).click();
   await dialog().getByRole('button', { name: '다시 공개' }).waitFor();
   assert.match(await page.getByRole('row').filter({ hasText: '운영자가 가린 글' }).textContent(), /가림/);
+  assert.deepEqual(await dialog().locator('.admin-guestbook-detail__meta .admin-badge').allTextContents(), ['가림']);
   await dialog().getByRole('button', { name: '닫기', exact: true }).last().click();
 
-  for (const text of ['쓴 사람이 지운 글', '지운 뒤 가린 글']) {
+  await page.getByRole('button', { name: /^지움 2$/ }).click();
+  await page.getByRole('button', { name: '조회' }).click();
+  await page.getByRole('row').filter({ hasText: '운영자가 가린 글' }).waitFor({ state: 'detached' });
+  assert.equal(lastRequest('GET', /\/admin\/blog\/guestbook$/).query.status, 'DELETED');
+
+  for (const text of ['지운 뒤 가린 글', '쓴 사람이 지운 글']) {
     assert.match(await page.getByRole('row').filter({ hasText: text }).textContent(), /지움/);
     await page.getByRole('row').filter({ hasText: text }).click();
     await dialog().getByText('되살릴 수 없습니다', { exact: false }).waitFor();
+    assert.deepEqual(await dialog().locator('.admin-guestbook-detail__meta .admin-badge').allTextContents(), ['지움']);
     assert.equal(await dialog().getByRole('button', { name: '다시 공개' }).count(), 0);
     assert.equal(await dialog().getByRole('button', { name: '가리기' }).count(), 0);
     await dialog().getByRole('button', { name: '닫기', exact: true }).last().click();

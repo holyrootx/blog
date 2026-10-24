@@ -46,8 +46,8 @@ const states = computed(() => {
   const result = [];
   if (entry.value.secret) result.push('비밀글');
   if (entry.value.edited) result.push('수정됨');
-  if (entry.value.hiddenByAdmin) result.push('가림');
-  else if (entry.value.deleted) result.push('쓴 사람이 지움');
+  if (entry.value.deletedByWriter) result.push('지움');
+  else if (entry.value.hiddenByAdmin) result.push('가림');
   return result;
 });
 
