@@ -27,4 +27,12 @@ public class PostViewRecorder {
     public void record(Long postId, Long memberId, LocalDateTime viewedAt, DeviceType deviceType) {
         postViewRepository.save(PostView.of(postId, memberId, viewedAt, deviceType));
     }
+
+    /** 30분 안의 회원 재방문은 집계 행을 추가하지 않고 마지막 열람 시각만 갱신한다. */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void updateLastViewedAt(Long postId, Long memberId, LocalDateTime viewedAt) {
+        if (memberId == null) return;
+        postViewRepository.findFirstByPostIdAndMemberIdOrderByViewedAtDescIdDesc(postId, memberId)
+                .ifPresent(view -> postViewRepository.advanceLastViewedAt(view.getId(), viewedAt));
+    }
 }
