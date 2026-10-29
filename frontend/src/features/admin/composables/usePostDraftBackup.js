@@ -106,7 +106,6 @@ export function usePostDraftBackup({ form, draftKey, serverUpdatedAt, lastSavedF
 		draftFound.value = draft;
 	}
 
-	// 폼이 바뀌면 2초 뒤에 스냅샷을 남긴다
 	watch(form, scheduleDraftSave, { deep: true });
 
 	onBeforeUnmount(() => {

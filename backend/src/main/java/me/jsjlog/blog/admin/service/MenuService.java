@@ -56,20 +56,16 @@ public class MenuService {
 	 */
 	public List<MenuResponse> getMenuList(MenuSearchCondition menuSearchCondition) {
 
-		// 1. 조회조건에 맞는 항목을 먼저 찾는다
 		List<MenuResponse> itemMenuList = menuRepository.getMenuItemList(menuSearchCondition);
 
-		// 2. 그 항목들이 속한 그룹 번호를 모은다
 		Set<Long> parentIds = itemMenuList.stream()
 				.map(MenuResponse::parentId)
 				.filter(Objects::nonNull)
 				.collect(Collectors.toSet());
 
-		// 3. 조건에 맞는 그룹 + 위에서 모은 소속 그룹
 		List<MenuResponse> groupMenuList =
 				menuRepository.getMenuGroupList(menuSearchCondition, parentIds);
 
-		// 4. 항목을 자기 그룹에 붙인다
 		Map<Long, MenuResponse> groupMenuById = groupMenuList.stream()
 				.collect(Collectors.toMap(MenuResponse::id, groupMenu -> groupMenu));
 
@@ -115,7 +111,6 @@ public class MenuService {
 		return menuRepository.save(menu).getId();
 	}
 
-	/** 순서를 안 주면 같은 자리의 마지막 다음 번호 */
 	private Long resolveSortOrder(Long sortOrder, boolean isGroup, Long parentId) {
 		if (sortOrder != null) {
 			return sortOrder;

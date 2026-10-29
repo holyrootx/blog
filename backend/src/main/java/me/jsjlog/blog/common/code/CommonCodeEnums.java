@@ -27,7 +27,6 @@ public final class CommonCodeEnums {
 	private CommonCodeEnums() {
 	}
 
-	/** 그룹 → 그 그룹 enum 의 코드들. 한 번 찾은 뒤에는 같은 결과를 쓴다 */
 	public static Map<String, Set<String>> codesByGroup() {
 		Map<String, Set<String>> found = codesByGroup;
 		if (found == null) {

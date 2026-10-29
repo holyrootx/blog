@@ -15,7 +15,6 @@ const props = defineProps({
 		type: Boolean,
 		default: false,
 	},
-	// 손잡이의 화면 위치
 	anchor: {
 		type: Object,
 		default: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
@@ -24,7 +23,6 @@ const props = defineProps({
 		type: String,
 		default: '',
 	},
-	// 글자를 칠 수 있는 블록이어야 바꾸기를 보인다
 	canTurn: {
 		type: Boolean,
 		default: true,

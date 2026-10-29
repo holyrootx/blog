@@ -52,11 +52,6 @@ public class ImageCleanupService {
 	private final StoredImageFiles storedImageFiles;
 	private final ImageReferenceGuard imageReferenceGuard;
 
-	/**
-	 * 올린 지 일주일 넘은 이미지 목록. 어디에 쓰이는지 같이 채워 준다.
-	 *
-	 * onlyUnused 가 true 면 아무 데서도 안 쓰는 것만 준다.
-	 */
 	@Transactional(readOnly = true)
 	public AdminImageListResponse findAll(boolean onlyUnused, Pageable pageable) {
 		LocalDateTime cutoff = LocalDateTime.now().minus(GRACE_PERIOD);

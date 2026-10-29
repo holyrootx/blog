@@ -126,7 +126,6 @@ class ImageCleanupServiceTest {
 	@Test
 	@DisplayName("업로드한 이미지가 아니면 건드리지 않는다")
 	void leavesExternalUrlsAlone() {
-		// 외부 URL 을 본문에 직접 쓴 경우
 		cleaner.deleteUnused(Set.of("https://example.com/남의사진.png"));
 
 		assertThat(imageUsageRepository.count()).isZero();

@@ -81,7 +81,6 @@ async function toggle() {
 	scrollActiveIntoView();
 }
 
-// 아래 공간이 부족하면 위로 펼친다
 function decideDirection() {
 	const trigger = rootRef.value?.querySelector('.admin-combo__trigger');
 	const list = listRef.value;
@@ -200,7 +199,6 @@ onBeforeUnmount(() => {
 	<div class="admin-field">
 		<span class="admin-field__label">{{ label }}</span>
 
-		<!-- 모바일: 네이티브 피커 -->
 		<select
 			v-if="isMobile"
 			class="admin-field__select"
@@ -212,7 +210,6 @@ onBeforeUnmount(() => {
 			</option>
 		</select>
 
-		<!-- 데스크톱: 커스텀 드롭다운 -->
 		<div v-else ref="rootRef" class="admin-combo">
 			<button
 				class="admin-combo__trigger"

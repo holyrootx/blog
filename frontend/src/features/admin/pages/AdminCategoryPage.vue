@@ -89,7 +89,6 @@ const { loading, loadError, load: loadCategories } = useAdminListRequest({
 	},
 });
 
-// 조회 — 목록이 바뀌는 것은 이 함수를 거칠 때뿐이다
 /** 실패도 성공만큼 눈에 띄어야 한다. 인라인 문구는 폼 아래라 화면 밖일 때가 있다 */
 function failWith(message) {
 	formError.value = message;
@@ -113,7 +112,6 @@ function openCreateForm() {
 	formError.value = '';
 	editDeleteConfirmOpen.value = false;
 	Object.assign(form, EMPTY_FORM, {
-		// 다음 순서를 미리 채워둔다
 		sortOrder: String(nextSortOrder()),
 	});
 	formOpen.value = true;
@@ -163,7 +161,6 @@ async function saveCategory() {
 		// 팝업이 닫히는 것은 성공 신호가 아니다 — 취소해도 닫힌다
 		notifySuccess(done);
 	} catch (error) {
-		// 서버가 준 메시지를 그대로 보여준다 (이름 중복·필수값 누락 등)
 		failWith(error.message);
 	} finally {
 		saving.value = false;
@@ -302,7 +299,6 @@ onMounted(search);
 
 		<AdminPagination v-model:page="page" :total-pages="totalPages" />
 
-		<!-- 등록·수정 팝업 -->
 		<BaseModal variant="admin"
 			:open="formOpen"
 			:title="formMode === 'create' ? '카테고리 추가' : '카테고리 수정'"
@@ -376,7 +372,6 @@ onMounted(search);
 			</template>
 		</BaseModal>
 
-		<!-- 선택 삭제 확인 -->
 		<BaseModal variant="admin"
 			:open="deleteConfirmOpen"
 			title="선택한 카테고리를 삭제할까요?"

@@ -151,7 +151,6 @@ public class AdminCommentService {
 		record(lockCommentForReview(commentId), adminId, CommentModerationAction.DISMISS, reason);
 	}
 
-	/** 댓글 상세. 지금 본문, 신고와 조치, 변경 기록을 함께 준다 */
 	@Transactional(readOnly = true)
 	public AdminCommentDetail getDetail(Long commentId) {
 		Comment comment = findComment(commentId);

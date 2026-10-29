@@ -4,10 +4,8 @@ import { createBlock, insertPoint, moveBlockRange, shiftIndent, toMarkdown } fro
 import { hasHeldBlocks, heldBlocks, holdBlocks, readClipboardBlocks } from '../data/postEditorClipboard';
 
 export function useBlockSelection({ blocks, editorRef, sync, isUploading, isHidden = () => false }) {
-	// 드래그로 옮기는 중인 블록과 놓을 자리
 	const draggingId = ref('');
 	const dropIndex = ref(-1);
-	// 여러 블록 선택 (핸들 클릭, Shift+클릭)
 	const selectedIds = ref([]);
 	const selectionAnchorId = ref('');
 	const selectionCursorId = ref('');

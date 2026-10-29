@@ -34,12 +34,10 @@ public class AdminCategoryService {
 	private final CategoryRepository categoryRepository;
 	private final PostRepository postRepository;
 
-	/** 목록 (글 수 포함) */
 	public List<AdminCategoryResponse> getCategoryList(AdminCategorySearchCondition condition) {
 		return categoryRepository.getCategoryListWithPostCount(condition);
 	}
 
-	/** 등록 */
 	@Transactional
 	public Long createCategory(AdminCategoryRequest request) {
 		String name = requireName(request.name());
@@ -81,7 +79,6 @@ public class AdminCategoryService {
 		category.update(name, sortOrder);
 	}
 
-	/** 삭제 */
 	@Transactional
 	public void deleteCategory(Long categoryId) {
 		if (!categoryRepository.existsById(categoryId)) {
@@ -106,7 +103,6 @@ public class AdminCategoryService {
 		return name.trim();
 	}
 
-	/** 순서를 안 주면 마지막 다음 번호를 매긴다 */
 	private Long resolveSortOrder(Long sortOrder) {
 		if (sortOrder != null) {
 			return sortOrder;

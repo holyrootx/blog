@@ -189,12 +189,10 @@ class CommentReportApiTest {
 	void tellsWhichCommentsAreMine() throws Exception {
 		String comments = "/api/v1/blog/posts/%d/comments".formatted(comment.getPost().getId());
 
-		// 쓴 사람이 보면 내 것이다
 		mockMvc.perform(get(comments).with(user(writer)))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data.items[0].mine").value(true));
 
-		// 다른 사람이 보면 내 것이 아니다
 		mockMvc.perform(get(comments).with(user(reader)))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data.items[0].mine").value(false));

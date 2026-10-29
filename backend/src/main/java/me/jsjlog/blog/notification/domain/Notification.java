@@ -48,7 +48,6 @@ public class Notification extends BaseEntity {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
-	/** 받는 사람 */
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
 	@JoinColumn(name = "recipient_id", nullable = false)
 	private Member recipient;

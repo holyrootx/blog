@@ -3,7 +3,6 @@ package me.jsjlog.blog.admin.dto;
 import java.time.LocalDateTime;
 import java.util.List;
 
-/** 방명록 글 상세. 지금 본문과 신고 목록 */
 public record AdminGuestbookDetail(
 		AdminGuestbookSummaryResponse entry,
 		LocalDateTime deletedAt,

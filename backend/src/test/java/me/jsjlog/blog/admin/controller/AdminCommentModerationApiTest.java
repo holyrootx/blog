@@ -172,7 +172,6 @@ class AdminCommentModerationApiTest {
 				.andExpect(jsonPath("$.data.moderations[0].actionLabel").value("문제 없음"))
 				.andExpect(jsonPath("$.data.reports[0].handled").value(true));
 
-		// 댓글은 그대로다
 		assertThat(commentRepository.findById(comment.getId()))
 				.get()
 				.satisfies(found -> assertThat(found.isDeleted()).isFalse());

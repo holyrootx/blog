@@ -132,8 +132,6 @@ const {
 	offerSavedDraft,
 } = usePostDraftBackup({ form, draftKey, serverUpdatedAt, lastSavedForm });
 
-/* ── 불러오기 ─────────────────────────────── */
-
 async function loadPost() {
 	if (isNew.value) {
 		Object.assign(form, EMPTY_FORM);
@@ -167,16 +165,12 @@ async function loadPost() {
 	}
 }
 
-/* ── 대표 이미지 ───────────────────────────── */
-
 /** 대표 이미지가 비어 있으면 저장 시점의 본문 첫 이미지를 한 번 적용한다. */
 function applyAutomaticThumbnail() {
 	if (!form.thumbnailImageUrl) {
 		form.thumbnailImageUrl = firstBodyImageUrl.value;
 	}
 }
-
-/* ── 저장 ─────────────────────────────────── */
 
 /**
  * 저장에 실패했다고 알린다.
@@ -521,8 +515,6 @@ async function runDelete() {
 	}
 }
 
-/* ── 생명주기 ─────────────────────────────── */
-
 async function enter() {
 	imageContext.value += 1;
 	bodyUploads.value = { pending: 0, failed: 0 };
@@ -757,7 +749,6 @@ watch(postId, (id) => {
 		</template>
 
 
-		<!-- 로컬 스냅샷 복구 -->
 		<AdminPostDraftDialog
 			:draft="draftFound"
 			:conflict="draftConflict"
@@ -766,7 +757,6 @@ watch(postId, (id) => {
 			@close="closeDraftPrompt"
 		/>
 
-		<!-- 발행·내리기·삭제 확인 -->
 		<AdminPostActionDialog
 			v-model:scheduled-at="scheduledAt"
 			:action="confirmAction"

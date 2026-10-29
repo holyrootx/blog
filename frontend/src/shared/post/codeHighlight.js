@@ -8,7 +8,6 @@
  * 렌더 경로에 주입 구멍을 두지 않기 위해서다 — 본문 매퍼와 같은 원칙.
  */
 
-/** 코드 블록에서 고를 수 있는 언어 */
 export const CODE_LANGUAGES = [
 	{ value: '', label: '언어 없음' },
 	{ value: 'java', label: 'Java' },

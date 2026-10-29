@@ -183,8 +183,6 @@ function goToLogin() {
 	router.push({ name: 'member-login' });
 }
 
-// ── 쓰기 ──────────────────────────────
-
 const draft = ref('');
 const secret = ref(false);
 const submitting = ref(false);
@@ -243,8 +241,6 @@ async function signOut() {
 	draft.value = '';
 	secret.value = false;
 }
-
-// ── 내 글 고치기·지우기 ─────────────────
 
 const editingId = ref(null);
 const editDraft = ref('');
@@ -320,8 +316,6 @@ async function confirmDelete(entry) {
 		deletePending.value = false;
 	}
 }
-
-// ── 신고 ──────────────────────────────
 
 const reportTarget = ref(null);
 const reportPending = ref(false);

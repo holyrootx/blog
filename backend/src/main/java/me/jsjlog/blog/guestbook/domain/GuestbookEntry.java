@@ -106,7 +106,6 @@ public class GuestbookEntry extends BaseEntity {
 		this.secret = secret;
 	}
 
-	/** 쓴 사람이 지운다 */
 	public void delete(LocalDateTime now) {
 		this.deleted = true;
 		this.hiddenByAdmin = false;

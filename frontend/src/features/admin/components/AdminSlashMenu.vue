@@ -24,7 +24,6 @@ const emit = defineEmits(['run', 'hover']);
 const listRef = ref(null);
 const up = ref(false);
 
-// 메뉴와 화면 끝 사이에 남길 틈
 const EDGE_GAP = 8;
 // 이보다 좁아지면 항목을 고르기 어렵다
 const MIN_HEIGHT = 120;

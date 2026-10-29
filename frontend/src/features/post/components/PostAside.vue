@@ -130,7 +130,6 @@ watch(() => props.toc, () => nextTick(syncActive), { immediate: true });
 			<div class="ad-card__slot" :style="{ height: `${ads[0].height}px` }">{{ ads[0].label }}</div>
 		</div>
 
-		<!-- 목차와 두 번째 광고가 함께 스크롤을 따라온다 -->
 		<div class="post-aside__sticky">
 			<nav v-if="toc.length > 0" class="post-toc" aria-label="목차">
 				<div class="post-toc__head">

@@ -27,7 +27,6 @@ export function isInlineColor(value) {
 	return COLOR_NAME.test(String(value ?? ''));
 }
 
-/** 색 구간 하나를 저장 형식으로 */
 export function wrapColor(text, color) {
 	return text && isInlineColor(color) ? `<span data-color="${color}">${text}</span>` : text;
 }

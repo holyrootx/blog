@@ -31,7 +31,6 @@ public class AdminGuestbookController {
 		return ApiResponse.ok(adminGuestbookService.getEntries(condition));
 	}
 
-	/** 글 하나와 신고 목록 */
 	@GetMapping("/{entryId}")
 	public ApiResponse<AdminGuestbookDetail> getDetail(@PathVariable Long entryId) {
 		return ApiResponse.ok(adminGuestbookService.getDetail(entryId));
@@ -75,7 +74,6 @@ public class AdminGuestbookController {
 		return ApiResponse.ok();
 	}
 
-	/** 신고를 봤지만 글은 그대로 둔다 */
 	@PostMapping("/{entryId}/reports/dismiss")
 	public ApiResponse<Void> dismissReports(
 			@PathVariable Long entryId,

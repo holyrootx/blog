@@ -26,11 +26,9 @@ public interface MenuRepository extends JpaRepository<Menu,Long>, MenuRepository
 	@Query("select count(menu) > 0 from Menu menu where menu.parent.id = :parentId")
 	boolean existsByParentMenuId(@Param("parentId") Long parentId);
 
-	/** 그룹들 중 마지막 순서. 하나도 없으면 0 */
 	@Query("select coalesce(max(menu.sortOrder), 0) from Menu menu where menu.parent is null")
 	Long findMaxGroupSortOrder();
 
-	/** 한 그룹에 속한 항목들 중 마지막 순서. 하나도 없으면 0 */
 	@Query("select coalesce(max(menu.sortOrder), 0) from Menu menu where menu.parent.id = :parentId")
 	Long findMaxItemSortOrder(@Param("parentId") Long parentId);
 }

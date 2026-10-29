@@ -123,7 +123,6 @@ function toggleAllGroups() {
 		: groups.value.map((group) => group.id);
 }
 
-// 항목 수정 팝업에서 고를 소속 그룹
 const groupOptions = computed(() => groups.value
 	.map((group) => ({ value: String(group.id), label: group.menuName })));
 
@@ -222,7 +221,6 @@ async function saveMenu() {
 
 		notifySuccess(done);
 	} catch (error) {
-		// 서버가 준 메시지를 그대로 보여준다
 		failWith(error.message);
 	} finally {
 		saving.value = false;
@@ -302,7 +300,6 @@ onMounted(search);
 			</template>
 		</AdminGridToolbar>
 
-		<!-- 로딩 · 실패 · 빈 목록은 표와 같은 모양으로 보여준다 -->
 		<div v-if="state === 'loading'" class="admin-tree__state">
 			<div class="admin-tree__skeleton"><span></span><span></span><span></span></div>
 		</div>

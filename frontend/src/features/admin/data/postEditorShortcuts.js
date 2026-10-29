@@ -140,7 +140,6 @@ export function orderedLabel(number, depth) {
 	return `${number}.`;
 }
 
-/** 글머리 표시. 깊이마다 ● → ○ → ■ (노션과 같다) */
 export function bulletMarker(depth) {
 	return ['•', '◦', '▪'][depth % 3];
 }

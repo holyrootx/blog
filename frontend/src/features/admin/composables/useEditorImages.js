@@ -25,7 +25,6 @@ export function useEditorImages({ blocks, sync }) {
 		return uploadingIds.value.includes(block.id);
 	}
 
-	/** 파일 고르기 창을 띄우고, 고른 파일을 그 블록에 올린다 */
 	function pickImageFor(block) {
 		const picker = document.createElement('input');
 		picker.type = 'file';
@@ -115,7 +114,6 @@ export function useEditorImages({ blocks, sync }) {
 		probe.src = source;
 	}
 
-	/** 이미지 파일 하나를 새 블록으로 만들어 올린다 */
 	function insertImage(file, afterIndex) {
 		const block = createBlock('image');
 
@@ -144,8 +142,6 @@ export function useEditorImages({ blocks, sync }) {
 		event.preventDefault();
 		files.forEach((file, offset) => insertImage(file, index + offset));
 	}
-
-	/* ── 이미지 폭 ────────────────────────────── */
 
 	// 이 자리들에는 손이 정확히 멈추지 않아도 붙는다. 눈으로 맞추기 어려운 값들이다
 	const SNAP_WIDTHS = [25, 50, 75, MAX_IMAGE_WIDTH];

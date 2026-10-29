@@ -11,7 +11,6 @@ import me.jsjlog.blog.common.exception.ErrorCode;
  */
 public enum AuthProvider {
 
-	/** 아이디·비밀번호 로그인. 관리자가 쓴다 */
 	LOCAL,
 
 	GOOGLE,

@@ -2,7 +2,6 @@
 import { onBeforeUnmount, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
-// 마크다운 :::tip / :::warning / :::note 에 대응하는 고정 종류
 import PostBody from './PostBody.vue';
 import { removePostReaction, setPostReaction } from '../api/postApi';
 import { useMemberAuth } from '../../member/data/memberAuthStore';

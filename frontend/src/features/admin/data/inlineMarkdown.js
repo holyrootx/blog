@@ -37,7 +37,6 @@ export function safeHref(url) {
 	return /^(https?:|mailto:)/i.test(value) ? value : '';
 }
 
-/** 마크다운 한 줄 → contenteditable 에 넣을 HTML */
 export function inlineToHtml(text) {
 	const source = String(text ?? '');
 
@@ -263,7 +262,6 @@ export function colorRuns(runs, start, end, color) {
 	return result;
 }
 
-/** contenteditable 의 내용 → 마크다운 한 줄 */
 export function htmlToInline(node, { root = false } = {}) {
 	return runsToMarkdown(readRuns(node, { root }));
 }

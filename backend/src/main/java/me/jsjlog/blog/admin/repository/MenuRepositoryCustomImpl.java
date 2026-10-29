@@ -85,7 +85,6 @@ public class MenuRepositoryCustomImpl implements MenuRepositoryCustom{
 
 		QMenu menu = QMenu.menu;
 
-		// 그룹 자체가 조회조건에 맞는지
 		BooleanBuilder matchedBuilder = new BooleanBuilder();
 
 		if (!StringUtils.isNullOrEmpty(menuSearchCondition.menuName())) {

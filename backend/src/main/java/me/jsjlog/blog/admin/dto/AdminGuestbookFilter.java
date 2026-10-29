@@ -10,8 +10,6 @@ public enum AdminGuestbookFilter {
 	ALL,
 	/** 아직 판단하지 않은 신고가 있다 */
 	REPORTED,
-	/** 운영자가 가렸다 */
 	HIDDEN,
-	/** 쓴 사람이 지웠다 */
 	DELETED
 }

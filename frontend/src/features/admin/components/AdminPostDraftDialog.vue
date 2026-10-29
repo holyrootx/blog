@@ -2,7 +2,6 @@
 import BaseModal from '../../../shared/components/BaseModal.vue';
 import { formatEditorDateTime } from '../data/postEditorDates';
 
-/** 브라우저에 남아 있던 작성 중인 내용을 불러올지 묻는다 */
 defineProps({
 	draft: {
 		type: Object,

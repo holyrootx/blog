@@ -130,7 +130,6 @@ public class Comment extends BaseEntity {
 		this.edited = true;
 	}
 
-	/** 글쓴이가 지운다 */
 	public void delete() {
 		delete(LocalDateTime.now());
 	}
@@ -189,9 +188,6 @@ public class Comment extends BaseEntity {
 		return deletedAt != null || (deleted && !hiddenByAdmin);
 	}
 
-	/**
-	 * 답글 여부입니다. 답글에 답글을 다는 것을 막는 검증에서 사용합니다.
-	 */
 	public boolean isReply() {
 		return this.parent != null;
 	}

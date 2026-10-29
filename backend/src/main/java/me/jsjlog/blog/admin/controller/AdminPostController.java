@@ -29,20 +29,17 @@ public class AdminPostController {
 
 	private final AdminPostService adminPostService;
 
-	// GET /api/v1/admin/blog/posts?page=0&size=20&status=DRAFT&categoryId=1&keyword=배포
 	@GetMapping("/posts")
 	public ApiResponse<AdminPostListResponse> getPosts(AdminPostSearchCondition condition) {
 		AdminPostListResponse posts = adminPostService.getPostList(condition);
 		return ApiResponse.ok(posts);
 	}
 
-	// GET /api/v1/admin/blog/posts/{postId}
 	@GetMapping("/posts/{postId}")
 	public ApiResponse<AdminPostDetailResponse> getPost(@PathVariable Long postId) {
 		return ApiResponse.ok(adminPostService.getPost(postId));
 	}
 
-	// POST /api/v1/admin/blog/posts
 	// 글쓴이를 요청에서 받지 않는다. 로그인한 사람이 곧 글쓴이다 —
 	// 받게 만들면 남의 이름으로 글을 쓸 수 있게 된다
 	@PostMapping("/posts")
@@ -53,7 +50,6 @@ public class AdminPostController {
 		return ApiResponse.ok(adminPostService.createPost(request, principal.getId()));
 	}
 
-	// PUT /api/v1/admin/blog/posts/{postId}
 	@PutMapping("/posts/{postId}")
 	public ApiResponse<Void> updatePost(@PathVariable Long postId,
 										@RequestBody AdminPostRequest request) {
@@ -61,7 +57,6 @@ public class AdminPostController {
 		return ApiResponse.ok();
 	}
 
-	// POST /api/v1/admin/blog/posts/{postId}/publish
 	// 수정(PUT)에 status 를 섞지 않고 나눈 이유는 발행이 publishedAt 을 건드리는
 	// 부수효과를 갖기 때문이다. 저장할 때마다 값이 바뀌면 사고가 난다
 	@PostMapping("/posts/{postId}/publish")
@@ -73,14 +68,12 @@ public class AdminPostController {
 		return ApiResponse.ok();
 	}
 
-	// POST /api/v1/admin/blog/posts/{postId}/unpublish
 	@PostMapping("/posts/{postId}/unpublish")
 	public ApiResponse<Void> unpublishPost(@PathVariable Long postId) {
 		adminPostService.unpublishPost(postId);
 		return ApiResponse.ok();
 	}
 
-	// DELETE /api/v1/admin/blog/posts/{postId}
 	@DeleteMapping("/posts/{postId}")
 	public ApiResponse<Void> deletePost(@PathVariable Long postId) {
 		adminPostService.deletePost(postId);

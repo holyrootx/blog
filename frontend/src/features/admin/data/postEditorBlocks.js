@@ -36,7 +36,6 @@ export function createBlock(type = 'paragraph', patch = {}) {
 		// 기본값을 100 으로 두면 안 된다 — 예전 글을 열었다 저장만 해도
 		// 모든 이미지에 "100%" 가 붙어 원문이 달라진다
 		width: 0,
-		// 줄 안에서 사진이 놓이는 자리. 기본은 왼쪽이다
 		align: DEFAULT_IMAGE_ALIGN,
 		// 원본 픽셀 크기. 비율을 미리 알려 이미지 도착 때 글이 밀리지 않게 한다
 		naturalWidth: 0,
@@ -45,7 +44,6 @@ export function createBlock(type = 'paragraph', patch = {}) {
 		previewUrl: '',
 		// 목록(글머리·번호·할 일)의 들여쓰기 깊이. 0 이 맨 바깥이다
 		indent: 0,
-		// 할 일의 완료 여부
 		checked: false,
 		// 토글이 펼쳐져 있는지. 편집 화면에서만 쓰고 저장하지 않는다(공개 글은 접힌 채로 시작한다)
 		open: true,
@@ -224,8 +222,6 @@ export function moveBlockRange(blocks, start, end, direction) {
 
 	return [...rest.slice(0, at), ...moving, ...rest.slice(at)];
 }
-
-/* ── 마크다운 → 블록 ──────────────────────── */
 
 export function toEditorBlocks(markdown) {
 	const lines = String(markdown ?? '').replace(/\r\n/g, '\n').split('\n');
@@ -417,8 +413,6 @@ export function toEditorBlocks(markdown) {
 
 	return blocks.length > 0 ? blocks : [createBlock('paragraph')];
 }
-
-/* ── 블록 → 마크다운 ──────────────────────── */
 
 export function toMarkdown(blocks) {
 	const pieces = [];

@@ -53,7 +53,6 @@ public class CommentModeration {
 	@JoinColumn(name = "comment_id", nullable = false)
 	private Comment comment;
 
-	/** 조치한 운영자 */
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
 	@JoinColumn(name = "admin_id", nullable = false)
 	private Member admin;

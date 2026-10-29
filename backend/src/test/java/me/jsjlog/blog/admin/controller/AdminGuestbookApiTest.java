@@ -40,11 +40,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 관리자 방명록. 답글·가리기·신고 판단.
- *
- * <p>익명은 401, 일반 회원은 403, 운영자만 통과해야 한다. 상태를 바꾸는 요청은 CSRF 토큰도 본다.</p>
- */
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional

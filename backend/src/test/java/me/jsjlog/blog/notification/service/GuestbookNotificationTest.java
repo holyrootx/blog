@@ -142,7 +142,6 @@ class GuestbookNotificationTest {
 				.andExpect(jsonPath("$.data[0].preview").value("와 주셔서 고마워요"))
 				.andExpect(jsonPath("$.data[0].guestbookEntryId").value(entry.getId()));
 		assertThat(notifications.countUnread(guest.getId())).isEqualTo(1);
-		// 운영자 종에는 뜨지 않는다
 		assertThat(notifications.findMine(admin.getId())).isEmpty();
 	}
 

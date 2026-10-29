@@ -73,7 +73,6 @@ const state = computed(() => {
 	return 'rows';
 });
 
-// 메시지 줄이 차지할 칸 수 (체크박스 열 포함)
 const messageColspan = computed(() => props.columns.length + (props.selectable ? 1 : 0));
 
 const pageKeys = computed(() => props.rows.map((row) => row[props.rowKey]));
@@ -171,7 +170,6 @@ function onRowClick(row) {
 					</td>
 				</tr>
 
-				<!-- 실패: 아이콘 + 오류색 + 재시도 -->
 				<tr v-else-if="state === 'error'">
 					<td :colspan="messageColspan">
 						<div class="admin-grid__error">

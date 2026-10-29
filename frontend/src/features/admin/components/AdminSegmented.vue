@@ -1,6 +1,4 @@
 <script setup>
-// 이지선다 이상을 버튼으로 고르는 컨트롤.
-// 조회조건에서는 보통 [전체 / 노출 / 숨김] 처럼 3개까지 쓴다.
 defineProps({
 	label: {
 		type: String,

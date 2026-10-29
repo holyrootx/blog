@@ -8,7 +8,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/** 관리자와 회원이 함께 쓰는 인증 보조 API. */
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthController {

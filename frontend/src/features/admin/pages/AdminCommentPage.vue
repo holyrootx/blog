@@ -273,8 +273,6 @@ function formatCount(value) {
 </template>
 
 <style scoped>
-/* ── 댓글 관리 ─────────────────────────────── */
-
 .admin-comment-member-filter {
 	display: inline-flex;
 	gap: 8px;

@@ -102,7 +102,6 @@ function writeCell(text) {
 
 const ALIGN_MARKS = { left: ':---', center: ':---:', right: '---:' };
 
-/** 표 → GFM 표 문자열 */
 export function writeTable({ rows, align = [], header = true }) {
 	const columns = Math.max(1, ...rows.map((row) => row.length));
 	const line = (cells) => `| ${Array.from({ length: columns }, (_, column) => writeCell(cells[column])).join(' | ')} |`;

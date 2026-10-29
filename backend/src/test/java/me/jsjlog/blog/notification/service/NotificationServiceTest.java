@@ -201,8 +201,6 @@ class NotificationServiceTest {
 		assertThat(notificationService.countUnread(author.getId())).isEqualTo(1);
 	}
 
-	// ── 신고 알림 ──────────────────────────────
-
 	@Test
 	@DisplayName("신고가 들어오면 운영자에게 알림이 간다")
 	void notifiesAdminOnReport() {
@@ -276,8 +274,6 @@ class NotificationServiceTest {
 		assertThat(notificationService.countUnread(admin.getId())).isEqualTo(1);
 		assertThat(notificationService.findMine(admin.getId())).hasSize(2);
 	}
-
-	// ── 가려짐 알림 ────────────────────────────
 
 	@Test
 	@DisplayName("댓글을 가리면 쓴 사람에게 알림이 간다 — 가려진 뒤에도 목록에 남는다")

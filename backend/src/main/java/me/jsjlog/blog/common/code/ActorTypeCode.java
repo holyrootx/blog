@@ -3,7 +3,6 @@ package me.jsjlog.blog.common.code;
 /** 처리한 쪽. 공통 코드 그룹 ACTOR_TYPE 과 짝이다 */
 public enum ActorTypeCode implements CommonCodeType {
 
-	/** 회원 본인 */
 	SELF,
 	ADMIN,
 

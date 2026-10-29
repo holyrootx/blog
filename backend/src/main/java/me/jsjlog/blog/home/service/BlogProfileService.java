@@ -30,10 +30,6 @@ public class BlogProfileService {
 	private final BlogProfileRepository blogProfileRepository;
 	private final ImageReferenceGuard imageReferenceGuard;
 
-	/**
-	 * id는 1로 고정 예정(관리자는 1명이기 때문)
-	 * @return
-	 */
 	public BlogProfileResponse getBlogProfile(Long profileId) {
 		return BlogProfileResponse.from(findProfile(profileId));
 	}

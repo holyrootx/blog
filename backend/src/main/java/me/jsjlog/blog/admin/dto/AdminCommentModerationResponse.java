@@ -4,7 +4,6 @@ import me.jsjlog.blog.post.domain.CommentModeration;
 
 import java.time.LocalDateTime;
 
-/** 이 댓글에 운영자가 한 조치 한 건 */
 public record AdminCommentModerationResponse(
 		Long id,
 		String action,

@@ -13,7 +13,6 @@ import org.springframework.security.web.authentication.AuthenticationFailureHand
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.stereotype.Component;
 
-/** 소셜 로그인 실패 사유를 제한된 결과 코드로 바꿔 프론트 콜백 화면으로 보낸다. */
 @Component
 @RequiredArgsConstructor
 public class OAuth2LoginFailureHandler implements AuthenticationFailureHandler {

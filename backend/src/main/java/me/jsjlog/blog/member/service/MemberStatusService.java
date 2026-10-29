@@ -107,7 +107,6 @@ public class MemberStatusService {
 		return true;
 	}
 
-	/** 기간이 지난 복원 정보를 모두 정리한다. 하루 한 번 돈다 */
 	@Transactional
 	public int expireRestores(LocalDateTime now) {
 		int expired = 0;

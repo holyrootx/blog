@@ -51,11 +51,9 @@ public class AdminLoginConfigurer extends AbstractHttpConfigurer<AdminLoginConfi
 			filter.setSessionAuthenticationStrategy(sessionStrategy);
 		}
 
-		// 폼 로그인 필터가 서는 자리에 대신 세운다
 		http.addFilterBefore(postProcess(filter), UsernamePasswordAuthenticationFilter.class);
 	}
 
-	/** {@code http.with(...)} 에서 쓰기 좋게 감싼다 */
 	public static AdminLoginConfigurer of(
 			ObjectMapper objectMapper,
 			AuthenticationManager authenticationManager,

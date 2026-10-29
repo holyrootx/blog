@@ -56,13 +56,11 @@ public class AdminCommentController {
 		return ApiResponse.ok();
 	}
 
-	/** 댓글 상세. 지금 본문, 신고와 조치, 변경 기록 */
 	@GetMapping("/{commentId}")
 	public ApiResponse<AdminCommentDetail> getDetail(@PathVariable Long commentId) {
 		return ApiResponse.ok(adminCommentService.getDetail(commentId));
 	}
 
-	/** 신고를 봤지만 댓글은 그대로 둔다 */
 	@PostMapping("/{commentId}/reports/dismiss")
 	public ApiResponse<Void> dismissReports(
 			@PathVariable Long commentId,

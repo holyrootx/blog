@@ -32,23 +32,14 @@ public record ErrorResponse(
 	OffsetDateTime timestamp
 ) {
 
-	/**
-	 * 기본 에러 메시지를 그대로 사용하는 실패 응답입니다.
-	 */
 	public static ErrorResponse of(ErrorCode errorCode, String path) {
 		return of(errorCode, errorCode.getMessage(), List.of(), path);
 	}
 
-	/**
-	 * 에러 코드는 유지하되 메시지만 상황에 맞게 바꿔야 할 때 사용합니다.
-	 */
 	public static ErrorResponse of(ErrorCode errorCode, String message, String path) {
 		return of(errorCode, message, List.of(), path);
 	}
 
-	/**
-	 * validation 에러처럼 필드별 오류 목록이 필요한 실패 응답입니다.
-	 */
 	public static ErrorResponse of(
 		ErrorCode errorCode,
 		String message,

@@ -24,9 +24,6 @@ public record HomePageTopicResponse(
 		);
 	}
 
-	/**
-	 * 콤마로 구분해 저장한 키워드를 목록으로 바꿉니다.
-	 */
 	private static List<String> parseKeywords(String keywords) {
 		List<String> keywordList = new ArrayList<>();
 

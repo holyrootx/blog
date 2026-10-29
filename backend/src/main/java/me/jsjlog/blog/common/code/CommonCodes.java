@@ -69,7 +69,6 @@ public class CommonCodes implements ApplicationRunner {
 		return code == null ? type.code() : code.getCodeName();
 	}
 
-	/** 그룹의 코드들. 표시 순서대로 */
 	public List<CommonCode> codesOf(String groupCode) {
 		return groups().getOrDefault(groupCode, Map.of()).values().stream()
 				.sorted(Comparator.comparingInt(CommonCode::getSortOrder).thenComparing(CommonCode::getCode))

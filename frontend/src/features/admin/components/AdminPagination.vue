@@ -48,7 +48,6 @@ function move(nextPage) {
 </script>
 
 <template>
-	<!-- 1페이지뿐이면 아예 그리지 않는다 -->
 	<nav v-if="totalPages > 1" class="admin-pagination" aria-label="페이지 이동">
 		<button
 			class="admin-pagination__button"

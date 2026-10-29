@@ -35,28 +35,24 @@ public class MenuController {
 		return ApiResponse.ok(menus);
 	}
 
-	// /api/v1/admin/blog/menus
 	@GetMapping("/menus")
 	public ApiResponse<List<MenuResponse>> getMenus(MenuSearchCondition menuSearchCondition) {
 		List<MenuResponse> menuList = menuService.getMenuList(menuSearchCondition);
 		return ApiResponse.ok(menuList);
 	}
 
-	// POST /api/v1/admin/blog/menus
 	@PostMapping("/menus")
 	public ApiResponse<Long> createMenu(@RequestBody MenuCreateRequest request) {
 		Long menuId = menuService.createMenu(request);
 		return ApiResponse.ok(menuId);
 	}
 
-	// DELETE /api/v1/admin/blog/menus/{menuId}
 	@DeleteMapping("/menus/{menuId}")
 	public ApiResponse<Void> deleteMenu(@PathVariable Long menuId) {
 		menuService.deleteMenu(menuId);
 		return ApiResponse.ok();
 	}
 
-	// PUT /api/v1/admin/blog/menus/{menuId}
 	@PutMapping("/menus/{menuId}")
 	public ApiResponse<Void> updateMenu(@PathVariable Long menuId,
 										@RequestBody MenuRequest request) {

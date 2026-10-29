@@ -67,7 +67,6 @@ const router = useRouter();
 const route = useRoute();
 const categories = ref([]);
 
-// 확인창. 어떤 동작을 무슨 글에 할지 담아둔다
 const confirmTarget = ref(null);
 const confirmAction = ref('');
 const working = ref(false);
@@ -76,7 +75,6 @@ const purgeTitle = ref('');
 const canConfirm = computed(() => !working.value && confirmTarget.value !== null
 	&& (confirmAction.value !== 'purge' || purgeTitle.value === confirmTarget.value.title));
 
-// 조회 기록 팝업을 열어 둔 글
 const viewsTarget = ref(null);
 
 const categoryOptions = computed(() => [
@@ -295,7 +293,6 @@ async function runAction() {
 		// 목록이 새로 그려지는 것만으로는 무엇이 바뀌었는지 알기 어렵다
 		notifySuccess(done);
 	} catch (error) {
-		// 서버가 준 메시지를 그대로 보여준다 (요약 없음·본문 없음 등)
 		actionError.value = error.message;
 	} finally {
 		working.value = false;

@@ -64,7 +64,6 @@ public class MemberPrincipal implements UserDetails, OAuth2User {
 		this.attributes = attributes;
 	}
 
-	/** 아이디·비밀번호로 로그인한 경우 */
 	public static MemberPrincipal ofLocal(Member member) {
 		return ofLocal(member, System.nanoTime());
 	}

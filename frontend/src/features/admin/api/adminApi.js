@@ -717,11 +717,6 @@ function toVisible(menu) {
 	return true;
 }
 
-/**
- * 본문에 넣을 이미지를 올린다.
- *
- * 응답의 url 을 그대로 마크다운에 박는다. 파일은 R2 에 있고 DB 에는 기록만 남는다.
- */
 /** 이미지 목록. 올린 지 일주일 안 된 것은 서버가 빼고 준다 */
 export async function getAdminImages({ onlyUnused = false, page = 0, size = 20 } = {}) {
 	const params = new URLSearchParams({

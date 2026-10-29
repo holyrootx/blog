@@ -11,7 +11,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import me.jsjlog.blog.common.domain.BaseEntity;
 
-/** 대문에서 주제 카드들을 감싸는 제목과 안내 문구. */
 @Getter
 @Entity
 @Table(name = "home_page_topic_section")

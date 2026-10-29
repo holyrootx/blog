@@ -270,7 +270,6 @@ public class AdminPostService {
 		return post.getPublishedAt() == null ? LocalDateTime.now() : post.getPublishedAt();
 	}
 
-	/** 공개 글은 비공개로 내리고, 예약 글은 시각을 지운 초안으로 되돌린다. */
 	@Transactional
 	public void unpublishPost(Long postId) {
 		Post post = postAccess.lockActive(postId);

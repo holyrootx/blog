@@ -1,5 +1,3 @@
-/* 회원 로그인·가입 — 공개 화면 쪽이라 블로그 톤을 그대로 쓴다 */
-
 @use '../base/breakpoints' as bp;
 
 /* 공개 화면 공통 카드(.public-shell__main) 안에 들어간다. 헤더 아래 남은 자리 가운데에 판을 둔다 */
@@ -203,8 +201,6 @@
 	}
 }
 
-/* ── 헤더 회원 메뉴 ───────────────────────── */
-
 .member-menu {
 	position: relative;
 }
@@ -288,8 +284,6 @@
 	background: var(--surface-muted);
 	color: var(--accent-dark);
 }
-
-/* ── 내 설정 화면 ─────────────────────────── */
 
 .member-settings {
 	width: min(760px, 100%);
@@ -673,8 +667,6 @@
 		display: none;
 	}
 }
-
-/* ── 헤더 알림 종 ─────────────────────────── */
 
 .notification-bell {
 	position: relative;

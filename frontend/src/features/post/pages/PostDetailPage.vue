@@ -242,7 +242,6 @@ function applyPostReaction(reaction) {
 		</main>
 		<main v-else class="public-shell__main post-shell">
 			<div class="post-shell__layout">
-				<!-- 본문·댓글·관련글이 한 컬럼. 오른쪽 레일은 그 옆으로 계속 내려온다 -->
 				<div class="post-shell__column">
 					<PostArticleSkeleton v-if="loading.post" />
 					<PostArticle
@@ -295,7 +294,6 @@ function applyPostReaction(reaction) {
 			@dismiss="dismissResume"
 		/>
 
-		<!-- 모바일 전용 하단 고정 광고 (시안 2a) -->
 		<div v-if="showAds" class="anchor-ad">
 			<span class="anchor-ad__label">광고 · AD (하단 고정)</span>
 			<div class="anchor-ad__slot">{{ detail.anchorAd.label }}</div>

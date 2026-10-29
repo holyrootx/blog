@@ -83,7 +83,6 @@ public class GuestbookReport extends BaseEntity {
 		this.reportedContent = entry.getContent();
 	}
 
-	/** 이미 처리한 신고는 다시 건드리지 않는다 */
 	public void markHandled(LocalDateTime now) {
 		if (handledAt == null) {
 			this.handledAt = now;

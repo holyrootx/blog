@@ -12,7 +12,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.zip.CRC32;
 import javax.imageio.ImageIO;
 
-/** 작은 실제 이미지와 픽셀을 할당하지 않는 경계 검사 파일. */
 public final class ImageTestFiles {
 	private ImageTestFiles() { }
 

@@ -33,11 +33,9 @@ public class UploadImage extends BaseEntity {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
-	/** 저장소 안에서의 위치. 파일을 지울 때 이 값이 필요하다 */
 	@Column(name = "storage_key", nullable = false, length = 255)
 	private String storageKey;
 
-	/** 글 본문에 박히는 공개 주소 */
 	@Column(name = "url", nullable = false, length = 500)
 	private String url;
 

@@ -73,7 +73,6 @@ function onInput() {
 		return;
 	}
 
-	// 닫는 기호를 친 순간 기호가 사라지고 서식이 들어간다 (노션과 같은 동작)
 	applyCompletedMarker();
 
 	emit('update:modelValue', readText());
@@ -108,7 +107,6 @@ function applyCompletedMarker() {
 		return;
 	}
 
-	// 표기 구간만 잘라내고 그 자리에 태그를 넣는다
 	const target = document.createRange();
 	target.setStart(node, start);
 	target.setEnd(node, offset);

@@ -28,10 +28,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class LoginAttemptGuard {
 
-	/** 이만큼 틀리면 막는다 */
 	private static final int MAX_FAILURES = 5;
 
-	/** 막아 두는 시간 */
 	private static final Duration BLOCK_DURATION = Duration.ofMinutes(10);
 
 	/**
@@ -51,7 +49,6 @@ public class LoginAttemptGuard {
 
 	private final Map<String, Attempt> attempts = new ConcurrentHashMap<>();
 
-	/** @return 지금 막혀 있으면 true */
 	public boolean isBlocked(String clientIp) {
 		Attempt attempt = attempts.get(clientIp);
 
@@ -63,7 +60,6 @@ public class LoginAttemptGuard {
 			return true;
 		}
 
-		// 막힌 시간이 지났거나 오래 조용했으면 없던 일로 한다
 		if (attempt.isStale()) {
 			attempts.remove(clientIp);
 		}
@@ -71,7 +67,6 @@ public class LoginAttemptGuard {
 		return false;
 	}
 
-	/** 남은 시간. 막혀 있지 않으면 0 */
 	public Duration remainingBlock(String clientIp) {
 		Attempt attempt = attempts.get(clientIp);
 

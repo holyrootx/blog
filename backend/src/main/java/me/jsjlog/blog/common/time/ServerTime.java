@@ -4,7 +4,6 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 
-/** 서버가 저장한 시각을 받는 쪽이 같은 순간으로 읽을 수 있게 바꾼다. */
 public final class ServerTime {
 
 	private ServerTime() {

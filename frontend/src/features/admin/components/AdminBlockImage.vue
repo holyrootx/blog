@@ -57,7 +57,6 @@ const ALIGN_OPTIONS = [
 						@keydown="emit('resize-keydown', $event)"
 					></button>
 
-					<!-- 사진 오른쪽 위 단추들. 정렬 셋과 캡션 하나 -->
 					<div class="block-editor__image-tools">
 						<div class="block-editor__image-toolgroup" role="group" aria-label="이미지 정렬">
 							<button

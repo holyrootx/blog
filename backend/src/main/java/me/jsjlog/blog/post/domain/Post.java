@@ -158,9 +158,6 @@ public class Post extends BaseEntity {
 		this.status = PostStatus.PRIVATE;
 	}
 
-	/**
-	 * 카테고리를 옮깁니다. 카테고리 삭제 시 미분류로 이동시킬 때 사용합니다.
-	 */
 	public void moveTo(Category category) {
 		this.category = category;
 	}

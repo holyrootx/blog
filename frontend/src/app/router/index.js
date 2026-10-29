@@ -165,7 +165,6 @@ const router = createRouter({
 			component: AdminLayout,
 			meta: {
 				robots: 'noindex,follow',
-				// 이 아래 화면은 전부 로그인이 필요하다
 				requiresAdmin: true,
 			},
 			children: [

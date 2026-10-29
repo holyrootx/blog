@@ -1,5 +1,3 @@
-/* 관리자 공통 컴포넌트 — 조회조건 · 표 · 페이징 */
-
 /* 폼 컨트롤 강조색 통일. 체크박스만 브라우저 기본 파란색이 되는 것을 막는다 */
 @use '../base/breakpoints' as bp;
 
@@ -9,8 +7,6 @@
 .admin-toolbar {
 	accent-color: var(--admin-control-accent);
 }
-
-/* ── 조회조건 필드 ─────────────────────────── */
 
 .admin-field {
 	display: flex;
@@ -56,8 +52,6 @@
 .admin-field__input::placeholder {
 	color: var(--text-subtle);
 }
-
-/* ── 대문 설정 ─────────────────────────────── */
 
 .admin-home-settings {
 	width: 100%;
@@ -357,8 +351,6 @@
 	cursor: pointer;
 }
 
-/* ── 커스텀 셀렉트 ─────────────────────────── */
-
 .admin-combo {
 	position: relative;
 }
@@ -418,7 +410,6 @@
 	transform: rotate(-135deg);
 }
 
-/* 목록은 기본으로 트리거 바로 아래 */
 .admin-combo__list {
 	position: absolute;
 	top: calc(100% + 4px);
@@ -435,7 +426,6 @@
 	overflow-y: auto;
 }
 
-/* 아래 공간이 부족하면 위로 */
 .admin-combo__list--up {
 	top: auto;
 	bottom: calc(100% + 4px);
@@ -457,8 +447,6 @@
 	color: var(--admin-accent-dark);
 	font-weight: 700;
 }
-
-/* ── 이지선다 버튼 ─────────────────────────── */
 
 .admin-segmented {
 	display: flex;
@@ -499,8 +487,6 @@
 	color: var(--admin-text-strong);
 }
 
-/* ── 조회조건 틀 ───────────────────────────── */
-
 .admin-search {
 	padding: 20px 22px 16px;
 	border: 1px solid var(--admin-card-line);
@@ -523,7 +509,6 @@
 	display: none;
 }
 
-/* 접기·펼치기만 남는 줄 */
 .admin-search__footer {
 	display: flex;
 	justify-content: flex-end;
@@ -553,8 +538,6 @@
 	pointer-events: none;
 }
 
-/* ── 조회조건과 그리드 사이 툴바 ───────────── */
-
 .admin-toolbar {
 	display: flex;
 	align-items: center;
@@ -579,7 +562,6 @@
 	color: var(--admin-title);
 }
 
-/* 체크박스로 고른 건수. 0건일 때는 화면에서 감춘다 */
 .admin-toolbar__selected {
 	padding: 4px 10px;
 	border-radius: 999px;
@@ -588,8 +570,6 @@
 	font-size: 12.5px;
 	font-weight: 700;
 }
-
-/* ── 표 ────────────────────────────────────── */
 
 .admin-grid {
 	border: 1px solid var(--admin-card-line);
@@ -649,7 +629,6 @@
 	color: var(--admin-meta);
 }
 
-/* 로딩 — 문구 대신 뼈대를 보여준다 */
 .admin-grid__skeleton,
 .admin-tree__skeleton {
 	display: flex;
@@ -683,7 +662,6 @@
 	to { background-position: 0 50%; }
 }
 
-/* 실패 — 아이콘 + 오류색 + 재시도 */
 .admin-grid__error {
 	display: flex;
 	flex-direction: column;
@@ -722,7 +700,6 @@
 	background: var(--admin-danger-soft);
 }
 
-/* 체크박스 열 */
 .admin-grid__check-cell {
 	text-align: center;
 	vertical-align: middle;
@@ -751,8 +728,6 @@
 .admin-grid__table tbody tr.admin-grid__row--active td:first-child {
 	box-shadow: inset 3px 0 0 var(--admin-accent);
 }
-
-/* ── 개수 선택 ─────────────────────────────── */
 
 .admin-page-size {
 	position: relative;
@@ -840,8 +815,6 @@
 	font-weight: 700;
 }
 
-/* ── 페이징 ────────────────────────────────── */
-
 .admin-pagination {
 	display: flex;
 	justify-content: center;
@@ -879,8 +852,6 @@
 	font-weight: 700;
 }
 
-/* ── 좁은 화면 ─────────────────────────────── */
-
 @include bp.upto(xl) {
 	.admin-search__fields {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -893,8 +864,6 @@
 	}
 }
 
-/* ── 모달 ──────────────────────────────────── */
-
 .admin-modal__form {
 	display: grid;
 	grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -905,7 +874,6 @@
 	grid-template-columns: minmax(0, 1fr);
 }
 
-/* ── 상태 배지 ─────────────────────────────── */
 /* 주황은 "활성·공개" 강조, 회색은 "비활성·중립". 색을 늘리지 않고 역할만 나눈다 */
 
 .admin-badge {
@@ -931,8 +899,6 @@
 	background: var(--admin-danger-soft);
 	color: var(--admin-danger);
 }
-
-/* ── 회원 관리 ─────────────────────────────── */
 
 .admin-member__identity,
 .admin-member__confirm {
@@ -964,7 +930,6 @@
 	background: var(--admin-surface-hover);
 }
 
-/* ── 그룹·항목 트리 ────────────────────────── */
 /* 메뉴는 "그룹 한 줄 + 그 그룹에 속한 항목들"로 조립돼 나가므로,
 	 표에 한 줄씩 늘어놓는 대신 속한 관계가 그대로 보이도록 묶어서 보여준다 */
 
@@ -1013,7 +978,6 @@
 	cursor: default;
 }
 
-/* 화살표는 아래(펼침)를 보고, 접히면 오른쪽을 본다 */
 .admin-tree__chevron {
 	width: 6px;
 	height: 6px;
@@ -1028,7 +992,6 @@
 	transform: rotate(-45deg);
 }
 
-/* 그룹 이름 칸 전체가 수정 팝업을 여는 버튼 */
 .admin-tree__head-main {
 	display: flex;
 	flex: 1;
@@ -1050,7 +1013,6 @@
 	background: var(--admin-surface-hover);
 }
 
-/* 키보드로 이동할 때 어디에 있는지 보이게 */
 .admin-tree__head-main:focus-visible,
 .admin-tree__item:focus-visible {
 	outline: 2px solid var(--admin-accent);
@@ -1075,7 +1037,6 @@
 	font-size: 12.5px;
 }
 
-/* 정렬 순서. 그룹끼리, 그리고 한 그룹 안의 항목끼리 이 숫자로 줄을 세운다 */
 .admin-tree__order {
 	flex: none;
 	display: inline-flex;
@@ -1098,8 +1059,6 @@
 	font-size: 12px;
 	white-space: nowrap;
 }
-
-/* ── 그룹 안의 항목 ────────────────────────── */
 
 .admin-tree__items {
 	display: flex;
@@ -1152,7 +1111,6 @@
 	justify-self: end;
 }
 
-/* 로딩·빈 목록·실패를 담는 칸 */
 .admin-tree__state {
 	padding: 16px;
 	border: 1px solid var(--admin-card-line);
@@ -1166,7 +1124,6 @@
 		padding-left: 28px;
 	}
 
-	/* 경로는 이름 아래로 내린다 */
 	.admin-tree__path {
 		grid-column: 2 / 4;
 		grid-row: 2;
@@ -1177,7 +1134,6 @@
 	}
 }
 
-/* ── 화면 제목 줄 ──────────────────────────── */
 /* 목록 화면은 제목과 위치만 둔다.
 	 설명 문장을 본문에 깔면 매번 읽히지도 않으면서 내용 시작을 밀어낸다 */
 
@@ -1191,7 +1147,6 @@
 	border-bottom: 1px solid var(--admin-card-line);
 }
 
-/* 어느 메뉴 아래인지. 링크가 아니다 */
 .admin-page-header__location {
 	display: block;
 	margin-bottom: 3px;
@@ -1226,8 +1181,6 @@
 		align-items: stretch;
 	}
 }
-
-/* ── 카테고리 관리 ─────────────────────────── */
 
 /* 전용 API 연결 전이라 값이 없는 칸 */
 .admin-category__pending {
@@ -1264,13 +1217,10 @@
 	line-height: 1.6;
 }
 
-/* 실패한 단계만 다시 시도하는 버튼. 문구 끝에 붙는다 */
 .admin-form-error .admin-button {
 	margin-left: 8px;
 	vertical-align: middle;
 }
-
-/* ── 글 관리 ───────────────────────────────── */
 
 /* 날짜 한 칸에 값과 기준(발행·작성)을 같이 둔다.
 	 임시저장 글은 발행일이 없어서 열을 나누면 절반이 빈다 */
@@ -1287,7 +1237,6 @@
 	font-style: normal;
 }
 
-/* 표 안에 들어가는 작은 버튼 */
 .admin-button--small {
 	min-height: 28px;
 	padding: 0 10px;
@@ -1415,8 +1364,6 @@
 	word-break: keep-all;
 }
 
-/* ── 글 편집 ───────────────────────────────── */
-
 /* 작업 바. 상태와 발행일은 읽기 전용이고, 상태는 액션의 결과다 */
 .admin-editor__bar {
 	display: flex;
@@ -1504,7 +1451,6 @@
 	display: none;
 }
 
-/* 입력칸과 글자 수 카운터를 한 묶음으로 */
 .admin-editor__row {
 	display: flex;
 	flex-direction: column;
@@ -1542,8 +1488,6 @@
 	color: var(--admin-accent-dark);
 	font-weight: 700;
 }
-
-/* ── 슬래시 메뉴 ───────────────────────────── */
 
 /* 커서 자리에 붙는다. textarea 위에 겹치므로 z-index 가 필요하다 */
 .admin-slash {
@@ -1605,7 +1549,6 @@
 	white-space: nowrap;
 }
 
-/* 입력칸 라벨 옆 안내 */
 .admin-editor__tip {
 	margin-left: 8px;
 	color: var(--admin-meta);
@@ -1614,7 +1557,6 @@
 	font-weight: 400;
 }
 
-/* ── 블록 에디터 ───────────────────────────── */
 /* 쓰는 자리가 곧 결과다. 공개 화면(post-body__*)과 같은 크기·간격을 쓴다 */
 
 .block-editor {
@@ -1807,7 +1749,6 @@
 	transform: rotate(90deg);
 }
 
-/* 빈 토글 안내. 누르면 안쪽 첫 줄이 생긴다 */
 .block-editor__toggle-empty {
 	display: block;
 	margin: 2px 0 4px;
@@ -1939,7 +1880,6 @@
 	color: var(--admin-title);
 }
 
-/* 표 오른쪽·아래 끝의 + 막대. 표에 마우스를 올리거나 칸에 커서가 있으면 보인다 */
 .block-table__add {
 	padding: 0;
 	border: 0;
@@ -2056,7 +1996,6 @@
 	color: inherit;
 }
 
-/* 끝낸 할 일은 흐리게 긋는다 (노션과 같다) */
 .block-editor__text--done {
 	color: var(--text-subtle);
 	text-decoration: line-through;
@@ -2098,7 +2037,6 @@
 	line-height: 1.85;
 }
 
-/* 콜아웃 — 배경 상자 안에서 바로 친다 */
 .block-editor__row--callout {
 	align-items: flex-start;
 	margin-top: 18px;
@@ -2126,13 +2064,11 @@
 	margin: 0;
 }
 
-/* 슬래시 메뉴는 그 줄 바로 아래에 */
 .block-editor__menu {
 	top: 100%;
 	left: 0;
 }
 
-/* 글자를 고르면 그 위에 뜨는 서식 막대 (노션과 같은 자리·구성) */
 .admin-text-toolbar {
 	position: fixed;
 	z-index: 40;
@@ -2207,7 +2143,6 @@
 	font-weight: 700;
 }
 
-/* 색 고르기. 글자 색 열 가지·배경 색 열 가지를 두 줄로 */
 .admin-text-toolbar__colors {
 	position: absolute;
 	top: calc(100% + 6px);
@@ -2335,7 +2270,6 @@
 	font-size: 12px;
 }
 
-/* 아래 공간이 모자랄 때는 줄 위로 펼친다 */
 .block-editor__menu.admin-slash--up {
 	top: auto;
 	bottom: 100%;
@@ -2402,13 +2336,10 @@
 	background: rgba(210, 150, 100, 0.35);
 }
 
-/* ── 블록 핸들·선택·드래그 ─────────────────── */
-
 .block-editor__row {
 	padding-left: 26px;
 }
 
-/* + 는 손잡이 왼쪽, 편집기 안쪽 여백에 둔다. 손잡이처럼 줄에 마우스를 올리면 나온다 */
 .block-editor__add {
 	position: absolute;
 	left: -22px;
@@ -2436,7 +2367,6 @@
 	color: var(--admin-text-strong);
 }
 
-/* 손잡이 메뉴 (노션과 같은 구성) */
 .admin-block-menu {
 	position: fixed;
 	z-index: 40;
@@ -2509,7 +2439,6 @@
 	gap: 10px;
 }
 
-/* 평소에는 숨어 있다가 줄에 마우스를 올리면 나온다 */
 .block-editor__handle {
 	position: absolute;
 	left: 0;
@@ -2568,13 +2497,10 @@
 	color: var(--editor-selected);
 }
 
-/* 놓을 자리 */
 .block-editor__row--dropping,
 .block-editor__row--keyboard-target {
 	box-shadow: inset 0 2px 0 var(--admin-accent);
 }
-
-/* ── 본문 이미지 블록 ──────────────────────── */
 
 .block-editor__image {
 	/* 행이 flex 라 늘어나라고 말해 줘야 폭을 채운다.
@@ -2677,7 +2603,6 @@
 	cursor: pointer;
 }
 
-/* 폭 손잡이. 평소엔 숨어 있다가 사진에 마우스를 올리면 나타난다 */
 .block-editor__image-grip {
 	position: absolute;
 	top: 50%;
@@ -2715,7 +2640,6 @@
 	outline-offset: 2px;
 }
 
-/* 단추 묶음. 사진 오른쪽 위 */
 .block-editor__image-tools {
 	position: absolute;
 	top: 8px;
@@ -2886,8 +2810,6 @@
 	font-size: 12px;
 }
 
-/* 캡션은 이미지에 마우스를 올려야 나타난다.
-	 값이 있거나 입력 중이면 계속 보인다 */
 .block-editor__image-caption {
 	width: 100%;
 	padding: 4px 8px;
@@ -2901,7 +2823,6 @@
 	transition: opacity 0.12s ease, background-color 0.12s ease, box-shadow 0.12s ease;
 }
 
-/* 사진에 마우스를 올리면 "여기에 쓸 수 있다"는 것만 옅게 알린다 */
 .block-editor__image:hover .block-editor__image-caption {
 	opacity: 0.7;
 }
@@ -2956,7 +2877,6 @@
 	cursor: pointer;
 }
 
-/* 발행 확인 창의 시각 선택 */
 .admin-post__schedule {
 	margin-top: 14px;
 }

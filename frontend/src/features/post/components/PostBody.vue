@@ -81,7 +81,6 @@ const calloutLabels = {
 			<!-- 목록 안의 목록·할 일까지 PostList 가 그린다 -->
 			<PostList v-else-if="block.type === 'list'" :list="block" />
 
-			<!-- 표는 좁은 화면에서 본문 폭을 넘지 않고 옆으로 밀어 본다 -->
 			<div
 				v-else-if="block.type === 'table'"
 				class="post-table"

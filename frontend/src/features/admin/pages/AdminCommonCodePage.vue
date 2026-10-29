@@ -64,7 +64,6 @@ const EMPTY_CONDITION = {
 	enabled: '',
 };
 
-// ── 그룹 목록 ──
 const condition = reactive({ ...EMPTY_CONDITION });
 const applied = ref({ ...EMPTY_CONDITION });
 const groups = ref([]);
@@ -78,7 +77,6 @@ const groupsLoaded = ref(false);
 const selectedGroup = ref(null);
 const codesPane = ref(null);
 
-// ── 코드 목록 ──
 const codes = ref([]);
 const codesLoading = ref(false);
 const codesError = ref('');
@@ -89,7 +87,6 @@ onScopeDispose(() => {
 	codesLoading.value = false;
 });
 
-// ── 팝업 ──
 const groupFormOpen = ref(false);
 const groupFormMode = ref('create');
 const groupForm = reactive({ groupCode: '', groupName: '', description: '', enabled: 'true', managedByEnum: false, updatedAt: null });
@@ -218,8 +215,6 @@ async function loadCodes() {
 	}
 }
 
-// ── 그룹 추가·수정 ──
-
 function openGroupCreate() {
 	formError.value = '';
 	groupFormMode.value = 'create';
@@ -274,8 +269,6 @@ async function saveGroup() {
 		saving.value = false;
 	}
 }
-
-// ── 코드 추가·수정 ──
 
 function openCodeCreate() {
 	formError.value = '';
@@ -375,7 +368,6 @@ onMounted(search);
 		</AdminGridToolbar>
 
 		<div class="admin-common-code__panes">
-			<!-- 왼쪽: 그룹 -->
 			<section class="admin-common-code__pane" aria-labelledby="common-code-groups-title">
 				<div class="admin-common-code__pane-head">
 					<h2 id="common-code-groups-title" class="admin-common-code__pane-title">그룹</h2>
@@ -422,7 +414,6 @@ onMounted(search);
 				/>
 			</section>
 
-			<!-- 오른쪽: 고른 그룹의 코드 -->
 			<section
 				ref="codesPane"
 				class="admin-common-code__pane admin-common-code__pane--codes"
@@ -509,7 +500,6 @@ onMounted(search);
 			</section>
 		</div>
 
-		<!-- 그룹 추가·수정 -->
 		<BaseModal variant="admin"
 			:open="groupFormOpen"
 			:title="groupFormMode === 'create' ? '그룹 추가' : '그룹 수정'"
@@ -545,7 +535,6 @@ onMounted(search);
 			</template>
 		</BaseModal>
 
-		<!-- 코드 추가·수정 -->
 		<BaseModal variant="admin"
 			:open="codeFormOpen"
 			:title="codeFormMode === 'create' ? '코드 추가' : '코드 수정'"

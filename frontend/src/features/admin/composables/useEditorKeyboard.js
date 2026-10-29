@@ -36,7 +36,6 @@ export function useEditorKeyboard({ editorRef, selection, undo, redo, focusBlock
 
 			const row = event.target.closest?.('[data-block-id]');
 
-			// 글자 커서에서 한 번 누르면 그 블록을 고른다. 블록 모드에서 다시 누르면 빠져나온다
 			if (row && selectedIds.value.length === 0 && keyboardInsertIndex.value < 0) {
 				selectOnly(row.dataset.blockId);
 				focusEditor();

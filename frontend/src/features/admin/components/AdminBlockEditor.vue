@@ -159,9 +159,6 @@ function placeholderFor(block) {
 	return '글을 쓰거나 / 를 눌러 블록을 고르세요';
 }
 
-/* ── 토글 ─────────────────────────────────── */
-
-/** 접힌 토글 안에 있어 화면에서 숨은 블록들 */
 const hiddenIds = computed(() => {
 	const hidden = new Set();
 	let closedIndent = null;
@@ -196,7 +193,6 @@ function hasChildren(index) {
 	return subtreeEnd(blocks.value, index) > index + 1;
 }
 
-/** 빈 토글의 안내 줄을 누르면 안쪽 첫 줄을 만들고 커서를 둔다 (노션과 같다) */
 function addToggleChild(index) {
 	const toggle = blocks.value[index];
 	const child = createBlock('paragraph', { indent: (toggle.indent ?? 0) + 1 });
@@ -205,8 +201,6 @@ function addToggleChild(index) {
 	sync();
 	focusBlock(child.id, 'start');
 }
-
-/* ── 되돌리기 ─────────────────────────────── */
 
 const history = createEditorHistory();
 
@@ -290,8 +284,6 @@ function apply(entry) {
 		focusBlock(entry.focusId, entry.caret);
 	}
 }
-
-/* ── 바깥에서 들어온 값 ───────────────────── */
 
 watch(() => props.modelValue, (next) => {
 	if (next === toMarkdown(blocks.value)) {
@@ -387,8 +379,6 @@ function codeCaret(code, position) {
 	return code.value.length;
 }
 
-/* ── 코드 블록 ────────────────────────────── */
-
 function codeTokens(block) {
 	return toCodeTokens(block.text, block.language);
 }
@@ -407,8 +397,6 @@ function onCodeInput(block, event) {
 	autoGrow(event.target);
 	sync(`text:${block.id}`);
 }
-
-/* ── 글자 블록 ────────────────────────────── */
 
 function onTextInput(block) {
 	// 마크다운을 직접 쳐도 같은 결과가 되게 한다
@@ -441,8 +429,6 @@ async function finishShortcut(block) {
 
 	focusBlock(block.id, 'start');
 }
-
-/* ── 키보드 ───────────────────────────────── */
 
 function onKeydown(block, index, event) {
 	// 한글 조합을 확정하려고 누른 Enter 가 새 블록 생성으로 새지 않게 한다.
@@ -566,7 +552,6 @@ function onKeydown(block, index, event) {
 		}
 	}
 
-	// 글이 있는 줄 끝에서 Delete: 아랫줄을 끌어와 붙인다
 	if (event.key === 'Delete' && atEnd && !isCode && isMergeable(block) && isMergeable(blocks.value[index + 1])) {
 		event.preventDefault();
 		mergeInto(index, index + 1);
@@ -710,7 +695,6 @@ function removeBlock(index) {
 	}
 }
 
-// / 메뉴의 글자 서식 명령이 넣는 태그
 const INLINE_COMMAND_TAGS = {
 	bold: { tag: 'strong' },
 	italic: { tag: 'em' },
@@ -873,8 +857,6 @@ function blockTypeId(block) {
 	return block.type === 'callout' ? block.variant : block.type;
 }
 
-/* ── 서식 막대 ────────────────────────────── */
-
 function toolbarBlock() {
 	return blocks.value.find((block) => block.id === toolbar.blockId) ?? null;
 }
@@ -951,8 +933,6 @@ function onLinkCancel() {
 	restoreSelection();
 	refreshToolbar();
 }
-
-/* ── 블록 손잡이 메뉴·+ 버튼 ──────────────── */
 
 const blockMenu = reactive({ open: false, anchor: { top: 0, bottom: 0, left: 0, right: 0 } });
 
@@ -1059,8 +1039,6 @@ function duplicateBlockAt(index) {
 	focusBlock(block.id, caret);
 }
 
-/* ── 줄 합치기 ───────────────────────────── */
-
 /** 글자를 이어 붙일 수 있는 블록. 코드(원문 그대로)·구분선·이미지는 아니다 */
 function isMergeable(block) {
 	// 토글 제목은 안쪽 블록을 품고 있어 다른 줄과 합치면 구조가 꼬인다
@@ -1082,8 +1060,6 @@ function mergeInto(intoIndex, fromIndex) {
 	sync();
 	focusBlock(into.id, joinAt);
 }
-
-/* ── 목록 들여쓰기·할 일 ─────────────────── */
 
 /**
  * 목록 항목을 한 단계 들이거나 내민다(Tab · Shift+Tab). 바로 위 항목보다 두 단계 이상 깊어지지 않는다.
@@ -1139,7 +1115,6 @@ function toggleTodo(block) {
 	sync();
 }
 
-/** 목록 표시 글자. 깊이마다 모양이 바뀐다 (노션과 같다) */
 function listMarker(block, index) {
 	const depth = listDepth(index);
 
@@ -1267,9 +1242,6 @@ function focusNeighbor(block, x, edge) {
 	focusBlock(block.id, edge === 'first' ? 'start' : 'end');
 }
 
-/* ── 표 ───────────────────────────────────── */
-
-/** 새 표: 3열 3줄, 첫 줄은 제목 행 */
 function newTableRows() {
 	return Array.from({ length: 3 }, () => ['', '', '']);
 }
@@ -1323,8 +1295,6 @@ function onTableCommand(index, name) {
 		tableRefs.get(block.id)?.focusCell(row, col);
 	}
 }
-
-/* ── 이미지 ───────────────────────────────── */
 
 function onDropFiles(index, event) {
 	event.preventDefault();
@@ -1389,7 +1359,6 @@ function addBlockAtEnd() {
 			@dragover="onDragOver(index, $event)"
 			@drop="onDropFiles(index, $event)"
 		>
-			<!-- 누르면 아래에 빈 줄. Option(Alt) 을 누른 채면 위에 -->
 			<button
 				class="block-editor__add"
 				type="button"
@@ -1398,7 +1367,6 @@ function addBlockAtEnd() {
 				@click="addBlockNear(index, $event)"
 			>+</button>
 
-			<!-- 잡아서 순서를 바꾸고, 누르면 블록을 고르며 메뉴를 연다 -->
 			<button
 				class="block-editor__handle"
 				type="button"

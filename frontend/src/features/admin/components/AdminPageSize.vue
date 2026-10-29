@@ -1,7 +1,6 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 
-// 표 위에 두는 "10개씩 보기" 선택. 기본 10개.
 const props = defineProps({
 	modelValue: {
 		type: Number,

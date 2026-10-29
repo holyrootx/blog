@@ -108,7 +108,6 @@ class AdminCommentReportedContentTest {
 		return id;
 	}
 
-	/** 실제로 7개월이 지난 것처럼 시각을 당긴다 */
 	private void ageSevenMonths(String table, List<Long> ids) {
 		em.flush();
 		for (Long id : ids) {

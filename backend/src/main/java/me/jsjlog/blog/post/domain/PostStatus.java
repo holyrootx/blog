@@ -12,7 +12,6 @@ public enum PostStatus {
 	/** 작성 중. 한 번도 발행하지 않았으므로 {@code publishedAt}이 없습니다. */
 	DRAFT,
 
-	/** 공개 발행됨. */
 	PUBLISHED,
 
 	/**

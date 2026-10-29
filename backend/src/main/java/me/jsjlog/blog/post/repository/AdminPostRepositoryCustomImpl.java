@@ -40,7 +40,6 @@ public class AdminPostRepositoryCustomImpl implements AdminPostRepositoryCustom 
 				.from(post)
 				.join(post.category)
 				.where(toPredicate(condition, true))
-				// 휴지통은 최근 삭제순, 일반 목록은 최근 작성순이다.
 				.orderBy(condition.trashOrDefault() ? post.deletedAt.desc() : post.createdAt.desc(), post.id.desc())
 				.offset((long) condition.pageOrDefault() * condition.sizeOrDefault())
 				.limit(condition.sizeOrDefault())

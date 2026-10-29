@@ -150,11 +150,6 @@ public enum ErrorCode {
 	private final String code;
 	private final String message;
 
-	/**
-	 * @param httpStatus 클라이언트에 내려줄 HTTP 상태
-	 * @param code 프론트엔드가 분기 처리할 안정적인 에러 코드 문자열
-	 * @param message 기본 에러 메시지
-	 */
 	ErrorCode(HttpStatus httpStatus, String code, String message) {
 		this.httpStatus = httpStatus;
 		this.code = code;

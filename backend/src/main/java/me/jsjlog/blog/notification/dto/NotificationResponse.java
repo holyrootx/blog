@@ -35,7 +35,6 @@ public record NotificationResponse(
 		 * 답글이면 답을 단 운영자다.
 		 */
 		Long guestbookEntryId,
-		/** 목록에서 미리 보여 줄 만큼만 */
 		String preview,
 		LocalDateTime createdAt,
 		boolean unread

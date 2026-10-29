@@ -9,9 +9,7 @@ public interface CommentReportRepository extends JpaRepository<CommentReport, Lo
 
 	boolean existsByCommentIdAndMemberId(Long commentId, Long memberId);
 
-	/** 관리자 화면에 보여 줄 신고 내역. 온 순서대로 */
 	List<CommentReport> findByCommentIdOrderByIdAsc(Long commentId);
 
-	/** 아직 판단하지 않은 신고. 조치할 때 한꺼번에 처리로 바꾼다 */
 	List<CommentReport> findByCommentIdAndHandledAtIsNull(Long commentId);
 }

@@ -68,7 +68,6 @@ const props = defineProps({
 const emit = defineEmits(['close']);
 
 const panelRef = ref(null);
-// 이 인스턴스를 스택에서 식별할 표식
 const modalId = Symbol('modal');
 
 let returnTarget = null;

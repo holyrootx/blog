@@ -85,7 +85,6 @@ public class CommentReport extends BaseEntity {
 		this.detail = trim(detail);
 	}
 
-	/** 운영자가 판단을 내렸다. 이미 처리한 신고는 다시 건드리지 않는다 */
 	public void markHandled() {
 		if (handledAt == null) {
 			this.handledAt = LocalDateTime.now();

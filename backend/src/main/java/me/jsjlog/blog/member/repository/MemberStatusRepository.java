@@ -82,7 +82,6 @@ public interface MemberStatusRepository extends JpaRepository<MemberStatus, Long
 						 @Param("providerUserId") String providerUserId, @Param("now") LocalDateTime now,
 						 @Param("updatedBy") String updatedBy);
 
-	/** 기간이 지난 복원 정보를 지운다 */
 	@Modifying(clearAutomatically = true)
 	@Query("""
 			update MemberStatus s

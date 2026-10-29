@@ -108,8 +108,6 @@ function setCell(row, col, value) {
 	update({ rows }, `table:${props.block.id}:${row}:${col}`);
 }
 
-/* ── 줄·열 바꾸기 ───────────────────────── */
-
 function addRow(at) {
 	const rows = copyRows();
 	rows.splice(at, 0, Array(columnCount.value).fill(''));
@@ -166,8 +164,6 @@ function setAlign(col, value) {
 	update({ columnAlign: align });
 }
 
-/* ── 키보드 ─────────────────────────────── */
-
 function nextCell(row, col, step) {
 	const flat = row * columnCount.value + col + step;
 	const total = props.block.rows.length * columnCount.value;
@@ -189,7 +185,6 @@ function onCellKeydown(row, col, event) {
 	const command = (event.metaKey || event.ctrlKey) && !event.altKey;
 	const plain = !event.metaKey && !event.ctrlKey && !event.altKey;
 
-	// 굵게·기울임·밑줄·코드·취소선은 칸 안에서 그대로 쓴다
 	const formatKeys = { b: 'strong', i: 'em', u: 'u', e: 'code' };
 	const key = event.key.toLowerCase();
 	const format = command && !event.shiftKey ? formatKeys[key] : (command && event.shiftKey && key === 's' ? 's' : '');
@@ -219,7 +214,6 @@ function onCellKeydown(row, col, event) {
 		if (target) {
 			focusCell(target.row, target.col, 'end');
 		} else if (!event.shiftKey) {
-			// 마지막 칸에서 Tab: 줄을 하나 더한다 (노션과 같다)
 			appendRow(0);
 		}
 
@@ -302,8 +296,6 @@ function onCellPaste(event) {
 	event.stopPropagation();
 	document.execCommand('insertText', false, text.replace(/\s*\n+\s*/g, ' '));
 }
-
-/* ── 손잡이 메뉴 ─────────────────────────── */
 
 async function openMenu(kind, index, event) {
 	const rect = event.currentTarget.getBoundingClientRect();
