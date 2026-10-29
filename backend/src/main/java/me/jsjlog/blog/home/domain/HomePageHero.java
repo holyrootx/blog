@@ -19,43 +19,43 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class HomePageHero extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
 
-    @Column(name = "sub_title", nullable = false, length = 255)
-    private String subTitle;
+	@Column(name = "sub_title", nullable = false, length = 255)
+	private String subTitle;
 
-    @Column(name = "title", nullable = false, length = 255)
-    private String title;
+	@Column(name = "title", nullable = false, length = 255)
+	private String title;
 
-    @Column(name = "intro", nullable = false, columnDefinition = "TEXT")
-    private String intro;
+	@Column(name = "intro", nullable = false, columnDefinition = "TEXT")
+	private String intro;
 
-    @Column(name = "hero_image_url", length = 500)
-    private String heroImageUrl;
+	@Column(name = "hero_image_url", length = 500)
+	private String heroImageUrl;
 
-    public HomePageHero(
-            String subTitle,
-            String title,
-            String intro,
-            String heroImageUrl
-    ) {
-        this.subTitle = subTitle;
-        this.title = title;
-        this.intro = intro;
-        this.heroImageUrl = heroImageUrl;
-    }
+	public HomePageHero(
+			String subTitle,
+			String title,
+			String intro,
+			String heroImageUrl
+	) {
+		this.subTitle = subTitle;
+		this.title = title;
+		this.intro = intro;
+		this.heroImageUrl = heroImageUrl;
+	}
 
-    public void update(
-            String subTitle,
-            String title,
-            String intro,
-            String heroImageUrl
-    ) {
-        this.subTitle = subTitle;
-        this.title = title;
-        this.intro = intro;
-        this.heroImageUrl = heroImageUrl;
-    }
+	public void update(
+			String subTitle,
+			String title,
+			String intro,
+			String heroImageUrl
+	) {
+		this.subTitle = subTitle;
+		this.title = title;
+		this.intro = intro;
+		this.heroImageUrl = heroImageUrl;
+	}
 }

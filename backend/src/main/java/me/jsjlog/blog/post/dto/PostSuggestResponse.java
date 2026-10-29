@@ -7,8 +7,8 @@ package me.jsjlog.blog.post.dto;
  * 오가는 응답이라 화면이 실제로 그리는 것만 담는다.</p>
  */
 public record PostSuggestResponse(
-        Long id,
-        String title,
-        String categoryName
+		Long id,
+		String title,
+		String categoryName
 ) {
 }

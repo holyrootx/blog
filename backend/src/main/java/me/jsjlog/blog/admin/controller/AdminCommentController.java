@@ -24,61 +24,61 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/admin/blog/comments")
 public class AdminCommentController {
 
-    private final AdminCommentService adminCommentService;
+	private final AdminCommentService adminCommentService;
 
-    @GetMapping
-    public ApiResponse<AdminCommentListResponse> getComments(
-            AdminCommentSearchCondition condition
-    ) {
-        return ApiResponse.ok(adminCommentService.getComments(condition));
-    }
+	@GetMapping
+	public ApiResponse<AdminCommentListResponse> getComments(
+			AdminCommentSearchCondition condition
+	) {
+		return ApiResponse.ok(adminCommentService.getComments(condition));
+	}
 
-    @PostMapping("/{commentId}/replies")
-    public ApiResponse<Long> reply(
-            @PathVariable Long commentId,
-            @RequestBody AdminCommentReplyRequest request,
-            @AuthenticationPrincipal MemberPrincipal principal
-    ) {
-        return ApiResponse.ok(adminCommentService.reply(
-                commentId,
-                request,
-                principal == null ? null : principal.getId()
-        ));
-    }
+	@PostMapping("/{commentId}/replies")
+	public ApiResponse<Long> reply(
+			@PathVariable Long commentId,
+			@RequestBody AdminCommentReplyRequest request,
+			@AuthenticationPrincipal MemberPrincipal principal
+	) {
+		return ApiResponse.ok(adminCommentService.reply(
+				commentId,
+				request,
+				principal == null ? null : principal.getId()
+		));
+	}
 
-    @PutMapping("/{commentId}/visibility")
-    public ApiResponse<Void> updateVisibility(
-            @PathVariable Long commentId,
-            @RequestBody AdminCommentVisibilityRequest request,
-            @AuthenticationPrincipal MemberPrincipal principal
-    ) {
-        adminCommentService.updateVisibility(commentId, request, principalId(principal));
-        return ApiResponse.ok();
-    }
+	@PutMapping("/{commentId}/visibility")
+	public ApiResponse<Void> updateVisibility(
+			@PathVariable Long commentId,
+			@RequestBody AdminCommentVisibilityRequest request,
+			@AuthenticationPrincipal MemberPrincipal principal
+	) {
+		adminCommentService.updateVisibility(commentId, request, principalId(principal));
+		return ApiResponse.ok();
+	}
 
-    /** 댓글 상세. 지금 본문, 신고와 조치, 변경 기록 */
-    @GetMapping("/{commentId}")
-    public ApiResponse<AdminCommentDetail> getDetail(@PathVariable Long commentId) {
-        return ApiResponse.ok(adminCommentService.getDetail(commentId));
-    }
+	/** 댓글 상세. 지금 본문, 신고와 조치, 변경 기록 */
+	@GetMapping("/{commentId}")
+	public ApiResponse<AdminCommentDetail> getDetail(@PathVariable Long commentId) {
+		return ApiResponse.ok(adminCommentService.getDetail(commentId));
+	}
 
-    /** 신고를 봤지만 댓글은 그대로 둔다 */
-    @PostMapping("/{commentId}/reports/dismiss")
-    public ApiResponse<Void> dismissReports(
-            @PathVariable Long commentId,
-            @RequestBody(required = false) AdminCommentModerationRequest request,
-            @AuthenticationPrincipal MemberPrincipal principal
-    ) {
-        adminCommentService.dismissReports(
-                commentId,
-                request == null ? null : request.reason(),
-                principalId(principal)
-        );
+	/** 신고를 봤지만 댓글은 그대로 둔다 */
+	@PostMapping("/{commentId}/reports/dismiss")
+	public ApiResponse<Void> dismissReports(
+			@PathVariable Long commentId,
+			@RequestBody(required = false) AdminCommentModerationRequest request,
+			@AuthenticationPrincipal MemberPrincipal principal
+	) {
+		adminCommentService.dismissReports(
+				commentId,
+				request == null ? null : request.reason(),
+				principalId(principal)
+		);
 
-        return ApiResponse.ok();
-    }
+		return ApiResponse.ok();
+	}
 
-    private Long principalId(MemberPrincipal principal) {
-        return principal == null ? null : principal.getId();
-    }
+	private Long principalId(MemberPrincipal principal) {
+		return principal == null ? null : principal.getId();
+	}
 }

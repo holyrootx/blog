@@ -24,21 +24,21 @@ export const blogProfileLoading = readonly(loading);
  * 실패하면 받아 둔 값을 그대로 둔다. 프로필을 못 받아도 글은 읽을 수 있어야 한다.
  */
 export function refreshBlogProfile() {
-  if (!pending) {
-    pending = getBlogProfile()
-      .then((found) => {
-        profile.value = found ?? null;
-        return profile.value;
-      })
-      .catch((error) => {
-        console.error(error);
-        return profile.value;
-      })
-      .finally(() => {
-        loading.value = false;
-        pending = null;
-      });
-  }
+	if (!pending) {
+		pending = getBlogProfile()
+			.then((found) => {
+				profile.value = found ?? null;
+				return profile.value;
+			})
+			.catch((error) => {
+				console.error(error);
+				return profile.value;
+			})
+			.finally(() => {
+				loading.value = false;
+				pending = null;
+			});
+	}
 
-  return pending;
+	return pending;
 }

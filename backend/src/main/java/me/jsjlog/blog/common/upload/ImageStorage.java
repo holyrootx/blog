@@ -10,7 +10,7 @@ import java.io.InputStream;
  */
 public interface ImageStorage {
 
-    StoredImage store(String storageKey, String contentType, long size, InputStream content);
+	StoredImage store(String storageKey, String contentType, long size, InputStream content);
 
-    void delete(String storageKey);
+	void delete(String storageKey);
 }

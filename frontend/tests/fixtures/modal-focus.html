@@ -5,9 +5,9 @@ import { createApp } from 'vue';
 import { createRouter, createMemoryHistory } from 'vue-router';
 import Fixture from './ModalFocusFixture.vue';
 const router = createRouter({ history: createMemoryHistory(), routes: [
-  { path: '/', component: { template: '<div />' } },
-  { path: '/posts', name: 'post-list', component: { template: '<div />' } },
-  { path: '/posts/:id', name: 'post-detail', component: { template: '<div />' } },
+	{ path: '/', component: { template: '<div />' } },
+	{ path: '/posts', name: 'post-list', component: { template: '<div />' } },
+	{ path: '/posts/:id', name: 'post-detail', component: { template: '<div />' } },
 ] });
 createApp(Fixture).use(router).mount('#app');
 </script></body></html>

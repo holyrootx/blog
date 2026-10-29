@@ -18,100 +18,100 @@ const PRODUCTION_HOST = 'jsjlog.me';
 const EXCLUDED_ROUTE_NAMES = new Set(['admin-login', 'oauth-callback']);
 
 export function shouldTrack(route) {
-  return !route.meta?.requiresAdmin && !EXCLUDED_ROUTE_NAMES.has(route.name);
+	return !route.meta?.requiresAdmin && !EXCLUDED_ROUTE_NAMES.has(route.name);
 }
 
 /** 해시만 바뀐 이동(같은 글 안의 목차·댓글 이동)은 새 페이지가 아니다 */
 export function pageKey(route) {
-  return route.fullPath.split('#')[0];
+	return route.fullPath.split('#')[0];
 }
 
 export function createPageTracker({
-  measurementId = GA_MEASUREMENT_ID,
-  productionHost = PRODUCTION_HOST,
-  win = globalThis.window,
-  doc = globalThis.document,
+	measurementId = GA_MEASUREMENT_ID,
+	productionHost = PRODUCTION_HOST,
+	win = globalThis.window,
+	doc = globalThis.document,
 } = {}) {
-  let started = false;
-  let currentKey = null;
-  // 제목이 API 응답 뒤에 정해지는 화면(글 상세)은 제목을 맞출 때까지 기록을 미룬다
-  let pendingKey = null;
+	let started = false;
+	let currentKey = null;
+	// 제목이 API 응답 뒤에 정해지는 화면(글 상세)은 제목을 맞출 때까지 기록을 미룬다
+	let pendingKey = null;
 
-  function ready() {
-    if (started) {
-      return true;
-    }
-    if (!measurementId || win?.location?.hostname !== productionHost) {
-      return false;
-    }
+	function ready() {
+		if (started) {
+			return true;
+		}
+		if (!measurementId || win?.location?.hostname !== productionHost) {
+			return false;
+		}
 
-    win.dataLayer = win.dataLayer || [];
-    // gtag.js 는 arguments 객체를 그대로 받는다. 배열로 바꿔 넣으면 명령을 읽지 못한다
-    win.gtag = function gtag() {
-      win.dataLayer.push(arguments);
-    };
-    win.gtag('js', new Date());
-    // 첫 화면 기록도 라우터가 제목을 맞춘 뒤 직접 보낸다. 광고용 신호는 쓰지 않는다
-    win.gtag('config', measurementId, {
-      send_page_view: false,
-      allow_google_signals: false,
-      allow_ad_personalization_signals: false,
-    });
+		win.dataLayer = win.dataLayer || [];
+		// gtag.js 는 arguments 객체를 그대로 받는다. 배열로 바꿔 넣으면 명령을 읽지 못한다
+		win.gtag = function gtag() {
+			win.dataLayer.push(arguments);
+		};
+		win.gtag('js', new Date());
+		// 첫 화면 기록도 라우터가 제목을 맞춘 뒤 직접 보낸다. 광고용 신호는 쓰지 않는다
+		win.gtag('config', measurementId, {
+			send_page_view: false,
+			allow_google_signals: false,
+			allow_ad_personalization_signals: false,
+		});
 
-    const script = doc.createElement('script');
-    script.async = true;
-    script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(measurementId)}`;
-    doc.head.appendChild(script);
+		const script = doc.createElement('script');
+		script.async = true;
+		script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(measurementId)}`;
+		doc.head.appendChild(script);
 
-    started = true;
-    return true;
-  }
+		started = true;
+		return true;
+	}
 
-  function send(key) {
-    win.gtag('event', 'page_view', {
-      page_location: `${win.location.origin}${key}`,
-      page_title: doc.title,
-    });
-  }
+	function send(key) {
+		win.gtag('event', 'page_view', {
+			page_location: `${win.location.origin}${key}`,
+			page_title: doc.title,
+		});
+	}
 
-  return {
-    trackRoute(route, { waitForTitle = false } = {}) {
-      const key = pageKey(route);
-      if (key === currentKey) {
-        return;
-      }
-      currentKey = key;
-      // 제목을 기다리던 글을 떠났다. 보지 않은 화면은 남기지 않는다
-      pendingKey = null;
+	return {
+		trackRoute(route, { waitForTitle = false } = {}) {
+			const key = pageKey(route);
+			if (key === currentKey) {
+				return;
+			}
+			currentKey = key;
+			// 제목을 기다리던 글을 떠났다. 보지 않은 화면은 남기지 않는다
+			pendingKey = null;
 
-      if (!shouldTrack(route) || !ready()) {
-        return;
-      }
-      if (waitForTitle) {
-        pendingKey = key;
-        return;
-      }
-      send(key);
-    },
+			if (!shouldTrack(route) || !ready()) {
+				return;
+			}
+			if (waitForTitle) {
+				pendingKey = key;
+				return;
+			}
+			send(key);
+		},
 
-    /** 제목을 맞춘 뒤 부른다. 같은 화면에서 여러 번 불러도 한 번만 보낸다 */
-    trackPendingPage() {
-      if (pendingKey === null) {
-        return;
-      }
-      const key = pendingKey;
-      pendingKey = null;
-      send(key);
-    },
-  };
+		/** 제목을 맞춘 뒤 부른다. 같은 화면에서 여러 번 불러도 한 번만 보낸다 */
+		trackPendingPage() {
+			if (pendingKey === null) {
+				return;
+			}
+			const key = pendingKey;
+			pendingKey = null;
+			send(key);
+		},
+	};
 }
 
 const tracker = createPageTracker();
 
 export function trackRoute(route, options) {
-  tracker.trackRoute(route, options);
+	tracker.trackRoute(route, options);
 }
 
 export function trackPendingPage() {
-  tracker.trackPendingPage();
+	tracker.trackPendingPage();
 }

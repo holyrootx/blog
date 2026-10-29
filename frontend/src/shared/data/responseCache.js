@@ -10,23 +10,23 @@ const MAX_ENTRIES = 50;
 const entries = new Map();
 
 export function readCachedResponse(key) {
-  if (!entries.has(key)) {
-    return undefined;
-  }
+	if (!entries.has(key)) {
+		return undefined;
+	}
 
-  // 다시 넣어 맨 뒤로 보낸다. Map 은 넣은 순서를 지키므로 맨 앞이 가장 오래 안 쓴 것이다
-  const value = entries.get(key);
-  entries.delete(key);
-  entries.set(key, value);
+	// 다시 넣어 맨 뒤로 보낸다. Map 은 넣은 순서를 지키므로 맨 앞이 가장 오래 안 쓴 것이다
+	const value = entries.get(key);
+	entries.delete(key);
+	entries.set(key, value);
 
-  return value;
+	return value;
 }
 
 export function writeCachedResponse(key, value) {
-  entries.delete(key);
-  entries.set(key, value);
+	entries.delete(key);
+	entries.set(key, value);
 
-  if (entries.size > MAX_ENTRIES) {
-    entries.delete(entries.keys().next().value);
-  }
+	if (entries.size > MAX_ENTRIES) {
+		entries.delete(entries.keys().next().value);
+	}
 }

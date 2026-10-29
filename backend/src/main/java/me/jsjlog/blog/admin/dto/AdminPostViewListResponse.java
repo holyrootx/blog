@@ -11,15 +11,15 @@ import java.util.List;
  * @param recordingStartedAt 블로그 전체에서 가장 오래된 기록의 시각. 기록이 하나도 없으면 비어 있다
  */
 public record AdminPostViewListResponse(
-        Long postId,
-        String postTitle,
-        long totalViews,
-        OffsetDateTime recordingStartedAt,
-        AdminPostViewCounts counts,
-        List<AdminPostViewResponse> items,
-        int page,
-        int size,
-        long totalElements,
-        int totalPages
+		Long postId,
+		String postTitle,
+		long totalViews,
+		OffsetDateTime recordingStartedAt,
+		AdminPostViewCounts counts,
+		List<AdminPostViewResponse> items,
+		int page,
+		int size,
+		long totalElements,
+		int totalPages
 ) {
 }

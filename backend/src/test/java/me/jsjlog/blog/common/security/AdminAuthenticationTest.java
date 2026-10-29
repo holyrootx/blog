@@ -28,60 +28,60 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @SpringBootTest
 class AdminAuthenticationTest {
 
-    private static final String USERNAME = "tester";
-    private static final String PASSWORD = "test-password";
+	private static final String USERNAME = "tester";
+	private static final String PASSWORD = "test-password";
 
-    @Autowired
-    private AuthenticationManager authenticationManager;
+	@Autowired
+	private AuthenticationManager authenticationManager;
 
-    @Autowired
-    private MemberRepository memberRepository;
+	@Autowired
+	private MemberRepository memberRepository;
 
 
-    @Autowired
+	@Autowired
 
-    private MemberStatusHistoryRepository memberStatusHistoryRepository;
+	private MemberStatusHistoryRepository memberStatusHistoryRepository;
 
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+	@Autowired
+	private PasswordEncoder passwordEncoder;
 
-    @BeforeEach
-    void seedAdmin() {
-        memberStatusHistoryRepository.deleteAll();
-        memberRepository.deleteAll();
-        memberRepository.save(Member.ofLocalAdmin(USERNAME, passwordEncoder.encode(PASSWORD), "테스트 관리자"));
-    }
+	@BeforeEach
+	void seedAdmin() {
+		memberStatusHistoryRepository.deleteAll();
+		memberRepository.deleteAll();
+		memberRepository.save(Member.ofLocalAdmin(USERNAME, passwordEncoder.encode(PASSWORD), "테스트 관리자"));
+	}
 
-    @Test
-    @DisplayName("아이디와 비밀번호가 맞으면 ROLE_ADMIN 으로 인증된다")
-    void authenticate() {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(USERNAME, PASSWORD));
+	@Test
+	@DisplayName("아이디와 비밀번호가 맞으면 ROLE_ADMIN 으로 인증된다")
+	void authenticate() {
+		Authentication authentication = authenticationManager.authenticate(
+				new UsernamePasswordAuthenticationToken(USERNAME, PASSWORD));
 
-        assertThat(authentication.isAuthenticated()).isTrue();
-        assertThat(authentication.getPrincipal()).isInstanceOf(MemberPrincipal.class);
+		assertThat(authentication.isAuthenticated()).isTrue();
+		assertThat(authentication.getPrincipal()).isInstanceOf(MemberPrincipal.class);
 
-        // Spring Security 7 은 어떤 수단으로 인증했는지도 권한으로 같이 넣는다
-        // (비밀번호로 들어오면 FACTOR_PASSWORD). 그래서 정확히 하나인지 보지 않는다
-        assertThat(authentication.getAuthorities())
-                .extracting(GrantedAuthority::getAuthority)
-                .contains(MemberRole.ADMIN.getAuthority());
-    }
+		// Spring Security 7 은 어떤 수단으로 인증했는지도 권한으로 같이 넣는다
+		// (비밀번호로 들어오면 FACTOR_PASSWORD). 그래서 정확히 하나인지 보지 않는다
+		assertThat(authentication.getAuthorities())
+				.extracting(GrantedAuthority::getAuthority)
+				.contains(MemberRole.ADMIN.getAuthority());
+	}
 
-    @Test
-    @DisplayName("비밀번호가 틀리면 인증에 실패한다")
-    void wrongPassword() {
-        assertThatThrownBy(() -> authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(USERNAME, "wrong-password")))
-                .isInstanceOf(BadCredentialsException.class);
-    }
+	@Test
+	@DisplayName("비밀번호가 틀리면 인증에 실패한다")
+	void wrongPassword() {
+		assertThatThrownBy(() -> authenticationManager.authenticate(
+				new UsernamePasswordAuthenticationToken(USERNAME, "wrong-password")))
+				.isInstanceOf(BadCredentialsException.class);
+	}
 
-    @Test
-    @DisplayName("없는 아이디도 비밀번호가 틀린 것과 같은 예외로 덮인다")
-    void unknownUsername() {
-        // 두 경우를 구분해 주면 어떤 아이디가 존재하는지 알려주는 꼴이 된다
-        assertThatThrownBy(() -> authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken("someone-else", PASSWORD)))
-                .isInstanceOf(BadCredentialsException.class);
-    }
+	@Test
+	@DisplayName("없는 아이디도 비밀번호가 틀린 것과 같은 예외로 덮인다")
+	void unknownUsername() {
+		// 두 경우를 구분해 주면 어떤 아이디가 존재하는지 알려주는 꼴이 된다
+		assertThatThrownBy(() -> authenticationManager.authenticate(
+				new UsernamePasswordAuthenticationToken("someone-else", PASSWORD)))
+				.isInstanceOf(BadCredentialsException.class);
+	}
 }

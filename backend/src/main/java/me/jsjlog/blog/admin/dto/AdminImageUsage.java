@@ -8,10 +8,10 @@ package me.jsjlog.blog.admin.dto;
  */
 public record AdminImageUsage(String url, Where where, String title) {
 
-    public enum Where {
-        POST_CONTENT,
-        POST_THUMBNAIL,
-        HOME_HERO,
-        PROFILE
-    }
+	public enum Where {
+		POST_CONTENT,
+		POST_THUMBNAIL,
+		HOME_HERO,
+		PROFILE
+	}
 }

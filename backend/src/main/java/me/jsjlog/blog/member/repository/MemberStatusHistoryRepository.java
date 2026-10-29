@@ -7,5 +7,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface MemberStatusHistoryRepository extends JpaRepository<MemberStatusHistory, Long> {
 
-    List<MemberStatusHistory> findAllByMember_IdOrderByIdAsc(Long memberId);
+	List<MemberStatusHistory> findAllByMember_IdOrderByIdAsc(Long memberId);
 }

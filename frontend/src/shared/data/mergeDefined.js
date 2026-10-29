@@ -5,14 +5,14 @@
  * 서버가 아직 넣지 않은 칸은 기본값으로 둔다.
  */
 export function mergeDefined(base, next) {
-  return Object.entries(next ?? {}).reduce(
-    (result, [key, value]) => {
-      if (value !== null && value !== undefined && value !== '') {
-        result[key] = value;
-      }
+	return Object.entries(next ?? {}).reduce(
+		(result, [key, value]) => {
+			if (value !== null && value !== undefined && value !== '') {
+				result[key] = value;
+			}
 
-      return result;
-    },
-    { ...base },
-  );
+			return result;
+		},
+		{ ...base },
+	);
 }

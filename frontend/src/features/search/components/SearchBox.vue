@@ -53,49 +53,49 @@ let inflight = null;
 const canSearch = computed(() => keyword.value.trim().length >= MIN_LENGTH);
 
 const hint = computed(() => {
-  if (keyword.value.trim().length === 0) {
-    return '제목과 요약에서 찾습니다. 대소문자를 구분합니다.';
-  }
+	if (keyword.value.trim().length === 0) {
+		return '제목과 요약에서 찾습니다. 대소문자를 구분합니다.';
+	}
 
-  if (!canSearch.value) {
-    return `${MIN_LENGTH}글자 이상 입력해 주세요.`;
-  }
+	if (!canSearch.value) {
+		return `${MIN_LENGTH}글자 이상 입력해 주세요.`;
+	}
 
-  return '';
+	return '';
 });
 
 function openBox() {
-  open.value = true;
+	open.value = true;
 }
 
 function closeBox() {
-  open.value = false;
-  cancelPending();
+	open.value = false;
+	cancelPending();
 
-  keyword.value = '';
-  suggestions.value = [];
-  activeIndex.value = -1;
-  loading.value = false;
+	keyword.value = '';
+	suggestions.value = [];
+	activeIndex.value = -1;
+	loading.value = false;
 
-  // 입력칸 값은 Vue 가 들고 있지 않으므로 직접 비운다
-  if (field.value) {
-    field.value.value = '';
-  }
+	// 입력칸 값은 Vue 가 들고 있지 않으므로 직접 비운다
+	if (field.value) {
+		field.value.value = '';
+	}
 }
 
 function cancelPending() {
-  clearTimeout(timer);
-  timer = null;
+	clearTimeout(timer);
+	timer = null;
 
-  inflight?.abort();
-  inflight = null;
+	inflight?.abort();
+	inflight = null;
 }
 
 function onInput(event) {
-  keyword.value = event.target.value;
-  activeIndex.value = -1;
+	keyword.value = event.target.value;
+	activeIndex.value = -1;
 
-  schedule();
+	schedule();
 }
 
 /**
@@ -105,103 +105,103 @@ function onInput(event) {
  * 브라우저에 따라 {@code input} 이 오지 않는 경우가 있다. 그때 "스프리" 에서 멈춘다.
  */
 function onCompositionEnd(event) {
-  keyword.value = event.target.value;
+	keyword.value = event.target.value;
 
-  schedule();
+	schedule();
 }
 
 function schedule() {
-  clearTimeout(timer);
+	clearTimeout(timer);
 
-  const typed = keyword.value.trim();
+	const typed = keyword.value.trim();
 
-  if (typed.length < MIN_LENGTH) {
-    // 앞선 요청의 답이 뒤늦게 와서 빈 칸에 결과가 남는 일을 막는다
-    cancelPending();
-    suggestions.value = [];
-    loading.value = false;
-    return;
-  }
+	if (typed.length < MIN_LENGTH) {
+		// 앞선 요청의 답이 뒤늦게 와서 빈 칸에 결과가 남는 일을 막는다
+		cancelPending();
+		suggestions.value = [];
+		loading.value = false;
+		return;
+	}
 
-  // 낱자로 끝나면 아직 치는 중이다. 이전 결과를 그대로 두고 기다린다
-  if (endsWithIncompleteHangul(typed)) {
-    return;
-  }
+	// 낱자로 끝나면 아직 치는 중이다. 이전 결과를 그대로 두고 기다린다
+	if (endsWithIncompleteHangul(typed)) {
+		return;
+	}
 
-  loading.value = true;
-  timer = setTimeout(() => load(typed), DEBOUNCE_MS);
+	loading.value = true;
+	timer = setTimeout(() => load(typed), DEBOUNCE_MS);
 }
 
 async function load(typed) {
-  // 앞 요청을 끊지 않으면 늦게 온 답이 최신 결과를 덮어써서 한 글자 전으로 되돌아간다
-  inflight?.abort();
-  inflight = new AbortController();
+	// 앞 요청을 끊지 않으면 늦게 온 답이 최신 결과를 덮어써서 한 글자 전으로 되돌아간다
+	inflight?.abort();
+	inflight = new AbortController();
 
-  const controller = inflight;
+	const controller = inflight;
 
-  try {
-    const found = await getPostSuggestions(typed, { signal: controller.signal });
+	try {
+		const found = await getPostSuggestions(typed, { signal: controller.signal });
 
-    // 기다리는 동안 더 쳤으면 이 답은 이미 낡았다
-    if (controller !== inflight) {
-      return;
-    }
+		// 기다리는 동안 더 쳤으면 이 답은 이미 낡았다
+		if (controller !== inflight) {
+			return;
+		}
 
-    suggestions.value = found;
-    activeIndex.value = -1;
-  } catch (error) {
-    if (error.name === 'AbortError') {
-      return;
-    }
+		suggestions.value = found;
+		activeIndex.value = -1;
+	} catch (error) {
+		if (error.name === 'AbortError') {
+			return;
+		}
 
-    // 자동완성이 실패해도 검색 자체는 할 수 있어야 한다. 목록만 비운다
-    console.error(error);
-    suggestions.value = [];
-  } finally {
-    if (controller === inflight) {
-      loading.value = false;
-    }
-  }
+		// 자동완성이 실패해도 검색 자체는 할 수 있어야 한다. 목록만 비운다
+		console.error(error);
+		suggestions.value = [];
+	} finally {
+		if (controller === inflight) {
+			loading.value = false;
+		}
+	}
 }
 
 function move(step) {
-  if (suggestions.value.length === 0) {
-    return;
-  }
+	if (suggestions.value.length === 0) {
+		return;
+	}
 
-  const last = suggestions.value.length - 1;
-  const next = activeIndex.value + step;
+	const last = suggestions.value.length - 1;
+	const next = activeIndex.value + step;
 
-  // 끝에서 한 번 더 누르면 입력칸으로 돌아온다. 갇히지 않게
-  activeIndex.value = next < -1 ? last : next > last ? -1 : next;
+	// 끝에서 한 번 더 누르면 입력칸으로 돌아온다. 갇히지 않게
+	activeIndex.value = next < -1 ? last : next > last ? -1 : next;
 }
 
 function onEnter() {
-  const chosen = suggestions.value[activeIndex.value];
+	const chosen = suggestions.value[activeIndex.value];
 
-  if (chosen) {
-    goToPost(chosen.id);
-    return;
-  }
+	if (chosen) {
+		goToPost(chosen.id);
+		return;
+	}
 
-  submit();
+	submit();
 }
 
 /** 고른 글이 없으면 전체 결과 화면으로 간다 */
 function submit() {
-  if (!canSearch.value) {
-    return;
-  }
+	if (!canSearch.value) {
+		return;
+	}
 
-  const typed = keyword.value.trim();
+	const typed = keyword.value.trim();
 
-  closeBox();
-  router.push({ name: 'post-list', query: { q: typed } });
+	closeBox();
+	router.push({ name: 'post-list', query: { q: typed } });
 }
 
 function goToPost(postId) {
-  closeBox();
-  router.push({ name: 'post-detail', params: { id: postId } });
+	closeBox();
+	router.push({ name: 'post-detail', params: { id: postId } });
 }
 
 // 화면을 옮기면 닫는다. 열어 둔 채 이동하면 새 화면 위에 그대로 덮여 있다
@@ -211,66 +211,66 @@ onBeforeUnmount(cancelPending);
 </script>
 
 <template>
-  <slot name="trigger" :open="openBox" />
+	<slot name="trigger" :open="openBox" />
 
-  <!--
-    덮개·제목·× 는 공용 모달이 만든다. 전에는 여기서 직접 만들어서 제목이 없었고
-    닫는 자리도 "닫기" 글자였다 — 팝업마다 손으로 지키면 이렇게 빠진다
-  -->
-  <BaseModal :open="open" title="검색" initial-focus=".search-panel__input" :close-on-backdrop="true" @close="closeBox">
-    <input
-      ref="field"
-      class="search-panel__input"
-      type="search"
-      autocomplete="off"
-      placeholder="찾을 말을 입력하세요"
-      aria-label="검색어"
-      role="combobox"
-      aria-expanded="true"
-      aria-controls="search-results"
-      @input="onInput"
-      @compositionend="onCompositionEnd"
-      @keydown.down.prevent="move(1)"
-      @keydown.up.prevent="move(-1)"
-      @keydown.enter.prevent="onEnter"
-    />
+	<!--
+		덮개·제목·× 는 공용 모달이 만든다. 전에는 여기서 직접 만들어서 제목이 없었고
+		닫는 자리도 "닫기" 글자였다 — 팝업마다 손으로 지키면 이렇게 빠진다
+	-->
+	<BaseModal :open="open" title="검색" initial-focus=".search-panel__input" :close-on-backdrop="true" @close="closeBox">
+		<input
+			ref="field"
+			class="search-panel__input"
+			type="search"
+			autocomplete="off"
+			placeholder="찾을 말을 입력하세요"
+			aria-label="검색어"
+			role="combobox"
+			aria-expanded="true"
+			aria-controls="search-results"
+			@input="onInput"
+			@compositionend="onCompositionEnd"
+			@keydown.down.prevent="move(1)"
+			@keydown.up.prevent="move(-1)"
+			@keydown.enter.prevent="onEnter"
+		/>
 
-    <p v-if="hint" class="search-panel__hint">{{ hint }}</p>
+		<p v-if="hint" class="search-panel__hint">{{ hint }}</p>
 
-    <ul v-else-if="suggestions.length > 0" id="search-results" class="search-results" role="listbox">
-      <li
-        v-for="(post, index) in suggestions"
-        :key="post.id"
-        role="option"
-        :aria-selected="index === activeIndex"
-      >
-        <button
-          class="search-results__item"
-          :class="{ 'search-results__item--active': index === activeIndex }"
-          type="button"
-          @click="goToPost(post.id)"
-          @mouseenter="activeIndex = index"
-        >
-          <span class="search-results__category">{{ post.categoryName }}</span>
-          <span class="search-results__title">
-            <HighlightedText :text="post.title" :keyword="keyword.trim()" />
-          </span>
-        </button>
-      </li>
-    </ul>
+		<ul v-else-if="suggestions.length > 0" id="search-results" class="search-results" role="listbox">
+			<li
+				v-for="(post, index) in suggestions"
+				:key="post.id"
+				role="option"
+				:aria-selected="index === activeIndex"
+			>
+				<button
+					class="search-results__item"
+					:class="{ 'search-results__item--active': index === activeIndex }"
+					type="button"
+					@click="goToPost(post.id)"
+					@mouseenter="activeIndex = index"
+				>
+					<span class="search-results__category">{{ post.categoryName }}</span>
+					<span class="search-results__title">
+						<HighlightedText :text="post.title" :keyword="keyword.trim()" />
+					</span>
+				</button>
+			</li>
+		</ul>
 
-    <ul v-else-if="loading" class="search-results search-results--skeleton" aria-hidden="true">
-      <li v-for="index in 4" :key="index" class="search-results__item">
-        <span class="ui-skeleton"></span>
-        <span class="ui-skeleton"></span>
-      </li>
-    </ul>
-    <p v-else class="search-panel__hint">맞는 글이 없습니다.</p>
+		<ul v-else-if="loading" class="search-results search-results--skeleton" aria-hidden="true">
+			<li v-for="index in 4" :key="index" class="search-results__item">
+				<span class="ui-skeleton"></span>
+				<span class="ui-skeleton"></span>
+			</li>
+		</ul>
+		<p v-else class="search-panel__hint">맞는 글이 없습니다.</p>
 
-    <template v-if="canSearch" #footer>
-      <button class="ui-button ui-button--accent" type="button" @click="submit">
-        “{{ keyword.trim() }}” 전체 결과 보기
-      </button>
-    </template>
-  </BaseModal>
+		<template v-if="canSearch" #footer>
+			<button class="ui-button ui-button--accent" type="button" @click="submit">
+				“{{ keyword.trim() }}” 전체 결과 보기
+			</button>
+		</template>
+	</BaseModal>
 </template>

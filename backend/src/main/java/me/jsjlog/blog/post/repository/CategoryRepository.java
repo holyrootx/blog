@@ -13,17 +13,17 @@ import java.util.List;
 import java.util.Optional;
 
 public interface CategoryRepository extends JpaRepository<Category, Long>, CategoryRepositoryCustom {
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select category from Category category where category.id = :categoryId")
-    Optional<Category> findLockedById(@Param("categoryId") Long categoryId);
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("select category from Category category where category.id = :categoryId")
+	Optional<Category> findLockedById(@Param("categoryId") Long categoryId);
 
-    List<CategoryResponse> findAllBy(Sort sort);
+	List<CategoryResponse> findAllBy(Sort sort);
 
-    boolean existsByName(String name);
+	boolean existsByName(String name);
 
-    /** 수정할 때 자기 자신은 빼고 이름 중복을 본다 */
-    boolean existsByNameAndIdNot(String name, Long id);
+	/** 수정할 때 자기 자신은 빼고 이름 중복을 본다 */
+	boolean existsByNameAndIdNot(String name, Long id);
 
-    /** 등록할 때 순서를 안 주면 마지막 다음 번호를 매기려고 쓴다 */
-    Optional<Category> findTopByOrderBySortOrderDesc();
+	/** 등록할 때 순서를 안 주면 마지막 다음 번호를 매기려고 쓴다 */
+	Optional<Category> findTopByOrderBySortOrderDesc();
 }

@@ -24,16 +24,16 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class JsonAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
-    private final SecurityResponseWriter responseWriter;
+	private final SecurityResponseWriter responseWriter;
 
-    @Override
-    public void commence(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            AuthenticationException authenticationException
-    ) throws IOException {
-        // 실패 사유(아이디 없음·비밀번호 틀림)는 내려보내지 않는다.
-        // ErrorResponse 의 고정 문구만 나간다
-        responseWriter.writeError(request, response, ErrorCode.UNAUTHORIZED);
-    }
+	@Override
+	public void commence(
+			HttpServletRequest request,
+			HttpServletResponse response,
+			AuthenticationException authenticationException
+	) throws IOException {
+		// 실패 사유(아이디 없음·비밀번호 틀림)는 내려보내지 않는다.
+		// ErrorResponse 의 고정 문구만 나간다
+		responseWriter.writeError(request, response, ErrorCode.UNAUTHORIZED);
+	}
 }

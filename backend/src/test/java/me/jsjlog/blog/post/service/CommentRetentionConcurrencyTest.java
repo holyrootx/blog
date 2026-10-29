@@ -44,130 +44,130 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @SpringBootTest
 class CommentRetentionConcurrencyTest {
 
-    @DynamicPropertySource
-    static void isolatedDatabase(DynamicPropertyRegistry registry) {
-        MySqlTestDatabase.configure(registry, "comment_retention_concurrency");
-    }
+	@DynamicPropertySource
+	static void isolatedDatabase(DynamicPropertyRegistry registry) {
+		MySqlTestDatabase.configure(registry, "comment_retention_concurrency");
+	}
 
-    @Autowired private CommentRetention retention;
-    @Autowired private CommentRepository comments;
-    @Autowired private AdminCommentService adminComments;
-    @Autowired private CategoryRepository categories;
-    @Autowired private PostRepository posts;
-    @Autowired private MemberRepository members;
-    @Autowired private PlatformTransactionManager transactionManager;
+	@Autowired private CommentRetention retention;
+	@Autowired private CommentRepository comments;
+	@Autowired private AdminCommentService adminComments;
+	@Autowired private CategoryRepository categories;
+	@Autowired private PostRepository posts;
+	@Autowired private MemberRepository members;
+	@Autowired private PlatformTransactionManager transactionManager;
 
-    private TransactionTemplate tx;
-    private Long commentId;
-    private Long adminId;
+	private TransactionTemplate tx;
+	private Long commentId;
+	private Long adminId;
 
-    @BeforeEach
-    void setUp() {
-        tx = new TransactionTemplate(transactionManager);
-        String key = UUID.randomUUID().toString();
+	@BeforeEach
+	void setUp() {
+		tx = new TransactionTemplate(transactionManager);
+		String key = UUID.randomUUID().toString();
 
-        commentId = tx.execute(status -> {
-            Category category = categories.save(new Category("동시 " + key, 970L));
-            Post post = new Post("동시 글", "요약", "본문", category, null, null);
-            post.publish(LocalDateTime.now().minusDays(1));
-            posts.save(post);
-            Member writer = members.save(Member.ofSocial(AuthProvider.NAVER, "w-" + key, "글쓴이", null, null));
-            adminId = members.save(Member.ofLocalAdmin("a-" + key, "encoded-password", "운영자")).getId();
+		commentId = tx.execute(status -> {
+			Category category = categories.save(new Category("동시 " + key, 970L));
+			Post post = new Post("동시 글", "요약", "본문", category, null, null);
+			post.publish(LocalDateTime.now().minusDays(1));
+			posts.save(post);
+			Member writer = members.save(Member.ofSocial(AuthProvider.NAVER, "w-" + key, "글쓴이", null, null));
+			adminId = members.save(Member.ofLocalAdmin("a-" + key, "encoded-password", "운영자")).getId();
 
-            Comment comment = comments.save(new Comment(post, null, writer, "지운 말"));
-            comment.delete(LocalDateTime.now().minusMonths(7));
-            return comment.getId();
-        });
-    }
+			Comment comment = comments.save(new Comment(post, null, writer, "지운 말"));
+			comment.delete(LocalDateTime.now().minusMonths(7));
+			return comment.getId();
+		});
+	}
 
-    private Comment load() {
-        return comments.findById(commentId).orElseThrow();
-    }
+	private Comment load() {
+		return comments.findById(commentId).orElseThrow();
+	}
 
-    @Test
-    @DisplayName("글쓴이가 지운 댓글은 잠금을 쥐고 되살리려 해도 거절되고, 정리는 잠금이 풀린 뒤 파기한다")
-    void restoreOfWriterDeletedIsRefusedUnderLock() throws Exception {
-        CountDownLatch locked = new CountDownLatch(1);
+	@Test
+	@DisplayName("글쓴이가 지운 댓글은 잠금을 쥐고 되살리려 해도 거절되고, 정리는 잠금이 풀린 뒤 파기한다")
+	void restoreOfWriterDeletedIsRefusedUnderLock() throws Exception {
+		CountDownLatch locked = new CountDownLatch(1);
 
-        // 운영자는 자기가 가린 댓글만 되돌린다(2026-10-18). 예전에는 여기서 되살리기가 이겼다
-        CompletableFuture<Void> restoring = CompletableFuture.runAsync(() -> tx.executeWithoutResult(status -> {
-            Comment comment = comments.findLockedById(commentId).orElseThrow();
-            locked.countDown();
-            sleep(800);
-            comment.restore();
-        }));
+		// 운영자는 자기가 가린 댓글만 되돌린다(2026-10-18). 예전에는 여기서 되살리기가 이겼다
+		CompletableFuture<Void> restoring = CompletableFuture.runAsync(() -> tx.executeWithoutResult(status -> {
+			Comment comment = comments.findLockedById(commentId).orElseThrow();
+			locked.countDown();
+			sleep(800);
+			comment.restore();
+		}));
 
-        assertThat(locked.await(5, TimeUnit.SECONDS)).isTrue();
-        CommentRetention.Result result = retention.purgeExpired(LocalDateTime.now());
+		assertThat(locked.await(5, TimeUnit.SECONDS)).isTrue();
+		CommentRetention.Result result = retention.purgeExpired(LocalDateTime.now());
 
-        assertThatThrownBy(() -> restoring.get(10, TimeUnit.SECONDS))
-                .hasRootCauseInstanceOf(IllegalStateException.class);
+		assertThatThrownBy(() -> restoring.get(10, TimeUnit.SECONDS))
+				.hasRootCauseInstanceOf(IllegalStateException.class);
 
-        Comment saved = load();
-        assertThat(result.purgedComments()).isEqualTo(1);
-        assertThat(saved.isDeleted()).isTrue();
-        assertThat(saved.getContent()).isEmpty();
-        assertThat(saved.isContentPurged()).isTrue();
-    }
+		Comment saved = load();
+		assertThat(result.purgedComments()).isEqualTo(1);
+		assertThat(saved.isDeleted()).isTrue();
+		assertThat(saved.getContent()).isEmpty();
+		assertThat(saved.isContentPurged()).isTrue();
+	}
 
-    @Test
-    @DisplayName("파기한 뒤에 되살리려 하면 거절하고 원문은 비어 있는 그대로다")
-    void restoreAfterPurgeIsRejected() {
-        retention.purgeExpired(LocalDateTime.now());
+	@Test
+	@DisplayName("파기한 뒤에 되살리려 하면 거절하고 원문은 비어 있는 그대로다")
+	void restoreAfterPurgeIsRejected() {
+		retention.purgeExpired(LocalDateTime.now());
 
-        assertThatThrownBy(() -> adminComments.updateVisibility(
-                commentId, new AdminCommentVisibilityRequest(false, "되돌림"), adminId))
-                .isInstanceOfSatisfying(BlogException.class,
-                        error -> assertThat(error.getErrorCode()).isEqualTo(ErrorCode.COMMENT_CONTENT_PURGED));
-        assertThatThrownBy(() -> adminComments.updateVisibility(
-                commentId, new AdminCommentVisibilityRequest(true, "가림"), adminId))
-                .isInstanceOfSatisfying(BlogException.class,
-                        error -> assertThat(error.getErrorCode()).isEqualTo(ErrorCode.COMMENT_CONTENT_PURGED));
+		assertThatThrownBy(() -> adminComments.updateVisibility(
+				commentId, new AdminCommentVisibilityRequest(false, "되돌림"), adminId))
+				.isInstanceOfSatisfying(BlogException.class,
+						error -> assertThat(error.getErrorCode()).isEqualTo(ErrorCode.COMMENT_CONTENT_PURGED));
+		assertThatThrownBy(() -> adminComments.updateVisibility(
+				commentId, new AdminCommentVisibilityRequest(true, "가림"), adminId))
+				.isInstanceOfSatisfying(BlogException.class,
+						error -> assertThat(error.getErrorCode()).isEqualTo(ErrorCode.COMMENT_CONTENT_PURGED));
 
-        Comment saved = load();
-        assertThat(saved.isDeleted()).isTrue();
-        assertThat(saved.getContent()).isEmpty();
-    }
+		Comment saved = load();
+		assertThat(saved.isDeleted()).isTrue();
+		assertThat(saved.getContent()).isEmpty();
+	}
 
-    @Test
-    @DisplayName("정리가 두 번 겹쳐 돌아도 한 번만 파기한다")
-    void concurrentPurgesPurgeOnce() throws Exception {
-        CyclicBarrier start = new CyclicBarrier(2);
-        // DB에 저장되는 마이크로초 정밀도에 맞춰 비교한다.
-        LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.MICROS);
+	@Test
+	@DisplayName("정리가 두 번 겹쳐 돌아도 한 번만 파기한다")
+	void concurrentPurgesPurgeOnce() throws Exception {
+		CyclicBarrier start = new CyclicBarrier(2);
+		// DB에 저장되는 마이크로초 정밀도에 맞춰 비교한다.
+		LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.MICROS);
 
-        CompletableFuture<CommentRetention.Result> first = CompletableFuture.supplyAsync(() -> {
-            await(start);
-            return retention.purgeExpired(now);
-        });
-        CompletableFuture<CommentRetention.Result> second = CompletableFuture.supplyAsync(() -> {
-            await(start);
-            return retention.purgeExpired(now.plusSeconds(1));
-        });
+		CompletableFuture<CommentRetention.Result> first = CompletableFuture.supplyAsync(() -> {
+			await(start);
+			return retention.purgeExpired(now);
+		});
+		CompletableFuture<CommentRetention.Result> second = CompletableFuture.supplyAsync(() -> {
+			await(start);
+			return retention.purgeExpired(now.plusSeconds(1));
+		});
 
-        first.get(10, TimeUnit.SECONDS);
-        second.get(10, TimeUnit.SECONDS);
+		first.get(10, TimeUnit.SECONDS);
+		second.get(10, TimeUnit.SECONDS);
 
-        // 늦게 온 쪽의 UPDATE 는 조건에서 걸러져 파기 시각을 덮어쓰지 않는다
-        Comment saved = load();
-        assertThat(saved.getContent()).isEmpty();
-        assertThat(saved.getContentPurgedAt()).isIn(now, now.plusSeconds(1));
-    }
+		// 늦게 온 쪽의 UPDATE 는 조건에서 걸러져 파기 시각을 덮어쓰지 않는다
+		Comment saved = load();
+		assertThat(saved.getContent()).isEmpty();
+		assertThat(saved.getContentPurgedAt()).isIn(now, now.plusSeconds(1));
+	}
 
-    private static void sleep(long millis) {
-        try {
-            Thread.sleep(millis);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException(e);
-        }
-    }
+	private static void sleep(long millis) {
+		try {
+			Thread.sleep(millis);
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			throw new IllegalStateException(e);
+		}
+	}
 
-    private static void await(CyclicBarrier barrier) {
-        try {
-            barrier.await(5, TimeUnit.SECONDS);
-        } catch (Exception e) {
-            throw new IllegalStateException(e);
-        }
-    }
+	private static void await(CyclicBarrier barrier) {
+		try {
+			barrier.await(5, TimeUnit.SECONDS);
+		} catch (Exception e) {
+			throw new IllegalStateException(e);
+		}
+	}
 }

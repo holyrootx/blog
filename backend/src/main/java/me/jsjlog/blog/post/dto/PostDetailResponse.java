@@ -6,79 +6,79 @@ import java.time.LocalDateTime;
 import java.util.Map;
 
 public record PostDetailResponse(
-        Long id,
-        String title,
-        String excerpt,
-        String content,
-        Long categoryId,
-        String categoryName,
-        String thumbnailImageUrl,
-        PostStatus status,
-        LocalDateTime publishedAt,
-        Long views,
-        Long likeCount,
-        Long dislikeCount,
-        boolean likedByMe,
-        boolean dislikedByMe,
-        Map<String, Object> structuredData
+		Long id,
+		String title,
+		String excerpt,
+		String content,
+		Long categoryId,
+		String categoryName,
+		String thumbnailImageUrl,
+		PostStatus status,
+		LocalDateTime publishedAt,
+		Long views,
+		Long likeCount,
+		Long dislikeCount,
+		boolean likedByMe,
+		boolean dislikedByMe,
+		Map<String, Object> structuredData
 ) {
 
-    /** QueryDSL 상세 조회가 사용하는 기본 생성자. 반응 정보는 서비스에서 회원 기준으로 채운다. */
-    public PostDetailResponse(
-            Long id,
-            String title,
-            String excerpt,
-            String content,
-            Long categoryId,
-            String categoryName,
-            String thumbnailImageUrl,
-            PostStatus status,
-            LocalDateTime publishedAt,
-            Long views,
-            Long likeCount
-    ) {
-        this(
-                id,
-                title,
-                excerpt,
-                content,
-                categoryId,
-                categoryName,
-                thumbnailImageUrl,
-                status,
-                publishedAt,
-                views,
-                likeCount,
-                0L,
-                false,
-                false,
-                Map.of()
-        );
-    }
+	/** QueryDSL 상세 조회가 사용하는 기본 생성자. 반응 정보는 서비스에서 회원 기준으로 채운다. */
+	public PostDetailResponse(
+			Long id,
+			String title,
+			String excerpt,
+			String content,
+			Long categoryId,
+			String categoryName,
+			String thumbnailImageUrl,
+			PostStatus status,
+			LocalDateTime publishedAt,
+			Long views,
+			Long likeCount
+	) {
+		this(
+				id,
+				title,
+				excerpt,
+				content,
+				categoryId,
+				categoryName,
+				thumbnailImageUrl,
+				status,
+				publishedAt,
+				views,
+				likeCount,
+				0L,
+				false,
+				false,
+				Map.of()
+		);
+	}
 
-    public PostDetailResponse withReactions(PostReactionResponse reactions) {
-        return new PostDetailResponse(
-                id,
-                title,
-                excerpt,
-                content,
-                categoryId,
-                categoryName,
-                thumbnailImageUrl,
-                status,
-                publishedAt,
-                views,
-                reactions.likeCount(),
-                reactions.dislikeCount(),
-                reactions.likedByMe(),
-                reactions.dislikedByMe(),
-                structuredData
-        );
-    }
+	public PostDetailResponse withReactions(PostReactionResponse reactions) {
+		return new PostDetailResponse(
+				id,
+				title,
+				excerpt,
+				content,
+				categoryId,
+				categoryName,
+				thumbnailImageUrl,
+				status,
+				publishedAt,
+				views,
+				reactions.likeCount(),
+				reactions.dislikeCount(),
+				reactions.likedByMe(),
+				reactions.dislikedByMe(),
+				structuredData
+		);
+	}
 
-    public PostDetailResponse withStructuredData(Map<String, Object> data) {
-        return new PostDetailResponse(id, title, excerpt, content, categoryId, categoryName,
-                thumbnailImageUrl, status, publishedAt, views, likeCount, dislikeCount,
-                likedByMe, dislikedByMe, data);
-    }
+	public PostDetailResponse withStructuredData(Map<String, Object> data) {
+		return new PostDetailResponse(id, title, excerpt, content, categoryId, categoryName,
+				thumbnailImageUrl, status, publishedAt, views, likeCount, dislikeCount,
+				likedByMe, dislikedByMe, data);
+	}
 }

@@ -24,29 +24,29 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class AdminLoginFailureHandler implements AuthenticationFailureHandler {
 
-    private final SecurityResponseWriter responseWriter;
-    private final LoginAttemptGuard attemptGuard;
-    private final ClientIpResolver clientIpResolver;
+	private final SecurityResponseWriter responseWriter;
+	private final LoginAttemptGuard attemptGuard;
+	private final ClientIpResolver clientIpResolver;
 
-    @Override
-    public void onAuthenticationFailure(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            AuthenticationException exception
-    ) throws IOException {
-        String clientIp = clientIpResolver.resolve(request);
+	@Override
+	public void onAuthenticationFailure(
+			HttpServletRequest request,
+			HttpServletResponse response,
+			AuthenticationException exception
+	) throws IOException {
+		String clientIp = clientIpResolver.resolve(request);
 
-        // 막혀서 돌아온 것이라면 세지 않는다. 세면 막힌 동안 계속 두드리는 것만으로
-        // 차단 시간이 끝없이 늘어난다
-        if (exception instanceof LockedException) {
-            responseWriter.writeError(request, response, ErrorCode.ADMIN_LOGIN_BLOCKED);
-            return;
-        }
+		// 막혀서 돌아온 것이라면 세지 않는다. 세면 막힌 동안 계속 두드리는 것만으로
+		// 차단 시간이 끝없이 늘어난다
+		if (exception instanceof LockedException) {
+			responseWriter.writeError(request, response, ErrorCode.ADMIN_LOGIN_BLOCKED);
+			return;
+		}
 
-        attemptGuard.recordFailure(clientIp);
+		attemptGuard.recordFailure(clientIp);
 
-        // 몇 번 남았는지는 알려 주지 않는다. 알려 주면 차단 직전에 멈췄다가
-        // 다시 시작하는 식으로 피해 갈 수 있다
-        responseWriter.writeError(request, response, ErrorCode.ADMIN_LOGIN_FAILED);
-    }
+		// 몇 번 남았는지는 알려 주지 않는다. 알려 주면 차단 직전에 멈췄다가
+		// 다시 시작하는 식으로 피해 갈 수 있다
+		responseWriter.writeError(request, response, ErrorCode.ADMIN_LOGIN_FAILED);
+	}
 }

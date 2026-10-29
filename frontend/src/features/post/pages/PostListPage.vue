@@ -42,15 +42,15 @@ const sort = computed(() => listCondition.value.sort);
 const keyword = computed(() => listCondition.value.keyword);
 
 const currentCategoryName = computed(
-  () => categories.value.find((category) => category.id === categoryId.value)?.name ?? '',
+	() => categories.value.find((category) => category.id === categoryId.value)?.name ?? '',
 );
 
 const heading = computed(() => {
-  if (keyword.value) {
-    return `‘${keyword.value}’ 검색 결과`;
-  }
+	if (keyword.value) {
+		return `‘${keyword.value}’ 검색 결과`;
+	}
 
-  return currentCategoryName.value || '전체 글';
+	return currentCategoryName.value || '전체 글';
 });
 
 /**
@@ -69,20 +69,20 @@ const hasPreviousBlock = computed(() => blockStart.value > 1);
 const hasNextBlock = computed(() => blockEnd.value < totalPages.value);
 
 const pageNumbers = computed(() => {
-  const numbers = [];
+	const numbers = [];
 
-  for (let number = blockStart.value; number <= blockEnd.value; number += 1) {
-    numbers.push(number);
-  }
+	for (let number = blockStart.value; number <= blockEnd.value; number += 1) {
+		numbers.push(number);
+	}
 
-  return numbers;
+	return numbers;
 });
 
 function queryFor(changes) {
-  return toPostListQuery(readPostListQuery({
-    ...route.query,
-    ...changes,
-  }));
+	return toPostListQuery(readPostListQuery({
+		...route.query,
+		...changes,
+	}));
 }
 
 /**
@@ -90,40 +90,42 @@ function queryFor(changes) {
  * 다시 그리지 않는다. 화면은 언제나 새로 받아 바꾼다.
  */
 function load() {
-  const condition = {
-    page: page.value,
-    size: PAGE_SIZE,
-    categoryId: categoryId.value,
-    sort: sort.value,
-    keyword: keyword.value,
-  };
+	const condition = {
+		page: page.value,
+		size: PAGE_SIZE,
+		categoryId: categoryId.value,
+		sort: sort.value,
+		keyword: keyword.value,
+	};
 
-  sections.restart();
-  failed.value = false;
+	sections.restart();
+	failed.value = false;
 
-  return sections.load('posts', {
-    cacheKey: `post-list:${JSON.stringify(condition)}`,
-    request: async () => {
-      const result = await getPosts(condition);
-      return { result, fallback: await fallbackFor(result, condition.keyword) };
-    },
-    apply: ({ result, fallback }) => {
-      posts.value = result.items;
-      totalElements.value = result.totalElements;
-      totalPages.value = result.totalPages;
-      fallbackPosts.value = fallback;
-    },
-    onError: (error, { showingCached }) => {
-      console.error(error);
-      // 전에 받은 목록을 보여 주고 있으면 그대로 둔다. 다시 받는 데 실패했다고 읽던 목록을 지우지 않는다
-      if (showingCached) return;
-      failed.value = true;
-      posts.value = [];
-      fallbackPosts.value = [];
-      totalElements.value = 0;
-      totalPages.value = 0;
-    },
-  });
+	return sections.load('posts', {
+		cacheKey: `post-list:${JSON.stringify(condition)}`,
+		request: async () => {
+			const result = await getPosts(condition);
+			return { result, fallback: await fallbackFor(result, condition.keyword) };
+		},
+		apply: ({ result, fallback }) => {
+			posts.value = result.items;
+			totalElements.value = result.totalElements;
+			totalPages.value = result.totalPages;
+			fallbackPosts.value = fallback;
+		},
+		onError: (error, { showingCached }) => {
+			console.error(error);
+			// 전에 받은 목록을 보여 주고 있으면 그대로 둔다. 다시 받는 데 실패했다고 읽던 목록을 지우지 않는다
+			if (showingCached) {
+				return;
+			}
+			failed.value = true;
+			posts.value = [];
+			fallbackPosts.value = [];
+			totalElements.value = 0;
+			totalPages.value = 0;
+		},
+	});
 }
 
 /**
@@ -133,16 +135,16 @@ function load() {
  * 거기서 나갈 길도 같이 줘야 뒤로가기 말고 할 일이 생긴다.</p>
  */
 async function fallbackFor(result, requestedKeyword) {
-  if (result.items.length > 0 || !requestedKeyword) {
-    return [];
-  }
+	if (result.items.length > 0 || !requestedKeyword) {
+		return [];
+	}
 
-  // 여기서 실패해도 검색 결과 화면 자체는 이미 멀쩡하다. 덤이 빠질 뿐이다
-  return getHomePosts('latest').catch(() => []);
+	// 여기서 실패해도 검색 결과 화면 자체는 이미 멀쩡하다. 덤이 빠질 뿐이다
+	return getHomePosts('latest').catch(() => []);
 }
 
 function clearKeyword() {
-  router.push({ name: 'post-list', query: queryFor({ q: '', page: '' }) });
+	router.push({ name: 'post-list', query: queryFor({ q: '', page: '' }) });
 }
 
 // 주소가 바뀌면 다시 불러온다. 페이지·카테고리·정렬이 전부 주소에 있어서 이 하나로 끝난다
@@ -150,186 +152,186 @@ watch(() => route.fullPath, load, { immediate: true });
 
 // 헤더도 같은 값을 쓴다. 같이 쓰는 자리를 거치므로 한 화면에 요청이 한 번만 나간다
 loadCategories().then((found) => {
-  categories.value = found;
+	categories.value = found;
 }).finally(() => {
-  categoriesLoading.value = false;
+	categoriesLoading.value = false;
 });
 
 </script>
 
 <template>
-  <main class="public-shell__main post-list" :aria-busy="loading || categoriesLoading">
-    <header class="post-list__head">
-      <h1 class="post-list__title">{{ heading }}</h1>
-      <span v-if="loading" class="ui-skeleton post-list__count-skeleton" aria-hidden="true"></span>
-      <p v-else class="post-list__count">{{ totalElements }}편</p>
-      <button
-        v-if="keyword"
-        class="post-list__clear"
-        type="button"
-        @click="clearKeyword"
-      >검색 지우기</button>
-    </header>
+	<main class="public-shell__main post-list" :aria-busy="loading || categoriesLoading">
+		<header class="post-list__head">
+			<h1 class="post-list__title">{{ heading }}</h1>
+			<span v-if="loading" class="ui-skeleton post-list__count-skeleton" aria-hidden="true"></span>
+			<p v-else class="post-list__count">{{ totalElements }}편</p>
+			<button
+				v-if="keyword"
+				class="post-list__clear"
+				type="button"
+				@click="clearKeyword"
+			>검색 지우기</button>
+		</header>
 
-    <nav class="post-list__filters" aria-label="분류">
-      <RouterLink
-        class="post-list__filter"
-        :class="{ 'post-list__filter--active': categoryId === null }"
-        :to="{ name: 'post-list', query: queryFor({ category: '', page: '' }) }"
-      >전체</RouterLink>
-      <template v-if="categoriesLoading">
-        <span
-          v-for="index in 3"
-          :key="`category-skeleton-${index}`"
-          class="ui-skeleton post-list__filter-skeleton"
-          aria-hidden="true"
-        ></span>
-      </template>
-      <RouterLink
-        v-for="category in categories"
-        :key="category.id"
-        class="post-list__filter"
-        :class="{ 'post-list__filter--active': categoryId === category.id }"
-        :to="{ name: 'post-list', query: queryFor({ category: String(category.id), page: '' }) }"
-      >{{ category.name }}</RouterLink>
+		<nav class="post-list__filters" aria-label="분류">
+			<RouterLink
+				class="post-list__filter"
+				:class="{ 'post-list__filter--active': categoryId === null }"
+				:to="{ name: 'post-list', query: queryFor({ category: '', page: '' }) }"
+			>전체</RouterLink>
+			<template v-if="categoriesLoading">
+				<span
+					v-for="index in 3"
+					:key="`category-skeleton-${index}`"
+					class="ui-skeleton post-list__filter-skeleton"
+					aria-hidden="true"
+				></span>
+			</template>
+			<RouterLink
+				v-for="category in categories"
+				:key="category.id"
+				class="post-list__filter"
+				:class="{ 'post-list__filter--active': categoryId === category.id }"
+				:to="{ name: 'post-list', query: queryFor({ category: String(category.id), page: '' }) }"
+			>{{ category.name }}</RouterLink>
 
-      <span class="post-list__filter-gap"></span>
+			<span class="post-list__filter-gap"></span>
 
-      <RouterLink
-        class="post-list__filter"
-        :class="{ 'post-list__filter--active': sort === 'latest' }"
-        :to="{ name: 'post-list', query: queryFor({ sort: 'latest', page: '' }) }"
-      >최신순</RouterLink>
-      <RouterLink
-        class="post-list__filter"
-        :class="{ 'post-list__filter--active': sort === 'popular' }"
-        :to="{ name: 'post-list', query: queryFor({ sort: 'popular', page: '' }) }"
-      >인기순</RouterLink>
-    </nav>
+			<RouterLink
+				class="post-list__filter"
+				:class="{ 'post-list__filter--active': sort === 'latest' }"
+				:to="{ name: 'post-list', query: queryFor({ sort: 'latest', page: '' }) }"
+			>최신순</RouterLink>
+			<RouterLink
+				class="post-list__filter"
+				:class="{ 'post-list__filter--active': sort === 'popular' }"
+				:to="{ name: 'post-list', query: queryFor({ sort: 'popular', page: '' }) }"
+			>인기순</RouterLink>
+		</nav>
 
-    <div v-if="loading" class="post-grid" aria-hidden="true">
-      <article v-for="index in PAGE_SIZE" :key="index" class="post-card post-card--skeleton">
-        <div class="post-card__image ui-skeleton"></div>
-        <div class="post-card__body home-skeleton-stack">
-          <span class="ui-skeleton home-skeleton--post-category"></span>
-          <span class="ui-skeleton home-skeleton--post-title"></span>
-          <span class="ui-skeleton home-skeleton--post-meta"></span>
-        </div>
-      </article>
-    </div>
-    <p v-else-if="failed" class="post-list__empty" role="alert">
-      글을 불러오지 못했습니다. 잠시 뒤에 다시 시도해 주세요.
-    </p>
-    <template v-else-if="posts.length === 0">
-      <!--
-        검색어 뒤에 조사를 붙이지 않는다. 와/과, 이/가 는 앞말 받침에 따라 달라지는데
-        검색어는 사람이 치는 값이라 무엇이 올지 모른다. 붙이면 반드시 틀리는 경우가 생긴다
-      -->
-      <p class="post-list__empty">
-        <template v-if="keyword">‘{{ keyword }}’ 검색 결과가 없습니다.</template>
-        <template v-else>아직 글이 없습니다.</template>
-      </p>
+		<div v-if="loading" class="post-grid" aria-hidden="true">
+			<article v-for="index in PAGE_SIZE" :key="index" class="post-card post-card--skeleton">
+				<div class="post-card__image ui-skeleton"></div>
+				<div class="post-card__body home-skeleton-stack">
+					<span class="ui-skeleton home-skeleton--post-category"></span>
+					<span class="ui-skeleton home-skeleton--post-title"></span>
+					<span class="ui-skeleton home-skeleton--post-meta"></span>
+				</div>
+			</article>
+		</div>
+		<p v-else-if="failed" class="post-list__empty" role="alert">
+			글을 불러오지 못했습니다. 잠시 뒤에 다시 시도해 주세요.
+		</p>
+		<template v-else-if="posts.length === 0">
+			<!--
+				검색어 뒤에 조사를 붙이지 않는다. 와/과, 이/가 는 앞말 받침에 따라 달라지는데
+				검색어는 사람이 치는 값이라 무엇이 올지 모른다. 붙이면 반드시 틀리는 경우가 생긴다
+			-->
+			<p class="post-list__empty">
+				<template v-if="keyword">‘{{ keyword }}’ 검색 결과가 없습니다.</template>
+				<template v-else>아직 글이 없습니다.</template>
+			</p>
 
-      <!-- 검색이 빈손일 때만. 막다른 길 대신 읽을거리를 준다 -->
-      <section v-if="fallbackPosts.length > 0" class="post-list__fallback">
-        <h2 class="post-list__fallback-title">대신 최근 글은 어떠세요</h2>
-        <div class="post-grid">
-          <RouterLink
-            v-for="post in fallbackPosts"
-            :key="post.id"
-            class="post-card"
-            :to="{ name: 'post-detail', params: { id: post.id } }"
-          >
-            <img
-              class="post-card__image"
-              :src="post.imageUrl"
-              :alt="post.title"
-              loading="lazy"
-              decoding="async"
-            />
-            <div class="post-card__body">
-              <span class="post-card__category">{{ post.category }}</span>
-              <h3 class="post-card__title">{{ post.title }}</h3>
-              <div class="post-card__meta">
-                <time>{{ post.publishedAt }}</time>
-                <span>조회 {{ post.views }}</span>
-              </div>
-            </div>
-            <ViewedPostBadge :post-id="post.id" />
-          </RouterLink>
-        </div>
-      </section>
-    </template>
+			<!-- 검색이 빈손일 때만. 막다른 길 대신 읽을거리를 준다 -->
+			<section v-if="fallbackPosts.length > 0" class="post-list__fallback">
+				<h2 class="post-list__fallback-title">대신 최근 글은 어떠세요</h2>
+				<div class="post-grid">
+					<RouterLink
+						v-for="post in fallbackPosts"
+						:key="post.id"
+						class="post-card"
+						:to="{ name: 'post-detail', params: { id: post.id } }"
+					>
+						<img
+							class="post-card__image"
+							:src="post.imageUrl"
+							:alt="post.title"
+							loading="lazy"
+							decoding="async"
+						/>
+						<div class="post-card__body">
+							<span class="post-card__category">{{ post.category }}</span>
+							<h3 class="post-card__title">{{ post.title }}</h3>
+							<div class="post-card__meta">
+								<time>{{ post.publishedAt }}</time>
+								<span>조회 {{ post.views }}</span>
+							</div>
+						</div>
+						<ViewedPostBadge :post-id="post.id" />
+					</RouterLink>
+				</div>
+			</section>
+		</template>
 
-    <div v-else class="post-grid">
-      <RouterLink
-        v-for="post in posts"
-        :key="post.id"
-        class="post-card"
-        :to="{ name: 'post-detail', params: { id: post.id } }"
-      >
-        <img
-          class="post-card__image"
-          :src="post.imageUrl"
-          :alt="post.title"
-          loading="lazy"
-          decoding="async"
-        />
-        <div class="post-card__body">
-          <span class="post-card__category">{{ post.category }}</span>
-          <h2 class="post-card__title">
-            <HighlightedText :text="post.title" :keyword="keyword" />
-          </h2>
-          <div class="post-card__meta">
-            <time>{{ post.publishedAt }}</time>
-            <span>조회 {{ post.views }}</span>
-          </div>
-        </div>
-        <ViewedPostBadge :post-id="post.id" />
-      </RouterLink>
-    </div>
+		<div v-else class="post-grid">
+			<RouterLink
+				v-for="post in posts"
+				:key="post.id"
+				class="post-card"
+				:to="{ name: 'post-detail', params: { id: post.id } }"
+			>
+				<img
+					class="post-card__image"
+					:src="post.imageUrl"
+					:alt="post.title"
+					loading="lazy"
+					decoding="async"
+				/>
+				<div class="post-card__body">
+					<span class="post-card__category">{{ post.category }}</span>
+					<h2 class="post-card__title">
+						<HighlightedText :text="post.title" :keyword="keyword" />
+					</h2>
+					<div class="post-card__meta">
+						<time>{{ post.publishedAt }}</time>
+						<span>조회 {{ post.views }}</span>
+					</div>
+				</div>
+				<ViewedPostBadge :post-id="post.id" />
+			</RouterLink>
+		</div>
 
-    <nav v-if="totalPages > 1" class="post-pager" aria-label="페이지">
-      <!--
-        앞 묶음으로는 그 묶음의 마지막 쪽으로 간다. 10쪽에서 11쪽으로 넘어왔다면
-        돌아갈 곳도 10쪽이다 — 1쪽으로 보내면 읽던 자리를 잃는다
-      -->
-      <RouterLink
-        v-if="hasPreviousBlock"
-        class="post-pager__button"
-        title="1쪽으로"
-        :aria-current-value="null"
-        :to="{ name: 'post-list', query: queryFor({ page: '1' }) }"
-      >처음</RouterLink>
-      <RouterLink
-        v-if="hasPreviousBlock"
-        class="post-pager__button"
-        :aria-current-value="null"
-        :to="{ name: 'post-list', query: queryFor({ page: String(blockStart - 1) }) }"
-      >‹ 이전 {{ BLOCK_SIZE }}개</RouterLink>
+		<nav v-if="totalPages > 1" class="post-pager" aria-label="페이지">
+			<!--
+				앞 묶음으로는 그 묶음의 마지막 쪽으로 간다. 10쪽에서 11쪽으로 넘어왔다면
+				돌아갈 곳도 10쪽이다 — 1쪽으로 보내면 읽던 자리를 잃는다
+			-->
+			<RouterLink
+				v-if="hasPreviousBlock"
+				class="post-pager__button"
+				title="1쪽으로"
+				:aria-current-value="null"
+				:to="{ name: 'post-list', query: queryFor({ page: '1' }) }"
+			>처음</RouterLink>
+			<RouterLink
+				v-if="hasPreviousBlock"
+				class="post-pager__button"
+				:aria-current-value="null"
+				:to="{ name: 'post-list', query: queryFor({ page: String(blockStart - 1) }) }"
+			>‹ 이전 {{ BLOCK_SIZE }}개</RouterLink>
 
-      <RouterLink
-        v-for="number in pageNumbers"
-        :key="number"
-        class="post-pager__number"
-        :class="{ 'post-pager__number--active': number === page }"
-        :aria-current-value="number === page ? 'page' : null"
-        :to="{ name: 'post-list', query: queryFor({ page: String(number) }) }"
-      >{{ number }}</RouterLink>
+			<RouterLink
+				v-for="number in pageNumbers"
+				:key="number"
+				class="post-pager__number"
+				:class="{ 'post-pager__number--active': number === page }"
+				:aria-current-value="number === page ? 'page' : null"
+				:to="{ name: 'post-list', query: queryFor({ page: String(number) }) }"
+			>{{ number }}</RouterLink>
 
-      <RouterLink
-        v-if="hasNextBlock"
-        class="post-pager__button"
-        :aria-current-value="null"
-        :to="{ name: 'post-list', query: queryFor({ page: String(blockEnd + 1) }) }"
-      >다음 {{ BLOCK_SIZE }}개 ›</RouterLink>
-      <RouterLink
-        v-if="hasNextBlock"
-        class="post-pager__button"
-        :aria-current-value="null"
-        :title="`${totalPages}쪽으로`"
-        :to="{ name: 'post-list', query: queryFor({ page: String(totalPages) }) }"
-      >끝</RouterLink>
-    </nav>
-  </main>
+			<RouterLink
+				v-if="hasNextBlock"
+				class="post-pager__button"
+				:aria-current-value="null"
+				:to="{ name: 'post-list', query: queryFor({ page: String(blockEnd + 1) }) }"
+			>다음 {{ BLOCK_SIZE }}개 ›</RouterLink>
+			<RouterLink
+				v-if="hasNextBlock"
+				class="post-pager__button"
+				:aria-current-value="null"
+				:title="`${totalPages}쪽으로`"
+				:to="{ name: 'post-list', query: queryFor({ page: String(totalPages) }) }"
+			>끝</RouterLink>
+		</nav>
+	</main>
 </template>

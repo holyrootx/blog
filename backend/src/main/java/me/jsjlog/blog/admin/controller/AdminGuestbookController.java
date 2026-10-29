@@ -24,68 +24,68 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/admin/blog/guestbook")
 public class AdminGuestbookController {
 
-    private final AdminGuestbookService adminGuestbookService;
+	private final AdminGuestbookService adminGuestbookService;
 
-    @GetMapping
-    public ApiResponse<AdminGuestbookListResponse> getEntries(AdminGuestbookSearchCondition condition) {
-        return ApiResponse.ok(adminGuestbookService.getEntries(condition));
-    }
+	@GetMapping
+	public ApiResponse<AdminGuestbookListResponse> getEntries(AdminGuestbookSearchCondition condition) {
+		return ApiResponse.ok(adminGuestbookService.getEntries(condition));
+	}
 
-    /** 글 하나와 신고 목록 */
-    @GetMapping("/{entryId}")
-    public ApiResponse<AdminGuestbookDetail> getDetail(@PathVariable Long entryId) {
-        return ApiResponse.ok(adminGuestbookService.getDetail(entryId));
-    }
+	/** 글 하나와 신고 목록 */
+	@GetMapping("/{entryId}")
+	public ApiResponse<AdminGuestbookDetail> getDetail(@PathVariable Long entryId) {
+		return ApiResponse.ok(adminGuestbookService.getDetail(entryId));
+	}
 
-    /** 운영자 답글. 글마다 하나라 달기와 고치기가 같은 자리다 */
-    @PutMapping("/{entryId}/reply")
-    public ApiResponse<Void> reply(
-            @PathVariable Long entryId,
-            @RequestBody AdminCommentReplyRequest request,
-            @AuthenticationPrincipal MemberPrincipal principal
-    ) {
-        adminGuestbookService.reply(
-                entryId,
-                request == null ? null : request.content(),
-                principalId(principal)
-        );
-        return ApiResponse.ok();
-    }
+	/** 운영자 답글. 글마다 하나라 달기와 고치기가 같은 자리다 */
+	@PutMapping("/{entryId}/reply")
+	public ApiResponse<Void> reply(
+			@PathVariable Long entryId,
+			@RequestBody AdminCommentReplyRequest request,
+			@AuthenticationPrincipal MemberPrincipal principal
+	) {
+		adminGuestbookService.reply(
+				entryId,
+				request == null ? null : request.content(),
+				principalId(principal)
+		);
+		return ApiResponse.ok();
+	}
 
-    @DeleteMapping("/{entryId}/reply")
-    public ApiResponse<Void> removeReply(
-            @PathVariable Long entryId,
-            @AuthenticationPrincipal MemberPrincipal principal
-    ) {
-        adminGuestbookService.removeReply(entryId, principalId(principal));
-        return ApiResponse.ok();
-    }
+	@DeleteMapping("/{entryId}/reply")
+	public ApiResponse<Void> removeReply(
+			@PathVariable Long entryId,
+			@AuthenticationPrincipal MemberPrincipal principal
+	) {
+		adminGuestbookService.removeReply(entryId, principalId(principal));
+		return ApiResponse.ok();
+	}
 
-    @PutMapping("/{entryId}/visibility")
-    public ApiResponse<Void> updateVisibility(
-            @PathVariable Long entryId,
-            @RequestBody AdminGuestbookVisibilityRequest request,
-            @AuthenticationPrincipal MemberPrincipal principal
-    ) {
-        adminGuestbookService.updateVisibility(
-                entryId,
-                request == null ? null : request.hidden(),
-                principalId(principal)
-        );
-        return ApiResponse.ok();
-    }
+	@PutMapping("/{entryId}/visibility")
+	public ApiResponse<Void> updateVisibility(
+			@PathVariable Long entryId,
+			@RequestBody AdminGuestbookVisibilityRequest request,
+			@AuthenticationPrincipal MemberPrincipal principal
+	) {
+		adminGuestbookService.updateVisibility(
+				entryId,
+				request == null ? null : request.hidden(),
+				principalId(principal)
+		);
+		return ApiResponse.ok();
+	}
 
-    /** 신고를 봤지만 글은 그대로 둔다 */
-    @PostMapping("/{entryId}/reports/dismiss")
-    public ApiResponse<Void> dismissReports(
-            @PathVariable Long entryId,
-            @AuthenticationPrincipal MemberPrincipal principal
-    ) {
-        adminGuestbookService.dismissReports(entryId, principalId(principal));
-        return ApiResponse.ok();
-    }
+	/** 신고를 봤지만 글은 그대로 둔다 */
+	@PostMapping("/{entryId}/reports/dismiss")
+	public ApiResponse<Void> dismissReports(
+			@PathVariable Long entryId,
+			@AuthenticationPrincipal MemberPrincipal principal
+	) {
+		adminGuestbookService.dismissReports(entryId, principalId(principal));
+		return ApiResponse.ok();
+	}
 
-    private Long principalId(MemberPrincipal principal) {
-        return principal == null ? null : principal.getId();
-    }
+	private Long principalId(MemberPrincipal principal) {
+		return principal == null ? null : principal.getId();
+	}
 }

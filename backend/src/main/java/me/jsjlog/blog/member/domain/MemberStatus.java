@@ -40,76 +40,76 @@ import org.hibernate.type.SqlTypes;
 @Getter
 @Entity
 @Table(
-        name = "member_status",
-        uniqueConstraints = @UniqueConstraint(
-                name = "uk_member_status_restore",
-                columnNames = {"restore_provider", "restore_provider_user_id"}
-        ),
-        indexes = {
-                @Index(name = "idx_member_status_code", columnList = "member_status_code"),
-                @Index(name = "idx_member_status_restore_expires", columnList = "restore_expires_at")
-        }
+		name = "member_status",
+		uniqueConstraints = @UniqueConstraint(
+				name = "uk_member_status_restore",
+				columnNames = {"restore_provider", "restore_provider_user_id"}
+		),
+		indexes = {
+				@Index(name = "idx_member_status_code", columnList = "member_status_code"),
+				@Index(name = "idx_member_status_restore_expires", columnList = "restore_expires_at")
+		}
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class MemberStatus extends BaseEntity {
 
-    /** 탈퇴 후 복원할 수 있는 기간. 개인정보 처리방침에 적은 서비스 기준이다 */
-    public static final Duration RESTORE_PERIOD = Duration.ofDays(30);
+	/** 탈퇴 후 복원할 수 있는 기간. 개인정보 처리방침에 적은 서비스 기준이다 */
+	public static final Duration RESTORE_PERIOD = Duration.ofDays(30);
 
-    @Id
-    @Column(name = "member_id")
-    private Long memberId;
+	@Id
+	@Column(name = "member_id")
+	private Long memberId;
 
-    @MapsId
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "member_id", foreignKey = @ForeignKey(name = "fk_member_status_member"))
-    private Member member;
+	@MapsId
+	@OneToOne(fetch = FetchType.LAZY, optional = false)
+	@JoinColumn(name = "member_id", foreignKey = @ForeignKey(name = "fk_member_status_member"))
+	private Member member;
 
-    @Enumerated(EnumType.STRING)
-    @JdbcTypeCode(SqlTypes.VARCHAR)
-    @Column(name = "member_status_code", nullable = false, length = 30)
-    private MemberStatusCode memberStatusCode;
+	@Enumerated(EnumType.STRING)
+	@JdbcTypeCode(SqlTypes.VARCHAR)
+	@Column(name = "member_status_code", nullable = false, length = 30)
+	private MemberStatusCode memberStatusCode;
 
-    @Column(name = "status_changed_at", nullable = false)
-    private LocalDateTime statusChangedAt;
+	@Column(name = "status_changed_at", nullable = false)
+	private LocalDateTime statusChangedAt;
 
-    /** 아래 셋은 탈퇴 후 복원 기간 동안만 채운다 */
-    @Enumerated(EnumType.STRING)
-    @JdbcTypeCode(SqlTypes.VARCHAR)
-    @Column(name = "restore_provider", length = 20)
-    private AuthProvider restoreProvider;
+	/** 아래 셋은 탈퇴 후 복원 기간 동안만 채운다 */
+	@Enumerated(EnumType.STRING)
+	@JdbcTypeCode(SqlTypes.VARCHAR)
+	@Column(name = "restore_provider", length = 20)
+	private AuthProvider restoreProvider;
 
-    @Column(name = "restore_provider_user_id", length = 255)
-    private String restoreProviderUserId;
+	@Column(name = "restore_provider_user_id", length = 255)
+	private String restoreProviderUserId;
 
-    @Column(name = "restore_expires_at")
-    private LocalDateTime restoreExpiresAt;
+	@Column(name = "restore_expires_at")
+	private LocalDateTime restoreExpiresAt;
 
-    MemberStatus(Member member, MemberStatusCode code, LocalDateTime now) {
-        this.member = member;
-        this.memberStatusCode = code;
-        this.statusChangedAt = now;
-    }
+	MemberStatus(Member member, MemberStatusCode code, LocalDateTime now) {
+		this.member = member;
+		this.memberStatusCode = code;
+		this.statusChangedAt = now;
+	}
 
-    void changeTo(MemberStatusCode code, LocalDateTime now) {
-        this.memberStatusCode = code;
-        this.statusChangedAt = now;
-    }
+	void changeTo(MemberStatusCode code, LocalDateTime now) {
+		this.memberStatusCode = code;
+		this.statusChangedAt = now;
+	}
 
-    /** 탈퇴. 제공자 ID 가 없는 회원(아이디·비밀번호 회원)은 복원할 길이 없으므로 기한도 두지 않는다 */
-    void withdraw(AuthProvider provider, String providerUserId, LocalDateTime now) {
-        changeTo(MemberStatusCode.WITHDRAWN, now);
-        if (providerUserId != null) {
-            this.restoreProvider = provider;
-            this.restoreProviderUserId = providerUserId;
-            this.restoreExpiresAt = now.plus(RESTORE_PERIOD);
-        }
-    }
+	/** 탈퇴. 제공자 ID 가 없는 회원(아이디·비밀번호 회원)은 복원할 길이 없으므로 기한도 두지 않는다 */
+	void withdraw(AuthProvider provider, String providerUserId, LocalDateTime now) {
+		changeTo(MemberStatusCode.WITHDRAWN, now);
+		if (providerUserId != null) {
+			this.restoreProvider = provider;
+			this.restoreProviderUserId = providerUserId;
+			this.restoreExpiresAt = now.plus(RESTORE_PERIOD);
+		}
+	}
 
-    public boolean isRestorable(LocalDateTime now) {
-        return memberStatusCode == MemberStatusCode.WITHDRAWN
-                && restoreProviderUserId != null
-                && restoreExpiresAt != null
-                && restoreExpiresAt.isAfter(now);
-    }
+	public boolean isRestorable(LocalDateTime now) {
+		return memberStatusCode == MemberStatusCode.WITHDRAWN
+				&& restoreProviderUserId != null
+				&& restoreExpiresAt != null
+				&& restoreExpiresAt.isAfter(now);
+	}
 }

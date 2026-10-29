@@ -12,12 +12,12 @@ import java.util.List;
  */
 public interface AdminPostRepositoryCustom {
 
-    /** 조건에 맞는 글 한 페이지 */
-    List<AdminPostSummaryResponse> getAdminPosts(AdminPostSearchCondition condition);
+	/** 조건에 맞는 글 한 페이지 */
+	List<AdminPostSummaryResponse> getAdminPosts(AdminPostSearchCondition condition);
 
-    /** 조건에 맞는 전체 건수 (페이징 계산용) */
-    long countAdminPosts(AdminPostSearchCondition condition);
+	/** 조건에 맞는 전체 건수 (페이징 계산용) */
+	long countAdminPosts(AdminPostSearchCondition condition);
 
-    /** 상태별 건수. status 필터를 빼고 센다 */
-    AdminPostStatusCounts countByStatus(AdminPostSearchCondition condition);
+	/** 상태별 건수. status 필터를 빼고 센다 */
+	AdminPostStatusCounts countByStatus(AdminPostSearchCondition condition);
 }

@@ -13,11 +13,11 @@ package me.jsjlog.blog.common.code;
  */
 public interface CommonCodeType {
 
-    /** 이 enum 이 속한 공통 코드 그룹 */
-    String groupCode();
+	/** 이 enum 이 속한 공통 코드 그룹 */
+	String groupCode();
 
-    /** 공통 코드의 코드 값. enum 상수 이름과 같다 */
-    default String code() {
-        return ((Enum<?>) this).name();
-    }
+	/** 공통 코드의 코드 값. enum 상수 이름과 같다 */
+	default String code() {
+		return ((Enum<?>) this).name();
+	}
 }

@@ -15,14 +15,14 @@ package me.jsjlog.blog.member.domain;
  */
 public enum MemberRole {
 
-    USER,
-    ADMIN;
+	USER,
+	ADMIN;
 
-    public String getAuthority() {
-        return "ROLE_" + name();
-    }
+	public String getAuthority() {
+		return "ROLE_" + name();
+	}
 
-    public boolean isAdmin() {
-        return this == ADMIN;
-    }
+	public boolean isAdmin() {
+		return this == ADMIN;
+	}
 }

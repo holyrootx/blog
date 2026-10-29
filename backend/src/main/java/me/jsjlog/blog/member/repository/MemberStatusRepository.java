@@ -22,75 +22,75 @@ import org.springframework.data.repository.query.Param;
  */
 public interface MemberStatusRepository extends JpaRepository<MemberStatus, Long> {
 
-    /** 복원 기간 안의 탈퇴 회원. 같은 소셜 계정으로 돌아왔을 때 찾는다 */
-    @Query("""
-            select s from MemberStatus s join fetch s.member
-            where s.restoreProvider = :provider and s.restoreProviderUserId = :providerUserId
-                and s.restoreExpiresAt > :now
-                and s.memberStatusCode = me.jsjlog.blog.member.domain.MemberStatusCode.WITHDRAWN
-            """)
-    Optional<MemberStatus> findRestorable(@Param("provider") AuthProvider provider,
-                                          @Param("providerUserId") String providerUserId,
-                                          @Param("now") LocalDateTime now);
+	/** 복원 기간 안의 탈퇴 회원. 같은 소셜 계정으로 돌아왔을 때 찾는다 */
+	@Query("""
+			select s from MemberStatus s join fetch s.member
+			where s.restoreProvider = :provider and s.restoreProviderUserId = :providerUserId
+			    and s.restoreExpiresAt > :now
+			    and s.memberStatusCode = me.jsjlog.blog.member.domain.MemberStatusCode.WITHDRAWN
+			""")
+	Optional<MemberStatus> findRestorable(@Param("provider") AuthProvider provider,
+										  @Param("providerUserId") String providerUserId,
+										  @Param("now") LocalDateTime now);
 
-    /** 기간이 지났는데 아직 정리되지 않은 복원 정보 */
-    @Query("""
-            select s.memberId from MemberStatus s
-            where s.restoreProviderUserId is not null and s.restoreExpiresAt <= :now
-            order by s.memberId
-            """)
-    List<Long> findExpiredRestoreIds(@Param("now") LocalDateTime now);
+	/** 기간이 지났는데 아직 정리되지 않은 복원 정보 */
+	@Query("""
+			select s.memberId from MemberStatus s
+			where s.restoreProviderUserId is not null and s.restoreExpiresAt <= :now
+			order by s.memberId
+			""")
+	List<Long> findExpiredRestoreIds(@Param("now") LocalDateTime now);
 
-    /** 가입 트랜잭션의 첫 조회 이후 생긴 복원 정보도 최신 상태로 확인한다. */
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("""
-            select s from MemberStatus s
-            where s.restoreProvider = :provider and s.restoreProviderUserId = :providerUserId
-            """)
-    Optional<MemberStatus> findRestoreForUpdate(@Param("provider") AuthProvider provider,
-                                               @Param("providerUserId") String providerUserId);
+	/** 가입 트랜잭션의 첫 조회 이후 생긴 복원 정보도 최신 상태로 확인한다. */
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("""
+			select s from MemberStatus s
+			where s.restoreProvider = :provider and s.restoreProviderUserId = :providerUserId
+			""")
+	Optional<MemberStatus> findRestoreForUpdate(@Param("provider") AuthProvider provider,
+											   @Param("providerUserId") String providerUserId);
 
-    /** 복원. 기간 안이고 아직 그 계정의 복원 정보가 남아 있을 때만 활동으로 되돌린다 */
-    @Modifying(clearAutomatically = true)
-    @Query("""
-            update MemberStatus s
-            set s.memberStatusCode = me.jsjlog.blog.member.domain.MemberStatusCode.ACTIVE,
-                s.statusChangedAt = :now,
-                s.restoreProvider = null, s.restoreProviderUserId = null, s.restoreExpiresAt = null,
-                s.updatedAt = :now, s.updatedBy = :updatedBy
-            where s.memberId = :memberId
-                and s.memberStatusCode = me.jsjlog.blog.member.domain.MemberStatusCode.WITHDRAWN
-                and s.restoreProvider = :provider and s.restoreProviderUserId = :providerUserId
-                and s.restoreExpiresAt > :now
-            """)
-    int reactivate(@Param("memberId") Long memberId, @Param("provider") AuthProvider provider,
-                   @Param("providerUserId") String providerUserId, @Param("now") LocalDateTime now,
-                   @Param("updatedBy") String updatedBy);
+	/** 복원. 기간 안이고 아직 그 계정의 복원 정보가 남아 있을 때만 활동으로 되돌린다 */
+	@Modifying(clearAutomatically = true)
+	@Query("""
+			update MemberStatus s
+			set s.memberStatusCode = me.jsjlog.blog.member.domain.MemberStatusCode.ACTIVE,
+			    s.statusChangedAt = :now,
+			    s.restoreProvider = null, s.restoreProviderUserId = null, s.restoreExpiresAt = null,
+			    s.updatedAt = :now, s.updatedBy = :updatedBy
+			where s.memberId = :memberId
+			    and s.memberStatusCode = me.jsjlog.blog.member.domain.MemberStatusCode.WITHDRAWN
+			    and s.restoreProvider = :provider and s.restoreProviderUserId = :providerUserId
+			    and s.restoreExpiresAt > :now
+			""")
+	int reactivate(@Param("memberId") Long memberId, @Param("provider") AuthProvider provider,
+				   @Param("providerUserId") String providerUserId, @Param("now") LocalDateTime now,
+				   @Param("updatedBy") String updatedBy);
 
-    /** 새로 만들기를 골랐다. 예전 회원은 탈퇴 그대로 두고 복원 정보만 지운다 */
-    @Modifying(clearAutomatically = true)
-    @Query("""
-            update MemberStatus s
-            set s.restoreProvider = null, s.restoreProviderUserId = null, s.restoreExpiresAt = null,
-                s.updatedAt = :now, s.updatedBy = :updatedBy
-            where s.memberId = :memberId
-                and s.memberStatusCode = me.jsjlog.blog.member.domain.MemberStatusCode.WITHDRAWN
-                and s.restoreProvider = :provider and s.restoreProviderUserId = :providerUserId
-                and s.restoreExpiresAt > :now
-            """)
-    int releaseForRejoin(@Param("memberId") Long memberId, @Param("provider") AuthProvider provider,
-                         @Param("providerUserId") String providerUserId, @Param("now") LocalDateTime now,
-                         @Param("updatedBy") String updatedBy);
+	/** 새로 만들기를 골랐다. 예전 회원은 탈퇴 그대로 두고 복원 정보만 지운다 */
+	@Modifying(clearAutomatically = true)
+	@Query("""
+			update MemberStatus s
+			set s.restoreProvider = null, s.restoreProviderUserId = null, s.restoreExpiresAt = null,
+			    s.updatedAt = :now, s.updatedBy = :updatedBy
+			where s.memberId = :memberId
+			    and s.memberStatusCode = me.jsjlog.blog.member.domain.MemberStatusCode.WITHDRAWN
+			    and s.restoreProvider = :provider and s.restoreProviderUserId = :providerUserId
+			    and s.restoreExpiresAt > :now
+			""")
+	int releaseForRejoin(@Param("memberId") Long memberId, @Param("provider") AuthProvider provider,
+						 @Param("providerUserId") String providerUserId, @Param("now") LocalDateTime now,
+						 @Param("updatedBy") String updatedBy);
 
-    /** 기간이 지난 복원 정보를 지운다 */
-    @Modifying(clearAutomatically = true)
-    @Query("""
-            update MemberStatus s
-            set s.restoreProvider = null, s.restoreProviderUserId = null, s.restoreExpiresAt = null,
-                s.updatedAt = :now, s.updatedBy = :updatedBy
-            where s.memberId = :memberId
-                and s.restoreProviderUserId is not null and s.restoreExpiresAt <= :now
-            """)
-    int expireRestore(@Param("memberId") Long memberId, @Param("now") LocalDateTime now,
-                      @Param("updatedBy") String updatedBy);
+	/** 기간이 지난 복원 정보를 지운다 */
+	@Modifying(clearAutomatically = true)
+	@Query("""
+			update MemberStatus s
+			set s.restoreProvider = null, s.restoreProviderUserId = null, s.restoreExpiresAt = null,
+			    s.updatedAt = :now, s.updatedBy = :updatedBy
+			where s.memberId = :memberId
+			    and s.restoreProviderUserId is not null and s.restoreExpiresAt <= :now
+			""")
+	int expireRestore(@Param("memberId") Long memberId, @Param("now") LocalDateTime now,
+					  @Param("updatedBy") String updatedBy);
 }

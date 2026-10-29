@@ -6,20 +6,20 @@ import me.jsjlog.blog.post.domain.PostReadPosition;
 import java.time.OffsetDateTime;
 
 public record ReadingPositionResponse(
-        Long postId,
-        int blockIndex,
-        int blockOffset,
-        String blockHash,
-        OffsetDateTime savedAt
+		Long postId,
+		int blockIndex,
+		int blockOffset,
+		String blockHash,
+		OffsetDateTime savedAt
 ) {
 
-    public static ReadingPositionResponse from(PostReadPosition position) {
-        return new ReadingPositionResponse(
-                position.getPostId(),
-                position.getBlockIndex(),
-                position.getBlockOffset(),
-                position.getBlockHash(),
-                ServerTime.toOffset(position.getSavedAt())
-        );
-    }
+	public static ReadingPositionResponse from(PostReadPosition position) {
+		return new ReadingPositionResponse(
+				position.getPostId(),
+				position.getBlockIndex(),
+				position.getBlockOffset(),
+				position.getBlockHash(),
+				ServerTime.toOffset(position.getSavedAt())
+		);
+	}
 }

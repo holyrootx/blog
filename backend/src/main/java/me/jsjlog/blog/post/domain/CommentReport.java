@@ -34,75 +34,75 @@ import java.time.LocalDateTime;
 @Getter
 @Entity
 @Table(
-        name = "comment_report",
-        uniqueConstraints = @UniqueConstraint(
-                name = "uk_comment_report_comment_member",
-                columnNames = {"comment_id", "member_id"}
-        ),
-        indexes = {
-                @Index(name = "idx_comment_report_comment", columnList = "comment_id")
-        }
+		name = "comment_report",
+		uniqueConstraints = @UniqueConstraint(
+				name = "uk_comment_report_comment_member",
+				columnNames = {"comment_id", "member_id"}
+		),
+		indexes = {
+				@Index(name = "idx_comment_report_comment", columnList = "comment_id")
+		}
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class CommentReport extends BaseEntity {
 
-    /** 기타 사유에 덧붙이는 설명의 길이. 길게 받을 자리가 아니다 — 자세한 사연은 메일로 온다 */
-    public static final int MAX_DETAIL_LENGTH = 200;
+	/** 기타 사유에 덧붙이는 설명의 길이. 길게 받을 자리가 아니다 — 자세한 사연은 메일로 온다 */
+	public static final int MAX_DETAIL_LENGTH = 200;
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "comment_id", nullable = false)
-    private Comment comment;
+	@ManyToOne(fetch = FetchType.LAZY, optional = false)
+	@JoinColumn(name = "comment_id", nullable = false)
+	private Comment comment;
 
-    /** 신고한 사람. 누가 신고했는지는 관리자 화면에 내보내지 않는다 */
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "member_id", nullable = false)
-    private Member member;
+	/** 신고한 사람. 누가 신고했는지는 관리자 화면에 내보내지 않는다 */
+	@ManyToOne(fetch = FetchType.LAZY, optional = false)
+	@JoinColumn(name = "member_id", nullable = false)
+	private Member member;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "reason", nullable = false, length = 20)
-    private CommentReportReason reason;
+	@Enumerated(EnumType.STRING)
+	@Column(name = "reason", nullable = false, length = 20)
+	private CommentReportReason reason;
 
-    @Column(name = "detail", length = MAX_DETAIL_LENGTH)
-    private String detail;
+	@Column(name = "detail", length = MAX_DETAIL_LENGTH)
+	private String detail;
 
-    /**
-     * 운영자가 이 신고를 보고 판단을 내린 시각. 아직이면 비어 있다.
-     *
-     * <p>이게 없으면 신고 수만 남아서, 이미 본 신고와 새로 온 신고를 가릴 수 없다.
-     * 처리해도 숫자가 그대로라 목록에서 계속 눈에 걸린다.</p>
-     */
-    @Column(name = "handled_at")
-    private LocalDateTime handledAt;
+	/**
+	 * 운영자가 이 신고를 보고 판단을 내린 시각. 아직이면 비어 있다.
+	 *
+	 * <p>이게 없으면 신고 수만 남아서, 이미 본 신고와 새로 온 신고를 가릴 수 없다.
+	 * 처리해도 숫자가 그대로라 목록에서 계속 눈에 걸린다.</p>
+	 */
+	@Column(name = "handled_at")
+	private LocalDateTime handledAt;
 
-    public CommentReport(Comment comment, Member member, CommentReportReason reason, String detail) {
-        this.comment = comment;
-        this.member = member;
-        this.reason = reason;
-        this.detail = trim(detail);
-    }
+	public CommentReport(Comment comment, Member member, CommentReportReason reason, String detail) {
+		this.comment = comment;
+		this.member = member;
+		this.reason = reason;
+		this.detail = trim(detail);
+	}
 
-    /** 운영자가 판단을 내렸다. 이미 처리한 신고는 다시 건드리지 않는다 */
-    public void markHandled() {
-        if (handledAt == null) {
-            this.handledAt = LocalDateTime.now();
-        }
-    }
+	/** 운영자가 판단을 내렸다. 이미 처리한 신고는 다시 건드리지 않는다 */
+	public void markHandled() {
+		if (handledAt == null) {
+			this.handledAt = LocalDateTime.now();
+		}
+	}
 
-    private static String trim(String detail) {
-        if (detail == null) {
-            return null;
-        }
+	private static String trim(String detail) {
+		if (detail == null) {
+			return null;
+		}
 
-        String text = detail.trim();
+		String text = detail.trim();
 
-        if (text.isEmpty()) {
-            return null;
-        }
+		if (text.isEmpty()) {
+			return null;
+		}
 
-        return text.length() <= MAX_DETAIL_LENGTH ? text : text.substring(0, MAX_DETAIL_LENGTH);
-    }
+		return text.length() <= MAX_DETAIL_LENGTH ? text : text.substring(0, MAX_DETAIL_LENGTH);
+	}
 }

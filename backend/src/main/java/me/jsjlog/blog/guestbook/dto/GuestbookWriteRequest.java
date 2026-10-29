@@ -7,11 +7,11 @@ package me.jsjlog.blog.guestbook.dto;
  * 쓴 사람이 의도하지 않은 일이 생긴다.</p>
  */
 public record GuestbookWriteRequest(
-        String content,
-        Boolean secret
+		String content,
+		Boolean secret
 ) {
 
-    public boolean secretOrDefault() {
-        return Boolean.TRUE.equals(secret);
-    }
+	public boolean secretOrDefault() {
+		return Boolean.TRUE.equals(secret);
+	}
 }

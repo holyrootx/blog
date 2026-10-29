@@ -25,40 +25,40 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class NotificationController {
 
-    private final NotificationService notificationService;
+	private final NotificationService notificationService;
 
-    @GetMapping
-    public ApiResponse<List<NotificationResponse>> myNotifications(
-            @AuthenticationPrincipal MemberPrincipal principal
-    ) {
-        return ApiResponse.ok(notificationService.findMine(principal.getId()));
-    }
+	@GetMapping
+	public ApiResponse<List<NotificationResponse>> myNotifications(
+			@AuthenticationPrincipal MemberPrincipal principal
+	) {
+		return ApiResponse.ok(notificationService.findMine(principal.getId()));
+	}
 
-    /**
-     * 종에 붙는 숫자.
-     *
-     * 목록과 따로 둔 이유는 부르는 빈도가 다르기 때문이다. 숫자는 화면을 옮길 때마다
-     * 확인하고, 목록은 종을 열었을 때만 필요하다.
-     */
-    @GetMapping("/unread-count")
-    public ApiResponse<Long> unreadCount(@AuthenticationPrincipal MemberPrincipal principal) {
-        return ApiResponse.ok(notificationService.countUnread(principal.getId()));
-    }
+	/**
+	 * 종에 붙는 숫자.
+	 *
+	 * 목록과 따로 둔 이유는 부르는 빈도가 다르기 때문이다. 숫자는 화면을 옮길 때마다
+	 * 확인하고, 목록은 종을 열었을 때만 필요하다.
+	 */
+	@GetMapping("/unread-count")
+	public ApiResponse<Long> unreadCount(@AuthenticationPrincipal MemberPrincipal principal) {
+		return ApiResponse.ok(notificationService.countUnread(principal.getId()));
+	}
 
-    @PutMapping("/{notificationId}/read")
-    public ApiResponse<Void> markRead(
-            @AuthenticationPrincipal MemberPrincipal principal,
-            @PathVariable Long notificationId
-    ) {
-        notificationService.markRead(notificationId, principal.getId());
+	@PutMapping("/{notificationId}/read")
+	public ApiResponse<Void> markRead(
+			@AuthenticationPrincipal MemberPrincipal principal,
+			@PathVariable Long notificationId
+	) {
+		notificationService.markRead(notificationId, principal.getId());
 
-        return ApiResponse.ok();
-    }
+		return ApiResponse.ok();
+	}
 
-    @PutMapping("/read")
-    public ApiResponse<Void> markAllRead(@AuthenticationPrincipal MemberPrincipal principal) {
-        notificationService.markAllRead(principal.getId());
+	@PutMapping("/read")
+	public ApiResponse<Void> markAllRead(@AuthenticationPrincipal MemberPrincipal principal) {
+		notificationService.markAllRead(principal.getId());
 
-        return ApiResponse.ok();
-    }
+		return ApiResponse.ok();
+	}
 }

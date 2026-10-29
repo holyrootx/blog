@@ -19,62 +19,62 @@ import org.springframework.util.StringUtils;
 @Slf4j
 public class HomePageHeroService {
 
-    private static final int TITLE_MAX_LENGTH = 255;
-    private static final int IMAGE_URL_MAX_LENGTH = 500;
+	private static final int TITLE_MAX_LENGTH = 255;
+	private static final int IMAGE_URL_MAX_LENGTH = 500;
 
-    private final HomePageHeroRepository homePageHeroRepository;
-    private final ImageReferenceGuard imageReferenceGuard;
+	private final HomePageHeroRepository homePageHeroRepository;
+	private final ImageReferenceGuard imageReferenceGuard;
 
-    public HomePageHeroResponse getHomePageHero(Long homePageHeroId) {
-        return HomePageHeroResponse.from(findHero(homePageHeroId));
-    }
+	public HomePageHeroResponse getHomePageHero(Long homePageHeroId) {
+		return HomePageHeroResponse.from(findHero(homePageHeroId));
+	}
 
-    @Transactional
-    public HomePageHeroResponse updateHomePageHero(UpdateHomePageHeroRequest request) {
-        validate(request);
-        imageReferenceGuard.protect(null, request.heroImageUrl());
+	@Transactional
+	public HomePageHeroResponse updateHomePageHero(UpdateHomePageHeroRequest request) {
+		validate(request);
+		imageReferenceGuard.protect(null, request.heroImageUrl());
 
-        HomePageHero homePageHero = findHero(request.id());
-        homePageHero.update(
-                request.subTitle().trim(),
-                request.title().trim(),
-                request.intro().trim(),
-                blankToNull(request.heroImageUrl())
-        );
+		HomePageHero homePageHero = findHero(request.id());
+		homePageHero.update(
+				request.subTitle().trim(),
+				request.title().trim(),
+				request.intro().trim(),
+				blankToNull(request.heroImageUrl())
+		);
 
-        return HomePageHeroResponse.from(homePageHero);
-    }
+		return HomePageHeroResponse.from(homePageHero);
+	}
 
-    private HomePageHero findHero(Long homePageHeroId) {
-        if (homePageHeroId == null) {
-            throw new BlogException(ErrorCode.MAIN_HERO_NOT_FOUND);
-        }
+	private HomePageHero findHero(Long homePageHeroId) {
+		if (homePageHeroId == null) {
+			throw new BlogException(ErrorCode.MAIN_HERO_NOT_FOUND);
+		}
 
-        return homePageHeroRepository.findById(homePageHeroId)
-                .orElseThrow(() -> new BlogException(ErrorCode.MAIN_HERO_NOT_FOUND));
-    }
+		return homePageHeroRepository.findById(homePageHeroId)
+				.orElseThrow(() -> new BlogException(ErrorCode.MAIN_HERO_NOT_FOUND));
+	}
 
-    private void validate(UpdateHomePageHeroRequest request) {
-        if (request == null
-                || !StringUtils.hasText(request.subTitle())
-                || !StringUtils.hasText(request.title())
-                || !StringUtils.hasText(request.intro())) {
-            throw new BlogException(ErrorCode.MAIN_HERO_REQUIRED_VALUE_MISSING);
-        }
+	private void validate(UpdateHomePageHeroRequest request) {
+		if (request == null
+				|| !StringUtils.hasText(request.subTitle())
+				|| !StringUtils.hasText(request.title())
+				|| !StringUtils.hasText(request.intro())) {
+			throw new BlogException(ErrorCode.MAIN_HERO_REQUIRED_VALUE_MISSING);
+		}
 
-        if (request.subTitle().trim().length() > TITLE_MAX_LENGTH
-                || request.title().trim().length() > TITLE_MAX_LENGTH
-                || length(request.heroImageUrl()) > IMAGE_URL_MAX_LENGTH) {
-            throw new BlogException(ErrorCode.MAIN_HERO_VALUE_TOO_LONG);
-        }
-    }
+		if (request.subTitle().trim().length() > TITLE_MAX_LENGTH
+				|| request.title().trim().length() > TITLE_MAX_LENGTH
+				|| length(request.heroImageUrl()) > IMAGE_URL_MAX_LENGTH) {
+			throw new BlogException(ErrorCode.MAIN_HERO_VALUE_TOO_LONG);
+		}
+	}
 
-    private int length(String value) {
-        return value == null ? 0 : value.length();
-    }
+	private int length(String value) {
+		return value == null ? 0 : value.length();
+	}
 
-    private String blankToNull(String value) {
-        return StringUtils.hasText(value) ? value.trim() : null;
-    }
+	private String blankToNull(String value) {
+		return StringUtils.hasText(value) ? value.trim() : null;
+	}
 
 }

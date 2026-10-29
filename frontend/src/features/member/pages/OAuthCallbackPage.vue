@@ -9,11 +9,11 @@ import { getOAuthPending } from '../api/memberAuthApi';
 import { takeReturnPath } from '../data/memberReturnPath';
 import { refreshCsrfToken } from '../../../shared/api/csrfApi';
 import {
-  clearMemberSession,
-  completeReactivation,
-  completeRejoin,
-  completeSignUp,
-  ensureMemberSession,
+	clearMemberSession,
+	completeReactivation,
+	completeRejoin,
+	completeSignUp,
+	ensureMemberSession,
 } from '../data/memberAuthStore';
 
 /**
@@ -30,12 +30,12 @@ const route = useRoute();
 const router = useRouter();
 
 const PHASE = {
-  LOADING: 'loading',
-  PENDING_ERROR: 'pending-error',
-  SIGNUP: 'signup',
-  CHOICE: 'choice',
-  REJOIN: 'rejoin',
-  NOTICE: 'notice',
+	LOADING: 'loading',
+	PENDING_ERROR: 'pending-error',
+	SIGNUP: 'signup',
+	CHOICE: 'choice',
+	REJOIN: 'rejoin',
+	NOTICE: 'notice',
 };
 
 const phase = ref(PHASE.LOADING);
@@ -52,164 +52,164 @@ const notice = ref({ title: '', message: '', retryable: true });
 onMounted(start);
 
 async function start() {
-  switch (route.query.result) {
-    case 'success':
-      await finishExistingLogin();
-      return;
+	switch (route.query.result) {
+		case 'success':
+			await finishExistingLogin();
+			return;
 
-    case 'signup-required':
-      await loadPending();
-      return;
+		case 'signup-required':
+			await loadPending();
+			return;
 
-    case 'reactivation-required':
-      await loadPending();
-      return;
+		case 'reactivation-required':
+			await loadPending();
+			return;
 
-    case 'account-suspended':
-      showNotice(
-        '로그인할 수 없는 계정입니다',
-        '이용이 제한된 계정입니다. 문의가 필요하시면 블로그 주인에게 연락해 주세요.',
-        false,
-      );
-      return;
+		case 'account-suspended':
+			showNotice(
+				'로그인할 수 없는 계정입니다',
+				'이용이 제한된 계정입니다. 문의가 필요하시면 블로그 주인에게 연락해 주세요.',
+				false,
+			);
+			return;
 
-    case 'login-failed':
-      showNotice('로그인하지 못했습니다', '잠시 뒤에 다시 시도해 주세요.');
-      return;
+		case 'login-failed':
+			showNotice('로그인하지 못했습니다', '잠시 뒤에 다시 시도해 주세요.');
+			return;
 
-    default:
-      // 주소를 직접 치고 들어왔거나 result 가 빠진 경우
-      showNotice('잘못된 접근입니다', '로그인 화면에서 다시 시작해 주세요.');
-  }
+		default:
+			// 주소를 직접 치고 들어왔거나 result 가 빠진 경우
+			showNotice('잘못된 접근입니다', '로그인 화면에서 다시 시작해 주세요.');
+	}
 }
 
 async function finishExistingLogin() {
-  try {
-    // 서버 세션은 이미 로그인 상태다. 앱이 뜰 때 확인한 값은 로그인 전 결과일 수 있으므로
-    // 비운 뒤 실제 회원 정보를 다시 받는다
-    clearMemberSession();
-    const session = await ensureMemberSession();
+	try {
+		// 서버 세션은 이미 로그인 상태다. 앱이 뜰 때 확인한 값은 로그인 전 결과일 수 있으므로
+		// 비운 뒤 실제 회원 정보를 다시 받는다
+		clearMemberSession();
+		const session = await ensureMemberSession();
 
-    if (!session) {
-      throw new Error('로그인된 회원 정보를 확인하지 못했습니다.');
-    }
+		if (!session) {
+			throw new Error('로그인된 회원 정보를 확인하지 못했습니다.');
+		}
 
-    // 제공자 화면을 다녀오는 동안 SPA 메모리는 초기화된다. 로그인된 세션의 토큰을
-    // 다시 받아 두어야 돌아간 화면에서 첫 댓글 등록이 403으로 막히지 않는다
-    await refreshCsrfToken();
-    await goHome();
-  } catch (error) {
-    clearMemberSession();
-    showNotice(
-      '로그인 정보를 확인하지 못했습니다',
-      error?.message ?? '소셜 로그인을 다시 진행해 주세요.',
-    );
-  }
+		// 제공자 화면을 다녀오는 동안 SPA 메모리는 초기화된다. 로그인된 세션의 토큰을
+		// 다시 받아 두어야 돌아간 화면에서 첫 댓글 등록이 403으로 막히지 않는다
+		await refreshCsrfToken();
+		await goHome();
+	} catch (error) {
+		clearMemberSession();
+		showNotice(
+			'로그인 정보를 확인하지 못했습니다',
+			error?.message ?? '소셜 로그인을 다시 진행해 주세요.',
+		);
+	}
 }
 
 async function loadPending() {
-  if (checkingPending.value) {
-    return false;
-  }
-  checkingPending.value = true;
+	if (checkingPending.value) {
+		return false;
+	}
+	checkingPending.value = true;
 
-  try {
-    // 토큰을 먼저 받는다. 가입·복구는 POST 라 CSRF 토큰이 있어야 하는데,
-    // 제공자에 다녀오는 사이 페이지가 통째로 바뀌어 로그인 화면에서 받아 둔 값은 사라졌다.
-    // 세션 쿠키는 남아 있으므로 여기서 다시 받으면 같은 세션의 토큰이 온다
-    await refreshCsrfToken();
+	try {
+		// 토큰을 먼저 받는다. 가입·복구는 POST 라 CSRF 토큰이 있어야 하는데,
+		// 제공자에 다녀오는 사이 페이지가 통째로 바뀌어 로그인 화면에서 받아 둔 값은 사라졌다.
+		// 세션 쿠키는 남아 있으므로 여기서 다시 받으면 같은 세션의 토큰이 온다
+		await refreshCsrfToken();
 
-    const pending = await getOAuthPending();
+		const pending = await getOAuthPending();
 
-    suggestedNickname.value = pending.suggestedNickname;
-    // 주소의 결과는 오래됐을 수 있다. 현재 서버 상태로 가입·복구 화면을 정한다.
-    if (pending.loginState === 'SIGNUP_REQUIRED') {
-      if (!signupNicknameInitialized) {
-        signupNickname.value = pending.suggestedNickname;
-        signupNicknameInitialized = true;
-      }
-      phase.value = PHASE.SIGNUP;
-    } else if (pending.loginState === 'REACTIVATION_REQUIRED') {
-      phase.value = PHASE.CHOICE;
-    } else {
-      throw new Error('가입 상태를 확인하지 못했습니다.');
-    }
-    pendingError.value = '';
-    errorMessage.value = '';
-    return true;
-  } catch (error) {
-    if (isSessionExpired(error)) {
-      pendingError.value = '';
-      showNotice('로그인 정보가 만료되었습니다', '소셜 로그인을 다시 진행해 주세요.');
-    } else {
-      // 연결 실패만으로 로그아웃했다고 판단하지 않는다. 현재 화면과 입력을 남겨 재확인한다.
-      pendingError.value = '일시적으로 가입 정보를 확인하지 못했습니다. 잠시 뒤 다시 확인해 주세요.';
-      if (phase.value === PHASE.LOADING) {
-        phase.value = PHASE.PENDING_ERROR;
-      }
-    }
-    return false;
-  } finally {
-    checkingPending.value = false;
-  }
+		suggestedNickname.value = pending.suggestedNickname;
+		// 주소의 결과는 오래됐을 수 있다. 현재 서버 상태로 가입·복구 화면을 정한다.
+		if (pending.loginState === 'SIGNUP_REQUIRED') {
+			if (!signupNicknameInitialized) {
+				signupNickname.value = pending.suggestedNickname;
+				signupNicknameInitialized = true;
+			}
+			phase.value = PHASE.SIGNUP;
+		} else if (pending.loginState === 'REACTIVATION_REQUIRED') {
+			phase.value = PHASE.CHOICE;
+		} else {
+			throw new Error('가입 상태를 확인하지 못했습니다.');
+		}
+		pendingError.value = '';
+		errorMessage.value = '';
+		return true;
+	} catch (error) {
+		if (isSessionExpired(error)) {
+			pendingError.value = '';
+			showNotice('로그인 정보가 만료되었습니다', '소셜 로그인을 다시 진행해 주세요.');
+		} else {
+			// 연결 실패만으로 로그아웃했다고 판단하지 않는다. 현재 화면과 입력을 남겨 재확인한다.
+			pendingError.value = '일시적으로 가입 정보를 확인하지 못했습니다. 잠시 뒤 다시 확인해 주세요.';
+			if (phase.value === PHASE.LOADING) {
+				phase.value = PHASE.PENDING_ERROR;
+			}
+		}
+		return false;
+	} finally {
+		checkingPending.value = false;
+	}
 }
 
 function isSessionExpired(error) {
-  return error?.status === 401 || error?.code === 'OAUTH_SESSION_EXPIRED';
+	return error?.status === 401 || error?.code === 'OAUTH_SESSION_EXPIRED';
 }
 
 async function submitSignUp(nickname) {
-  await runSubmit(() => completeSignUp(nickname));
+	await runSubmit(() => completeSignUp(nickname));
 }
 
 async function submitReactivate() {
-  await runSubmit(completeReactivation);
+	await runSubmit(completeReactivation);
 }
 
 async function submitRejoin(nickname) {
-  await runSubmit(() => completeRejoin(nickname));
+	await runSubmit(() => completeRejoin(nickname));
 }
 
 /** 가입·복구는 전부 "성공하면 로그인된 채로 블로그로" 라서 처리 방식이 같다 */
 async function runSubmit(action) {
-  if (submitting.value || checkingPending.value || pendingError.value) {
-    return;
-  }
+	if (submitting.value || checkingPending.value || pendingError.value) {
+		return;
+	}
 
-  submitting.value = true;
-  errorMessage.value = '';
+	submitting.value = true;
+	errorMessage.value = '';
 
-  try {
-    await action();
-    await goHome();
-  } catch (error) {
-    if (error?.status === 409) {
-      if (await loadPending()) {
-        errorMessage.value = '가입·복구 정보를 다시 확인했습니다. 현재 화면에서 다시 선택해 주세요.';
-      }
-    } else if (isSessionExpired(error)) {
-      showNotice('로그인 정보가 만료되었습니다', '소셜 로그인을 다시 진행해 주세요.');
-    } else {
-      errorMessage.value = error?.message ?? '처리하지 못했습니다. 다시 시도해 주세요.';
-    }
-  } finally {
-    submitting.value = false;
-  }
+	try {
+		await action();
+		await goHome();
+	} catch (error) {
+		if (error?.status === 409) {
+			if (await loadPending()) {
+				errorMessage.value = '가입·복구 정보를 다시 확인했습니다. 현재 화면에서 다시 선택해 주세요.';
+			}
+		} else if (isSessionExpired(error)) {
+			showNotice('로그인 정보가 만료되었습니다', '소셜 로그인을 다시 진행해 주세요.');
+		} else {
+			errorMessage.value = error?.message ?? '처리하지 못했습니다. 다시 시도해 주세요.';
+		}
+	} finally {
+		submitting.value = false;
+	}
 }
 
 function showNotice(title, message, retryable = true) {
-  notice.value = { title, message, retryable };
-  phase.value = PHASE.NOTICE;
+	notice.value = { title, message, retryable };
+	phase.value = PHASE.NOTICE;
 }
 
 function startRejoin() {
-  errorMessage.value = '';
-  phase.value = PHASE.REJOIN;
+	errorMessage.value = '';
+	phase.value = PHASE.REJOIN;
 }
 
 function backToChoice() {
-  errorMessage.value = '';
-  phase.value = PHASE.CHOICE;
+	errorMessage.value = '';
+	phase.value = PHASE.CHOICE;
 }
 
 /**
@@ -219,83 +219,83 @@ function backToChoice() {
  * 다시 들어와도 "만료되었습니다" 만 보게 된다.
  */
 function goHome() {
-  const returnPath = takeReturnPath();
+	const returnPath = takeReturnPath();
 
-  return returnPath ? router.replace(returnPath) : router.replace({ name: 'home' });
+	return returnPath ? router.replace(returnPath) : router.replace({ name: 'home' });
 }
 
 function retryLogin() {
-  return router.replace({ name: 'member-login' });
+	return router.replace({ name: 'member-login' });
 }
 </script>
 
 <template>
-  <main class="public-shell__main member-auth">
-    <p v-if="phase === PHASE.LOADING" class="member-auth__loading">로그인 정보를 확인하고 있습니다…</p>
+	<main class="public-shell__main member-auth">
+		<p v-if="phase === PHASE.LOADING" class="member-auth__loading">로그인 정보를 확인하고 있습니다…</p>
 
-    <MemberNicknameForm
-      v-else-if="phase === PHASE.SIGNUP"
-      v-model="signupNickname"
-      title="닉네임을 정해 주세요"
-      description="댓글에 이 이름으로 표시됩니다. 나중에 바꿀 수 있습니다."
-      submit-label="시작하기"
-      :submitting="submitting || checkingPending"
-      :disabled="!!pendingError"
-      :error-message="errorMessage"
-      @submit="submitSignUp"
-    />
+		<MemberNicknameForm
+			v-else-if="phase === PHASE.SIGNUP"
+			v-model="signupNickname"
+			title="닉네임을 정해 주세요"
+			description="댓글에 이 이름으로 표시됩니다. 나중에 바꿀 수 있습니다."
+			submit-label="시작하기"
+			:submitting="submitting || checkingPending"
+			:disabled="!!pendingError"
+			:error-message="errorMessage"
+			@submit="submitSignUp"
+		/>
 
-    <OAuthReactivateChoice
-      v-else-if="phase === PHASE.CHOICE"
-      :previous-nickname="suggestedNickname"
-      :submitting="submitting || checkingPending"
-      :disabled="!!pendingError"
-      :error-message="errorMessage"
-      @reactivate="submitReactivate"
-      @rejoin="startRejoin"
-    />
+		<OAuthReactivateChoice
+			v-else-if="phase === PHASE.CHOICE"
+			:previous-nickname="suggestedNickname"
+			:submitting="submitting || checkingPending"
+			:disabled="!!pendingError"
+			:error-message="errorMessage"
+			@reactivate="submitReactivate"
+			@rejoin="startRejoin"
+		/>
 
-    <MemberNicknameForm
-      v-else-if="phase === PHASE.REJOIN"
-      v-model="rejoinNickname"
-      title="새 계정으로 시작합니다"
-      description="예전 댓글은 그대로 남지만 내 것이 아니게 됩니다. 되돌릴 수 없습니다."
-      submit-label="새로 만들기"
-      cancellable
-      :submitting="submitting || checkingPending"
-      :disabled="!!pendingError"
-      :error-message="errorMessage"
-      @submit="submitRejoin"
-      @cancel="backToChoice"
-    />
+		<MemberNicknameForm
+			v-else-if="phase === PHASE.REJOIN"
+			v-model="rejoinNickname"
+			title="새 계정으로 시작합니다"
+			description="예전 댓글은 그대로 남지만 내 것이 아니게 됩니다. 되돌릴 수 없습니다."
+			submit-label="새로 만들기"
+			cancellable
+			:submitting="submitting || checkingPending"
+			:disabled="!!pendingError"
+			:error-message="errorMessage"
+			@submit="submitRejoin"
+			@cancel="backToChoice"
+		/>
 
-    <OAuthResultNotice
-      v-else-if="phase === PHASE.NOTICE"
-      :title="notice.title"
-      :message="notice.message"
-      :retryable="notice.retryable"
-      @retry="retryLogin"
-      @home="goHome"
-    />
+		<OAuthResultNotice
+			v-else-if="phase === PHASE.NOTICE"
+			:title="notice.title"
+			:message="notice.message"
+			:retryable="notice.retryable"
+			@retry="retryLogin"
+			@home="goHome"
+		/>
 
-    <div v-if="pendingError" class="member-auth__panel">
-      <h1 v-if="phase === PHASE.PENDING_ERROR" class="member-auth__title">
-        가입 정보를 확인하지 못했습니다
-      </h1>
-      <p class="member-auth__error" role="alert">{{ pendingError }}</p>
-      <button
-        class="ui-button ui-button--accent"
-        type="button"
-        :disabled="checkingPending"
-        @click="loadPending"
-      >{{ checkingPending ? '확인 중…' : '다시 확인' }}</button>
-    </div>
-  </main>
+		<div v-if="pendingError" class="member-auth__panel">
+			<h1 v-if="phase === PHASE.PENDING_ERROR" class="member-auth__title">
+				가입 정보를 확인하지 못했습니다
+			</h1>
+			<p class="member-auth__error" role="alert">{{ pendingError }}</p>
+			<button
+				class="ui-button ui-button--accent"
+				type="button"
+				:disabled="checkingPending"
+				@click="loadPending"
+			>{{ checkingPending ? '확인 중…' : '다시 확인' }}</button>
+		</div>
+	</main>
 </template>
 
 <style scoped>
 .member-auth {
-  flex-direction: column;
-  gap: 16px;
+	flex-direction: column;
+	gap: 16px;
 }
 </style>

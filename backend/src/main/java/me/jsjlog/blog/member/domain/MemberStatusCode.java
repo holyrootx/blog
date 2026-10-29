@@ -11,20 +11,20 @@ import me.jsjlog.blog.common.code.CommonCodeType;
  */
 public enum MemberStatusCode implements CommonCodeType {
 
-    ACTIVE,
+	ACTIVE,
 
-    /** 스팸 등으로 막힌 상태. 로그인은 거부한다 */
-    SUSPENDED,
+	/** 스팸 등으로 막힌 상태. 로그인은 거부한다 */
+	SUSPENDED,
 
-    /** 탈퇴. 행은 남아 있다 — 댓글이 이 행의 닉네임을 보고 이름을 표시한다 */
-    WITHDRAWN;
+	/** 탈퇴. 행은 남아 있다 — 댓글이 이 행의 닉네임을 보고 이름을 표시한다 */
+	WITHDRAWN;
 
-    @Override
-    public String groupCode() {
-        return "MEMBER_STATUS";
-    }
+	@Override
+	public String groupCode() {
+		return "MEMBER_STATUS";
+	}
 
-    public boolean isActive() {
-        return this == ACTIVE;
-    }
+	public boolean isActive() {
+		return this == ACTIVE;
+	}
 }

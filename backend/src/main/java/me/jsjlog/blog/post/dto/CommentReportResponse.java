@@ -8,11 +8,11 @@ package me.jsjlog.blog.post.dto;
  * 접수됐다는 사실 하나다.</p>
  */
 public record CommentReportResponse(
-        Long commentId,
-        boolean reported
+		Long commentId,
+		boolean reported
 ) {
 
-    public static CommentReportResponse accepted(Long commentId) {
-        return new CommentReportResponse(commentId, true);
-    }
+	public static CommentReportResponse accepted(Long commentId) {
+		return new CommentReportResponse(commentId, true);
+	}
 }

@@ -31,90 +31,90 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AdminCategoryService {
 
-    private final CategoryRepository categoryRepository;
-    private final PostRepository postRepository;
+	private final CategoryRepository categoryRepository;
+	private final PostRepository postRepository;
 
-    /** 목록 (글 수 포함) */
-    public List<AdminCategoryResponse> getCategoryList(AdminCategorySearchCondition condition) {
-        return categoryRepository.getCategoryListWithPostCount(condition);
-    }
+	/** 목록 (글 수 포함) */
+	public List<AdminCategoryResponse> getCategoryList(AdminCategorySearchCondition condition) {
+		return categoryRepository.getCategoryListWithPostCount(condition);
+	}
 
-    /** 등록 */
-    @Transactional
-    public Long createCategory(AdminCategoryRequest request) {
-        String name = requireName(request.name());
+	/** 등록 */
+	@Transactional
+	public Long createCategory(AdminCategoryRequest request) {
+		String name = requireName(request.name());
 
-        // name 이 unique 라 DB 에서도 막히지만, 그때는 500 이 나간다.
-        // 어떤 이유로 실패했는지 알려주려면 먼저 검사해야 한다
-        if (categoryRepository.existsByName(name)) {
-            throw new BlogException(ErrorCode.CATEGORY_NAME_DUPLICATED);
-        }
+		// name 이 unique 라 DB 에서도 막히지만, 그때는 500 이 나간다.
+		// 어떤 이유로 실패했는지 알려주려면 먼저 검사해야 한다
+		if (categoryRepository.existsByName(name)) {
+			throw new BlogException(ErrorCode.CATEGORY_NAME_DUPLICATED);
+		}
 
-        Category category = new Category(name, resolveSortOrder(request.sortOrder()));
+		Category category = new Category(name, resolveSortOrder(request.sortOrder()));
 
-        return categoryRepository.save(category).getId();
-    }
+		return categoryRepository.save(category).getId();
+	}
 
-    /**
-     * 수정.
-     *
-     * 주의: sort_order 에 unique 제약이 남아 있으면 순서 변경은 항상 실패한다.
-     * (1번을 2번으로 바꾸려면 기존 2번이 먼저 비켜야 하는데 그럴 방법이 없다)
-     */
-    @Transactional
-    public void updateCategory(Long categoryId, AdminCategoryRequest request) {
-        Category category = categoryRepository.findLockedById(categoryId)
-                .orElseThrow(() -> new BlogException(ErrorCode.CATEGORY_NOT_FOUND));
+	/**
+	 * 수정.
+	 *
+	 * 주의: sort_order 에 unique 제약이 남아 있으면 순서 변경은 항상 실패한다.
+	 * (1번을 2번으로 바꾸려면 기존 2번이 먼저 비켜야 하는데 그럴 방법이 없다)
+	 */
+	@Transactional
+	public void updateCategory(Long categoryId, AdminCategoryRequest request) {
+		Category category = categoryRepository.findLockedById(categoryId)
+				.orElseThrow(() -> new BlogException(ErrorCode.CATEGORY_NOT_FOUND));
 
-        // 잠금을 얻은 뒤 비교해야 동시에 들어온 두 요청이 같은 시각 검사를 통과하지 않는다.
-        ConcurrencyGuard.check(request.updatedAt(), category.getUpdatedAt());
+		// 잠금을 얻은 뒤 비교해야 동시에 들어온 두 요청이 같은 시각 검사를 통과하지 않는다.
+		ConcurrencyGuard.check(request.updatedAt(), category.getUpdatedAt());
 
-        String name = requireName(request.name());
+		String name = requireName(request.name());
 
-        // 이름을 안 바꾸는 수정도 있으므로 자기 자신은 중복 검사에서 뺀다
-        if (categoryRepository.existsByNameAndIdNot(name, categoryId)) {
-            throw new BlogException(ErrorCode.CATEGORY_NAME_DUPLICATED);
-        }
+		// 이름을 안 바꾸는 수정도 있으므로 자기 자신은 중복 검사에서 뺀다
+		if (categoryRepository.existsByNameAndIdNot(name, categoryId)) {
+			throw new BlogException(ErrorCode.CATEGORY_NAME_DUPLICATED);
+		}
 
-        Long sortOrder = request.sortOrder() == null ? category.getSortOrder() : request.sortOrder();
+		Long sortOrder = request.sortOrder() == null ? category.getSortOrder() : request.sortOrder();
 
-        category.update(name, sortOrder);
-    }
+		category.update(name, sortOrder);
+	}
 
-    /** 삭제 */
-    @Transactional
-    public void deleteCategory(Long categoryId) {
-        if (!categoryRepository.existsById(categoryId)) {
-            throw new BlogException(ErrorCode.CATEGORY_NOT_FOUND);
-        }
+	/** 삭제 */
+	@Transactional
+	public void deleteCategory(Long categoryId) {
+		if (!categoryRepository.existsById(categoryId)) {
+			throw new BlogException(ErrorCode.CATEGORY_NOT_FOUND);
+		}
 
-        // 발행 여부와 상관없이 한 건이라도 있으면 못 지운다.
-        // Post.category 가 nullable = false 라 글을 남겨둘 수 없기 때문
-        if (postRepository.existsByCategoryId(categoryId)) {
-            throw new BlogException(ErrorCode.CATEGORY_IN_USE);
-        }
+		// 발행 여부와 상관없이 한 건이라도 있으면 못 지운다.
+		// Post.category 가 nullable = false 라 글을 남겨둘 수 없기 때문
+		if (postRepository.existsByCategoryId(categoryId)) {
+			throw new BlogException(ErrorCode.CATEGORY_IN_USE);
+		}
 
-        categoryRepository.deleteById(categoryId);
-    }
+		categoryRepository.deleteById(categoryId);
+	}
 
-    private String requireName(String name) {
-        if (!StringUtils.hasText(name)) {
-            // name 이 nullable = false 라 그냥 두면 500 이 나간다
-            throw new BlogException(ErrorCode.INVALID_INPUT);
-        }
+	private String requireName(String name) {
+		if (!StringUtils.hasText(name)) {
+			// name 이 nullable = false 라 그냥 두면 500 이 나간다
+			throw new BlogException(ErrorCode.INVALID_INPUT);
+		}
 
-        return name.trim();
-    }
+		return name.trim();
+	}
 
-    /** 순서를 안 주면 마지막 다음 번호를 매긴다 */
-    private Long resolveSortOrder(Long sortOrder) {
-        if (sortOrder != null) {
-            return sortOrder;
-        }
+	/** 순서를 안 주면 마지막 다음 번호를 매긴다 */
+	private Long resolveSortOrder(Long sortOrder) {
+		if (sortOrder != null) {
+			return sortOrder;
+		}
 
-        return categoryRepository.findTopByOrderBySortOrderDesc()
-                .map(category -> category.getSortOrder() + 1)
-                .orElse(1L);
-    }
+		return categoryRepository.findTopByOrderBySortOrderDesc()
+				.map(category -> category.getSortOrder() + 1)
+				.orElse(1L);
+	}
 
 }

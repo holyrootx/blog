@@ -25,65 +25,65 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @Transactional
 @TestPropertySource(properties = {
-        "blog.frontend.index-path=../frontend/index.html",
-        "blog.frontend.base-url=https://blog.example"
+		"blog.frontend.index-path=../frontend/index.html",
+		"blog.frontend.base-url=https://blog.example"
 })
 class PostPageControllerTest {
 
-    @Autowired MockMvc mvc;
-    @Autowired CategoryRepository categories;
-    @Autowired PostRepository posts;
-    private Post post;
+	@Autowired MockMvc mvc;
+	@Autowired CategoryRepository categories;
+	@Autowired PostRepository posts;
+	private Post post;
 
-    @BeforeEach
-    void setUp() {
-        var category = categories.save(new Category("공유 메타", 991L));
-        post = new Post("공유할 글", "공유할 설명", "본문", category, null, null);
-        post.publish(LocalDateTime.now().minusDays(1));
-        posts.saveAndFlush(post);
-    }
+	@BeforeEach
+	void setUp() {
+		var category = categories.save(new Category("공유 메타", 991L));
+		post = new Post("공유할 글", "공유할 설명", "본문", category, null, null);
+		post.publish(LocalDateTime.now().minusDays(1));
+		posts.saveAndFlush(post);
+	}
 
-    @Test
-    void anonymousCrawlerReceivesHtmlWithoutCreatingASession() throws Exception {
-        mvc.perform(get("/posts/" + post.getId()).header("Host", "untrusted.example"))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType("text/html;charset=UTF-8"))
-                .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
-                .andExpect(header().doesNotExist(HttpHeaders.SET_COOKIE))
-                .andExpect(content().string(containsString("<title>공유할 글 · 정성주의 기록</title>")))
-                .andExpect(content().string(containsString("https://blog.example/posts/" + post.getId())))
-                .andExpect(content().string(not(containsString("untrusted.example"))));
-    }
+	@Test
+	void anonymousCrawlerReceivesHtmlWithoutCreatingASession() throws Exception {
+		mvc.perform(get("/posts/" + post.getId()).header("Host", "untrusted.example"))
+				.andExpect(status().isOk())
+				.andExpect(content().contentType("text/html;charset=UTF-8"))
+				.andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
+				.andExpect(header().doesNotExist(HttpHeaders.SET_COOKIE))
+				.andExpect(content().string(containsString("<title>공유할 글 · 정성주의 기록</title>")))
+				.andExpect(content().string(containsString("https://blog.example/posts/" + post.getId())))
+				.andExpect(content().string(not(containsString("untrusted.example"))));
+	}
 
-    @Test
-    void deletedPostReturns404WithNoPrivateMetadata() throws Exception {
-        post.delete(LocalDateTime.now());
-        posts.flush();
-        mvc.perform(get("/posts/" + post.getId()))
-                .andExpect(status().isNotFound())
-                .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
-                .andExpect(content().string(containsString("noindex,follow")))
-                .andExpect(content().string(not(containsString("공유할 글"))))
-                .andExpect(content().string(not(containsString("공유할 설명"))));
-    }
+	@Test
+	void deletedPostReturns404WithNoPrivateMetadata() throws Exception {
+		post.delete(LocalDateTime.now());
+		posts.flush();
+		mvc.perform(get("/posts/" + post.getId()))
+				.andExpect(status().isNotFound())
+				.andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
+				.andExpect(content().string(containsString("noindex,follow")))
+				.andExpect(content().string(not(containsString("공유할 글"))))
+				.andExpect(content().string(not(containsString("공유할 설명"))));
+	}
 
-    @Test
-    void malformedIdAlsoReturnsHtml404() throws Exception {
-        mvc.perform(get("/posts/not-a-post"))
-                .andExpect(status().isNotFound())
-                .andExpect(content().contentType("text/html;charset=UTF-8"))
-                .andExpect(content().string(containsString("찾는 글이 없습니다")));
-    }
+	@Test
+	void malformedIdAlsoReturnsHtml404() throws Exception {
+		mvc.perform(get("/posts/not-a-post"))
+				.andExpect(status().isNotFound())
+				.andExpect(content().contentType("text/html;charset=UTF-8"))
+				.andExpect(content().string(containsString("찾는 글이 없습니다")));
+	}
 
-    @Test
-    void detailApiAndHtmlProvideArticleStructuredData() throws Exception {
-        mvc.perform(get("/api/v1/blog/posts/" + post.getId()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.structuredData['@type']").value("BlogPosting"))
-                .andExpect(jsonPath("$.data.structuredData.headline").value("공유할 글"))
-                .andExpect(jsonPath("$.data.structuredData.url").value("https://blog.example/posts/" + post.getId()));
-        mvc.perform(get("/posts/" + post.getId()))
-                .andExpect(status().isOk())
-                .andExpect(content().string(containsString("application/ld+json")));
-    }
+	@Test
+	void detailApiAndHtmlProvideArticleStructuredData() throws Exception {
+		mvc.perform(get("/api/v1/blog/posts/" + post.getId()))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.structuredData['@type']").value("BlogPosting"))
+				.andExpect(jsonPath("$.data.structuredData.headline").value("공유할 글"))
+				.andExpect(jsonPath("$.data.structuredData.url").value("https://blog.example/posts/" + post.getId()));
+		mvc.perform(get("/posts/" + post.getId()))
+				.andExpect(status().isOk())
+				.andExpect(content().string(containsString("application/ld+json")));
+	}
 }

@@ -6,32 +6,32 @@
  * 알아내는 통로가 되므로, 화면도 사용자가 다음에 할 수 있는 일만 말한다.
  */
 defineProps({
-  title: { type: String, required: true },
-  message: { type: String, required: true },
-  retryable: { type: Boolean, default: true },
+	title: { type: String, required: true },
+	message: { type: String, required: true },
+	retryable: { type: Boolean, default: true },
 });
 
 const emit = defineEmits(['retry', 'home']);
 </script>
 
 <template>
-  <div class="member-auth__panel">
-    <h1 class="member-auth__title">{{ title }}</h1>
-    <p class="member-auth__description" role="alert">{{ message }}</p>
+	<div class="member-auth__panel">
+		<h1 class="member-auth__title">{{ title }}</h1>
+		<p class="member-auth__description" role="alert">{{ message }}</p>
 
-    <div class="member-auth__actions">
-      <button
-        class="ui-button"
-        type="button"
-        @click="emit('home')"
-      >블로그로 돌아가기</button>
+		<div class="member-auth__actions">
+			<button
+				class="ui-button"
+				type="button"
+				@click="emit('home')"
+			>블로그로 돌아가기</button>
 
-      <button
-        v-if="retryable"
-        class="ui-button ui-button--accent"
-        type="button"
-        @click="emit('retry')"
-      >다시 로그인</button>
-    </div>
-  </div>
+			<button
+				v-if="retryable"
+				class="ui-button ui-button--accent"
+				type="button"
+				@click="emit('retry')"
+			>다시 로그인</button>
+		</div>
+	</div>
 </template>

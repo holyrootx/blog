@@ -7,18 +7,18 @@ import globals from 'globals';
  * 켜면 기존 파일 수백 곳이 한꺼번에 걸리고, 고치려면 동작과 무관한 재포맷이 섞인다(컨벤션 §8).
  */
 export default [
-  { ignores: ['dist/**', 'src/sandbox/**'] },
-  js.configs.recommended,
-  ...pluginVue.configs['flat/essential'],
-  {
-    languageOptions: {
-      ecmaVersion: 'latest',
-      sourceType: 'module',
-      globals: { ...globals.browser },
-    },
-  },
-  {
-    files: ['tests/**/*.mjs', 'tests/**/*.js', 'vite.config.js', 'eslint.config.js'],
-    languageOptions: { globals: { ...globals.node } },
-  },
+	{ ignores: ['dist/**', 'src/sandbox/**'] },
+	js.configs.recommended,
+	...pluginVue.configs['flat/essential'],
+	{
+		languageOptions: {
+			ecmaVersion: 'latest',
+			sourceType: 'module',
+			globals: { ...globals.browser },
+		},
+	},
+	{
+		files: ['tests/**/*.mjs', 'tests/**/*.js', 'vite.config.js', 'eslint.config.js'],
+		languageOptions: { globals: { ...globals.node } },
+	},
 ];

@@ -44,302 +44,304 @@ import org.springframework.util.StringUtils;
 @RequiredArgsConstructor
 public class AdminCommentService {
 
-    private static final int MAX_CONTENT_LENGTH = 1000;
+	private static final int MAX_CONTENT_LENGTH = 1000;
 
-    private final AdminCommentQueryRepository adminCommentQueryRepository;
-    private final CommentRepository commentRepository;
-    private final CommentReportRepository commentReportRepository;
-    private final CommentModerationRepository commentModerationRepository;
-    private final MemberRepository memberRepository;
-    private final NotificationService notificationService;
-    private final PostAccess postAccess;
-    private final PostRepository postRepository;
-    private final ContentHistoryService historyService;
+	private final AdminCommentQueryRepository adminCommentQueryRepository;
+	private final CommentRepository commentRepository;
+	private final CommentReportRepository commentReportRepository;
+	private final CommentModerationRepository commentModerationRepository;
+	private final MemberRepository memberRepository;
+	private final NotificationService notificationService;
+	private final PostAccess postAccess;
+	private final PostRepository postRepository;
+	private final ContentHistoryService historyService;
 
-    @Transactional(readOnly = true)
-    public AdminCommentListResponse getComments(AdminCommentSearchCondition condition) {
-        var items = adminCommentQueryRepository.getComments(condition);
-        long totalElements = adminCommentQueryRepository.countComments(condition);
-        int size = condition.sizeOrDefault();
+	@Transactional(readOnly = true)
+	public AdminCommentListResponse getComments(AdminCommentSearchCondition condition) {
+		var items = adminCommentQueryRepository.getComments(condition);
+		long totalElements = adminCommentQueryRepository.countComments(condition);
+		int size = condition.sizeOrDefault();
 
-        return new AdminCommentListResponse(
-                items,
-                adminCommentQueryRepository.countByStatus(condition),
-                condition.pageOrDefault(),
-                size,
-                totalElements,
-                (int) Math.ceil((double) totalElements / size)
-        );
-    }
+		return new AdminCommentListResponse(
+				items,
+				adminCommentQueryRepository.countByStatus(condition),
+				condition.pageOrDefault(),
+				size,
+				totalElements,
+				(int) Math.ceil((double) totalElements / size)
+		);
+	}
 
-    @Transactional
-    public Long reply(Long commentId, AdminCommentReplyRequest request, Long memberId) {
-        Comment parent = lockComment(commentId);
-        if (parent.isReply()) {
-            throw new BlogException(ErrorCode.COMMENT_REPLY_DEPTH_EXCEEDED);
-        }
-        if (parent.isDeleted()) {
-            throw new BlogException(ErrorCode.COMMENT_DELETED);
-        }
+	@Transactional
+	public Long reply(Long commentId, AdminCommentReplyRequest request, Long memberId) {
+		Comment parent = lockComment(commentId);
+		if (parent.isReply()) {
+			throw new BlogException(ErrorCode.COMMENT_REPLY_DEPTH_EXCEEDED);
+		}
+		if (parent.isDeleted()) {
+			throw new BlogException(ErrorCode.COMMENT_DELETED);
+		}
 
-        Member admin = findActiveAdmin(memberId);
-        String content = requireContent(request == null ? null : request.content());
+		Member admin = findActiveAdmin(memberId);
+		String content = requireContent(request == null ? null : request.content());
 
-        Comment reply = commentRepository.save(new Comment(
-                parent.getPost(),
-                parent,
-                admin,
-                content
-        ));
+		Comment reply = commentRepository.save(new Comment(
+				parent.getPost(),
+				parent,
+				admin,
+				content
+		));
 
-        historyService.recordComment(reply, Action.CREATE, null);
-        notificationService.notifyCommentCreated(reply);
-        return reply.getId();
-    }
+		historyService.recordComment(reply, Action.CREATE, null);
+		notificationService.notifyCommentCreated(reply);
+		return reply.getId();
+	}
 
-    @Transactional
-    public void updateVisibility(
-            Long commentId,
-            AdminCommentVisibilityRequest request,
-            Long adminId
-    ) {
-        if (request == null || request.hidden() == null) {
-            throw new BlogException(ErrorCode.COMMENT_VISIBILITY_REQUIRED);
-        }
+	@Transactional
+	public void updateVisibility(
+			Long commentId,
+			AdminCommentVisibilityRequest request,
+			Long adminId
+	) {
+		if (request == null || request.hidden() == null) {
+			throw new BlogException(ErrorCode.COMMENT_VISIBILITY_REQUIRED);
+		}
 
-        Comment comment = lockComment(commentId);
+		Comment comment = lockComment(commentId);
 
-        // 파기한 원문은 돌아오지 않는다. 빈 본문으로 다시 공개되거나 가림 상태로 바뀌지 않게 한다
-        if (comment.isContentPurged()) {
-            throw new BlogException(ErrorCode.COMMENT_CONTENT_PURGED);
-        }
+		// 파기한 원문은 돌아오지 않는다. 빈 본문으로 다시 공개되거나 가림 상태로 바뀌지 않게 한다
+		if (comment.isContentPurged()) {
+			throw new BlogException(ErrorCode.COMMENT_CONTENT_PURGED);
+		}
 
-        CommentSnapshot before = CommentSnapshot.from(comment);
+		CommentSnapshot before = CommentSnapshot.from(comment);
 
-        // delete() 가 아니다. 그건 글쓴이가 지울 때 쓰는 자리라, 여기서 부르면
-        // 가려진 사람이 자기가 지운 줄 알게 된다
-        // 작성자가 지운 댓글은 되살리지 않는다. 운영자는 자기가 가린 댓글만 되돌린다
-        if (!request.hidden() && comment.isDeletedByWriter()) {
-            throw new BlogException(ErrorCode.COMMENT_DELETED_BY_WRITER);
-        }
+		// delete() 가 아니다. 그건 글쓴이가 지울 때 쓰는 자리라, 여기서 부르면
+		// 가려진 사람이 자기가 지운 줄 알게 된다
+		// 작성자가 지운 댓글은 되살리지 않는다. 운영자는 자기가 가린 댓글만 되돌린다
+		if (!request.hidden() && comment.isDeletedByWriter()) {
+			throw new BlogException(ErrorCode.COMMENT_DELETED_BY_WRITER);
+		}
 
-        if (request.hidden()) {
-            comment.hideByAdmin();
+		if (request.hidden()) {
+			comment.hideByAdmin();
 
-            // 알리지 않으면 쓴 사람은 안 써진 줄 알고 다시 쓴다. 답글이 없는 댓글은
-            // 공개 화면에서 흔적 없이 사라지기 때문이다. 되돌릴 때는 알리지 않는다 —
-            // 받는 사람이 할 일이 없다
-            notificationService.notifyCommentHidden(comment);
-        } else {
-            comment.restore();
-        }
+			// 알리지 않으면 쓴 사람은 안 써진 줄 알고 다시 쓴다. 답글이 없는 댓글은
+			// 공개 화면에서 흔적 없이 사라지기 때문이다. 되돌릴 때는 알리지 않는다 —
+			// 받는 사람이 할 일이 없다
+			notificationService.notifyCommentHidden(comment);
+		} else {
+			comment.restore();
+		}
 
-        record(comment, adminId, request.hidden()
-                ? CommentModerationAction.HIDE
-                : CommentModerationAction.RESTORE, request.reason());
-        historyService.recordComment(comment, request.hidden() ? Action.HIDE : Action.RESTORE, before);
-    }
+		record(comment, adminId, request.hidden()
+				? CommentModerationAction.HIDE
+				: CommentModerationAction.RESTORE, request.reason());
+		historyService.recordComment(comment, request.hidden() ? Action.HIDE : Action.RESTORE, before);
+	}
 
-    /**
-     * 신고를 봤지만 댓글은 그대로 둔다.
-     *
-     * <p>이 자리가 없으면 "문제 없음" 을 남길 방법이 없어서, 같은 신고를 볼 때마다
-     * 처음부터 다시 읽게 된다.</p>
-     */
-    @Transactional
-    public void dismissReports(Long commentId, String reason, Long adminId) {
-        record(lockCommentForReview(commentId), adminId, CommentModerationAction.DISMISS, reason);
-    }
+	/**
+	 * 신고를 봤지만 댓글은 그대로 둔다.
+	 *
+	 * <p>이 자리가 없으면 "문제 없음" 을 남길 방법이 없어서, 같은 신고를 볼 때마다
+	 * 처음부터 다시 읽게 된다.</p>
+	 */
+	@Transactional
+	public void dismissReports(Long commentId, String reason, Long adminId) {
+		record(lockCommentForReview(commentId), adminId, CommentModerationAction.DISMISS, reason);
+	}
 
-    /** 댓글 상세. 지금 본문, 신고와 조치, 변경 기록을 함께 준다 */
-    @Transactional(readOnly = true)
-    public AdminCommentDetail getDetail(Long commentId) {
-        Comment comment = findComment(commentId);
-        String current = comment.getContent();
-        List<CommentChange> changes = historyService.commentChanges(commentId);
-        LocalDateTime now = LocalDateTime.now();
+	/** 댓글 상세. 지금 본문, 신고와 조치, 변경 기록을 함께 준다 */
+	@Transactional(readOnly = true)
+	public AdminCommentDetail getDetail(Long commentId) {
+		Comment comment = findComment(commentId);
+		String current = comment.getContent();
+		List<CommentChange> changes = historyService.commentChanges(commentId);
+		LocalDateTime now = LocalDateTime.now();
 
-        List<AdminCommentReportResponse> reports = commentReportRepository
-                .findByCommentIdOrderByIdAsc(commentId)
-                .stream()
-                .map(report -> AdminCommentReportResponse.from(
-                        report,
-                        reportedContent(comment, report.getCreatedAt(), changes, now)
-                ))
-                .toList();
+		List<AdminCommentReportResponse> reports = commentReportRepository
+				.findByCommentIdOrderByIdAsc(commentId)
+				.stream()
+				.map(report -> AdminCommentReportResponse.from(
+						report,
+						reportedContent(comment, report.getCreatedAt(), changes, now)
+				))
+				.toList();
 
-        List<AdminCommentModerationResponse> moderations = commentModerationRepository
-                .findByCommentIdOrderByActedAtDescIdDesc(commentId)
-                .stream()
-                .map(AdminCommentModerationResponse::from)
-                .toList();
+		List<AdminCommentModerationResponse> moderations = commentModerationRepository
+				.findByCommentIdOrderByActedAtDescIdDesc(commentId)
+				.stream()
+				.map(AdminCommentModerationResponse::from)
+				.toList();
 
-        return new AdminCommentDetail(
-                comment.getId(),
-                comment.getPost().getId(),
-                comment.getPost().getTitle(),
-                comment.getParent() == null ? null : comment.getParent().getId(),
-                comment.getMember().getNickname(),
-                comment.getMember().getRole(),
-                current,
-                comment.getCreatedAt(),
-                comment.isDeleted(),
-                comment.isHiddenByAdmin(),
-                comment.isEdited(),
-                comment.getDeletedAt(),
-                retainedUntil(comment),
-                comment.isContentPurged(),
-                comment.getPost().isContentPurged(),
-                reports,
-                moderations,
-                changes.stream().map(AdminCommentHistoryResponse::from).toList()
-        );
-    }
+		return new AdminCommentDetail(
+				comment.getId(),
+				comment.getPost().getId(),
+				comment.getPost().getTitle(),
+				comment.getParent() == null ? null : comment.getParent().getId(),
+				comment.getMember().getNickname(),
+				comment.getMember().getRole(),
+				current,
+				comment.getCreatedAt(),
+				comment.isDeleted(),
+				comment.isHiddenByAdmin(),
+				comment.isEdited(),
+				comment.getDeletedAt(),
+				retainedUntil(comment),
+				comment.isContentPurged(),
+				comment.getPost().isContentPurged(),
+				reports,
+				moderations,
+				changes.stream().map(AdminCommentHistoryResponse::from).toList()
+		);
+	}
 
-    private LocalDateTime retainedUntil(Comment comment) {
-        if (comment.isContentPurged()) return null;
-        LocalDateTime since = comment.getDeletedAt();
-        LocalDateTime postPurgedAt = comment.getPost().getContentPurgedAt();
-        if (postPurgedAt != null && (since == null || postPurgedAt.isBefore(since))) {
-            since = postPurgedAt;
-        }
-        return since == null ? null : since.plus(CommentRetention.RETENTION);
-    }
+	private LocalDateTime retainedUntil(Comment comment) {
+		if (comment.isContentPurged()) {
+			return null;
+		}
+		LocalDateTime since = comment.getDeletedAt();
+		LocalDateTime postPurgedAt = comment.getPost().getContentPurgedAt();
+		if (postPurgedAt != null && (since == null || postPurgedAt.isBefore(since))) {
+			since = postPurgedAt;
+		}
+		return since == null ? null : since.plus(CommentRetention.RETENTION);
+	}
 
-    /**
-     * 신고 당시 본문.
-     *
-     * 본문을 바꾸는 건 수정뿐이라, 신고 뒤 첫 수정의 "수정 전" 이 그때 본문이고 신고 뒤 수정이
-     * 없으면 지금 본문이 그때 본문이다. 다만 이건 신고 뒤 기록이 빠짐없이 있을 때만 맞다.
-     *
-     * 빠짐없는지는 이렇게 본다. 기록은 오래된 것부터 지워지므로, 신고 시각 이전의 기록이
-     * 하나라도 남아 있으면 그 뒤 기록은 다 있다. 이 댓글 기록이 없더라도 신고가 보관 기간 안이고
-     * 그때 이미 기록이 쌓이고 있었다면, 신고 뒤 수정은 모두 남아 있다.
-     *
-     * 근거가 없으면 지금 본문으로 대신하지 않는다. 이력이 파기된 뒤 고친 본문이 신고 당시
-     * 본문처럼 보이던 문제가 여기서 생겼다.
-     */
-    private ReportedContent reportedContent(
-            Comment comment,
-            LocalDateTime reportedAt,
-            List<CommentChange> changes,
-            LocalDateTime now
-    ) {
-        if (comment.isContentPurged()) {
-            return ReportedContent.unknown(ReportedContent.Status.EXPIRED);
-        }
+	/**
+	 * 신고 당시 본문.
+	 *
+	 * 본문을 바꾸는 건 수정뿐이라, 신고 뒤 첫 수정의 "수정 전" 이 그때 본문이고 신고 뒤 수정이
+	 * 없으면 지금 본문이 그때 본문이다. 다만 이건 신고 뒤 기록이 빠짐없이 있을 때만 맞다.
+	 *
+	 * 빠짐없는지는 이렇게 본다. 기록은 오래된 것부터 지워지므로, 신고 시각 이전의 기록이
+	 * 하나라도 남아 있으면 그 뒤 기록은 다 있다. 이 댓글 기록이 없더라도 신고가 보관 기간 안이고
+	 * 그때 이미 기록이 쌓이고 있었다면, 신고 뒤 수정은 모두 남아 있다.
+	 *
+	 * 근거가 없으면 지금 본문으로 대신하지 않는다. 이력이 파기된 뒤 고친 본문이 신고 당시
+	 * 본문처럼 보이던 문제가 여기서 생겼다.
+	 */
+	private ReportedContent reportedContent(
+			Comment comment,
+			LocalDateTime reportedAt,
+			List<CommentChange> changes,
+			LocalDateTime now
+	) {
+		if (comment.isContentPurged()) {
+			return ReportedContent.unknown(ReportedContent.Status.EXPIRED);
+		}
 
-        if (reportedAt == null) {
-            return ReportedContent.unknown(ReportedContent.Status.NOT_RECORDED);
-        }
+		if (reportedAt == null) {
+			return ReportedContent.unknown(ReportedContent.Status.NOT_RECORDED);
+		}
 
-        LocalDateTime cutoff = now.minus(CommentRetention.RETENTION);
-        boolean complete = changes.stream()
-                .anyMatch(change -> change.occurredAt() != null && !change.occurredAt().isAfter(reportedAt))
-                || (!reportedAt.isBefore(cutoff) && historyService.wasRecordingAt(reportedAt));
+		LocalDateTime cutoff = now.minus(CommentRetention.RETENTION);
+		boolean complete = changes.stream()
+				.anyMatch(change -> change.occurredAt() != null && !change.occurredAt().isAfter(reportedAt))
+				|| (!reportedAt.isBefore(cutoff) && historyService.wasRecordingAt(reportedAt));
 
-        if (complete) {
-            return changes.stream()
-                    .filter(change -> change.action() == Action.UPDATE && change.before() != null)
-                    .filter(change -> change.occurredAt() != null && change.occurredAt().isAfter(reportedAt))
-                    .min(Comparator.comparing(CommentChange::occurredAt))
-                    .map(change -> ReportedContent.confirmed(change.before().content(), true))
-                    .orElseGet(() -> ReportedContent.confirmed(comment.getContent(), false));
-        }
+		if (complete) {
+			return changes.stream()
+					.filter(change -> change.action() == Action.UPDATE && change.before() != null)
+					.filter(change -> change.occurredAt() != null && change.occurredAt().isAfter(reportedAt))
+					.min(Comparator.comparing(CommentChange::occurredAt))
+					.map(change -> ReportedContent.confirmed(change.before().content(), true))
+					.orElseGet(() -> ReportedContent.confirmed(comment.getContent(), false));
+		}
 
-        // 한 번도 고친 적 없으면 지금 본문이 처음부터 그대로다
-        if (!comment.isEdited()) {
-            return ReportedContent.confirmed(comment.getContent(), false);
-        }
+		// 한 번도 고친 적 없으면 지금 본문이 처음부터 그대로다
+		if (!comment.isEdited()) {
+			return ReportedContent.confirmed(comment.getContent(), false);
+		}
 
-        return ReportedContent.unknown(reportedAt.isBefore(cutoff)
-                ? ReportedContent.Status.EXPIRED
-                : ReportedContent.Status.NOT_RECORDED);
-    }
+		return ReportedContent.unknown(reportedAt.isBefore(cutoff)
+				? ReportedContent.Status.EXPIRED
+				: ReportedContent.Status.NOT_RECORDED);
+	}
 
-    /**
-     * 조치를 남기고, 이 댓글에 걸린 미처리 신고를 모두 판단한 것으로 바꾼다.
-     *
-     * <p>무엇을 했든 운영자가 이 댓글을 본 것이므로, 조치와 신고 처리를 따로 누르게 하지
-     * 않는다. 두 번 눌러야 하면 한쪽을 빠뜨리고 목록에 계속 남는다.</p>
-     */
-    private void record(Comment comment, Long adminId, CommentModerationAction action, String reason) {
-        Member admin = findAdmin(adminId);
+	/**
+	 * 조치를 남기고, 이 댓글에 걸린 미처리 신고를 모두 판단한 것으로 바꾼다.
+	 *
+	 * <p>무엇을 했든 운영자가 이 댓글을 본 것이므로, 조치와 신고 처리를 따로 누르게 하지
+	 * 않는다. 두 번 눌러야 하면 한쪽을 빠뜨리고 목록에 계속 남는다.</p>
+	 */
+	private void record(Comment comment, Long adminId, CommentModerationAction action, String reason) {
+		Member admin = findAdmin(adminId);
 
-        commentModerationRepository.save(CommentModeration.of(comment, admin, action, reason));
+		commentModerationRepository.save(CommentModeration.of(comment, admin, action, reason));
 
-        for (CommentReport report : commentReportRepository
-                .findByCommentIdAndHandledAtIsNull(comment.getId())) {
-            report.markHandled();
-        }
-    }
+		for (CommentReport report : commentReportRepository
+				.findByCommentIdAndHandledAtIsNull(comment.getId())) {
+			report.markHandled();
+		}
+	}
 
-    private Member findAdmin(Long adminId) {
-        if (adminId == null) {
-            throw new BlogException(ErrorCode.UNAUTHORIZED);
-        }
+	private Member findAdmin(Long adminId) {
+		if (adminId == null) {
+			throw new BlogException(ErrorCode.UNAUTHORIZED);
+		}
 
-        return memberRepository.findById(adminId)
-                .orElseThrow(() -> new BlogException(ErrorCode.UNAUTHORIZED));
-    }
+		return memberRepository.findById(adminId)
+				.orElseThrow(() -> new BlogException(ErrorCode.UNAUTHORIZED));
+	}
 
-    private Comment findComment(Long commentId) {
-        Comment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new BlogException(ErrorCode.COMMENT_NOT_FOUND));
-        requireReviewable(comment.getPost());
-        return comment;
-    }
+	private Comment findComment(Long commentId) {
+		Comment comment = commentRepository.findById(commentId)
+				.orElseThrow(() -> new BlogException(ErrorCode.COMMENT_NOT_FOUND));
+		requireReviewable(comment.getPost());
+		return comment;
+	}
 
-    /** 원글을 영구 삭제해도 보관 중인 댓글의 신고 조사와 처리 기록은 남길 수 있다. */
-    private Comment lockCommentForReview(Long commentId) {
-        Long postId = commentRepository.findPostId(commentId)
-                .orElseThrow(() -> new BlogException(ErrorCode.COMMENT_NOT_FOUND));
-        Post post = postRepository.findLockedById(postId)
-                .orElseThrow(() -> new BlogException(ErrorCode.POST_NOT_FOUND));
-        requireReviewable(post);
-        return commentRepository.findLockedById(commentId)
-                .orElseThrow(() -> new BlogException(ErrorCode.COMMENT_NOT_FOUND));
-    }
+	/** 원글을 영구 삭제해도 보관 중인 댓글의 신고 조사와 처리 기록은 남길 수 있다. */
+	private Comment lockCommentForReview(Long commentId) {
+		Long postId = commentRepository.findPostId(commentId)
+				.orElseThrow(() -> new BlogException(ErrorCode.COMMENT_NOT_FOUND));
+		Post post = postRepository.findLockedById(postId)
+				.orElseThrow(() -> new BlogException(ErrorCode.POST_NOT_FOUND));
+		requireReviewable(post);
+		return commentRepository.findLockedById(commentId)
+				.orElseThrow(() -> new BlogException(ErrorCode.COMMENT_NOT_FOUND));
+	}
 
-    private void requireReviewable(Post post) {
-        if (post.isDeleted() && !post.isContentPurged()) {
-            throw new BlogException(ErrorCode.POST_NOT_FOUND);
-        }
-    }
+	private void requireReviewable(Post post) {
+		if (post.isDeleted() && !post.isContentPurged()) {
+			throw new BlogException(ErrorCode.POST_NOT_FOUND);
+		}
+	}
 
-    private Comment lockComment(Long commentId) {
-        Long postId = commentRepository.findPostId(commentId)
-                .orElseThrow(() -> new BlogException(ErrorCode.COMMENT_NOT_FOUND));
-        postAccess.lockActive(postId);
-        return commentRepository.findLockedById(commentId)
-                .orElseThrow(() -> new BlogException(ErrorCode.COMMENT_NOT_FOUND));
-    }
+	private Comment lockComment(Long commentId) {
+		Long postId = commentRepository.findPostId(commentId)
+				.orElseThrow(() -> new BlogException(ErrorCode.COMMENT_NOT_FOUND));
+		postAccess.lockActive(postId);
+		return commentRepository.findLockedById(commentId)
+				.orElseThrow(() -> new BlogException(ErrorCode.COMMENT_NOT_FOUND));
+	}
 
-    private Member findActiveAdmin(Long memberId) {
-        if (memberId == null) {
-            throw new BlogException(ErrorCode.UNAUTHORIZED);
-        }
+	private Member findActiveAdmin(Long memberId) {
+		if (memberId == null) {
+			throw new BlogException(ErrorCode.UNAUTHORIZED);
+		}
 
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new BlogException(ErrorCode.UNAUTHORIZED));
+		Member member = memberRepository.findById(memberId)
+				.orElseThrow(() -> new BlogException(ErrorCode.UNAUTHORIZED));
 
-        if (!member.getStatusCode().isActive() || member.getRole() != MemberRole.ADMIN) {
-            throw new BlogException(ErrorCode.FORBIDDEN);
-        }
+		if (!member.getStatusCode().isActive() || member.getRole() != MemberRole.ADMIN) {
+			throw new BlogException(ErrorCode.FORBIDDEN);
+		}
 
-        return member;
-    }
+		return member;
+	}
 
-    private String requireContent(String content) {
-        if (!StringUtils.hasText(content)) {
-            throw new BlogException(ErrorCode.COMMENT_CONTENT_REQUIRED);
-        }
+	private String requireContent(String content) {
+		if (!StringUtils.hasText(content)) {
+			throw new BlogException(ErrorCode.COMMENT_CONTENT_REQUIRED);
+		}
 
-        String trimmed = content.trim();
-        if (trimmed.length() > MAX_CONTENT_LENGTH) {
-            throw new BlogException(ErrorCode.COMMENT_CONTENT_TOO_LONG);
-        }
+		String trimmed = content.trim();
+		if (trimmed.length() > MAX_CONTENT_LENGTH) {
+			throw new BlogException(ErrorCode.COMMENT_CONTENT_TOO_LONG);
+		}
 
-        return trimmed;
-    }
+		return trimmed;
+	}
 }

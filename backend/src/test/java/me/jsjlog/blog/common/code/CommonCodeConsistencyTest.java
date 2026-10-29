@@ -29,72 +29,72 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:common_code_check;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1")
 class CommonCodeConsistencyTest {
 
-    @Autowired CommonCodes commonCodes;
-    @Autowired JdbcTemplate jdbc;
-    @Autowired DataSource dataSource;
+	@Autowired CommonCodes commonCodes;
+	@Autowired JdbcTemplate jdbc;
+	@Autowired DataSource dataSource;
 
-    @AfterEach
-    void restoreSeed() {
-        jdbc.update("delete from common_code where group_code = 'MEMBER_STATUS' and code = 'DORMANT'");
-        new ResourceDatabasePopulator(new ClassPathResource("db/common-code-seed.sql")).execute(dataSource);
-        commonCodes.reload();
-    }
+	@AfterEach
+	void restoreSeed() {
+		jdbc.update("delete from common_code where group_code = 'MEMBER_STATUS' and code = 'DORMANT'");
+		new ResourceDatabasePopulator(new ClassPathResource("db/common-code-seed.sql")).execute(dataSource);
+		commonCodes.reload();
+	}
 
-    @Test
-    @DisplayName("서버 enum 과 시드한 공통 코드 표가 같다")
-    void enumsMatchSeededTable() {
-        Map<String, Set<String>> enums = CommonCodeEnums.codesByGroup();
+	@Test
+	@DisplayName("서버 enum 과 시드한 공통 코드 표가 같다")
+	void enumsMatchSeededTable() {
+		Map<String, Set<String>> enums = CommonCodeEnums.codesByGroup();
 
-        assertThat(enums).containsOnlyKeys("MEMBER_STATUS", "MEMBER_STATUS_REASON", "ACTOR_TYPE");
-        assertThat(enums.get("MEMBER_STATUS")).containsExactly("ACTIVE", "SUSPENDED", "WITHDRAWN");
-        assertThat(commonCodes.mismatches(enums)).isEmpty();
-    }
+		assertThat(enums).containsOnlyKeys("MEMBER_STATUS", "MEMBER_STATUS_REASON", "ACTOR_TYPE");
+		assertThat(enums.get("MEMBER_STATUS")).containsExactly("ACTIVE", "SUSPENDED", "WITHDRAWN");
+		assertThat(commonCodes.mismatches(enums)).isEmpty();
+	}
 
-    @Test
-    @DisplayName("어긋나면 양쪽 방향을 모두 알려 준다")
-    void reportsBothDirections() {
-        Map<String, Set<String>> enums = new LinkedHashMap<>(CommonCodeEnums.codesByGroup());
-        Set<String> memberStatus = new LinkedHashSet<>(enums.get("MEMBER_STATUS"));
-        memberStatus.add("DORMANT");
-        memberStatus.remove("WITHDRAWN");
-        enums.put("MEMBER_STATUS", memberStatus);
+	@Test
+	@DisplayName("어긋나면 양쪽 방향을 모두 알려 준다")
+	void reportsBothDirections() {
+		Map<String, Set<String>> enums = new LinkedHashMap<>(CommonCodeEnums.codesByGroup());
+		Set<String> memberStatus = new LinkedHashSet<>(enums.get("MEMBER_STATUS"));
+		memberStatus.add("DORMANT");
+		memberStatus.remove("WITHDRAWN");
+		enums.put("MEMBER_STATUS", memberStatus);
 
-        assertThat(commonCodes.mismatches(enums)).containsExactly(
-                "MEMBER_STATUS 표에 없음 [DORMANT]",
-                "MEMBER_STATUS enum 에 없음 [WITHDRAWN]"
-        );
-    }
+		assertThat(commonCodes.mismatches(enums)).containsExactly(
+				"MEMBER_STATUS 표에 없음 [DORMANT]",
+				"MEMBER_STATUS enum 에 없음 [WITHDRAWN]"
+		);
+	}
 
-    @Test
-    @DisplayName("enum 에 있는 코드가 표에서 빠지면 서버 시작을 거부한다")
-    void refusesStartWhenCodeIsMissing() {
-        jdbc.update("delete from common_code where group_code = 'ACTOR_TYPE' and code = 'SYSTEM'");
+	@Test
+	@DisplayName("enum 에 있는 코드가 표에서 빠지면 서버 시작을 거부한다")
+	void refusesStartWhenCodeIsMissing() {
+		jdbc.update("delete from common_code where group_code = 'ACTOR_TYPE' and code = 'SYSTEM'");
 
-        assertThatThrownBy(() -> commonCodes.run(null))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("ACTOR_TYPE 표에 없음 [SYSTEM]");
-    }
+		assertThatThrownBy(() -> commonCodes.run(null))
+				.isInstanceOf(IllegalStateException.class)
+				.hasMessageContaining("ACTOR_TYPE 표에 없음 [SYSTEM]");
+	}
 
-    @Test
-    @DisplayName("enum 에 없는 코드가 표에 생기면 서버 시작을 거부한다")
-    void refusesStartWhenTableHasUnknownCode() {
-        jdbc.update("""
-                insert into common_code (group_code, code, code_name, sort_order, is_enabled, created_at, updated_at)
-                values ('MEMBER_STATUS', 'DORMANT', '휴면', 9, true, current_timestamp, current_timestamp)
-                """);
+	@Test
+	@DisplayName("enum 에 없는 코드가 표에 생기면 서버 시작을 거부한다")
+	void refusesStartWhenTableHasUnknownCode() {
+		jdbc.update("""
+				insert into common_code (group_code, code, code_name, sort_order, is_enabled, created_at, updated_at)
+				values ('MEMBER_STATUS', 'DORMANT', '휴면', 9, true, current_timestamp, current_timestamp)
+				""");
 
-        assertThatThrownBy(() -> commonCodes.run(null))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("MEMBER_STATUS enum 에 없음 [DORMANT]");
-    }
+		assertThatThrownBy(() -> commonCodes.run(null))
+				.isInstanceOf(IllegalStateException.class)
+				.hasMessageContaining("MEMBER_STATUS enum 에 없음 [DORMANT]");
+	}
 
-    @Test
-    @DisplayName("이름은 표에서 가져온다")
-    void namesComeFromTable() {
-        assertThat(commonCodes.nameOf(MemberStatusCode.WITHDRAWN)).isEqualTo("탈퇴");
-        assertThat(commonCodes.nameOf(ActorTypeCode.SYSTEM)).isEqualTo("시스템");
-        assertThat(commonCodes.codesOf("MEMBER_STATUS"))
-                .extracting(code -> code.getCode())
-                .containsExactly("ACTIVE", "SUSPENDED", "WITHDRAWN");
-    }
+	@Test
+	@DisplayName("이름은 표에서 가져온다")
+	void namesComeFromTable() {
+		assertThat(commonCodes.nameOf(MemberStatusCode.WITHDRAWN)).isEqualTo("탈퇴");
+		assertThat(commonCodes.nameOf(ActorTypeCode.SYSTEM)).isEqualTo("시스템");
+		assertThat(commonCodes.codesOf("MEMBER_STATUS"))
+				.extracting(code -> code.getCode())
+				.containsExactly("ACTIVE", "SUSPENDED", "WITHDRAWN");
+	}
 }

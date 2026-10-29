@@ -4,17 +4,17 @@ import { shallowRef } from 'vue';
 export const commentTargetNavigation = shallowRef(null);
 
 export function cancelCommentTargetNavigation() {
-  commentTargetNavigation.value?.finish('cancelled');
-  commentTargetNavigation.value = null;
+	commentTargetNavigation.value?.finish('cancelled');
+	commentTargetNavigation.value = null;
 }
 
 export function requestCommentTargetNavigation(postId, commentId) {
-  cancelCommentTargetNavigation();
-  return new Promise((resolve) => {
-    commentTargetNavigation.value = {
-      postId: String(postId),
-      commentId: String(commentId),
-      finish: resolve,
-    };
-  });
+	cancelCommentTargetNavigation();
+	return new Promise((resolve) => {
+		commentTargetNavigation.value = {
+			postId: String(postId),
+			commentId: String(commentId),
+			finish: resolve,
+		};
+	});
 }

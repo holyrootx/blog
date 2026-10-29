@@ -9,7 +9,7 @@ import me.jsjlog.blog.admin.domain.UploadImage;
  */
 public record UploadImageResponse(Long id, String url, String originalName) {
 
-    public static UploadImageResponse from(UploadImage image) {
-        return new UploadImageResponse(image.getId(), image.getUrl(), image.getOriginalName());
-    }
+	public static UploadImageResponse from(UploadImage image) {
+		return new UploadImageResponse(image.getId(), image.getUrl(), image.getOriginalName());
+	}
 }

@@ -18,24 +18,24 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/admin/blog/members")
 public class AdminMemberController {
 
-    private final AdminMemberService adminMemberService;
+	private final AdminMemberService adminMemberService;
 
-    @GetMapping
-    public ApiResponse<AdminMemberListResponse> getMembers(AdminMemberSearchCondition condition) {
-        return ApiResponse.ok(adminMemberService.getMembers(condition));
-    }
+	@GetMapping
+	public ApiResponse<AdminMemberListResponse> getMembers(AdminMemberSearchCondition condition) {
+		return ApiResponse.ok(adminMemberService.getMembers(condition));
+	}
 
-    @PostMapping("/{memberId}/suspend")
-    public ApiResponse<Void> suspend(@PathVariable Long memberId,
-                                     @AuthenticationPrincipal MemberPrincipal principal) {
-        adminMemberService.suspend(memberId, principal.getId());
-        return ApiResponse.ok();
-    }
+	@PostMapping("/{memberId}/suspend")
+	public ApiResponse<Void> suspend(@PathVariable Long memberId,
+									 @AuthenticationPrincipal MemberPrincipal principal) {
+		adminMemberService.suspend(memberId, principal.getId());
+		return ApiResponse.ok();
+	}
 
-    @PostMapping("/{memberId}/unsuspend")
-    public ApiResponse<Void> unsuspend(@PathVariable Long memberId,
-                                       @AuthenticationPrincipal MemberPrincipal principal) {
-        adminMemberService.unsuspend(memberId, principal.getId());
-        return ApiResponse.ok();
-    }
+	@PostMapping("/{memberId}/unsuspend")
+	public ApiResponse<Void> unsuspend(@PathVariable Long memberId,
+									   @AuthenticationPrincipal MemberPrincipal principal) {
+		adminMemberService.unsuspend(memberId, principal.getId());
+		return ApiResponse.ok();
+	}
 }

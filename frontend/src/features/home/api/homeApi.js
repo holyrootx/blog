@@ -6,27 +6,27 @@ const DEFAULT_HOME_PAGE_HERO_ID = 1;
 const DEFAULT_HOME_POST_SIZE = 4;
 
 export function getBlogProfile(profileId = DEFAULT_PROFILE_ID) {
-  return getApiData(`/api/v1/blog/profile?profileId=${profileId}`);
+	return getApiData(`/api/v1/blog/profile?profileId=${profileId}`);
 }
 
 export function getHomePageHero(homePageHeroId = DEFAULT_HOME_PAGE_HERO_ID) {
-  return getApiData(`/api/v1/blog/home/hero?homePageHeroId=${homePageHeroId}`);
+	return getApiData(`/api/v1/blog/home/hero?homePageHeroId=${homePageHeroId}`);
 }
 
 export function getHomeTopics() {
-  return getApiData('/api/v1/blog/home/topics');
+	return getApiData('/api/v1/blog/home/topics');
 }
 
 export function getHomeTopicSection() {
-  return getApiData('/api/v1/blog/home/topic-section');
+	return getApiData('/api/v1/blog/home/topic-section');
 }
 
 export async function getHomePosts(sort = 'latest', size = DEFAULT_HOME_POST_SIZE) {
-  const searchParams = new URLSearchParams({
-    sort,
-    size: String(size),
-  });
+	const searchParams = new URLSearchParams({
+		sort,
+		size: String(size),
+	});
 
-  const posts = await getApiData(`/api/v1/blog/home/posts?${searchParams.toString()}`);
-  return posts.map(toPostCard);
+	const posts = await getApiData(`/api/v1/blog/home/posts?${searchParams.toString()}`);
+	return posts.map(toPostCard);
 }

@@ -17,71 +17,71 @@ const MERGE_MS = 700;
 const LIMIT = 100;
 
 export function createEditorHistory({ limit = LIMIT, mergeMs = MERGE_MS } = {}) {
-  const past = [];
-  const future = [];
+	const past = [];
+	const future = [];
 
-  let lastKey = '';
-  let lastAt = 0;
+	let lastKey = '';
+	let lastAt = 0;
 
-  return {
-    /**
-     * 방금 바뀌었다고 알린다. entry 는 바뀌기 직전 장면이다.
-     *
-     * @param mergeKey 같은 값이 이어지는 동안 한 덩어리로 묶는다. 빈 값이면 언제나 따로 쌓는다
-     * @returns 실제로 쌓았으면 true, 앞 덩어리에 묶였으면 false
-     */
-    record(entry, mergeKey = '', now = Date.now()) {
-      const merged = mergeKey !== '' && mergeKey === lastKey && now - lastAt < mergeMs;
+	return {
+		/**
+		 * 방금 바뀌었다고 알린다. entry 는 바뀌기 직전 장면이다.
+		 *
+		 * @param mergeKey 같은 값이 이어지는 동안 한 덩어리로 묶는다. 빈 값이면 언제나 따로 쌓는다
+		 * @returns 실제로 쌓았으면 true, 앞 덩어리에 묶였으면 false
+		 */
+		record(entry, mergeKey = '', now = Date.now()) {
+			const merged = mergeKey !== '' && mergeKey === lastKey && now - lastAt < mergeMs;
 
-      lastKey = mergeKey;
-      lastAt = now;
+			lastKey = mergeKey;
+			lastAt = now;
 
-      if (merged) {
-        return false;
-      }
+			if (merged) {
+				return false;
+			}
 
-      past.push(entry);
+			past.push(entry);
 
-      if (past.length > limit) {
-        past.shift();
-      }
+			if (past.length > limit) {
+				past.shift();
+			}
 
-      // 되돌린 뒤 새로 고치면 앞으로 가기는 갈 곳을 잃는다
-      future.length = 0;
+			// 되돌린 뒤 새로 고치면 앞으로 가기는 갈 곳을 잃는다
+			future.length = 0;
 
-      return true;
-    },
+			return true;
+		},
 
-    /** @returns 돌아갈 장면. 없으면 null */
-    undo(current) {
-      if (past.length === 0) {
-        return null;
-      }
+		/** @returns 돌아갈 장면. 없으면 null */
+		undo(current) {
+			if (past.length === 0) {
+				return null;
+			}
 
-      future.push(current);
-      // 되돌린 직후에 친 글자가 되돌리기 전 덩어리에 묶이면 안 된다
-      lastKey = '';
+			future.push(current);
+			// 되돌린 직후에 친 글자가 되돌리기 전 덩어리에 묶이면 안 된다
+			lastKey = '';
 
-      return past.pop();
-    },
+			return past.pop();
+		},
 
-    redo(current) {
-      if (future.length === 0) {
-        return null;
-      }
+		redo(current) {
+			if (future.length === 0) {
+				return null;
+			}
 
-      past.push(current);
-      lastKey = '';
+			past.push(current);
+			lastKey = '';
 
-      return future.pop();
-    },
+			return future.pop();
+		},
 
-    /** 다른 글을 불러왔을 때. 앞 글의 장면으로 되돌아가면 안 된다 */
-    reset() {
-      past.length = 0;
-      future.length = 0;
-      lastKey = '';
-      lastAt = 0;
-    },
-  };
+		/** 다른 글을 불러왔을 때. 앞 글의 장면으로 되돌아가면 안 된다 */
+		reset() {
+			past.length = 0;
+			future.length = 0;
+			lastKey = '';
+			lastAt = 0;
+		},
+	};
 }

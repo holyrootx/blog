@@ -6,15 +6,15 @@ import me.jsjlog.blog.post.domain.PostStatus;
 import java.time.LocalDateTime;
 
 public record PostResponse(Long id,
-                           String title,
-                           String excerpt,
-                           String content,
-                           Long categoryId,
-                           String categoryName,
-                           String thumbnailImageUrl,
-                           PostStatus status,
-                           LocalDateTime publishedAt,
-                           long views,
-                           long likeCount
+						   String title,
+						   String excerpt,
+						   String content,
+						   Long categoryId,
+						   String categoryName,
+						   String thumbnailImageUrl,
+						   PostStatus status,
+						   LocalDateTime publishedAt,
+						   long views,
+						   long likeCount
 ) {
 }

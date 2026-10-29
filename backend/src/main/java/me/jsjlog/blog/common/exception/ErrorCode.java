@@ -16,161 +16,161 @@ import org.springframework.http.HttpStatus;
  */
 public enum ErrorCode {
 
-    INVALID_INPUT(HttpStatus.BAD_REQUEST, "INVALID_INPUT", "요청 값이 올바르지 않습니다."),
-    VALIDATION_ERROR(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "요청 값 검증에 실패했습니다."),
-    METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "METHOD_NOT_ALLOWED", "지원하지 않는 HTTP 메서드입니다."),
-    UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "로그인이 필요합니다."),
-    // UNAUTHORIZED 와 나누는 이유는 화면이 할 일이 달라서다.
-    // UNAUTHORIZED 는 로그인 화면으로 보내야 하고, 이건 지금 보고 있는 로그인 폼에 사유를 적어야 한다
-    ADMIN_LOGIN_FAILED(HttpStatus.UNAUTHORIZED, "ADMIN_LOGIN_FAILED", "아이디 또는 비밀번호가 올바르지 않습니다."),
-    // 비밀번호를 검사하기도 전에 거절한다. 실패를 반복하면 BCrypt 가 계속 돌아
-    // 서버 한 대의 CPU 가 그대로 소모되기 때문이다
-    ADMIN_LOGIN_BLOCKED(HttpStatus.TOO_MANY_REQUESTS, "ADMIN_LOGIN_BLOCKED", "로그인 시도가 너무 많습니다. 잠시 뒤에 다시 시도해 주세요."),
-    FORBIDDEN(HttpStatus.FORBIDDEN, "FORBIDDEN", "접근 권한이 없습니다."),
-    NOT_FOUND(HttpStatus.NOT_FOUND, "NOT_FOUND", "요청한 리소스를 찾을 수 없습니다."),
-    DATA_CONSTRAINT_VIOLATED(HttpStatus.CONFLICT, "DATA_CONSTRAINT_VIOLATED", "데이터 규칙에 맞지 않아 처리하지 못했습니다."),
-    MODIFIED_BY_OTHERS(HttpStatus.CONFLICT, "MODIFIED_BY_OTHERS", "다른 곳에서 먼저 수정되었습니다. 최신 내용을 다시 불러온 뒤 저장해 주세요."),
-    RESOURCE_BUSY(HttpStatus.CONFLICT, "RESOURCE_BUSY", "같은 내용을 다른 요청이 처리하고 있습니다. 잠시 후 다시 시도해 주세요."),
-    INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_SERVER_ERROR", "서버 오류가 발생했습니다."),
+	INVALID_INPUT(HttpStatus.BAD_REQUEST, "INVALID_INPUT", "요청 값이 올바르지 않습니다."),
+	VALIDATION_ERROR(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "요청 값 검증에 실패했습니다."),
+	METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "METHOD_NOT_ALLOWED", "지원하지 않는 HTTP 메서드입니다."),
+	UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "로그인이 필요합니다."),
+	// UNAUTHORIZED 와 나누는 이유는 화면이 할 일이 달라서다.
+	// UNAUTHORIZED 는 로그인 화면으로 보내야 하고, 이건 지금 보고 있는 로그인 폼에 사유를 적어야 한다
+	ADMIN_LOGIN_FAILED(HttpStatus.UNAUTHORIZED, "ADMIN_LOGIN_FAILED", "아이디 또는 비밀번호가 올바르지 않습니다."),
+	// 비밀번호를 검사하기도 전에 거절한다. 실패를 반복하면 BCrypt 가 계속 돌아
+	// 서버 한 대의 CPU 가 그대로 소모되기 때문이다
+	ADMIN_LOGIN_BLOCKED(HttpStatus.TOO_MANY_REQUESTS, "ADMIN_LOGIN_BLOCKED", "로그인 시도가 너무 많습니다. 잠시 뒤에 다시 시도해 주세요."),
+	FORBIDDEN(HttpStatus.FORBIDDEN, "FORBIDDEN", "접근 권한이 없습니다."),
+	NOT_FOUND(HttpStatus.NOT_FOUND, "NOT_FOUND", "요청한 리소스를 찾을 수 없습니다."),
+	DATA_CONSTRAINT_VIOLATED(HttpStatus.CONFLICT, "DATA_CONSTRAINT_VIOLATED", "데이터 규칙에 맞지 않아 처리하지 못했습니다."),
+	MODIFIED_BY_OTHERS(HttpStatus.CONFLICT, "MODIFIED_BY_OTHERS", "다른 곳에서 먼저 수정되었습니다. 최신 내용을 다시 불러온 뒤 저장해 주세요."),
+	RESOURCE_BUSY(HttpStatus.CONFLICT, "RESOURCE_BUSY", "같은 내용을 다른 요청이 처리하고 있습니다. 잠시 후 다시 시도해 주세요."),
+	INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_SERVER_ERROR", "서버 오류가 발생했습니다."),
 
-    // 소셜 로그인 도중의 실패다. 사용자가 고칠 수 있는 게 없어서 메시지는 다시 시도하라는 쪽으로 둔다
-    OAUTH_PROVIDER_NOT_SUPPORTED(HttpStatus.BAD_REQUEST, "OAUTH_PROVIDER_NOT_SUPPORTED", "지원하지 않는 로그인 방법입니다."),
-    OAUTH_ACCOUNT_ID_MISSING(HttpStatus.INTERNAL_SERVER_ERROR, "OAUTH_ACCOUNT_ID_MISSING", "로그인 정보를 가져오지 못했습니다. 다시 시도해 주세요."),
-    OAUTH_SESSION_EXPIRED(HttpStatus.UNAUTHORIZED, "OAUTH_SESSION_EXPIRED", "로그인 정보가 만료되었습니다. 소셜 로그인을 다시 진행해 주세요."),
-    OAUTH_SIGNUP_NOT_ALLOWED(HttpStatus.CONFLICT, "OAUTH_SIGNUP_NOT_ALLOWED", "현재 로그인 정보로는 신규 가입을 진행할 수 없습니다."),
-    OAUTH_REACTIVATION_NOT_ALLOWED(HttpStatus.CONFLICT, "OAUTH_REACTIVATION_NOT_ALLOWED", "현재 로그인 정보로는 계정 복구를 진행할 수 없습니다."),
+	// 소셜 로그인 도중의 실패다. 사용자가 고칠 수 있는 게 없어서 메시지는 다시 시도하라는 쪽으로 둔다
+	OAUTH_PROVIDER_NOT_SUPPORTED(HttpStatus.BAD_REQUEST, "OAUTH_PROVIDER_NOT_SUPPORTED", "지원하지 않는 로그인 방법입니다."),
+	OAUTH_ACCOUNT_ID_MISSING(HttpStatus.INTERNAL_SERVER_ERROR, "OAUTH_ACCOUNT_ID_MISSING", "로그인 정보를 가져오지 못했습니다. 다시 시도해 주세요."),
+	OAUTH_SESSION_EXPIRED(HttpStatus.UNAUTHORIZED, "OAUTH_SESSION_EXPIRED", "로그인 정보가 만료되었습니다. 소셜 로그인을 다시 진행해 주세요."),
+	OAUTH_SIGNUP_NOT_ALLOWED(HttpStatus.CONFLICT, "OAUTH_SIGNUP_NOT_ALLOWED", "현재 로그인 정보로는 신규 가입을 진행할 수 없습니다."),
+	OAUTH_REACTIVATION_NOT_ALLOWED(HttpStatus.CONFLICT, "OAUTH_REACTIVATION_NOT_ALLOWED", "현재 로그인 정보로는 계정 복구를 진행할 수 없습니다."),
 
-    MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "MEMBER_NOT_FOUND", "회원을 찾을 수 없습니다."),
-    MEMBER_ADMIN_CANNOT_MODERATE(HttpStatus.CONFLICT, "MEMBER_ADMIN_CANNOT_MODERATE", "관리자 계정은 정지할 수 없습니다."),
-    MEMBER_STATUS_CHANGE_NOT_ALLOWED(HttpStatus.CONFLICT, "MEMBER_STATUS_CHANGE_NOT_ALLOWED", "현재 상태에서는 회원 상태를 변경할 수 없습니다."),
-    // 남의 알림 번호를 넣은 경우도 여기로 온다. 있는데 네 것이 아니라고 알려 주면
-    // 남의 알림이 존재한다는 사실을 확인해 주는 셈이 된다
-    NOTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "NOTIFICATION_NOT_FOUND", "알림을 찾을 수 없습니다."),
-    // 관리자는 이 블로그의 주인이다. 탈퇴하면 관리자 화면에 들어갈 사람이 없어지고
-    // 되돌리려면 DB 를 직접 고쳐야 한다. 화면에서 실수로 누를 수 있는 자리에 두지 않는다
-    MEMBER_ADMIN_CANNOT_WITHDRAW(HttpStatus.CONFLICT, "MEMBER_ADMIN_CANNOT_WITHDRAW", "관리자 계정은 탈퇴할 수 없습니다."),
+	MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "MEMBER_NOT_FOUND", "회원을 찾을 수 없습니다."),
+	MEMBER_ADMIN_CANNOT_MODERATE(HttpStatus.CONFLICT, "MEMBER_ADMIN_CANNOT_MODERATE", "관리자 계정은 정지할 수 없습니다."),
+	MEMBER_STATUS_CHANGE_NOT_ALLOWED(HttpStatus.CONFLICT, "MEMBER_STATUS_CHANGE_NOT_ALLOWED", "현재 상태에서는 회원 상태를 변경할 수 없습니다."),
+	// 남의 알림 번호를 넣은 경우도 여기로 온다. 있는데 네 것이 아니라고 알려 주면
+	// 남의 알림이 존재한다는 사실을 확인해 주는 셈이 된다
+	NOTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "NOTIFICATION_NOT_FOUND", "알림을 찾을 수 없습니다."),
+	// 관리자는 이 블로그의 주인이다. 탈퇴하면 관리자 화면에 들어갈 사람이 없어지고
+	// 되돌리려면 DB 를 직접 고쳐야 한다. 화면에서 실수로 누를 수 있는 자리에 두지 않는다
+	MEMBER_ADMIN_CANNOT_WITHDRAW(HttpStatus.CONFLICT, "MEMBER_ADMIN_CANNOT_WITHDRAW", "관리자 계정은 탈퇴할 수 없습니다."),
 
-    IMAGE_REFERENCE_UNAVAILABLE(HttpStatus.CONFLICT, "IMAGE_REFERENCE_UNAVAILABLE", "삭제되었거나 사용할 수 없는 이미지가 있습니다. 이미지를 다시 올린 뒤 저장해 주세요."),
-    IMAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "IMAGE_NOT_FOUND", "이미지를 찾을 수 없습니다."),
-    IMAGE_EMPTY(HttpStatus.BAD_REQUEST, "IMAGE_EMPTY", "이미지 파일이 없습니다."),
-    IMAGE_TOO_LARGE(HttpStatus.BAD_REQUEST, "IMAGE_TOO_LARGE", "이미지 용량이 너무 큽니다."),
-    IMAGE_TYPE_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "IMAGE_TYPE_NOT_ALLOWED", "지원하지 않는 이미지 형식입니다."),
-    IMAGE_TYPE_MISMATCH(HttpStatus.BAD_REQUEST, "IMAGE_TYPE_MISMATCH", "파일의 실제 이미지 형식과 업로드 형식이 다릅니다. 이미지를 다시 저장한 뒤 올려 주세요."),
-    IMAGE_INVALID(HttpStatus.BAD_REQUEST, "IMAGE_INVALID", "이미지 파일이 손상되었거나 읽을 수 없습니다. 다른 파일로 다시 올려 주세요."),
-    IMAGE_DIMENSIONS_TOO_LARGE(HttpStatus.BAD_REQUEST, "IMAGE_DIMENSIONS_TOO_LARGE", "이미지 가로·세로는 각각 16,383px 이하, 전체 크기는 2,500만 픽셀 이하여야 합니다. 크기를 줄여 다시 올려 주세요."),
-    IMAGE_THUMBNAIL_GENERATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "IMAGE_THUMBNAIL_GENERATION_FAILED", "이미지 썸네일을 만들지 못했습니다."),
-    IMAGE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "IMAGE_UPLOAD_FAILED", "이미지를 저장하지 못했습니다."),
-    IMAGE_DELETE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "IMAGE_DELETE_FAILED", "이미지를 삭제하지 못했습니다."),
+	IMAGE_REFERENCE_UNAVAILABLE(HttpStatus.CONFLICT, "IMAGE_REFERENCE_UNAVAILABLE", "삭제되었거나 사용할 수 없는 이미지가 있습니다. 이미지를 다시 올린 뒤 저장해 주세요."),
+	IMAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "IMAGE_NOT_FOUND", "이미지를 찾을 수 없습니다."),
+	IMAGE_EMPTY(HttpStatus.BAD_REQUEST, "IMAGE_EMPTY", "이미지 파일이 없습니다."),
+	IMAGE_TOO_LARGE(HttpStatus.BAD_REQUEST, "IMAGE_TOO_LARGE", "이미지 용량이 너무 큽니다."),
+	IMAGE_TYPE_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "IMAGE_TYPE_NOT_ALLOWED", "지원하지 않는 이미지 형식입니다."),
+	IMAGE_TYPE_MISMATCH(HttpStatus.BAD_REQUEST, "IMAGE_TYPE_MISMATCH", "파일의 실제 이미지 형식과 업로드 형식이 다릅니다. 이미지를 다시 저장한 뒤 올려 주세요."),
+	IMAGE_INVALID(HttpStatus.BAD_REQUEST, "IMAGE_INVALID", "이미지 파일이 손상되었거나 읽을 수 없습니다. 다른 파일로 다시 올려 주세요."),
+	IMAGE_DIMENSIONS_TOO_LARGE(HttpStatus.BAD_REQUEST, "IMAGE_DIMENSIONS_TOO_LARGE", "이미지 가로·세로는 각각 16,383px 이하, 전체 크기는 2,500만 픽셀 이하여야 합니다. 크기를 줄여 다시 올려 주세요."),
+	IMAGE_THUMBNAIL_GENERATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "IMAGE_THUMBNAIL_GENERATION_FAILED", "이미지 썸네일을 만들지 못했습니다."),
+	IMAGE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "IMAGE_UPLOAD_FAILED", "이미지를 저장하지 못했습니다."),
+	IMAGE_DELETE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "IMAGE_DELETE_FAILED", "이미지를 삭제하지 못했습니다."),
 
-    PROFILE_NOT_FOUND(HttpStatus.NOT_FOUND, "PROFILE_NOT_FOUND", "프로필을 찾을 수 없습니다."),
-    PROFILE_REQUIRED_VALUE_MISSING(HttpStatus.BAD_REQUEST, "PROFILE_REQUIRED_VALUE_MISSING", "이름, 소개와 직업을 입력해 주세요."),
-    PROFILE_VALUE_TOO_LONG(HttpStatus.BAD_REQUEST, "PROFILE_VALUE_TOO_LONG", "프로필 입력값이 허용 길이를 초과했습니다."),
-    BLOG_STARTED_AT_FUTURE(HttpStatus.BAD_REQUEST, "BLOG_STARTED_AT_FUTURE", "블로그 시작일은 오늘 이후로 설정할 수 없습니다."),
-    MAIN_HERO_NOT_FOUND(HttpStatus.NOT_FOUND, "MAIN_HERO_NOT_FOUND", "메인 소개글을 찾을 수 없습니다."),
-    MAIN_HERO_REQUIRED_VALUE_MISSING(HttpStatus.BAD_REQUEST, "MAIN_HERO_REQUIRED_VALUE_MISSING", "대문 제목과 소개를 입력해 주세요."),
-    MAIN_HERO_VALUE_TOO_LONG(HttpStatus.BAD_REQUEST, "MAIN_HERO_VALUE_TOO_LONG", "대문 입력값이 허용 길이를 초과했습니다."),
-    HOME_TOPIC_SECTION_NOT_FOUND(HttpStatus.NOT_FOUND, "HOME_TOPIC_SECTION_NOT_FOUND", "대문 이야기 설정을 찾을 수 없습니다."),
-    HOME_TOPIC_NOT_FOUND(HttpStatus.NOT_FOUND, "HOME_TOPIC_NOT_FOUND", "대문 이야기 항목을 찾을 수 없습니다."),
-    HOME_TOPIC_REQUIRED_VALUE_MISSING(HttpStatus.BAD_REQUEST, "HOME_TOPIC_REQUIRED_VALUE_MISSING", "대문 이야기 내용을 모두 입력해 주세요."),
-    HOME_TOPIC_VALUE_TOO_LONG(HttpStatus.BAD_REQUEST, "HOME_TOPIC_VALUE_TOO_LONG", "대문 이야기 입력값이 허용 길이를 초과했습니다."),
-    HOME_TOPIC_SIZE_LIMIT_EXCEEDED(HttpStatus.BAD_REQUEST, "HOME_TOPIC_SIZE_LIMIT_EXCEEDED", "대문 이야기 항목은 최대 6개까지 등록할 수 있습니다."),
-    MENU_NOT_FOUND(HttpStatus.NOT_FOUND, "MENU_NOT_FOUND", "메뉴를 찾을 수 없습니다."),
-    MENU_HAS_ITEMS(HttpStatus.CONFLICT, "MENU_HAS_ITEMS", "속한 항목이 있는 그룹은 삭제할 수 없습니다."),
-    POST_NOT_FOUND(HttpStatus.NOT_FOUND, "POST_NOT_FOUND", "게시글을 찾을 수 없습니다."),
-    POST_NOT_DELETED(HttpStatus.CONFLICT, "POST_NOT_DELETED", "휴지통에 있는 글이 아닙니다."),
-    POST_RESTORE_EXPIRED(HttpStatus.CONFLICT, "POST_RESTORE_EXPIRED", "삭제 후 30일이 지나 복구할 수 없습니다."),
-    POST_CONTENT_PURGED(HttpStatus.CONFLICT, "POST_CONTENT_PURGED", "영구 삭제된 글입니다. 복구하거나 변경할 수 없습니다."),
-    POST_PURGE_TOO_EARLY(HttpStatus.CONFLICT, "POST_PURGE_TOO_EARLY", "삭제 후 30일이 지난 글만 영구 삭제할 수 있습니다."),
-    POST_PURGE_CONFIRMATION_MISMATCH(HttpStatus.CONFLICT, "POST_PURGE_CONFIRMATION_MISMATCH", "확인한 글 정보가 일치하지 않습니다. 목록을 새로 조회한 뒤 제목을 확인해 주세요."),
-    IMAGE_IN_USE(HttpStatus.CONFLICT, "IMAGE_IN_USE", "글 본문이나 대표 이미지(휴지통 글 포함), 대문, 프로필에서 쓰고 있는 이미지입니다."),
-    POST_SLUG_DUPLICATED(HttpStatus.CONFLICT, "POST_SLUG_DUPLICATED", "이미 사용 중인 게시글 주소입니다."),
-    POST_NOT_PUBLISHED(HttpStatus.NOT_FOUND, "POST_NOT_PUBLISHED", "공개된 게시글을 찾을 수 없습니다."),
-    POST_SORT_INVALID(HttpStatus.BAD_REQUEST, "POST_SORT_INVALID", "지원하지 않는 게시글 정렬 방식입니다."),
-    POST_TITLE_REQUIRED(HttpStatus.BAD_REQUEST, "POST_TITLE_REQUIRED", "제목을 입력해 주세요."),
-    POST_TITLE_TOO_LONG(HttpStatus.BAD_REQUEST, "POST_TITLE_TOO_LONG", "제목은 255자까지 입력할 수 있습니다."),
-    POST_EXCERPT_TOO_LONG(HttpStatus.BAD_REQUEST, "POST_EXCERPT_TOO_LONG", "요약은 500자까지 입력할 수 있습니다."),
-    POST_THUMBNAIL_TOO_LONG(HttpStatus.BAD_REQUEST, "POST_THUMBNAIL_TOO_LONG", "썸네일 주소는 500자까지 입력할 수 있습니다."),
-    POST_CONTENT_REQUIRED(HttpStatus.BAD_REQUEST, "POST_CONTENT_REQUIRED", "본문이 없어 발행할 수 없습니다."),
-    POST_EXCERPT_REQUIRED(HttpStatus.BAD_REQUEST, "POST_EXCERPT_REQUIRED", "요약이 없어 발행할 수 없습니다."),
-    POST_ALREADY_PUBLISHED(HttpStatus.CONFLICT, "POST_ALREADY_PUBLISHED", "이미 발행된 글입니다."),
-    POST_NOT_PUBLISHED_YET(HttpStatus.CONFLICT, "POST_NOT_PUBLISHED_YET", "발행된 글이 아닙니다."),
-    POST_SIZE_LIMIT_EXCEEDED(HttpStatus.BAD_REQUEST, "POST_SIZE_LIMIT_EXCEEDED", "게시글 조회 개수는 최대 50개까지 가능합니다."),
-    POST_REACTION_REQUIRED(HttpStatus.BAD_REQUEST, "POST_REACTION_REQUIRED", "좋아요 또는 싫어요를 선택해 주세요."),
-    COMMENT_SIZE_LIMIT_EXCEEDED(HttpStatus.BAD_REQUEST, "COMMENT_SIZE_LIMIT_EXCEEDED", "댓글 조회 개수는 최대 50개까지 가능합니다."),
-    COMMENT_RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS, "COMMENT_RATE_LIMITED", "댓글을 너무 빠르게 등록하고 있습니다. 잠시 후 다시 시도해 주세요."),
-    COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "COMMENT_NOT_FOUND", "댓글을 찾을 수 없습니다."),
-    COMMENT_CONTENT_REQUIRED(HttpStatus.BAD_REQUEST, "COMMENT_CONTENT_REQUIRED", "댓글 내용을 입력해 주세요."),
-    COMMENT_CONTENT_TOO_LONG(HttpStatus.BAD_REQUEST, "COMMENT_CONTENT_TOO_LONG", "댓글은 1000자까지 입력할 수 있습니다."),
-    COMMENT_PARENT_INVALID(HttpStatus.BAD_REQUEST, "COMMENT_PARENT_INVALID", "같은 게시글의 댓글에만 답글을 작성할 수 있습니다."),
-    COMMENT_REPLY_DEPTH_EXCEEDED(HttpStatus.BAD_REQUEST, "COMMENT_REPLY_DEPTH_EXCEEDED", "답글에는 다시 답글을 작성할 수 없습니다."),
-    COMMENT_DELETED(HttpStatus.CONFLICT, "COMMENT_DELETED", "삭제된 댓글에는 작업할 수 없습니다."),
-    COMMENT_CONTENT_PURGED(HttpStatus.CONFLICT, "COMMENT_CONTENT_PURGED", "보관 기간이 지나 원문을 파기한 댓글은 되살리거나 가릴 수 없습니다."),
-    COMMENT_REACTION_REQUIRED(HttpStatus.BAD_REQUEST, "COMMENT_REACTION_REQUIRED", "좋아요 또는 싫어요를 선택해 주세요."),
-    COMMENT_VISIBILITY_REQUIRED(HttpStatus.BAD_REQUEST, "COMMENT_VISIBILITY_REQUIRED", "댓글 공개 상태를 선택해 주세요."),
-    COMMENT_HIDDEN_BY_ADMIN(HttpStatus.CONFLICT, "COMMENT_HIDDEN_BY_ADMIN", "운영자가 가린 댓글은 고치거나 지울 수 없습니다."),
-    COMMENT_DELETED_BY_WRITER(HttpStatus.CONFLICT, "COMMENT_DELETED_BY_WRITER", "작성자가 지운 댓글은 되살릴 수 없습니다. 관리자가 가린 댓글만 되돌릴 수 있습니다."),
-    COMMENT_NOT_MINE(HttpStatus.FORBIDDEN, "COMMENT_NOT_MINE", "내가 쓴 댓글만 고치거나 지울 수 있습니다."),
-    COMMENT_REPORT_REASON_REQUIRED(HttpStatus.BAD_REQUEST, "COMMENT_REPORT_REASON_REQUIRED", "신고 사유를 선택해 주세요."),
-    COMMENT_REPORT_SELF(HttpStatus.BAD_REQUEST, "COMMENT_REPORT_SELF", "내가 쓴 댓글은 신고할 수 없습니다."),
-    COMMENT_REPORT_DUPLICATED(HttpStatus.CONFLICT, "COMMENT_REPORT_DUPLICATED", "이미 신고한 댓글입니다."),
-    GUESTBOOK_SIZE_LIMIT_EXCEEDED(HttpStatus.BAD_REQUEST, "GUESTBOOK_SIZE_LIMIT_EXCEEDED", "방명록 조회 개수는 최대 50개까지 가능합니다."),
-    GUESTBOOK_RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS, "GUESTBOOK_RATE_LIMITED", "방명록을 너무 빠르게 남기고 있습니다. 잠시 후 다시 시도해 주세요."),
-    GUESTBOOK_NOT_FOUND(HttpStatus.NOT_FOUND, "GUESTBOOK_NOT_FOUND", "방명록 글을 찾을 수 없습니다."),
-    GUESTBOOK_CONTENT_REQUIRED(HttpStatus.BAD_REQUEST, "GUESTBOOK_CONTENT_REQUIRED", "방명록 내용을 입력해 주세요."),
-    GUESTBOOK_CONTENT_TOO_LONG(HttpStatus.BAD_REQUEST, "GUESTBOOK_CONTENT_TOO_LONG", "방명록은 500자까지 입력할 수 있습니다."),
-    GUESTBOOK_DELETED(HttpStatus.CONFLICT, "GUESTBOOK_DELETED", "삭제된 방명록 글에는 작업할 수 없습니다."),
-    GUESTBOOK_HIDDEN_BY_ADMIN(HttpStatus.CONFLICT, "GUESTBOOK_HIDDEN_BY_ADMIN", "운영자가 가린 방명록 글은 고치거나 지울 수 없습니다."),
-    GUESTBOOK_NOT_MINE(HttpStatus.FORBIDDEN, "GUESTBOOK_NOT_MINE", "내가 쓴 방명록 글만 고치거나 지울 수 있습니다."),
-    GUESTBOOK_DELETED_BY_WRITER(HttpStatus.CONFLICT, "GUESTBOOK_DELETED_BY_WRITER", "작성자가 지운 방명록 글은 되살릴 수 없습니다. 관리자가 가린 글만 되돌릴 수 있습니다."),
-    GUESTBOOK_CONTENT_PURGED(HttpStatus.CONFLICT, "GUESTBOOK_CONTENT_PURGED", "보관 기간이 지나 원문을 파기한 방명록 글은 되살리거나 가릴 수 없습니다."),
-    GUESTBOOK_VISIBILITY_REQUIRED(HttpStatus.BAD_REQUEST, "GUESTBOOK_VISIBILITY_REQUIRED", "방명록 공개 상태를 선택해 주세요."),
-    GUESTBOOK_REPLY_REQUIRED(HttpStatus.BAD_REQUEST, "GUESTBOOK_REPLY_REQUIRED", "답글 내용을 입력해 주세요."),
-    GUESTBOOK_REPLY_TOO_LONG(HttpStatus.BAD_REQUEST, "GUESTBOOK_REPLY_TOO_LONG", "답글은 500자까지 입력할 수 있습니다."),
-    GUESTBOOK_REPORT_SELF(HttpStatus.BAD_REQUEST, "GUESTBOOK_REPORT_SELF", "내가 쓴 방명록 글은 신고할 수 없습니다."),
-    GUESTBOOK_REPORT_DUPLICATED(HttpStatus.CONFLICT, "GUESTBOOK_REPORT_DUPLICATED", "이미 신고한 방명록 글입니다."),
-    CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "CATEGORY_NOT_FOUND", "카테고리를 찾을 수 없습니다."),
-    CATEGORY_NAME_DUPLICATED(HttpStatus.CONFLICT, "CATEGORY_NAME_DUPLICATED", "이미 사용 중인 카테고리 이름입니다."),
-    CATEGORY_IN_USE(HttpStatus.CONFLICT, "CATEGORY_IN_USE", "글이 달린 카테고리는 삭제할 수 없습니다."),
-    COMMON_CODE_GROUP_NOT_FOUND(HttpStatus.NOT_FOUND, "COMMON_CODE_GROUP_NOT_FOUND", "공통 코드 그룹을 찾을 수 없습니다."),
-    COMMON_CODE_NOT_FOUND(HttpStatus.NOT_FOUND, "COMMON_CODE_NOT_FOUND", "공통 코드를 찾을 수 없습니다."),
-    COMMON_CODE_GROUP_DUPLICATED(HttpStatus.CONFLICT, "COMMON_CODE_GROUP_DUPLICATED", "이미 있는 그룹 코드입니다."),
-    COMMON_CODE_DUPLICATED(HttpStatus.CONFLICT, "COMMON_CODE_DUPLICATED", "이 그룹에 이미 있는 코드입니다."),
-    COMMON_CODE_KEY_INVALID(HttpStatus.BAD_REQUEST, "COMMON_CODE_KEY_INVALID", "코드 값은 영문 대문자·숫자·밑줄(_)로 50자까지 입력할 수 있습니다."),
-    // 서버 코드(enum)에 있는 그룹은 서버가 동작을 아는 코드만 가진다. 화면에서 코드를 더하면
-    // 다음 시작 때 enum 과 대조하다 서버가 뜨지 않고, 끄면 쓰고 있는 동작이 이름을 잃는다
-    COMMON_CODE_MANAGED_BY_SERVER(HttpStatus.CONFLICT, "COMMON_CODE_MANAGED_BY_SERVER", "서버 코드와 연결된 그룹이라 코드 추가와 사용 여부 변경은 개발로만 할 수 있습니다."),
-    COMMON_CODE_NAME_REQUIRED(HttpStatus.BAD_REQUEST, "COMMON_CODE_NAME_REQUIRED", "이름을 입력해 주세요."),
-    COMMON_CODE_VALUE_TOO_LONG(HttpStatus.BAD_REQUEST, "COMMON_CODE_VALUE_TOO_LONG", "이름은 100자, 설명은 500자까지 입력할 수 있습니다."),
-    COMMON_CODE_SORT_ORDER_INVALID(HttpStatus.BAD_REQUEST, "COMMON_CODE_SORT_ORDER_INVALID", "순서는 0부터 9999까지 입력할 수 있습니다."),
-    FILE_TOO_LARGE(HttpStatus.BAD_REQUEST, "FILE_TOO_LARGE", "파일 크기가 너무 큽니다."),
-    UNSUPPORTED_FILE_TYPE(HttpStatus.BAD_REQUEST, "UNSUPPORTED_FILE_TYPE", "지원하지 않는 파일 형식입니다."),
-    FILE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "FILE_UPLOAD_FAILED", "파일 업로드에 실패했습니다.");
+	PROFILE_NOT_FOUND(HttpStatus.NOT_FOUND, "PROFILE_NOT_FOUND", "프로필을 찾을 수 없습니다."),
+	PROFILE_REQUIRED_VALUE_MISSING(HttpStatus.BAD_REQUEST, "PROFILE_REQUIRED_VALUE_MISSING", "이름, 소개와 직업을 입력해 주세요."),
+	PROFILE_VALUE_TOO_LONG(HttpStatus.BAD_REQUEST, "PROFILE_VALUE_TOO_LONG", "프로필 입력값이 허용 길이를 초과했습니다."),
+	BLOG_STARTED_AT_FUTURE(HttpStatus.BAD_REQUEST, "BLOG_STARTED_AT_FUTURE", "블로그 시작일은 오늘 이후로 설정할 수 없습니다."),
+	MAIN_HERO_NOT_FOUND(HttpStatus.NOT_FOUND, "MAIN_HERO_NOT_FOUND", "메인 소개글을 찾을 수 없습니다."),
+	MAIN_HERO_REQUIRED_VALUE_MISSING(HttpStatus.BAD_REQUEST, "MAIN_HERO_REQUIRED_VALUE_MISSING", "대문 제목과 소개를 입력해 주세요."),
+	MAIN_HERO_VALUE_TOO_LONG(HttpStatus.BAD_REQUEST, "MAIN_HERO_VALUE_TOO_LONG", "대문 입력값이 허용 길이를 초과했습니다."),
+	HOME_TOPIC_SECTION_NOT_FOUND(HttpStatus.NOT_FOUND, "HOME_TOPIC_SECTION_NOT_FOUND", "대문 이야기 설정을 찾을 수 없습니다."),
+	HOME_TOPIC_NOT_FOUND(HttpStatus.NOT_FOUND, "HOME_TOPIC_NOT_FOUND", "대문 이야기 항목을 찾을 수 없습니다."),
+	HOME_TOPIC_REQUIRED_VALUE_MISSING(HttpStatus.BAD_REQUEST, "HOME_TOPIC_REQUIRED_VALUE_MISSING", "대문 이야기 내용을 모두 입력해 주세요."),
+	HOME_TOPIC_VALUE_TOO_LONG(HttpStatus.BAD_REQUEST, "HOME_TOPIC_VALUE_TOO_LONG", "대문 이야기 입력값이 허용 길이를 초과했습니다."),
+	HOME_TOPIC_SIZE_LIMIT_EXCEEDED(HttpStatus.BAD_REQUEST, "HOME_TOPIC_SIZE_LIMIT_EXCEEDED", "대문 이야기 항목은 최대 6개까지 등록할 수 있습니다."),
+	MENU_NOT_FOUND(HttpStatus.NOT_FOUND, "MENU_NOT_FOUND", "메뉴를 찾을 수 없습니다."),
+	MENU_HAS_ITEMS(HttpStatus.CONFLICT, "MENU_HAS_ITEMS", "속한 항목이 있는 그룹은 삭제할 수 없습니다."),
+	POST_NOT_FOUND(HttpStatus.NOT_FOUND, "POST_NOT_FOUND", "게시글을 찾을 수 없습니다."),
+	POST_NOT_DELETED(HttpStatus.CONFLICT, "POST_NOT_DELETED", "휴지통에 있는 글이 아닙니다."),
+	POST_RESTORE_EXPIRED(HttpStatus.CONFLICT, "POST_RESTORE_EXPIRED", "삭제 후 30일이 지나 복구할 수 없습니다."),
+	POST_CONTENT_PURGED(HttpStatus.CONFLICT, "POST_CONTENT_PURGED", "영구 삭제된 글입니다. 복구하거나 변경할 수 없습니다."),
+	POST_PURGE_TOO_EARLY(HttpStatus.CONFLICT, "POST_PURGE_TOO_EARLY", "삭제 후 30일이 지난 글만 영구 삭제할 수 있습니다."),
+	POST_PURGE_CONFIRMATION_MISMATCH(HttpStatus.CONFLICT, "POST_PURGE_CONFIRMATION_MISMATCH", "확인한 글 정보가 일치하지 않습니다. 목록을 새로 조회한 뒤 제목을 확인해 주세요."),
+	IMAGE_IN_USE(HttpStatus.CONFLICT, "IMAGE_IN_USE", "글 본문이나 대표 이미지(휴지통 글 포함), 대문, 프로필에서 쓰고 있는 이미지입니다."),
+	POST_SLUG_DUPLICATED(HttpStatus.CONFLICT, "POST_SLUG_DUPLICATED", "이미 사용 중인 게시글 주소입니다."),
+	POST_NOT_PUBLISHED(HttpStatus.NOT_FOUND, "POST_NOT_PUBLISHED", "공개된 게시글을 찾을 수 없습니다."),
+	POST_SORT_INVALID(HttpStatus.BAD_REQUEST, "POST_SORT_INVALID", "지원하지 않는 게시글 정렬 방식입니다."),
+	POST_TITLE_REQUIRED(HttpStatus.BAD_REQUEST, "POST_TITLE_REQUIRED", "제목을 입력해 주세요."),
+	POST_TITLE_TOO_LONG(HttpStatus.BAD_REQUEST, "POST_TITLE_TOO_LONG", "제목은 255자까지 입력할 수 있습니다."),
+	POST_EXCERPT_TOO_LONG(HttpStatus.BAD_REQUEST, "POST_EXCERPT_TOO_LONG", "요약은 500자까지 입력할 수 있습니다."),
+	POST_THUMBNAIL_TOO_LONG(HttpStatus.BAD_REQUEST, "POST_THUMBNAIL_TOO_LONG", "썸네일 주소는 500자까지 입력할 수 있습니다."),
+	POST_CONTENT_REQUIRED(HttpStatus.BAD_REQUEST, "POST_CONTENT_REQUIRED", "본문이 없어 발행할 수 없습니다."),
+	POST_EXCERPT_REQUIRED(HttpStatus.BAD_REQUEST, "POST_EXCERPT_REQUIRED", "요약이 없어 발행할 수 없습니다."),
+	POST_ALREADY_PUBLISHED(HttpStatus.CONFLICT, "POST_ALREADY_PUBLISHED", "이미 발행된 글입니다."),
+	POST_NOT_PUBLISHED_YET(HttpStatus.CONFLICT, "POST_NOT_PUBLISHED_YET", "발행된 글이 아닙니다."),
+	POST_SIZE_LIMIT_EXCEEDED(HttpStatus.BAD_REQUEST, "POST_SIZE_LIMIT_EXCEEDED", "게시글 조회 개수는 최대 50개까지 가능합니다."),
+	POST_REACTION_REQUIRED(HttpStatus.BAD_REQUEST, "POST_REACTION_REQUIRED", "좋아요 또는 싫어요를 선택해 주세요."),
+	COMMENT_SIZE_LIMIT_EXCEEDED(HttpStatus.BAD_REQUEST, "COMMENT_SIZE_LIMIT_EXCEEDED", "댓글 조회 개수는 최대 50개까지 가능합니다."),
+	COMMENT_RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS, "COMMENT_RATE_LIMITED", "댓글을 너무 빠르게 등록하고 있습니다. 잠시 후 다시 시도해 주세요."),
+	COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "COMMENT_NOT_FOUND", "댓글을 찾을 수 없습니다."),
+	COMMENT_CONTENT_REQUIRED(HttpStatus.BAD_REQUEST, "COMMENT_CONTENT_REQUIRED", "댓글 내용을 입력해 주세요."),
+	COMMENT_CONTENT_TOO_LONG(HttpStatus.BAD_REQUEST, "COMMENT_CONTENT_TOO_LONG", "댓글은 1000자까지 입력할 수 있습니다."),
+	COMMENT_PARENT_INVALID(HttpStatus.BAD_REQUEST, "COMMENT_PARENT_INVALID", "같은 게시글의 댓글에만 답글을 작성할 수 있습니다."),
+	COMMENT_REPLY_DEPTH_EXCEEDED(HttpStatus.BAD_REQUEST, "COMMENT_REPLY_DEPTH_EXCEEDED", "답글에는 다시 답글을 작성할 수 없습니다."),
+	COMMENT_DELETED(HttpStatus.CONFLICT, "COMMENT_DELETED", "삭제된 댓글에는 작업할 수 없습니다."),
+	COMMENT_CONTENT_PURGED(HttpStatus.CONFLICT, "COMMENT_CONTENT_PURGED", "보관 기간이 지나 원문을 파기한 댓글은 되살리거나 가릴 수 없습니다."),
+	COMMENT_REACTION_REQUIRED(HttpStatus.BAD_REQUEST, "COMMENT_REACTION_REQUIRED", "좋아요 또는 싫어요를 선택해 주세요."),
+	COMMENT_VISIBILITY_REQUIRED(HttpStatus.BAD_REQUEST, "COMMENT_VISIBILITY_REQUIRED", "댓글 공개 상태를 선택해 주세요."),
+	COMMENT_HIDDEN_BY_ADMIN(HttpStatus.CONFLICT, "COMMENT_HIDDEN_BY_ADMIN", "운영자가 가린 댓글은 고치거나 지울 수 없습니다."),
+	COMMENT_DELETED_BY_WRITER(HttpStatus.CONFLICT, "COMMENT_DELETED_BY_WRITER", "작성자가 지운 댓글은 되살릴 수 없습니다. 관리자가 가린 댓글만 되돌릴 수 있습니다."),
+	COMMENT_NOT_MINE(HttpStatus.FORBIDDEN, "COMMENT_NOT_MINE", "내가 쓴 댓글만 고치거나 지울 수 있습니다."),
+	COMMENT_REPORT_REASON_REQUIRED(HttpStatus.BAD_REQUEST, "COMMENT_REPORT_REASON_REQUIRED", "신고 사유를 선택해 주세요."),
+	COMMENT_REPORT_SELF(HttpStatus.BAD_REQUEST, "COMMENT_REPORT_SELF", "내가 쓴 댓글은 신고할 수 없습니다."),
+	COMMENT_REPORT_DUPLICATED(HttpStatus.CONFLICT, "COMMENT_REPORT_DUPLICATED", "이미 신고한 댓글입니다."),
+	GUESTBOOK_SIZE_LIMIT_EXCEEDED(HttpStatus.BAD_REQUEST, "GUESTBOOK_SIZE_LIMIT_EXCEEDED", "방명록 조회 개수는 최대 50개까지 가능합니다."),
+	GUESTBOOK_RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS, "GUESTBOOK_RATE_LIMITED", "방명록을 너무 빠르게 남기고 있습니다. 잠시 후 다시 시도해 주세요."),
+	GUESTBOOK_NOT_FOUND(HttpStatus.NOT_FOUND, "GUESTBOOK_NOT_FOUND", "방명록 글을 찾을 수 없습니다."),
+	GUESTBOOK_CONTENT_REQUIRED(HttpStatus.BAD_REQUEST, "GUESTBOOK_CONTENT_REQUIRED", "방명록 내용을 입력해 주세요."),
+	GUESTBOOK_CONTENT_TOO_LONG(HttpStatus.BAD_REQUEST, "GUESTBOOK_CONTENT_TOO_LONG", "방명록은 500자까지 입력할 수 있습니다."),
+	GUESTBOOK_DELETED(HttpStatus.CONFLICT, "GUESTBOOK_DELETED", "삭제된 방명록 글에는 작업할 수 없습니다."),
+	GUESTBOOK_HIDDEN_BY_ADMIN(HttpStatus.CONFLICT, "GUESTBOOK_HIDDEN_BY_ADMIN", "운영자가 가린 방명록 글은 고치거나 지울 수 없습니다."),
+	GUESTBOOK_NOT_MINE(HttpStatus.FORBIDDEN, "GUESTBOOK_NOT_MINE", "내가 쓴 방명록 글만 고치거나 지울 수 있습니다."),
+	GUESTBOOK_DELETED_BY_WRITER(HttpStatus.CONFLICT, "GUESTBOOK_DELETED_BY_WRITER", "작성자가 지운 방명록 글은 되살릴 수 없습니다. 관리자가 가린 글만 되돌릴 수 있습니다."),
+	GUESTBOOK_CONTENT_PURGED(HttpStatus.CONFLICT, "GUESTBOOK_CONTENT_PURGED", "보관 기간이 지나 원문을 파기한 방명록 글은 되살리거나 가릴 수 없습니다."),
+	GUESTBOOK_VISIBILITY_REQUIRED(HttpStatus.BAD_REQUEST, "GUESTBOOK_VISIBILITY_REQUIRED", "방명록 공개 상태를 선택해 주세요."),
+	GUESTBOOK_REPLY_REQUIRED(HttpStatus.BAD_REQUEST, "GUESTBOOK_REPLY_REQUIRED", "답글 내용을 입력해 주세요."),
+	GUESTBOOK_REPLY_TOO_LONG(HttpStatus.BAD_REQUEST, "GUESTBOOK_REPLY_TOO_LONG", "답글은 500자까지 입력할 수 있습니다."),
+	GUESTBOOK_REPORT_SELF(HttpStatus.BAD_REQUEST, "GUESTBOOK_REPORT_SELF", "내가 쓴 방명록 글은 신고할 수 없습니다."),
+	GUESTBOOK_REPORT_DUPLICATED(HttpStatus.CONFLICT, "GUESTBOOK_REPORT_DUPLICATED", "이미 신고한 방명록 글입니다."),
+	CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "CATEGORY_NOT_FOUND", "카테고리를 찾을 수 없습니다."),
+	CATEGORY_NAME_DUPLICATED(HttpStatus.CONFLICT, "CATEGORY_NAME_DUPLICATED", "이미 사용 중인 카테고리 이름입니다."),
+	CATEGORY_IN_USE(HttpStatus.CONFLICT, "CATEGORY_IN_USE", "글이 달린 카테고리는 삭제할 수 없습니다."),
+	COMMON_CODE_GROUP_NOT_FOUND(HttpStatus.NOT_FOUND, "COMMON_CODE_GROUP_NOT_FOUND", "공통 코드 그룹을 찾을 수 없습니다."),
+	COMMON_CODE_NOT_FOUND(HttpStatus.NOT_FOUND, "COMMON_CODE_NOT_FOUND", "공통 코드를 찾을 수 없습니다."),
+	COMMON_CODE_GROUP_DUPLICATED(HttpStatus.CONFLICT, "COMMON_CODE_GROUP_DUPLICATED", "이미 있는 그룹 코드입니다."),
+	COMMON_CODE_DUPLICATED(HttpStatus.CONFLICT, "COMMON_CODE_DUPLICATED", "이 그룹에 이미 있는 코드입니다."),
+	COMMON_CODE_KEY_INVALID(HttpStatus.BAD_REQUEST, "COMMON_CODE_KEY_INVALID", "코드 값은 영문 대문자·숫자·밑줄(_)로 50자까지 입력할 수 있습니다."),
+	// 서버 코드(enum)에 있는 그룹은 서버가 동작을 아는 코드만 가진다. 화면에서 코드를 더하면
+	// 다음 시작 때 enum 과 대조하다 서버가 뜨지 않고, 끄면 쓰고 있는 동작이 이름을 잃는다
+	COMMON_CODE_MANAGED_BY_SERVER(HttpStatus.CONFLICT, "COMMON_CODE_MANAGED_BY_SERVER", "서버 코드와 연결된 그룹이라 코드 추가와 사용 여부 변경은 개발로만 할 수 있습니다."),
+	COMMON_CODE_NAME_REQUIRED(HttpStatus.BAD_REQUEST, "COMMON_CODE_NAME_REQUIRED", "이름을 입력해 주세요."),
+	COMMON_CODE_VALUE_TOO_LONG(HttpStatus.BAD_REQUEST, "COMMON_CODE_VALUE_TOO_LONG", "이름은 100자, 설명은 500자까지 입력할 수 있습니다."),
+	COMMON_CODE_SORT_ORDER_INVALID(HttpStatus.BAD_REQUEST, "COMMON_CODE_SORT_ORDER_INVALID", "순서는 0부터 9999까지 입력할 수 있습니다."),
+	FILE_TOO_LARGE(HttpStatus.BAD_REQUEST, "FILE_TOO_LARGE", "파일 크기가 너무 큽니다."),
+	UNSUPPORTED_FILE_TYPE(HttpStatus.BAD_REQUEST, "UNSUPPORTED_FILE_TYPE", "지원하지 않는 파일 형식입니다."),
+	FILE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "FILE_UPLOAD_FAILED", "파일 업로드에 실패했습니다.");
 
-    private final HttpStatus httpStatus;
-    private final String code;
-    private final String message;
+	private final HttpStatus httpStatus;
+	private final String code;
+	private final String message;
 
-    /**
-     * @param httpStatus 클라이언트에 내려줄 HTTP 상태
-     * @param code 프론트엔드가 분기 처리할 안정적인 에러 코드 문자열
-     * @param message 기본 에러 메시지
-     */
-    ErrorCode(HttpStatus httpStatus, String code, String message) {
-        this.httpStatus = httpStatus;
-        this.code = code;
-        this.message = message;
-    }
+	/**
+	 * @param httpStatus 클라이언트에 내려줄 HTTP 상태
+	 * @param code 프론트엔드가 분기 처리할 안정적인 에러 코드 문자열
+	 * @param message 기본 에러 메시지
+	 */
+	ErrorCode(HttpStatus httpStatus, String code, String message) {
+		this.httpStatus = httpStatus;
+		this.code = code;
+		this.message = message;
+	}
 
-    public HttpStatus getHttpStatus() {
-        return httpStatus;
-    }
+	public HttpStatus getHttpStatus() {
+		return httpStatus;
+	}
 
-    public String getCode() {
-        return code;
-    }
+	public String getCode() {
+		return code;
+	}
 
-    public String getMessage() {
-        return message;
-    }
+	public String getMessage() {
+		return message;
+	}
 
 }

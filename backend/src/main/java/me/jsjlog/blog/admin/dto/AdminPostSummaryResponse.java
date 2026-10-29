@@ -16,28 +16,28 @@ import java.time.LocalDateTime;
  * 항상 0이거나 비어 있는 칸은 정보가 아니라 잡음이다.
  */
 public record AdminPostSummaryResponse(
-        Long id,
-        String title,
-        Long categoryId,
-        String categoryName,
-        PostStatus status,
-        LocalDateTime publishedAt,
-        LocalDateTime createdAt,
-        long views,
-        LocalDateTime deletedAt
+		Long id,
+		String title,
+		Long categoryId,
+		String categoryName,
+		PostStatus status,
+		LocalDateTime publishedAt,
+		LocalDateTime createdAt,
+		long views,
+		LocalDateTime deletedAt
 ) {
-    @JsonProperty
-    public LocalDateTime restoreUntil() {
-        return deletedAt == null ? null : deletedAt.plusDays(Post.RESTORE_DAYS);
-    }
+	@JsonProperty
+	public LocalDateTime restoreUntil() {
+		return deletedAt == null ? null : deletedAt.plusDays(Post.RESTORE_DAYS);
+	}
 
-    @JsonProperty
-    public boolean restorable() {
-        return deletedAt != null && LocalDateTime.now().isBefore(restoreUntil());
-    }
+	@JsonProperty
+	public boolean restorable() {
+		return deletedAt != null && LocalDateTime.now().isBefore(restoreUntil());
+	}
 
-    @JsonProperty
-    public boolean purgeable() {
-        return deletedAt != null && !LocalDateTime.now().isBefore(restoreUntil());
-    }
+	@JsonProperty
+	public boolean purgeable() {
+		return deletedAt != null && !LocalDateTime.now().isBefore(restoreUntil());
+	}
 }

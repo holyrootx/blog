@@ -21,33 +21,33 @@ import me.jsjlog.blog.common.domain.BaseEntity;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class CommonCodeGroup extends BaseEntity {
 
-    @Id
-    @Column(name = "group_code", length = 50)
-    private String groupCode;
+	@Id
+	@Column(name = "group_code", length = 50)
+	private String groupCode;
 
-    @Column(name = "group_name", nullable = false, length = 100)
-    private String groupName;
+	@Column(name = "group_name", nullable = false, length = 100)
+	private String groupName;
 
-    @Column(name = "description", length = 500)
-    private String description;
+	@Column(name = "description", length = 500)
+	private String description;
 
-    @Column(name = "is_enabled", nullable = false)
-    private boolean enabled;
+	@Column(name = "is_enabled", nullable = false)
+	private boolean enabled;
 
-    private CommonCodeGroup(String groupCode, String groupName, String description) {
-        this.groupCode = groupCode;
-        this.groupName = groupName;
-        this.description = description;
-        this.enabled = true;
-    }
+	private CommonCodeGroup(String groupCode, String groupName, String description) {
+		this.groupCode = groupCode;
+		this.groupName = groupName;
+		this.description = description;
+		this.enabled = true;
+	}
 
-    public static CommonCodeGroup create(String groupCode, String groupName, String description) {
-        return new CommonCodeGroup(groupCode, groupName, description);
-    }
+	public static CommonCodeGroup create(String groupCode, String groupName, String description) {
+		return new CommonCodeGroup(groupCode, groupName, description);
+	}
 
-    public void change(String groupName, String description, boolean enabled) {
-        this.groupName = groupName;
-        this.description = description;
-        this.enabled = enabled;
-    }
+	public void change(String groupName, String description, boolean enabled) {
+		this.groupName = groupName;
+		this.description = description;
+		this.enabled = enabled;
+	}
 }

@@ -9,14 +9,14 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface CommentReactionRepository extends JpaRepository<CommentReaction, Long> {
 
-    Optional<CommentReaction> findByCommentIdAndMemberIdAndType(
-            Long commentId,
-            Long memberId,
-            CommentReactionType type
-    );
+	Optional<CommentReaction> findByCommentIdAndMemberIdAndType(
+			Long commentId,
+			Long memberId,
+			CommentReactionType type
+	);
 
-    List<CommentReaction> findAllByCommentIdAndMemberId(Long commentId, Long memberId);
+	List<CommentReaction> findAllByCommentIdAndMemberId(Long commentId, Long memberId);
 
-    long countByCommentIdAndType(Long commentId, CommentReactionType type);
+	long countByCommentIdAndType(Long commentId, CommentReactionType type);
 
 }

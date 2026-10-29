@@ -33,137 +33,137 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 class CsrfProtectionTest {
 
-    private static final String USERNAME = "csrf-tester";
-    private static final String PASSWORD = "test-password";
+	private static final String USERNAME = "csrf-tester";
+	private static final String PASSWORD = "test-password";
 
-    private static final String CSRF = "/api/v1/auth/csrf";
-    private static final String LOGIN = "/api/v1/admin/auth/login";
-    private static final String CATEGORIES = "/api/v1/admin/blog/categories";
+	private static final String CSRF = "/api/v1/auth/csrf";
+	private static final String LOGIN = "/api/v1/admin/auth/login";
+	private static final String CATEGORIES = "/api/v1/admin/blog/categories";
 
-    @Autowired
-    private MockMvc mockMvc;
+	@Autowired
+	private MockMvc mockMvc;
 
-    @Autowired
-    private MemberRepository memberRepository;
+	@Autowired
+	private MemberRepository memberRepository;
 
 
-    @Autowired
+	@Autowired
 
-    private MemberStatusHistoryRepository memberStatusHistoryRepository;
+	private MemberStatusHistoryRepository memberStatusHistoryRepository;
 
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+	@Autowired
+	private PasswordEncoder passwordEncoder;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+	@Autowired
+	private ObjectMapper objectMapper;
 
-    @BeforeEach
-    void seedAdmin() {
-        memberStatusHistoryRepository.deleteAll();
-        memberRepository.deleteAll();
-        memberRepository.save(Member.ofLocalAdmin(USERNAME, passwordEncoder.encode(PASSWORD), "테스트 관리자"));
-    }
+	@BeforeEach
+	void seedAdmin() {
+		memberStatusHistoryRepository.deleteAll();
+		memberRepository.deleteAll();
+		memberRepository.save(Member.ofLocalAdmin(USERNAME, passwordEncoder.encode(PASSWORD), "테스트 관리자"));
+	}
 
-    private record Csrf(String headerName, String token) { }
+	private record Csrf(String headerName, String token) { }
 
-    private Csrf readCsrf(MockHttpSession session) throws Exception {
-        MvcResult result = mockMvc.perform(get(CSRF).session(session))
-                .andExpect(status().isOk())
-                .andReturn();
+	private Csrf readCsrf(MockHttpSession session) throws Exception {
+		MvcResult result = mockMvc.perform(get(CSRF).session(session))
+				.andExpect(status().isOk())
+				.andReturn();
 
-        JsonNode data = objectMapper.readTree(result.getResponse().getContentAsString()).get("data");
+		JsonNode data = objectMapper.readTree(result.getResponse().getContentAsString()).get("data");
 
-        return new Csrf(data.get("headerName").asString(), data.get("token").asString());
-    }
+		return new Csrf(data.get("headerName").asString(), data.get("token").asString());
+	}
 
-    @Test
-    @DisplayName("토큰 없이 보낸 로그인은 403 으로 막힌다")
-    void loginWithoutToken() throws Exception {
-        mockMvc.perform(post(LOGIN)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"username":"%s","password":"%s"}
-                                """.formatted(USERNAME, PASSWORD)))
-                .andExpect(status().isForbidden());
-    }
+	@Test
+	@DisplayName("토큰 없이 보낸 로그인은 403 으로 막힌다")
+	void loginWithoutToken() throws Exception {
+		mockMvc.perform(post(LOGIN)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{"username":"%s","password":"%s"}
+								""".formatted(USERNAME, PASSWORD)))
+				.andExpect(status().isForbidden());
+	}
 
-    @Test
-    @DisplayName("공개 블로그 GET 은 토큰 없이도 그대로 열려 있다")
-    void publicGetIsUnaffected() throws Exception {
-        // CSRF 는 상태를 바꾸는 요청에만 걸린다. 여기가 막히면 블로그가 통째로 멈춘다
-        mockMvc.perform(get("/api/v1/blog/categories"))
-                .andExpect(status().isOk());
-    }
+	@Test
+	@DisplayName("공개 블로그 GET 은 토큰 없이도 그대로 열려 있다")
+	void publicGetIsUnaffected() throws Exception {
+		// CSRF 는 상태를 바꾸는 요청에만 걸린다. 여기가 막히면 블로그가 통째로 멈춘다
+		mockMvc.perform(get("/api/v1/blog/categories"))
+				.andExpect(status().isOk());
+	}
 
-    @Test
-    @DisplayName("로그인하면 토큰이 새로 발급된다")
-    void rotatesTokenOnLogin() throws Exception {
-        MockHttpSession session = new MockHttpSession();
-        Csrf before = readCsrf(session);
+	@Test
+	@DisplayName("로그인하면 토큰이 새로 발급된다")
+	void rotatesTokenOnLogin() throws Exception {
+		MockHttpSession session = new MockHttpSession();
+		Csrf before = readCsrf(session);
 
-        mockMvc.perform(post(LOGIN)
-                        .session(session)
-                        .header(before.headerName(), before.token())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"username":"%s","password":"%s"}
-                                """.formatted(USERNAME, PASSWORD)))
-                .andExpect(status().isOk());
+		mockMvc.perform(post(LOGIN)
+						.session(session)
+						.header(before.headerName(), before.token())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{"username":"%s","password":"%s"}
+								""".formatted(USERNAME, PASSWORD)))
+				.andExpect(status().isOk());
 
-        Csrf after = readCsrf(session);
+		Csrf after = readCsrf(session);
 
-        assertThat(after.token()).isNotEqualTo(before.token());
-    }
+		assertThat(after.token()).isNotEqualTo(before.token());
+	}
 
-    @Test
-    @DisplayName("로그인 전 토큰으로는 관리자 요청을 보낼 수 없다")
-    void oldTokenIsRejectedAfterLogin() throws Exception {
-        MockHttpSession session = new MockHttpSession();
-        Csrf before = readCsrf(session);
+	@Test
+	@DisplayName("로그인 전 토큰으로는 관리자 요청을 보낼 수 없다")
+	void oldTokenIsRejectedAfterLogin() throws Exception {
+		MockHttpSession session = new MockHttpSession();
+		Csrf before = readCsrf(session);
 
-        mockMvc.perform(post(LOGIN)
-                        .session(session)
-                        .header(before.headerName(), before.token())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"username":"%s","password":"%s"}
-                                """.formatted(USERNAME, PASSWORD)))
-                .andExpect(status().isOk());
+		mockMvc.perform(post(LOGIN)
+						.session(session)
+						.header(before.headerName(), before.token())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{"username":"%s","password":"%s"}
+								""".formatted(USERNAME, PASSWORD)))
+				.andExpect(status().isOk());
 
-        mockMvc.perform(post(CATEGORIES)
-                        .session(session)
-                        .header(before.headerName(), before.token())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"updatedAt":null,"name":"옛토큰","sortOrder":9100}
-                                """))
-                .andExpect(status().isForbidden());
-    }
+		mockMvc.perform(post(CATEGORIES)
+						.session(session)
+						.header(before.headerName(), before.token())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{"updatedAt":null,"name":"옛토큰","sortOrder":9100}
+								"""))
+				.andExpect(status().isForbidden());
+	}
 
-    @Test
-    @DisplayName("로그인 뒤 새로 받은 토큰이면 관리자 요청이 통과한다")
-    void newTokenWorksAfterLogin() throws Exception {
-        MockHttpSession session = new MockHttpSession();
-        Csrf before = readCsrf(session);
+	@Test
+	@DisplayName("로그인 뒤 새로 받은 토큰이면 관리자 요청이 통과한다")
+	void newTokenWorksAfterLogin() throws Exception {
+		MockHttpSession session = new MockHttpSession();
+		Csrf before = readCsrf(session);
 
-        mockMvc.perform(post(LOGIN)
-                        .session(session)
-                        .header(before.headerName(), before.token())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"username":"%s","password":"%s"}
-                                """.formatted(USERNAME, PASSWORD)))
-                .andExpect(status().isOk());
+		mockMvc.perform(post(LOGIN)
+						.session(session)
+						.header(before.headerName(), before.token())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{"username":"%s","password":"%s"}
+								""".formatted(USERNAME, PASSWORD)))
+				.andExpect(status().isOk());
 
-        Csrf after = readCsrf(session);
+		Csrf after = readCsrf(session);
 
-        mockMvc.perform(post(CATEGORIES)
-                        .session(session)
-                        .header(after.headerName(), after.token())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"updatedAt":null,"name":"새토큰","sortOrder":9101}
-                                """))
-                .andExpect(status().isOk());
-    }
+		mockMvc.perform(post(CATEGORIES)
+						.session(session)
+						.header(after.headerName(), after.token())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{"updatedAt":null,"name":"새토큰","sortOrder":9101}
+								"""))
+				.andExpect(status().isOk());
+	}
 }

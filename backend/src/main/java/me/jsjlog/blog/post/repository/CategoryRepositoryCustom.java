@@ -11,7 +11,7 @@ import java.util.List;
  */
 public interface CategoryRepositoryCustom {
 
-    /** 카테고리 목록 + 카테고리별 글 수 */
-    List<AdminCategoryResponse> getCategoryListWithPostCount(AdminCategorySearchCondition condition);
+	/** 카테고리 목록 + 카테고리별 글 수 */
+	List<AdminCategoryResponse> getCategoryListWithPostCount(AdminCategorySearchCondition condition);
 
 }

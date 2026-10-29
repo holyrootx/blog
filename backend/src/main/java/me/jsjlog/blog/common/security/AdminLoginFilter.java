@@ -27,47 +27,47 @@ import tools.jackson.databind.ObjectMapper;
  */
 public class AdminLoginFilter extends AbstractAuthenticationProcessingFilter {
 
-    private final ObjectMapper objectMapper;
-    private final LoginAttemptGuard attemptGuard;
-    private final ClientIpResolver clientIpResolver;
+	private final ObjectMapper objectMapper;
+	private final LoginAttemptGuard attemptGuard;
+	private final ClientIpResolver clientIpResolver;
 
-    public AdminLoginFilter(
-            ObjectMapper objectMapper,
-            LoginAttemptGuard attemptGuard,
-            ClientIpResolver clientIpResolver
-    ) {
-        super(PathPatternRequestMatcher.pathPattern(HttpMethod.POST, ApiPaths.Auth.LOGIN));
-        this.objectMapper = objectMapper;
-        this.attemptGuard = attemptGuard;
-        this.clientIpResolver = clientIpResolver;
-    }
+	public AdminLoginFilter(
+			ObjectMapper objectMapper,
+			LoginAttemptGuard attemptGuard,
+			ClientIpResolver clientIpResolver
+	) {
+		super(PathPatternRequestMatcher.pathPattern(HttpMethod.POST, ApiPaths.Auth.LOGIN));
+		this.objectMapper = objectMapper;
+		this.attemptGuard = attemptGuard;
+		this.clientIpResolver = clientIpResolver;
+	}
 
-    @Override
-    public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) {
-        // 본문을 읽기도 전에 본다. 여기를 지나면 BCrypt 가 돌고, 그 한 번이 42ms 다 —
-        // 비밀번호를 못 맞히더라도 서버 CPU 는 그대로 나간다
-        if (attemptGuard.isBlocked(clientIpResolver.resolve(request))) {
-            throw new LockedException("로그인 시도가 너무 많습니다.");
-        }
+	@Override
+	public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) {
+		// 본문을 읽기도 전에 본다. 여기를 지나면 BCrypt 가 돌고, 그 한 번이 42ms 다 —
+		// 비밀번호를 못 맞히더라도 서버 CPU 는 그대로 나간다
+		if (attemptGuard.isBlocked(clientIpResolver.resolve(request))) {
+			throw new LockedException("로그인 시도가 너무 많습니다.");
+		}
 
-        AdminLoginRequest loginRequest = readBody(request);
+		AdminLoginRequest loginRequest = readBody(request);
 
-        if (!StringUtils.hasText(loginRequest.username()) || !StringUtils.hasText(loginRequest.password())) {
-            // 빈 값도 로그인 실패로 다룬다. 400 과 401 을 나눠 주면
-            // 어떤 요청이 "형식은 맞았다"는 정보가 된다
-            throw new BadCredentialsException("아이디와 비밀번호를 입력해 주세요.");
-        }
+		if (!StringUtils.hasText(loginRequest.username()) || !StringUtils.hasText(loginRequest.password())) {
+			// 빈 값도 로그인 실패로 다룬다. 400 과 401 을 나눠 주면
+			// 어떤 요청이 "형식은 맞았다"는 정보가 된다
+			throw new BadCredentialsException("아이디와 비밀번호를 입력해 주세요.");
+		}
 
-        return getAuthenticationManager().authenticate(
-                new UsernamePasswordAuthenticationToken(loginRequest.username(), loginRequest.password()));
-    }
+		return getAuthenticationManager().authenticate(
+				new UsernamePasswordAuthenticationToken(loginRequest.username(), loginRequest.password()));
+	}
 
-    private AdminLoginRequest readBody(HttpServletRequest request) {
-        try {
-            return objectMapper.readValue(request.getInputStream(), AdminLoginRequest.class);
-        } catch (Exception exception) {
-            // 본문이 JSON 이 아니어도 실패 응답은 같아야 한다
-            throw new BadCredentialsException("로그인 요청을 읽지 못했습니다.");
-        }
-    }
+	private AdminLoginRequest readBody(HttpServletRequest request) {
+		try {
+			return objectMapper.readValue(request.getInputStream(), AdminLoginRequest.class);
+		} catch (Exception exception) {
+			// 본문이 JSON 이 아니어도 실패 응답은 같아야 한다
+			throw new BadCredentialsException("로그인 요청을 읽지 못했습니다.");
+		}
+	}
 }

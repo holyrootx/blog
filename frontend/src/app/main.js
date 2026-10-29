@@ -10,5 +10,5 @@ import '../assets/scss/main.scss';
 ensureMemberSession();
 
 createApp(App)
-  .use(router)
-  .mount('#app');
+	.use(router)
+	.mount('#app');

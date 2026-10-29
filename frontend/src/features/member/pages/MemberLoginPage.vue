@@ -15,16 +15,16 @@ import SocialLoginButtons from '../components/SocialLoginButtons.vue';
 </script>
 
 <template>
-  <main class="public-shell__main member-auth">
-    <div class="member-auth__panel">
-      <h1 class="member-auth__title">로그인</h1>
-      <p class="member-auth__description">
-        댓글을 남기려면 로그인이 필요합니다. 따로 가입하지 않아도 됩니다.
-      </p>
+	<main class="public-shell__main member-auth">
+		<div class="member-auth__panel">
+			<h1 class="member-auth__title">로그인</h1>
+			<p class="member-auth__description">
+				댓글을 남기려면 로그인이 필요합니다. 따로 가입하지 않아도 됩니다.
+			</p>
 
-      <SocialLoginButtons />
+			<SocialLoginButtons />
 
-      <RouterLink class="member-auth__back" to="/">블로그로 돌아가기</RouterLink>
-    </div>
-  </main>
+			<RouterLink class="member-auth__back" to="/">블로그로 돌아가기</RouterLink>
+		</div>
+	</main>
 </template>

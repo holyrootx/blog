@@ -6,9 +6,9 @@ package me.jsjlog.blog.admin.dto;
  * @param sortOrder 비우면 그룹의 맨 뒤
  */
 public record AdminCommonCodeCreateRequest(
-        String code,
-        String codeName,
-        String description,
-        Integer sortOrder
+		String code,
+		String codeName,
+		String description,
+		Integer sortOrder
 ) {
 }

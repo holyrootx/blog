@@ -15,60 +15,60 @@ const DELIMITER_CELL = /^:?-+:?$/;
 
 /** 표 한 줄을 칸으로 나눈다. 앞뒤 | 는 있어도 없어도 된다 */
 export function splitTableRow(line) {
-  let text = line.trim();
+	let text = line.trim();
 
-  if (text.startsWith('|')) {
-    text = text.slice(1);
-  }
+	if (text.startsWith('|')) {
+		text = text.slice(1);
+	}
 
-  if (text.endsWith('|') && !text.endsWith('\\|')) {
-    text = text.slice(0, -1);
-  }
+	if (text.endsWith('|') && !text.endsWith('\\|')) {
+		text = text.slice(0, -1);
+	}
 
-  const cells = [];
-  let cell = '';
+	const cells = [];
+	let cell = '';
 
-  for (let index = 0; index < text.length; index += 1) {
-    if (text[index] === '\\' && text[index + 1] === '|') {
-      cell += '|';
-      index += 1;
-    } else if (text[index] === '|') {
-      cells.push(cell.trim());
-      cell = '';
-    } else {
-      cell += text[index];
-    }
-  }
+	for (let index = 0; index < text.length; index += 1) {
+		if (text[index] === '\\' && text[index + 1] === '|') {
+			cell += '|';
+			index += 1;
+		} else if (text[index] === '|') {
+			cells.push(cell.trim());
+			cell = '';
+		} else {
+			cell += text[index];
+		}
+	}
 
-  cells.push(cell.trim());
+	cells.push(cell.trim());
 
-  return cells;
+	return cells;
 }
 
 function readAlign(cell) {
-  if (cell.startsWith(':') && cell.endsWith(':')) {
-    return 'center';
-  }
+	if (cell.startsWith(':') && cell.endsWith(':')) {
+		return 'center';
+	}
 
-  if (cell.endsWith(':')) {
-    return 'right';
-  }
+	if (cell.endsWith(':')) {
+		return 'right';
+	}
 
-  return cell.startsWith(':') ? 'left' : '';
+	return cell.startsWith(':') ? 'left' : '';
 }
 
 /** lines[index] 에서 표가 시작하는지. 제목 줄 다음 줄이 같은 칸 수의 --- 줄이어야 한다 */
 export function isTableStart(lines, index) {
-  const head = lines[index] ?? '';
-  const delimiter = lines[index + 1] ?? '';
+	const head = lines[index] ?? '';
+	const delimiter = lines[index + 1] ?? '';
 
-  if (!head.includes('|') || !delimiter.includes('-')) {
-    return false;
-  }
+	if (!head.includes('|') || !delimiter.includes('-')) {
+		return false;
+	}
 
-  const marks = splitTableRow(delimiter);
+	const marks = splitTableRow(delimiter);
 
-  return marks.every((mark) => DELIMITER_CELL.test(mark)) && marks.length === splitTableRow(head).length;
+	return marks.every((mark) => DELIMITER_CELL.test(mark)) && marks.length === splitTableRow(head).length;
 }
 
 /**
@@ -78,37 +78,37 @@ export function isTableStart(lines, index) {
  *          rows 는 화면에 보이는 줄들이다(제목 행이 있으면 첫 줄이 제목 행). end 는 표의 마지막 줄 번호
  */
 export function readTable(lines, index) {
-  const head = splitTableRow(lines[index]);
-  const columns = head.length;
-  const align = splitTableRow(lines[index + 1]).map(readAlign);
-  const body = [];
-  let end = index + 1;
+	const head = splitTableRow(lines[index]);
+	const columns = head.length;
+	const align = splitTableRow(lines[index + 1]).map(readAlign);
+	const body = [];
+	let end = index + 1;
 
-  while (end + 1 < lines.length && lines[end + 1].trim() !== '' && lines[end + 1].includes('|')) {
-    end += 1;
-    // 칸 수는 제목 줄을 따른다. 모자라면 빈 칸을 채우고 넘치면 버린다 (GFM 과 같다)
-    const cells = splitTableRow(lines[end]).slice(0, columns);
-    body.push([...cells, ...Array(columns - cells.length).fill('')]);
-  }
+	while (end + 1 < lines.length && lines[end + 1].trim() !== '' && lines[end + 1].includes('|')) {
+		end += 1;
+		// 칸 수는 제목 줄을 따른다. 모자라면 빈 칸을 채우고 넘치면 버린다 (GFM 과 같다)
+		const cells = splitTableRow(lines[end]).slice(0, columns);
+		body.push([...cells, ...Array(columns - cells.length).fill('')]);
+	}
 
-  const header = head.some((cell) => cell !== '');
+	const header = head.some((cell) => cell !== '');
 
-  return { rows: header ? [head, ...body] : body, align, header, end };
+	return { rows: header ? [head, ...body] : body, align, header, end };
 }
 
 function writeCell(text) {
-  return String(text ?? '').replace(/\n+/g, ' ').replace(/\|/g, '\\|').trim();
+	return String(text ?? '').replace(/\n+/g, ' ').replace(/\|/g, '\\|').trim();
 }
 
 const ALIGN_MARKS = { left: ':---', center: ':---:', right: '---:' };
 
 /** 표 → GFM 표 문자열 */
 export function writeTable({ rows, align = [], header = true }) {
-  const columns = Math.max(1, ...rows.map((row) => row.length));
-  const line = (cells) => `| ${Array.from({ length: columns }, (_, column) => writeCell(cells[column])).join(' | ')} |`;
-  const head = header ? rows[0] ?? [] : [];
-  const body = header ? rows.slice(1) : rows;
-  const marks = Array.from({ length: columns }, (_, column) => ALIGN_MARKS[align[column]] ?? '---');
+	const columns = Math.max(1, ...rows.map((row) => row.length));
+	const line = (cells) => `| ${Array.from({ length: columns }, (_, column) => writeCell(cells[column])).join(' | ')} |`;
+	const head = header ? rows[0] ?? [] : [];
+	const body = header ? rows.slice(1) : rows;
+	const marks = Array.from({ length: columns }, (_, column) => ALIGN_MARKS[align[column]] ?? '---');
 
-  return [line(head), `| ${marks.join(' | ')} |`, ...body.map(line)].join('\n');
+	return [line(head), `| ${marks.join(' | ')} |`, ...body.map(line)].join('\n');
 }

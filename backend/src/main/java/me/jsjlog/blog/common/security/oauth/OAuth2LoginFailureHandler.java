@@ -18,37 +18,37 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class OAuth2LoginFailureHandler implements AuthenticationFailureHandler {
 
-    private static final String ACCOUNT_SUSPENDED = "account_suspended";
+	private static final String ACCOUNT_SUSPENDED = "account_suspended";
 
-    private final OAuth2FrontendRedirectUriFactory redirectUriFactory;
+	private final OAuth2FrontendRedirectUriFactory redirectUriFactory;
 
-    @Override
-    public void onAuthenticationFailure(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            AuthenticationException exception
-    ) throws IOException {
-        clearAuthenticationState(request);
-        response.sendRedirect(redirectUriFactory.create(resultOf(exception)));
-    }
+	@Override
+	public void onAuthenticationFailure(
+			HttpServletRequest request,
+			HttpServletResponse response,
+			AuthenticationException exception
+	) throws IOException {
+		clearAuthenticationState(request);
+		response.sendRedirect(redirectUriFactory.create(resultOf(exception)));
+	}
 
-    private void clearAuthenticationState(HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
+	private void clearAuthenticationState(HttpServletRequest request) {
+		HttpSession session = request.getSession(false);
 
-        if (session != null) {
-            session.removeAttribute(PendingOAuthSession.ATTRIBUTE_NAME);
-            session.removeAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY);
-        }
+		if (session != null) {
+			session.removeAttribute(PendingOAuthSession.ATTRIBUTE_NAME);
+			session.removeAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY);
+		}
 
-        SecurityContextHolder.clearContext();
-    }
+		SecurityContextHolder.clearContext();
+	}
 
-    private String resultOf(AuthenticationException exception) {
-        if (exception instanceof OAuth2AuthenticationException oauthException
-                && ACCOUNT_SUSPENDED.equals(oauthException.getError().getErrorCode())) {
-            return "account-suspended";
-        }
+	private String resultOf(AuthenticationException exception) {
+		if (exception instanceof OAuth2AuthenticationException oauthException
+				&& ACCOUNT_SUSPENDED.equals(oauthException.getError().getErrorCode())) {
+			return "account-suspended";
+		}
 
-        return "login-failed";
-    }
+		return "login-failed";
+	}
 }

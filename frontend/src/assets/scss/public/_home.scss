@@ -1,694 +1,694 @@
 @use '../base/breakpoints' as bp;
 
 .public-shell {
-  min-height: 100vh;
-  padding: 0 12px 24px;
-  background:
-    radial-gradient(circle at top left, color-mix(in srgb, var(--accent) 8%, transparent), transparent 30%),
-    var(--page-bg);
+	min-height: 100vh;
+	padding: 0 12px 24px;
+	background:
+		radial-gradient(circle at top left, color-mix(in srgb, var(--accent) 8%, transparent), transparent 30%),
+		var(--page-bg);
 }
 
 .public-shell__main,
 .blog-header {
-  width: min(1440px, 100%);
-  margin: 0 auto;
+	width: min(1440px, 100%);
+	margin: 0 auto;
 }
 
 .blog-header {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 72px;
-  padding: 0 32px;
-  border: 1px solid var(--line);
-  border-bottom: 0;
-  border-radius: var(--radius) var(--radius) 0 0;
-  background: color-mix(in srgb, var(--surface) 92%, transparent);
-  backdrop-filter: blur(14px);
+	position: sticky;
+	top: 0;
+	z-index: 10;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	min-height: 72px;
+	padding: 0 32px;
+	border: 1px solid var(--line);
+	border-bottom: 0;
+	border-radius: var(--radius) var(--radius) 0 0;
+	background: color-mix(in srgb, var(--surface) 92%, transparent);
+	backdrop-filter: blur(14px);
 }
 
 .blog-header__brand {
-  position: relative;
-  font-size: 20px;
-  font-weight: 700;
+	position: relative;
+	font-size: 20px;
+	font-weight: 700;
 }
 
 .blog-header__brand::after {
-  position: absolute;
-  right: -8px;
-  bottom: -7px;
-  left: 8px;
-  height: 3px;
-  background: var(--accent);
-  content: '';
-  transform: rotate(-4deg);
+	position: absolute;
+	right: -8px;
+	bottom: -7px;
+	left: 8px;
+	height: 3px;
+	background: var(--accent);
+	content: '';
+	transform: rotate(-4deg);
 }
 
 .blog-header__actions {
-  display: flex;
-  gap: 8px;
+	display: flex;
+	gap: 8px;
 }
 
 
 /* 가운데 정렬을 명시한다. 단추마다 display 가 다르면(하나는 inline-block, 하나는
-   inline-flex) 글자의 기준선이 달라져서 한 줄에 섰을 때 위아래로 어긋난다 */
+	 inline-flex) 글자의 기준선이 달라져서 한 줄에 섰을 때 위아래로 어긋난다 */
 .blog-header__button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 56px;
-  min-height: 36px;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  background: transparent;
-  cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 56px;
+	min-height: 36px;
+	border: 1px solid transparent;
+	border-radius: 999px;
+	background: transparent;
+	cursor: pointer;
 }
 
 /* 그림만 든 단추. 글자 단추의 min-width(56px) 를 그대로 두면 돋보기 하나가
-   글자 두 자와 같은 폭을 차지해 허전해 보인다 */
+	 글자 두 자와 같은 폭을 차지해 허전해 보인다 */
 .blog-header__button--icon {
-  min-width: 40px;
+	min-width: 40px;
 }
 
 .blog-header__button:hover,
 .blog-header__button:focus-visible {
-  border-color: var(--line);
-  outline: none;
+	border-color: var(--line);
+	outline: none;
 }
 
 /* clip 이지 hidden 이 아니다. 둘 다 삐져나온 것을 자르지만 hidden 은 이 요소를
-   "스크롤 컨테이너" 로 만든다. 그러면 안에 있는 position: sticky 가 이 요소를
-   기준으로 삼는데, 정작 이 요소는 스크롤되지 않아서 아무 데도 안 붙는다.
-   글보기의 목차(.post-aside__sticky)가 그래서 따라오지 않았다 */
+	 "스크롤 컨테이너" 로 만든다. 그러면 안에 있는 position: sticky 가 이 요소를
+	 기준으로 삼는데, 정작 이 요소는 스크롤되지 않아서 아무 데도 안 붙는다.
+	 글보기의 목차(.post-aside__sticky)가 그래서 따라오지 않았다 */
 .public-shell__main {
-  overflow: clip;
-  border: 1px solid var(--line);
-  border-radius: 0 0 var(--radius) var(--radius);
-  background: color-mix(in srgb, var(--surface) 94%, transparent);
-  box-shadow: var(--shadow);
+	overflow: clip;
+	border: 1px solid var(--line);
+	border-radius: 0 0 var(--radius) var(--radius);
+	background: color-mix(in srgb, var(--surface) 94%, transparent);
+	box-shadow: var(--shadow);
 }
 
 .home-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(420px, 0.92fr);
-  gap: 48px;
-  padding: 64px 48px 44px;
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(420px, 0.92fr);
+	gap: 48px;
+	padding: 64px 48px 44px;
 }
 
 .home-hero__copy {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
 }
 
 .home-hero__copy-skeleton,
 .home-skeleton-stack {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
 }
 
 .home-hero__copy-skeleton {
-  gap: 16px;
+	gap: 16px;
 }
 
 .home-skeleton-stack {
-  width: 100%;
-  gap: 10px;
+	width: 100%;
+	gap: 10px;
 }
 
 .home-skeleton--eyebrow {
-  width: 132px;
-  height: 20px;
+	width: 132px;
+	height: 20px;
 }
 
 .home-skeleton--headline {
-  width: min(480px, 82%);
-  height: 54px;
+	width: min(480px, 82%);
+	height: 54px;
 }
 
 .home-skeleton--description {
-  width: min(420px, 72%);
-  height: 30px;
+	width: min(420px, 72%);
+	height: 30px;
 }
 
 .home-hero__eyebrow {
-  margin: 0 0 16px;
-  color: var(--text-muted);
-  font-size: 15px;
-  font-weight: 700;
+	margin: 0 0 16px;
+	color: var(--text-muted);
+	font-size: 15px;
+	font-weight: 700;
 }
 
 .home-hero__headline {
-  position: relative;
-  width: fit-content;
-  max-width: 650px;
-  margin: 0 0 28px;
-  font-size: 42px;
-  line-height: 1.28;
-  letter-spacing: 0;
+	position: relative;
+	width: fit-content;
+	max-width: 650px;
+	margin: 0 0 28px;
+	font-size: 42px;
+	line-height: 1.28;
+	letter-spacing: 0;
 }
 
 .home-hero__headline::after {
-  position: absolute;
-  right: 2%;
-  bottom: -8px;
-  left: 0;
-  height: 4px;
-  background: var(--accent);
-  content: '';
-  transform: rotate(-3deg);
+	position: absolute;
+	right: 2%;
+	bottom: -8px;
+	left: 0;
+	height: 4px;
+	background: var(--accent);
+	content: '';
+	transform: rotate(-3deg);
 }
 
 .home-hero__description {
-  max-width: 560px;
-  margin: 0;
-  color: var(--text-muted);
-  font-size: 16px;
-  line-height: 1.9;
+	max-width: 560px;
+	margin: 0;
+	color: var(--text-muted);
+	font-size: 16px;
+	line-height: 1.9;
 }
 
 .home-hero__profile {
-  display: grid;
-  grid-template-columns: 96px minmax(0, 1fr);
-  gap: 20px;
-  align-items: center;
-  max-width: 520px;
-  margin-top: 46px;
+	display: grid;
+	grid-template-columns: 96px minmax(0, 1fr);
+	gap: 20px;
+	align-items: center;
+	max-width: 520px;
+	margin-top: 46px;
 }
 
 .home-skeleton--avatar {
-  width: 96px;
-  height: 96px;
-  border-radius: 50%;
+	width: 96px;
+	height: 96px;
+	border-radius: 50%;
 }
 
 .home-skeleton--profile-name {
-  width: 150px;
-  height: 22px;
+	width: 150px;
+	height: 22px;
 }
 
 .home-skeleton--profile-bio {
-  width: min(330px, 92%);
-  height: 18px;
+	width: min(330px, 92%);
+	height: 18px;
 }
 
 .home-skeleton--profile-bio-short {
-  width: min(230px, 66%);
-  height: 18px;
+	width: min(230px, 66%);
+	height: 18px;
 }
 
 .home-hero__avatar {
-  width: 96px;
-  height: 96px;
-  border-radius: 50%;
-  object-fit: cover;
+	width: 96px;
+	height: 96px;
+	border-radius: 50%;
+	object-fit: cover;
 }
 
 .home-hero__profile-name {
-  display: inline-block;
-  margin-right: 10px;
-  font-size: 17px;
+	display: inline-block;
+	margin-right: 10px;
+	font-size: 17px;
 }
 
 .home-hero__profile-label {
-  color: var(--text-muted);
-  font-size: 13px;
+	color: var(--text-muted);
+	font-size: 13px;
 }
 
 .home-hero__profile-bio {
-  margin: 8px 0 0;
-  color: var(--text-muted);
-  font-size: 15px;
-  line-height: 1.7;
+	margin: 8px 0 0;
+	color: var(--text-muted);
+	font-size: 15px;
+	line-height: 1.7;
 }
 
 .home-hero__media {
-  min-width: 0;
-  min-height: 460px;
-  overflow: hidden;
-  border-radius: var(--radius);
-  background: var(--surface-muted);
+	min-width: 0;
+	min-height: 460px;
+	overflow: hidden;
+	border-radius: var(--radius);
+	background: var(--surface-muted);
 }
 
 .home-hero__media.is-loading {
-  animation: ui-skeleton-pulse 1.2s ease-in-out infinite alternate;
+	animation: ui-skeleton-pulse 1.2s ease-in-out infinite alternate;
 }
 
 .home-hero__image {
-  width: 100%;
-  height: 100%;
-  min-height: inherit;
-  object-fit: cover;
+	width: 100%;
+	height: 100%;
+	min-height: inherit;
+	object-fit: cover;
 }
 
 .home-section {
-  padding: 24px 48px 40px;
-  border-top: 1px solid var(--line);
+	padding: 24px 48px 40px;
+	border-top: 1px solid var(--line);
 }
 
 .home-section__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
 }
 
 .home-section__title {
-  margin: 0 0 18px;
-  font-size: 18px;
+	margin: 0 0 18px;
+	font-size: 18px;
 }
 
 .home-section__more {
-  color: var(--text-muted);
-  font-size: 14px;
+	color: var(--text-muted);
+	font-size: 14px;
 }
 
 .home-topics__header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 10px;
-  margin-bottom: 18px;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 10px;
+	margin-bottom: 18px;
 }
 
 .home-topics__header .home-section__title {
-  margin: 0;
+	margin: 0;
 }
 
 .home-skeleton--section-title {
-  width: 180px;
-  height: 24px;
+	width: 180px;
+	height: 24px;
 }
 
 .home-skeleton--section-intro {
-  width: 260px;
-  height: 18px;
+	width: 260px;
+	height: 18px;
 }
 
 .home-topics__intro {
-  margin: 0;
-  color: var(--text-subtle);
-  font-size: 14px;
+	margin: 0;
+	color: var(--text-subtle);
+	font-size: 14px;
 }
 
 .home-topic-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 20px;
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 20px;
 }
 
 .home-topic-card {
-  min-width: 0;
-  min-height: 198px;
-  padding: 22px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--surface);
+	min-width: 0;
+	min-height: 198px;
+	padding: 22px;
+	border: 1px solid var(--line);
+	border-radius: var(--radius);
+	background: var(--surface);
 }
 
 .home-topic-card--skeleton {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
 }
 
 .home-skeleton--topic-label {
-  width: 70px;
-  height: 18px;
+	width: 70px;
+	height: 18px;
 }
 
 .home-skeleton--topic-title {
-  width: 72%;
-  height: 28px;
+	width: 72%;
+	height: 28px;
 }
 
 .home-skeleton--topic-description {
-  width: 94%;
-  height: 48px;
+	width: 94%;
+	height: 48px;
 }
 
 .home-skeleton--topic-keywords {
-  width: 150px;
-  height: 28px;
-  margin-top: auto;
-  border-radius: 999px;
+	width: 150px;
+	height: 28px;
+	margin-top: auto;
+	border-radius: 999px;
 }
 
 .home-topic-card__label {
-  display: block;
-  margin-bottom: 8px;
-  color: var(--accent-dark);
-  font-size: 13px;
-  font-weight: 700;
+	display: block;
+	margin-bottom: 8px;
+	color: var(--accent-dark);
+	font-size: 13px;
+	font-weight: 700;
 }
 
 .home-topic-card__title {
-  margin: 0;
-  font-size: 19px;
-  line-height: 1.45;
+	margin: 0;
+	font-size: 19px;
+	line-height: 1.45;
 }
 
 .home-topic-card__description {
-  margin: 14px 0 0;
-  color: var(--text-muted);
-  font-size: 15px;
-  line-height: 1.8;
+	margin: 14px 0 0;
+	color: var(--text-muted);
+	font-size: 15px;
+	line-height: 1.8;
 }
 
 .home-topic-card__keywords {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 18px;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-top: 18px;
 }
 
 .home-topic-card__keyword,
 .home-topics__badge {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 0 12px;
-  border-radius: 999px;
-  background: var(--surface-muted);
-  color: var(--text-muted);
-  font-size: 13px;
-  line-height: 1;
+	display: inline-flex;
+	align-items: center;
+	min-height: 28px;
+	padding: 0 12px;
+	border-radius: 999px;
+	background: var(--surface-muted);
+	color: var(--text-muted);
+	font-size: 13px;
+	line-height: 1;
 }
 
 .home-topics__note {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 18px;
-  padding: 16px 22px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: color-mix(in srgb, var(--surface) 72%, transparent);
-  color: var(--text-muted);
-  font-size: 15px;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin-top: 18px;
+	padding: 16px 22px;
+	border: 1px solid var(--line);
+	border-radius: var(--radius);
+	background: color-mix(in srgb, var(--surface) 72%, transparent);
+	color: var(--text-muted);
+	font-size: 15px;
 }
 
 .home-topics__badge {
-  flex: 0 0 auto;
-  background: var(--accent-soft);
-  color: var(--accent-dark);
-  font-weight: 700;
+	flex: 0 0 auto;
+	background: var(--accent-soft);
+	color: var(--accent-dark);
+	font-weight: 700;
 }
 
 .home-skeleton--note-badge {
-  width: 72px;
-  height: 28px;
-  flex: 0 0 auto;
-  border-radius: 999px;
+	width: 72px;
+	height: 28px;
+	flex: 0 0 auto;
+	border-radius: 999px;
 }
 
 .home-skeleton--note {
-  width: min(420px, 70%);
-  height: 20px;
+	width: min(420px, 70%);
+	height: 20px;
 }
 
 .post-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 28px;
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	gap: 28px;
 }
 
 .post-card {
-  position: relative;
-  display: block;
-  min-width: 0;
-  color: inherit;
+	position: relative;
+	display: block;
+	min-width: 0;
+	color: inherit;
 }
 
 /* 회원이 연 적 있는 글. 이미지 위에 겹쳐서 표시가 와도 글줄이 밀리지 않는다.
-   바탕과 글자를 본문 색의 반대로 둬서 밝은 사진과 어두운 사진 어느 쪽에서도 읽힌다 */
+	 바탕과 글자를 본문 색의 반대로 둬서 밝은 사진과 어두운 사진 어느 쪽에서도 읽힌다 */
 .post-card__viewed {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  padding: 3px 9px;
-  border-radius: 999px;
-  background: var(--text);
-  color: var(--surface);
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1.5;
-  pointer-events: none;
+	position: absolute;
+	top: 10px;
+	left: 10px;
+	padding: 3px 9px;
+	border-radius: 999px;
+	background: var(--text);
+	color: var(--surface);
+	font-size: 12px;
+	font-weight: 700;
+	line-height: 1.5;
+	pointer-events: none;
 }
 
 .post-card:hover .post-card__title,
 .post-card:focus-visible .post-card__title {
-  color: var(--accent-dark);
+	color: var(--accent-dark);
 }
 
 .post-card__image {
-  width: 100%;
-  aspect-ratio: 16 / 7;
-  border-radius: var(--radius);
-  object-fit: cover;
+	width: 100%;
+	aspect-ratio: 16 / 7;
+	border-radius: var(--radius);
+	object-fit: cover;
 }
 
 .post-card__body {
-  padding-top: 12px;
+	padding-top: 12px;
 }
 
 .post-card__category {
-  color: var(--accent-dark);
-  font-size: 13px;
-  font-weight: 700;
+	color: var(--accent-dark);
+	font-size: 13px;
+	font-weight: 700;
 }
 
 .post-card__title {
-  min-height: 56px;
-  margin: 6px 0 8px;
-  font-size: 17px;
-  line-height: 1.45;
+	min-height: 56px;
+	margin: 6px 0 8px;
+	font-size: 17px;
+	line-height: 1.45;
 }
 
 .post-card__meta {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 8px;
-  color: var(--text-muted);
-  font-size: 13px;
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	gap: 8px;
+	color: var(--text-muted);
+	font-size: 13px;
 }
 
 .post-card--skeleton .post-card__image {
-  border-radius: var(--radius);
+	border-radius: var(--radius);
 }
 
 .post-card--skeleton .post-card__body {
-  min-height: 124px;
+	min-height: 124px;
 }
 
 .home-skeleton--post-category {
-  width: 64px;
-  height: 18px;
+	width: 64px;
+	height: 18px;
 }
 
 .home-skeleton--post-title {
-  width: 88%;
-  height: 48px;
+	width: 88%;
+	height: 48px;
 }
 
 .home-skeleton--post-meta {
-  width: 72%;
-  height: 18px;
+	width: 72%;
+	height: 18px;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .home-hero__media.is-loading {
-    animation: none;
-  }
+	.home-hero__media.is-loading {
+		animation: none;
+	}
 }
 
 @include bp.upto(lg) {
-  .public-shell {
-    padding: 0 10px 18px;
-  }
+	.public-shell {
+		padding: 0 10px 18px;
+	}
 
-  .blog-header {
-    min-height: 60px;
-    padding: 0 20px;
-  }
+	.blog-header {
+		min-height: 60px;
+		padding: 0 20px;
+	}
 
-  .home-hero {
-    grid-template-columns: 1fr;
-    gap: 28px;
-    padding: 32px 20px;
-  }
+	.home-hero {
+		grid-template-columns: 1fr;
+		gap: 28px;
+		padding: 32px 20px;
+	}
 
-  .home-hero__copy {
-    min-height: 290px;
-  }
+	.home-hero__copy {
+		min-height: 290px;
+	}
 
-  .home-hero__headline {
-    font-size: 30px;
-  }
+	.home-hero__headline {
+		font-size: 30px;
+	}
 
-  .home-hero__media {
-    min-height: auto;
-    aspect-ratio: 16 / 9;
-  }
+	.home-hero__media {
+		min-height: auto;
+		aspect-ratio: 16 / 9;
+	}
 
-  .home-hero__image {
-    min-height: 0;
-  }
+	.home-hero__image {
+		min-height: 0;
+	}
 
-  .home-section {
-    padding: 22px 20px 30px;
-  }
+	.home-section {
+		padding: 22px 20px 30px;
+	}
 
-  .home-topic-grid,
-  .post-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-  }
+	.home-topic-grid,
+	.post-grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 12px;
+	}
 
-  .home-topic-card {
-    min-height: 0;
-    padding: 18px;
-  }
+	.home-topic-card {
+		min-height: 0;
+		padding: 18px;
+	}
 }
 
 @include bp.upto(sm) {
-  .public-shell {
-    padding: 0;
-  }
+	.public-shell {
+		padding: 0;
+	}
 
-  .blog-header,
-  .public-shell__main {
-    border-right: 0;
-    border-left: 0;
-    border-radius: 0;
-  }
+	.blog-header,
+	.public-shell__main {
+		border-right: 0;
+		border-left: 0;
+		border-radius: 0;
+	}
 
-  .blog-header__brand {
-    font-size: 18px;
-  }
+	.blog-header__brand {
+		font-size: 18px;
+	}
 
-  .blog-header__button {
-    min-width: 44px;
-    font-size: 13px;
-  }
+	.blog-header__button {
+		min-width: 44px;
+		font-size: 13px;
+	}
 
-  .home-hero__headline {
-    font-size: 26px;
-  }
+	.home-hero__headline {
+		font-size: 26px;
+	}
 
-  .home-hero__copy {
-    min-height: 324px;
-  }
+	.home-hero__copy {
+		min-height: 324px;
+	}
 
-  .home-hero__description {
-    font-size: 14px;
-  }
+	.home-hero__description {
+		font-size: 14px;
+	}
 
-  .home-hero__profile {
-    grid-template-columns: 72px minmax(0, 1fr);
-    gap: 14px;
-    margin-top: 28px;
-  }
+	.home-hero__profile {
+		grid-template-columns: 72px minmax(0, 1fr);
+		gap: 14px;
+		margin-top: 28px;
+	}
 
-  .home-hero__avatar {
-    width: 72px;
-    height: 72px;
-  }
+	.home-hero__avatar {
+		width: 72px;
+		height: 72px;
+	}
 
-  .home-skeleton--avatar {
-    width: 72px;
-    height: 72px;
-  }
+	.home-skeleton--avatar {
+		width: 72px;
+		height: 72px;
+	}
 
-  .home-skeleton--headline {
-    height: 40px;
-  }
+	.home-skeleton--headline {
+		height: 40px;
+	}
 
-  .home-skeleton--description {
-    height: 42px;
-  }
+	.home-skeleton--description {
+		height: 42px;
+	}
 
-  .home-topic-grid {
-    grid-template-columns: 1fr;
-  }
+	.home-topic-grid {
+		grid-template-columns: 1fr;
+	}
 
-  .home-topic-card--skeleton {
-    gap: 10px;
-  }
+	.home-topic-card--skeleton {
+		gap: 10px;
+	}
 
-  .home-topics__header {
-    display: block;
-  }
+	.home-topics__header {
+		display: block;
+	}
 
-  .home-topics__intro {
-    margin-top: 8px;
-  }
+	.home-topics__intro {
+		margin-top: 8px;
+	}
 
-  .home-skeleton--section-intro {
-    width: 80%;
-    margin-top: 8px;
-  }
+	.home-skeleton--section-intro {
+		width: 80%;
+		margin-top: 8px;
+	}
 
-  .home-topics__note {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 10px;
-    padding: 14px 16px;
-  }
+	.home-topics__note {
+		align-items: flex-start;
+		flex-direction: column;
+		gap: 10px;
+		padding: 14px 16px;
+	}
 
-  .home-skeleton--note {
-    width: 92%;
-  }
+	.home-skeleton--note {
+		width: 92%;
+	}
 
-  .post-grid {
-    grid-template-columns: 1fr;
-  }
+	.post-grid {
+		grid-template-columns: 1fr;
+	}
 
-  .post-card {
-    display: grid;
-    grid-template-columns: 108px minmax(0, 1fr);
-    gap: 12px;
-  }
+	.post-card {
+		display: grid;
+		grid-template-columns: 108px minmax(0, 1fr);
+		gap: 12px;
+	}
 
-  .post-card__image {
-    aspect-ratio: 1 / 0.8;
-  }
+	.post-card__image {
+		aspect-ratio: 1 / 0.8;
+	}
 
-  .post-card__body {
-    padding-top: 0;
-  }
+	.post-card__body {
+		padding-top: 0;
+	}
 
-  .post-card--skeleton .post-card__body {
-    min-height: 100px;
-  }
+	.post-card--skeleton .post-card__body {
+		min-height: 100px;
+	}
 
-  .post-card__title {
-    min-height: 0;
-    font-size: 15px;
-  }
+	.post-card__title {
+		min-height: 0;
+		font-size: 15px;
+	}
 }
 
 /* 작은 폰(320~360). 헤더에 단추가 다섯 개까지 서면(검색·밝기·메뉴·알림·회원) 이름이 두 줄로
-   꺾이고 로그인 단추가 세로로 접힌다. 여백과 단추 폭을 조금씩 덜어 한 줄에 세운다 */
+	 꺾이고 로그인 단추가 세로로 접힌다. 여백과 단추 폭을 조금씩 덜어 한 줄에 세운다 */
 @include bp.upto(xs) {
-  .blog-header {
-    padding: 0 12px;
-  }
+	.blog-header {
+		padding: 0 12px;
+	}
 
-  .blog-header__actions {
-    gap: 4px;
-  }
+	.blog-header__actions {
+		gap: 4px;
+	}
 
-  .blog-header__button {
-    min-width: 40px;
-  }
+	.blog-header__button {
+		min-width: 40px;
+	}
 
-  .blog-header__button--icon {
-    min-width: 34px;
-  }
+	.blog-header__button--icon {
+		min-width: 34px;
+	}
 }
