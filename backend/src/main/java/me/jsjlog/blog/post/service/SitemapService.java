@@ -16,44 +16,44 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class SitemapService {
 
-    private static final String SITEMAP_NAMESPACE = "http://www.sitemaps.org/schemas/sitemap/0.9";
-    private static final String SITE_URL = "https://jsjlog.me";
+	private static final String SITEMAP_NAMESPACE = "http://www.sitemaps.org/schemas/sitemap/0.9";
+	private static final String SITE_URL = "https://jsjlog.me";
 
-    private final PostRepository postRepository;
+	private final PostRepository postRepository;
 
-    @Transactional(readOnly = true)
-    public String publicSitemapXml() {
-        var postIds = postRepository.findPublicPostIdsForSitemap(PostStatus.PUBLISHED, LocalDateTime.now());
-        var output = new StringWriter();
+	@Transactional(readOnly = true)
+	public String publicSitemapXml() {
+		var postIds = postRepository.findPublicPostIdsForSitemap(PostStatus.PUBLISHED, LocalDateTime.now());
+		var output = new StringWriter();
 
-        try {
-            XMLStreamWriter xml = XMLOutputFactory.newFactory().createXMLStreamWriter(output);
-            xml.writeStartDocument("UTF-8", "1.0");
-            xml.writeStartElement("urlset");
-            xml.writeDefaultNamespace(SITEMAP_NAMESPACE);
+		try {
+			XMLStreamWriter xml = XMLOutputFactory.newFactory().createXMLStreamWriter(output);
+			xml.writeStartDocument("UTF-8", "1.0");
+			xml.writeStartElement("urlset");
+			xml.writeDefaultNamespace(SITEMAP_NAMESPACE);
 
-            writeUrl(xml, SITE_URL + "/");
-            writeUrl(xml, SITE_URL + "/posts");
+			writeUrl(xml, SITE_URL + "/");
+			writeUrl(xml, SITE_URL + "/posts");
 
-            for (Long postId : postIds) {
-                writeUrl(xml, SITE_URL + "/posts/" + postId);
-            }
+			for (Long postId : postIds) {
+				writeUrl(xml, SITE_URL + "/posts/" + postId);
+			}
 
-            xml.writeEndElement();
-            xml.writeEndDocument();
-            xml.close();
-        } catch (XMLStreamException exception) {
-            throw new IllegalStateException("Failed to generate post sitemap", exception);
-        }
+			xml.writeEndElement();
+			xml.writeEndDocument();
+			xml.close();
+		} catch (XMLStreamException exception) {
+			throw new IllegalStateException("Failed to generate post sitemap", exception);
+		}
 
-        return output.toString();
-    }
+		return output.toString();
+	}
 
-    private void writeUrl(XMLStreamWriter xml, String url) throws XMLStreamException {
-        xml.writeStartElement("url");
-        xml.writeStartElement("loc");
-        xml.writeCharacters(url);
-        xml.writeEndElement();
-        xml.writeEndElement();
-    }
+	private void writeUrl(XMLStreamWriter xml, String url) throws XMLStreamException {
+		xml.writeStartElement("url");
+		xml.writeStartElement("loc");
+		xml.writeCharacters(url);
+		xml.writeEndElement();
+		xml.writeEndElement();
+	}
 }

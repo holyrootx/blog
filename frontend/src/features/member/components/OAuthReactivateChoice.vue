@@ -7,49 +7,49 @@
  * 지워질 거라 기대하고 고르게 되고, 안 지워지면 항의가 온다.
  */
 defineProps({
-  previousNickname: { type: String, default: '' },
-  submitting: { type: Boolean, default: false },
-  disabled: { type: Boolean, default: false },
-  errorMessage: { type: String, default: '' },
+	previousNickname: { type: String, default: '' },
+	submitting: { type: Boolean, default: false },
+	disabled: { type: Boolean, default: false },
+	errorMessage: { type: String, default: '' },
 });
 
 const emit = defineEmits(['reactivate', 'rejoin']);
 </script>
 
 <template>
-  <div class="member-auth__panel">
-    <h1 class="member-auth__title">예전에 쓰시던 계정이 있습니다</h1>
-    <p class="member-auth__description">
-      같은 계정으로 다시 로그인하셨습니다. 어떻게 할지 골라 주세요.
-    </p>
+	<div class="member-auth__panel">
+		<h1 class="member-auth__title">예전에 쓰시던 계정이 있습니다</h1>
+		<p class="member-auth__description">
+			같은 계정으로 다시 로그인하셨습니다. 어떻게 할지 골라 주세요.
+		</p>
 
-    <p v-if="errorMessage" class="member-auth__error" role="alert">{{ errorMessage }}</p>
+		<p v-if="errorMessage" class="member-auth__error" role="alert">{{ errorMessage }}</p>
 
-    <div class="member-auth__choices">
-      <button
-        class="member-auth__choice"
-        type="button"
-        :disabled="submitting || disabled"
-        @click="emit('reactivate')"
-      >
-        <span class="member-auth__choice-title">예전 계정 쓰기</span>
-        <span class="member-auth__choice-detail">
-          닉네임 <strong>{{ previousNickname || '(이름 없음)' }}</strong> 과 예전에 쓴 댓글을 되찾습니다.
-        </span>
-      </button>
+		<div class="member-auth__choices">
+			<button
+				class="member-auth__choice"
+				type="button"
+				:disabled="submitting || disabled"
+				@click="emit('reactivate')"
+			>
+				<span class="member-auth__choice-title">예전 계정 쓰기</span>
+				<span class="member-auth__choice-detail">
+					닉네임 <strong>{{ previousNickname || '(이름 없음)' }}</strong> 과 예전에 쓴 댓글을 되찾습니다.
+				</span>
+			</button>
 
-      <button
-        class="member-auth__choice"
-        type="button"
-        :disabled="submitting || disabled"
-        @click="emit('rejoin')"
-      >
-        <span class="member-auth__choice-title">새로 만들기</span>
-        <span class="member-auth__choice-detail">
-          빈 상태로 시작합니다. 예전 댓글은 그대로 남지만 내 것이 아니게 됩니다.
-          되돌릴 수 없습니다.
-        </span>
-      </button>
-    </div>
-  </div>
+			<button
+				class="member-auth__choice"
+				type="button"
+				:disabled="submitting || disabled"
+				@click="emit('rejoin')"
+			>
+				<span class="member-auth__choice-title">새로 만들기</span>
+				<span class="member-auth__choice-detail">
+					빈 상태로 시작합니다. 예전 댓글은 그대로 남지만 내 것이 아니게 됩니다.
+					되돌릴 수 없습니다.
+				</span>
+			</button>
+		</div>
+	</div>
 </template>

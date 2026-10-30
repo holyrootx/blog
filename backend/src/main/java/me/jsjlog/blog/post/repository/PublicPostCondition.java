@@ -15,12 +15,12 @@ import java.time.LocalDateTime;
  */
 final class PublicPostCondition {
 
-    private PublicPostCondition() {
-    }
+	private PublicPostCondition() {
+	}
 
-    static BooleanExpression of(QPost post) {
-        return post.status.eq(PostStatus.PUBLISHED)
-                .and(post.deletedAt.isNull())
-                .and(post.publishedAt.loe(LocalDateTime.now()));
-    }
+	static BooleanExpression of(QPost post) {
+		return post.status.eq(PostStatus.PUBLISHED)
+				.and(post.deletedAt.isNull())
+				.and(post.publishedAt.loe(LocalDateTime.now()));
+	}
 }

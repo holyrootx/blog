@@ -29,33 +29,31 @@ import me.jsjlog.blog.common.domain.BaseEntity;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class UploadImage extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
 
-    /** 저장소 안에서의 위치. 파일을 지울 때 이 값이 필요하다 */
-    @Column(name = "storage_key", nullable = false, length = 255)
-    private String storageKey;
+	@Column(name = "storage_key", nullable = false, length = 255)
+	private String storageKey;
 
-    /** 글 본문에 박히는 공개 주소 */
-    @Column(name = "url", nullable = false, length = 500)
-    private String url;
+	@Column(name = "url", nullable = false, length = 500)
+	private String url;
 
-    /** 목록 화면에서 사람이 알아볼 이름. 저장 경로에는 쓰지 않는다 */
-    @Column(name = "original_name", nullable = false, length = 255)
-    private String originalName;
+	/** 목록 화면에서 사람이 알아볼 이름. 저장 경로에는 쓰지 않는다 */
+	@Column(name = "original_name", nullable = false, length = 255)
+	private String originalName;
 
-    @Column(name = "content_type", nullable = false, length = 50)
-    private String contentType;
+	@Column(name = "content_type", nullable = false, length = 50)
+	private String contentType;
 
-    @Column(name = "byte_size", nullable = false)
-    private long byteSize;
+	@Column(name = "byte_size", nullable = false)
+	private long byteSize;
 
-    public UploadImage(String storageKey, String url, String originalName, String contentType, long byteSize) {
-        this.storageKey = storageKey;
-        this.url = url;
-        this.originalName = originalName;
-        this.contentType = contentType;
-        this.byteSize = byteSize;
-    }
+	public UploadImage(String storageKey, String url, String originalName, String contentType, long byteSize) {
+		this.storageKey = storageKey;
+		this.url = url;
+		this.originalName = originalName;
+		this.contentType = contentType;
+		this.byteSize = byteSize;
+	}
 }

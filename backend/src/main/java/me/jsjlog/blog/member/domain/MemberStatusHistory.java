@@ -35,61 +35,61 @@ import org.hibernate.type.SqlTypes;
 @Getter
 @Entity
 @Table(
-        name = "member_status_history",
-        indexes = @Index(name = "idx_member_status_history_member", columnList = "member_id, created_at")
+		name = "member_status_history",
+		indexes = @Index(name = "idx_member_status_history_member", columnList = "member_id, created_at")
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class MemberStatusHistory {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "member_id", nullable = false,
-            foreignKey = @ForeignKey(name = "fk_member_status_history_member"))
-    private Member member;
+	@ManyToOne(fetch = FetchType.LAZY, optional = false)
+	@JoinColumn(name = "member_id", nullable = false,
+			foreignKey = @ForeignKey(name = "fk_member_status_history_member"))
+	private Member member;
 
-    /** 가입처럼 이전 상태가 없으면 비어 있다 */
-    @Enumerated(EnumType.STRING)
-    @JdbcTypeCode(SqlTypes.VARCHAR)
-    @Column(name = "from_member_status_code", length = 30)
-    private MemberStatusCode fromMemberStatusCode;
+	/** 가입처럼 이전 상태가 없으면 비어 있다 */
+	@Enumerated(EnumType.STRING)
+	@JdbcTypeCode(SqlTypes.VARCHAR)
+	@Column(name = "from_member_status_code", length = 30)
+	private MemberStatusCode fromMemberStatusCode;
 
-    @Enumerated(EnumType.STRING)
-    @JdbcTypeCode(SqlTypes.VARCHAR)
-    @Column(name = "to_member_status_code", nullable = false, length = 30)
-    private MemberStatusCode toMemberStatusCode;
+	@Enumerated(EnumType.STRING)
+	@JdbcTypeCode(SqlTypes.VARCHAR)
+	@Column(name = "to_member_status_code", nullable = false, length = 30)
+	private MemberStatusCode toMemberStatusCode;
 
-    @Enumerated(EnumType.STRING)
-    @JdbcTypeCode(SqlTypes.VARCHAR)
-    @Column(name = "reason_code", nullable = false, length = 30)
-    private MemberStatusReasonCode reasonCode;
+	@Enumerated(EnumType.STRING)
+	@JdbcTypeCode(SqlTypes.VARCHAR)
+	@Column(name = "reason_code", nullable = false, length = 30)
+	private MemberStatusReasonCode reasonCode;
 
-    @Enumerated(EnumType.STRING)
-    @JdbcTypeCode(SqlTypes.VARCHAR)
-    @Column(name = "actor_type_code", nullable = false, length = 20)
-    private ActorTypeCode actorTypeCode;
+	@Enumerated(EnumType.STRING)
+	@JdbcTypeCode(SqlTypes.VARCHAR)
+	@Column(name = "actor_type_code", nullable = false, length = 20)
+	private ActorTypeCode actorTypeCode;
 
-    /** 처리한 회원. 본인이면 그 회원, 관리자면 관리자 번호, 시스템이면 비어 있다 */
-    @Column(name = "actor_member_id")
-    private Long actorMemberId;
+	/** 처리한 회원. 본인이면 그 회원, 관리자면 관리자 번호, 시스템이면 비어 있다 */
+	@Column(name = "actor_member_id")
+	private Long actorMemberId;
 
-    @Column(name = "memo", length = 500)
-    private String memo;
+	@Column(name = "memo", length = 500)
+	private String memo;
 
-    @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
+	@Column(name = "created_at", nullable = false)
+	private LocalDateTime createdAt;
 
-    public MemberStatusHistory(Member member, MemberStatusCode from, MemberStatusCode to,
-                               MemberStatusReasonCode reason, ActorTypeCode actorType, Long actorMemberId,
-                               LocalDateTime createdAt) {
-        this.member = member;
-        this.fromMemberStatusCode = from;
-        this.toMemberStatusCode = to;
-        this.reasonCode = reason;
-        this.actorTypeCode = actorType;
-        this.actorMemberId = actorMemberId;
-        this.createdAt = createdAt;
-    }
+	public MemberStatusHistory(Member member, MemberStatusCode from, MemberStatusCode to,
+							   MemberStatusReasonCode reason, ActorTypeCode actorType, Long actorMemberId,
+							   LocalDateTime createdAt) {
+		this.member = member;
+		this.fromMemberStatusCode = from;
+		this.toMemberStatusCode = to;
+		this.reasonCode = reason;
+		this.actorTypeCode = actorType;
+		this.actorMemberId = actorMemberId;
+		this.createdAt = createdAt;
+	}
 }

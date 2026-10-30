@@ -35,61 +35,61 @@ import java.time.LocalDateTime;
 @Getter
 @Entity
 @Table(
-        name = "post_view",
-        indexes = {
-                // 관리자 글별 기록을 최근순으로 읽는다
-                @Index(name = "idx_post_view_post", columnList = "post_id, viewed_at"),
-                // 회원의 최근 본 글과 카드 표시가 회원·글 단위로 마지막 시각을 찾는다
-                @Index(name = "idx_post_view_member", columnList = "member_id, post_id, viewed_at"),
-                // 관리자 통계가 최근 7일·30일을 잘라 센다
-                @Index(name = "idx_post_view_viewed_at", columnList = "viewed_at")
-        }
+		name = "post_view",
+		indexes = {
+				// 관리자 글별 기록을 최근순으로 읽는다
+				@Index(name = "idx_post_view_post", columnList = "post_id, viewed_at"),
+				// 회원의 최근 본 글과 카드 표시가 회원·글 단위로 마지막 시각을 찾는다
+				@Index(name = "idx_post_view_member", columnList = "member_id, post_id, viewed_at"),
+				// 관리자 통계가 최근 7일·30일을 잘라 센다
+				@Index(name = "idx_post_view_viewed_at", columnList = "viewed_at")
+		}
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class PostView {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
 
-    @Column(name = "post_id", nullable = false, updatable = false)
-    private Long postId;
+	@Column(name = "post_id", nullable = false, updatable = false)
+	private Long postId;
 
-    /** 비회원이면 비어 있다 */
-    @Column(name = "member_id", updatable = false)
-    private Long memberId;
+	/** 비회원이면 비어 있다 */
+	@Column(name = "member_id", updatable = false)
+	private Long memberId;
 
-    @Column(name = "viewed_at", nullable = false, updatable = false)
-    private LocalDateTime viewedAt;
+	@Column(name = "viewed_at", nullable = false, updatable = false)
+	private LocalDateTime viewedAt;
 
-    /** 회원의 실제 마지막 열람. 기존 기록은 null이면 viewedAt으로 읽는다. */
-    @Column(name = "last_viewed_at")
-    private LocalDateTime lastViewedAt;
+	/** 회원의 실제 마지막 열람. 기존 기록은 null이면 viewedAt으로 읽는다. */
+	@Column(name = "last_viewed_at")
+	private LocalDateTime lastViewedAt;
 
-    /** 거칠게 접은 기기 분류(검색 봇 포함). 원래 브라우저 정보는 남기지 않는다 */
-    @Enumerated(EnumType.STRING)
-    @Column(
-            name = "device_type",
-            nullable = false,
-            updatable = false,
-            length = 10,
-            columnDefinition = "varchar(10) not null default 'UNKNOWN'"
-    )
-    private DeviceType deviceType;
+	/** 거칠게 접은 기기 분류(검색 봇 포함). 원래 브라우저 정보는 남기지 않는다 */
+	@Enumerated(EnumType.STRING)
+	@Column(
+			name = "device_type",
+			nullable = false,
+			updatable = false,
+			length = 10,
+			columnDefinition = "varchar(10) not null default 'UNKNOWN'"
+	)
+	private DeviceType deviceType;
 
-    private PostView(Long postId, Long memberId, LocalDateTime viewedAt, DeviceType deviceType) {
-        this.postId = postId;
-        this.memberId = memberId;
-        this.viewedAt = viewedAt;
-        this.lastViewedAt = memberId == null ? null : viewedAt;
-        this.deviceType = deviceType == null ? DeviceType.UNKNOWN : deviceType;
-    }
+	private PostView(Long postId, Long memberId, LocalDateTime viewedAt, DeviceType deviceType) {
+		this.postId = postId;
+		this.memberId = memberId;
+		this.viewedAt = viewedAt;
+		this.lastViewedAt = memberId == null ? null : viewedAt;
+		this.deviceType = deviceType == null ? DeviceType.UNKNOWN : deviceType;
+	}
 
-    public static PostView of(Long postId, Long memberId, LocalDateTime viewedAt) {
-        return new PostView(postId, memberId, viewedAt, DeviceType.UNKNOWN);
-    }
+	public static PostView of(Long postId, Long memberId, LocalDateTime viewedAt) {
+		return new PostView(postId, memberId, viewedAt, DeviceType.UNKNOWN);
+	}
 
-    public static PostView of(Long postId, Long memberId, LocalDateTime viewedAt, DeviceType deviceType) {
-        return new PostView(postId, memberId, viewedAt, deviceType);
-    }
+	public static PostView of(Long postId, Long memberId, LocalDateTime viewedAt, DeviceType deviceType) {
+		return new PostView(postId, memberId, viewedAt, deviceType);
+	}
 }

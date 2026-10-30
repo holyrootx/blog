@@ -20,14 +20,14 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class JsonAccessDeniedHandler implements AccessDeniedHandler {
 
-    private final SecurityResponseWriter responseWriter;
+	private final SecurityResponseWriter responseWriter;
 
-    @Override
-    public void handle(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            AccessDeniedException accessDeniedException
-    ) throws IOException {
-        responseWriter.writeError(request, response, ErrorCode.FORBIDDEN);
-    }
+	@Override
+	public void handle(
+			HttpServletRequest request,
+			HttpServletResponse response,
+			AccessDeniedException accessDeniedException
+	) throws IOException {
+		responseWriter.writeError(request, response, ErrorCode.FORBIDDEN);
+	}
 }

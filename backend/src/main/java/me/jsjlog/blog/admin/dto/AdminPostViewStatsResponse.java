@@ -10,15 +10,15 @@ import me.jsjlog.blog.post.domain.PostStatus;
  * 기간과 상관없는 지금의 값이다. 댓글·좋아요가 그 기간에 생겼다는 기록은 따로 없다.</p>
  */
 public record AdminPostViewStatsResponse(
-        Long postId,
-        String title,
-        PostStatus status,
-        boolean deleted,
-        long pageViews,
-        long uniqueMembers,
-        long anonymousViews,
-        long totalViews,
-        long commentCount,
-        long likeCount
+		Long postId,
+		String title,
+		PostStatus status,
+		boolean deleted,
+		long pageViews,
+		long uniqueMembers,
+		long anonymousViews,
+		long totalViews,
+		long commentCount,
+		long likeCount
 ) {
 }

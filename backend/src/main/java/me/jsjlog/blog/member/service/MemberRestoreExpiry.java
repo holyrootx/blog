@@ -18,14 +18,14 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class MemberRestoreExpiry {
 
-    private final MemberStatusService memberStatusService;
+	private final MemberStatusService memberStatusService;
 
-    // 댓글 보관 정리(04:30)와 겹치지 않게 조금 뒤에 돈다
-    @Scheduled(cron = "${blog.retention.member-restore-cron:0 40 4 * * *}", zone = "Asia/Seoul")
-    public void expire() {
-        int expired = memberStatusService.expireRestores(LocalDateTime.now());
-        if (expired > 0) {
-            log.info("[보관 정리] 복원 기간이 지난 탈퇴 회원 {}명의 복원 정보 파기", expired);
-        }
-    }
+	// 댓글 보관 정리(04:30)와 겹치지 않게 조금 뒤에 돈다
+	@Scheduled(cron = "${blog.retention.member-restore-cron:0 40 4 * * *}", zone = "Asia/Seoul")
+	public void expire() {
+		int expired = memberStatusService.expireRestores(LocalDateTime.now());
+		if (expired > 0) {
+			log.info("[보관 정리] 복원 기간이 지난 탈퇴 회원 {}명의 복원 정보 파기", expired);
+		}
+	}
 }

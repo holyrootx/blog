@@ -10,10 +10,10 @@ import org.springframework.data.repository.query.Param;
 
 public interface CommonCodeRepository extends JpaRepository<CommonCode, CommonCodeId> {
 
-    List<CommonCode> findAllByOrderByGroupCodeAscSortOrderAscCodeAsc();
+	List<CommonCode> findAllByOrderByGroupCodeAscSortOrderAscCodeAsc();
 
-    List<CommonCode> findAllByGroupCodeOrderBySortOrderAscCodeAsc(String groupCode);
+	List<CommonCode> findAllByGroupCodeOrderBySortOrderAscCodeAsc(String groupCode);
 
-    @Query("select coalesce(max(c.sortOrder), 0) from CommonCode c where c.groupCode = :groupCode")
-    int findMaxSortOrder(@Param("groupCode") String groupCode);
+	@Query("select coalesce(max(c.sortOrder), 0) from CommonCode c where c.groupCode = :groupCode")
+	int findMaxSortOrder(@Param("groupCode") String groupCode);
 }

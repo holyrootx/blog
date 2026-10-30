@@ -13,61 +13,69 @@ import { readCachedResponse, writeCachedResponse } from '../data/responseCache';
  * 대문·목록·글 상세가 같은 일을 각자 다르게 하고 있어서 한 곳으로 모았다.
  */
 export function useSectionLoader(sectionKeys) {
-  const loading = reactive(Object.fromEntries(sectionKeys.map((key) => [key, true])));
-  const requests = new Map();
-  let generation = 0;
+	const loading = reactive(Object.fromEntries(sectionKeys.map((key) => [key, true])));
+	const requests = new Map();
+	let generation = 0;
 
-  onBeforeUnmount(() => {
-    generation += 1;
-  });
+	onBeforeUnmount(() => {
+		generation += 1;
+	});
 
-  /** 화면이 다른 대상을 보게 됐다. 하던 요청의 결과는 받지 않는다 */
-  function restart() {
-    generation += 1;
-    sectionKeys.forEach((key) => {
-      loading[key] = true;
-    });
-  }
+	/** 화면이 다른 대상을 보게 됐다. 하던 요청의 결과는 받지 않는다 */
+	function restart() {
+		generation += 1;
+		sectionKeys.forEach((key) => {
+			loading[key] = true;
+		});
+	}
 
-  /**
-   * 영역 하나를 불러온다.
-   *
-   * 실패를 알릴 때 {@code showingCached} 를 함께 넘긴다. 들고 있던 값을 이미 보여 주고 있으면
-   * 화면을 오류로 바꿀지는 그 화면이 정한다.
-   */
-  async function load(key, { request, apply, cacheKey = null, onError = reportError }) {
-    const requested = generation;
-    const sequence = (requests.get(key) ?? 0) + 1;
-    requests.set(key, sequence);
-    const current = () => requested === generation && requests.get(key) === sequence;
-    const cached = cacheKey ? readCachedResponse(cacheKey) : undefined;
-    loading[key] = true;
+	/**
+	 * 영역 하나를 불러온다.
+	 *
+	 * 실패를 알릴 때 {@code showingCached} 를 함께 넘긴다. 들고 있던 값을 이미 보여 주고 있으면
+	 * 화면을 오류로 바꿀지는 그 화면이 정한다.
+	 */
+	async function load(key, { request, apply, cacheKey = null, onError = reportError }) {
+		const requested = generation;
+		const sequence = (requests.get(key) ?? 0) + 1;
+		requests.set(key, sequence);
+		const current = () => requested === generation && requests.get(key) === sequence;
+		const cached = cacheKey ? readCachedResponse(cacheKey) : undefined;
+		loading[key] = true;
 
-    if (cached !== undefined) {
-      apply(cached);
-      loading[key] = false;
-    }
+		if (cached !== undefined) {
+			apply(cached);
+			loading[key] = false;
+		}
 
-    try {
-      const value = await request();
-      if (!current()) return;
-      if (cacheKey) writeCachedResponse(cacheKey, value);
-      apply(value);
-    } catch (error) {
-      if (current()) onError(error, { showingCached: cached !== undefined });
-    } finally {
-      if (current()) loading[key] = false;
-    }
-  }
+		try {
+			const value = await request();
+			if (!current()) {
+				return;
+			}
+			if (cacheKey) {
+				writeCachedResponse(cacheKey, value);
+			}
+			apply(value);
+		} catch (error) {
+			if (current()) {
+				onError(error, { showingCached: cached !== undefined });
+			}
+		} finally {
+			if (current()) {
+				loading[key] = false;
+			}
+		}
+	}
 
-  function cancel(key) {
-    requests.set(key, (requests.get(key) ?? 0) + 1);
-    loading[key] = false;
-  }
+	function cancel(key) {
+		requests.set(key, (requests.get(key) ?? 0) + 1);
+		loading[key] = false;
+	}
 
-  return { loading, load, restart, cancel };
+	return { loading, load, restart, cancel };
 }
 
 function reportError(error) {
-  console.error(error);
+	console.error(error);
 }

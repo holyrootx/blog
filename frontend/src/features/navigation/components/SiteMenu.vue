@@ -24,43 +24,43 @@ const root = ref(null);
 const categories = ref([]);
 
 function toggle() {
-  open.value = !open.value;
+	open.value = !open.value;
 
-  if (!open.value) {
-    return;
-  }
+	if (!open.value) {
+		return;
+	}
 
-  // 열 때 받는다. 헤더가 뜨자마자 부르면 아무도 안 열어 볼 메뉴 때문에 요청이 나간다.
-  // 이미 받아 둔 값이 있으면 그대로 쓴다
-  loadCategories().then((found) => {
-    categories.value = found;
-  });
+	// 열 때 받는다. 헤더가 뜨자마자 부르면 아무도 안 열어 볼 메뉴 때문에 요청이 나간다.
+	// 이미 받아 둔 값이 있으면 그대로 쓴다
+	loadCategories().then((found) => {
+		categories.value = found;
+	});
 }
 
 function close() {
-  open.value = false;
+	open.value = false;
 }
 
 function closeOnOutside(event) {
-  if (open.value && root.value && !root.value.contains(event.target)) {
-    close();
-  }
+	if (open.value && root.value && !root.value.contains(event.target)) {
+		close();
+	}
 }
 
 function closeOnEscape(event) {
-  if (event.key === 'Escape') {
-    close();
-  }
+	if (event.key === 'Escape') {
+		close();
+	}
 }
 
 onMounted(() => {
-  document.addEventListener('click', closeOnOutside);
-  document.addEventListener('keydown', closeOnEscape);
+	document.addEventListener('click', closeOnOutside);
+	document.addEventListener('keydown', closeOnEscape);
 });
 
 onBeforeUnmount(() => {
-  document.removeEventListener('click', closeOnOutside);
-  document.removeEventListener('keydown', closeOnEscape);
+	document.removeEventListener('click', closeOnOutside);
+	document.removeEventListener('keydown', closeOnEscape);
 });
 
 // 화면을 옮기면 닫는다. 메뉴는 옮기려고 여는 것이라 안 닫으면 새 화면 위에 남는다
@@ -68,22 +68,22 @@ watch(() => route.fullPath, close);
 </script>
 
 <template>
-  <div ref="root" class="site-menu">
-    <slot name="trigger" :open="toggle" :expanded="open" />
+	<div ref="root" class="site-menu">
+		<slot name="trigger" :open="toggle" :expanded="open" />
 
-    <nav v-if="open" class="site-menu__dropdown" aria-label="분류">
-      <RouterLink class="site-menu__link" :to="{ name: 'post-list' }">전체 글</RouterLink>
+		<nav v-if="open" class="site-menu__dropdown" aria-label="분류">
+			<RouterLink class="site-menu__link" :to="{ name: 'post-list' }">전체 글</RouterLink>
 
-      <p v-if="categories.length > 0" class="site-menu__label">분류</p>
-      <RouterLink
-        v-for="category in categories"
-        :key="category.id"
-        class="site-menu__link"
-        :to="{ name: 'post-list', query: { category: String(category.id) } }"
-      >{{ category.name }}</RouterLink>
+			<p v-if="categories.length > 0" class="site-menu__label">분류</p>
+			<RouterLink
+				v-for="category in categories"
+				:key="category.id"
+				class="site-menu__link"
+				:to="{ name: 'post-list', query: { category: String(category.id) } }"
+			>{{ category.name }}</RouterLink>
 
-      <!-- 글이 아니라 블로그 주인에게 남기는 자리라 분류 아래에 따로 둔다 -->
-      <RouterLink class="site-menu__link site-menu__link--separated" :to="{ name: 'guestbook' }">방명록</RouterLink>
-    </nav>
-  </div>
+			<!-- 글이 아니라 블로그 주인에게 남기는 자리라 분류 아래에 따로 둔다 -->
+			<RouterLink class="site-menu__link site-menu__link--separated" :to="{ name: 'guestbook' }">방명록</RouterLink>
+		</nav>
+	</div>
 </template>

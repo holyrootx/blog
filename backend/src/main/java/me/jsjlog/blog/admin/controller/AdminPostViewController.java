@@ -15,13 +15,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/admin/blog/posts")
 public class AdminPostViewController {
 
-    private final AdminPostViewService adminPostViewService;
+	private final AdminPostViewService adminPostViewService;
 
-    @GetMapping("/{postId}/views")
-    public ApiResponse<AdminPostViewListResponse> getPostViews(
-            @PathVariable Long postId,
-            AdminPostViewSearchCondition condition
-    ) {
-        return ApiResponse.ok(adminPostViewService.getPostViews(postId, condition));
-    }
+	@GetMapping("/{postId}/views")
+	public ApiResponse<AdminPostViewListResponse> getPostViews(
+			@PathVariable Long postId,
+			AdminPostViewSearchCondition condition
+	) {
+		return ApiResponse.ok(adminPostViewService.getPostViews(postId, condition));
+	}
 }

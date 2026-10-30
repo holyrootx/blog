@@ -17,154 +17,171 @@ const bodyInput = () => page.locator('[contenteditable=true]').first();
 const readDraft = () => page.evaluate(() => JSON.parse(localStorage.getItem('admin:post-draft:new')));
 
 before(async () => {
-  server = await createServer({
-    root: fileURLToPath(new URL('..', import.meta.url)), configFile: false,
-    plugins: [vue()], server: { host: '127.0.0.1', port: 0 },
-  });
-  await server.listen();
-  const chrome = process.env.CHROME_PATH;
-  browser = await chromium.launch({ headless: true, ...(chrome ? { executablePath: chrome } : {}) });
+	server = await createServer({
+		root: fileURLToPath(new URL('..', import.meta.url)), configFile: false,
+		plugins: [vue()], server: { host: '127.0.0.1', port: 0 },
+	});
+	await server.listen();
+	const chrome = process.env.CHROME_PATH;
+	browser = await chromium.launch({ headless: true, ...(chrome ? { executablePath: chrome } : {}) });
 });
 after(async () => { await browser?.close(); await server?.close(); });
 beforeEach(async () => {
-  categoriesRequest = null;
-  errors = [];
-  page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
-  page.setDefaultTimeout(5000);
-  page.on('pageerror', error => errors.push(error.message));
-  await page.route('**/api/v1/**', async route => {
-    const path = new URL(route.request().url()).pathname;
-    if (path.endsWith('/categories')) { categoriesRequest = route; return; }
-    if (path === '/api/v1/admin/auth/me') return ok(route, { username: 'test', role: 'ADMIN' });
-    if (path === '/api/v1/admin/auth/login') return ok(route, { username: 'test', role: 'ADMIN' });
-    if (path === '/api/v1/auth/me') return ok(route, null);
-    if (path.endsWith('/csrf')) return ok(route, { headerName: 'X-CSRF-TOKEN', token: 'test' });
-    if (path.endsWith('/sidebar/menus')) return ok(route, []);
-    if (path === '/api/v1/admin/blog/posts/9001') return ok(route, {
-      id: 9001, title: '저장된 제목', categoryId: 1, excerpt: '저장된 요약',
-      content: '저장된 본문', thumbnailImageUrl: '', status: 'DRAFT',
-      updatedAt: '2026-10-04T00:00:00', publishedAt: null,
-    });
-    if (path.endsWith('/posts')) return ok(route, { items: [], totalElements: 0 });
-    return ok(route);
-  });
+	categoriesRequest = null;
+	errors = [];
+	page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+	page.setDefaultTimeout(5000);
+	page.on('pageerror', error => errors.push(error.message));
+	await page.route('**/api/v1/**', async route => {
+		const path = new URL(route.request().url()).pathname;
+		if (path.endsWith('/categories')) { categoriesRequest = route; return; }
+		if (path === '/api/v1/admin/auth/me') {
+			return ok(route, { username: 'test', role: 'ADMIN' });
+		}
+		if (path === '/api/v1/admin/auth/login') {
+			return ok(route, { username: 'test', role: 'ADMIN' });
+		}
+		if (path === '/api/v1/auth/me') {
+			return ok(route, null);
+		}
+		if (path.endsWith('/csrf')) {
+			return ok(route, { headerName: 'X-CSRF-TOKEN', token: 'test' });
+		}
+		if (path.endsWith('/sidebar/menus')) {
+			return ok(route, []);
+		}
+		if (path === '/api/v1/admin/blog/posts/9001') {
+			return ok(route, {
+				id: 9001, title: '저장된 제목', categoryId: 1, excerpt: '저장된 요약',
+				content: '저장된 본문', thumbnailImageUrl: '', status: 'DRAFT',
+				updatedAt: '2026-10-04T00:00:00', publishedAt: null,
+			});
+		}
+		if (path.endsWith('/posts')) {
+			return ok(route, { items: [], totalElements: 0 });
+		}
+		return ok(route);
+	});
 });
 afterEach(async () => { await page?.close(); assert.deepEqual(errors, []); });
 
 async function openNewAndType() {
-  await page.goto(`${server.resolvedUrls.local[0]}admin/posts/new`);
-  await titleInput().fill('분류를 기다리며 입력한 제목');
-  await bodyInput().fill('분류를 기다리며 입력한 본문');
-  assert.ok(categoriesRequest);
+	await page.goto(`${server.resolvedUrls.local[0]}admin/posts/new`);
+	await titleInput().fill('분류를 기다리며 입력한 제목');
+	await bodyInput().fill('분류를 기다리며 입력한 본문');
+	assert.ok(categoriesRequest);
 }
 
 async function assertInputAndDraft() {
-  assert.equal(await titleInput().inputValue(), '분류를 기다리며 입력한 제목');
-  assert.equal(await bodyInput().textContent(), '분류를 기다리며 입력한 본문');
-  await page.evaluate(() => window.dispatchEvent(new Event('beforeunload')));
-  const draft = await readDraft();
-  assert.equal(draft?.form.title, '분류를 기다리며 입력한 제목');
-  assert.equal(draft?.form.content, '분류를 기다리며 입력한 본문');
+	assert.equal(await titleInput().inputValue(), '분류를 기다리며 입력한 제목');
+	assert.equal(await bodyInput().textContent(), '분류를 기다리며 입력한 본문');
+	await page.evaluate(() => window.dispatchEvent(new Event('beforeunload')));
+	const draft = await readDraft();
+	assert.equal(draft?.form.title, '분류를 기다리며 입력한 제목');
+	assert.equal(draft?.form.content, '분류를 기다리며 입력한 본문');
 }
 
 for (const failure of [false, true]) {
-  test(`new post preserves input after delayed categories ${failure ? 'fail' : 'succeed'}`, async () => {
-    await openNewAndType();
-    const response = page.waitForResponse(r => new URL(r.url()).pathname.endsWith('/categories'));
-    if (failure) await categoriesRequest.fulfill({ status: 500, json: { success: false } });
-    else await ok(categoriesRequest, categories);
-    await response;
-    // Let the API promise and Vue render finish before inspecting the user's input.
-    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-    await assertInputAndDraft();
-  });
+	test(`new post preserves input after delayed categories ${failure ? 'fail' : 'succeed'}`, async () => {
+		await openNewAndType();
+		const response = page.waitForResponse(r => new URL(r.url()).pathname.endsWith('/categories'));
+		if (failure) {
+			await categoriesRequest.fulfill({ status: 500, json: { success: false } });
+		} else {
+			await ok(categoriesRequest, categories);
+		}
+		await response;
+		// Let the API promise and Vue render finish before inspecting the user's input.
+		await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+		await assertInputAndDraft();
+	});
 }
 
 test('new post saves an unload draft while categories are still pending', async () => {
-  await openNewAndType();
-  await assertInputAndDraft();
+	await openNewAndType();
+	await assertInputAndDraft();
 });
 
 test('late categories after leaving the editor cannot clear the saved draft', async () => {
-  await openNewAndType();
-  await page.getByRole('link', { name: '목록', exact: true }).click();
-  await page.waitForURL('**/admin/posts');
-  await ok(categoriesRequest, categories);
-  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-  const draft = await readDraft();
-  assert.equal(draft?.form.title, '분류를 기다리며 입력한 제목');
-  assert.equal(draft?.form.content, '분류를 기다리며 입력한 본문');
+	await openNewAndType();
+	await page.getByRole('link', { name: '목록', exact: true }).click();
+	await page.waitForURL('**/admin/posts');
+	await ok(categoriesRequest, categories);
+	await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+	const draft = await readDraft();
+	assert.equal(draft?.form.title, '분류를 기다리며 입력한 제목');
+	assert.equal(draft?.form.content, '분류를 기다리며 입력한 본문');
 });
 
 test('existing post loads independently of a pending category request', async () => {
-  await page.goto(`${server.resolvedUrls.local[0]}admin/posts/9001`);
-  await page.waitForFunction(() => document.querySelector('input[placeholder="글 제목"]')?.value === '저장된 제목');
-  await titleInput().fill('분류 도착 전 수정한 제목');
-  await ok(categoriesRequest, categories);
-  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-  assert.equal(await titleInput().inputValue(), '분류 도착 전 수정한 제목');
+	await page.goto(`${server.resolvedUrls.local[0]}admin/posts/9001`);
+	await page.waitForFunction(() => document.querySelector('input[placeholder="글 제목"]')?.value === '저장된 제목');
+	await titleInput().fill('분류 도착 전 수정한 제목');
+	await ok(categoriesRequest, categories);
+	await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+	assert.equal(await titleInput().inputValue(), '분류 도착 전 수정한 제목');
 });
 
 for (const postId of ['new', '9001']) {
-  test(`session expiry preserves immediate editor input and restores it after login (${postId})`, async () => {
-    await page.goto(`${server.resolvedUrls.local[0]}admin/posts/${postId}`);
-    if (postId !== 'new') {
-      await page.waitForFunction(() => document.querySelector('input[placeholder="글 제목"]')?.value === '저장된 제목');
-    }
-    await page.evaluate(async () => {
-      const { useMemberAuth } = await import('/src/features/member/data/memberAuthStore.js');
-      const { useNotifications } = await import('/src/features/member/data/notificationStore.js');
-      useMemberAuth().member.value = { id: 99, nickname: '이전 회원' };
-      useNotifications().unreadCount.value = 3;
-    });
-    await titleInput().fill('만료 직전에 입력한 제목');
-    await bodyInput().fill('자동 보관을 기다리지 않은 본문');
-    await categoriesRequest.fulfill({ status: 401, json: { success: false, code: 'UNAUTHORIZED' } });
-    await page.waitForURL('**/admin/login?**');
-    const saved = await page.evaluate(key => JSON.parse(localStorage.getItem(`admin:post-draft:${key}`)), postId);
-    assert.equal(saved.form.title, '만료 직전에 입력한 제목');
-    assert.equal(saved.form.content, '자동 보관을 기다리지 않은 본문');
-    const cleared = await page.evaluate(async () => {
-      const { useMemberAuth } = await import('/src/features/member/data/memberAuthStore.js');
-      const { useNotifications } = await import('/src/features/member/data/notificationStore.js');
-      return { member: useMemberAuth().member.value, unread: useNotifications().unreadCount.value };
-    });
-    assert.deepEqual(cleared, { member: null, unread: 0 });
-    await page.getByLabel('아이디', { exact: true }).fill('test');
-    await page.getByLabel('비밀번호', { exact: true }).fill('test-password');
-    await page.getByRole('button', { name: '로그인', exact: true }).click();
-    await page.waitForURL(`**/admin/posts/${postId}`);
-    await page.getByRole('button', { name: '불러오기', exact: true }).click();
-    assert.equal(await titleInput().inputValue(), '만료 직전에 입력한 제목');
-    assert.equal(await bodyInput().textContent(), '자동 보관을 기다리지 않은 본문');
-  });
+	test(`session expiry preserves immediate editor input and restores it after login (${postId})`, async () => {
+		await page.goto(`${server.resolvedUrls.local[0]}admin/posts/${postId}`);
+		if (postId !== 'new') {
+			await page.waitForFunction(() => document.querySelector('input[placeholder="글 제목"]')?.value === '저장된 제목');
+		}
+		await page.evaluate(async () => {
+			const { useMemberAuth } = await import('/src/features/member/data/memberAuthStore.js');
+			const { useNotifications } = await import('/src/features/member/data/notificationStore.js');
+			useMemberAuth().member.value = { id: 99, nickname: '이전 회원' };
+			useNotifications().unreadCount.value = 3;
+		});
+		await titleInput().fill('만료 직전에 입력한 제목');
+		await bodyInput().fill('자동 보관을 기다리지 않은 본문');
+		await categoriesRequest.fulfill({ status: 401, json: { success: false, code: 'UNAUTHORIZED' } });
+		await page.waitForURL('**/admin/login?**');
+		const saved = await page.evaluate(key => JSON.parse(localStorage.getItem(`admin:post-draft:${key}`)), postId);
+		assert.equal(saved.form.title, '만료 직전에 입력한 제목');
+		assert.equal(saved.form.content, '자동 보관을 기다리지 않은 본문');
+		const cleared = await page.evaluate(async () => {
+			const { useMemberAuth } = await import('/src/features/member/data/memberAuthStore.js');
+			const { useNotifications } = await import('/src/features/member/data/notificationStore.js');
+			return { member: useMemberAuth().member.value, unread: useNotifications().unreadCount.value };
+		});
+		assert.deepEqual(cleared, { member: null, unread: 0 });
+		await page.getByLabel('아이디', { exact: true }).fill('test');
+		await page.getByLabel('비밀번호', { exact: true }).fill('test-password');
+		await page.getByRole('button', { name: '로그인', exact: true }).click();
+		await page.waitForURL(`**/admin/posts/${postId}`);
+		await page.getByRole('button', { name: '불러오기', exact: true }).click();
+		assert.equal(await titleInput().inputValue(), '만료 직전에 입력한 제목');
+		assert.equal(await bodyInput().textContent(), '자동 보관을 기다리지 않은 본문');
+	});
 }
 
 test('administrator logging out from the public member menu clears the admin cache too', async () => {
-  await openNewAndType();
-  await ok(categoriesRequest, categories);
-  await page.evaluate(async () => {
-    const { useMemberAuth } = await import('/src/features/member/data/memberAuthStore.js');
-    const { default: router } = await import('/src/app/router/index.js');
-    useMemberAuth().member.value = { id: 99, nickname: '공개 관리자', role: 'ROLE_ADMIN' };
-    await router.push({ name: 'post-list' });
-  });
-  await page.locator('.member-menu__trigger').click();
-  await page.getByRole('menuitem', { name: '로그아웃', exact: true }).click();
-  await page.waitForFunction(async () => {
-    const { useMemberAuth } = await import('/src/features/member/data/memberAuthStore.js');
-    return useMemberAuth().member.value === null;
-  });
-  const administrator = await page.evaluate(async () => {
-    const { useAdminAuth } = await import('/src/features/admin/data/adminAuthStore.js');
-    return useAdminAuth().admin.value;
-  });
-  assert.equal(administrator, null);
-  await page.route('**/api/v1/admin/auth/me', route => route.fulfill({
-    status: 401, json: { success: false, code: 'UNAUTHORIZED' },
-  }));
-  assert.equal(await page.evaluate(async () => {
-    const { ensureAdminSession } = await import('/src/features/admin/data/adminAuthStore.js');
-    return ensureAdminSession();
-  }), false);
+	await openNewAndType();
+	await ok(categoriesRequest, categories);
+	await page.evaluate(async () => {
+		const { useMemberAuth } = await import('/src/features/member/data/memberAuthStore.js');
+		const { default: router } = await import('/src/app/router/index.js');
+		useMemberAuth().member.value = { id: 99, nickname: '공개 관리자', role: 'ROLE_ADMIN' };
+		await router.push({ name: 'post-list' });
+	});
+	await page.locator('.member-menu__trigger').click();
+	await page.getByRole('menuitem', { name: '로그아웃', exact: true }).click();
+	await page.waitForFunction(async () => {
+		const { useMemberAuth } = await import('/src/features/member/data/memberAuthStore.js');
+		return useMemberAuth().member.value === null;
+	});
+	const administrator = await page.evaluate(async () => {
+		const { useAdminAuth } = await import('/src/features/admin/data/adminAuthStore.js');
+		return useAdminAuth().admin.value;
+	});
+	assert.equal(administrator, null);
+	await page.route('**/api/v1/admin/auth/me', route => route.fulfill({
+		status: 401, json: { success: false, code: 'UNAUTHORIZED' },
+	}));
+	assert.equal(await page.evaluate(async () => {
+		const { ensureAdminSession } = await import('/src/features/admin/data/adminAuthStore.js');
+		return ensureAdminSession();
+	}), false);
 });

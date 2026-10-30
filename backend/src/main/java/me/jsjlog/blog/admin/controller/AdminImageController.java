@@ -26,35 +26,35 @@ import me.jsjlog.blog.common.response.ApiResponse;
 @RequiredArgsConstructor
 public class AdminImageController {
 
-    private final AdminImageService adminImageService;
-    private final ImageCleanupService imageCleanupService;
+	private final AdminImageService adminImageService;
+	private final ImageCleanupService imageCleanupService;
 
-    @PostMapping("/images")
-    public ApiResponse<UploadImageResponse> upload(@RequestParam("file") MultipartFile file) {
-        return ApiResponse.ok(adminImageService.upload(file));
-    }
+	@PostMapping("/images")
+	public ApiResponse<UploadImageResponse> upload(@RequestParam("file") MultipartFile file) {
+		return ApiResponse.ok(adminImageService.upload(file));
+	}
 
-    /** 이미지 목록. 올린 지 일주일 안 된 것은 빼고 준다 */
-    @GetMapping("/images")
-    public ApiResponse<AdminImageListResponse> images(
-            @RequestParam(defaultValue = "false") boolean onlyUnused,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
-    ) {
-        return ApiResponse.ok(imageCleanupService.findAll(
-                onlyUnused, PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id"))));
-    }
+	/** 이미지 목록. 올린 지 일주일 안 된 것은 빼고 준다 */
+	@GetMapping("/images")
+	public ApiResponse<AdminImageListResponse> images(
+			@RequestParam(defaultValue = "false") boolean onlyUnused,
+			@RequestParam(defaultValue = "0") int page,
+			@RequestParam(defaultValue = "20") int size
+	) {
+		return ApiResponse.ok(imageCleanupService.findAll(
+				onlyUnused, PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id"))));
+	}
 
-    /** 고른 것을 지운다. 지우기 직전에 참조를 한 번 더 본다 */
-    @PostMapping("/images/cleanup")
-    public ApiResponse<AdminImageCleanupResponse> cleanup(@RequestBody AdminImageCleanupRequest request) {
-        return ApiResponse.ok(imageCleanupService.cleanup(request.imageIds()));
-    }
+	/** 고른 것을 지운다. 지우기 직전에 참조를 한 번 더 본다 */
+	@PostMapping("/images/cleanup")
+	public ApiResponse<AdminImageCleanupResponse> cleanup(@RequestBody AdminImageCleanupRequest request) {
+		return ApiResponse.ok(imageCleanupService.cleanup(request.imageIds()));
+	}
 
-    @DeleteMapping("/images/{imageId}")
-    public ApiResponse<Void> delete(@PathVariable Long imageId) {
-        adminImageService.delete(imageId);
+	@DeleteMapping("/images/{imageId}")
+	public ApiResponse<Void> delete(@PathVariable Long imageId) {
+		adminImageService.delete(imageId);
 
-        return ApiResponse.ok();
-    }
+		return ApiResponse.ok();
+	}
 }

@@ -22,48 +22,48 @@ import org.springframework.stereotype.Component;
 @Component
 public class GuestbookWriteGuard {
 
-    private static final int MAX_MEMBERS = 10_000;
+	private static final int MAX_MEMBERS = 10_000;
 
-    private final int limit;
-    private final Clock clock;
-    private final Map<Long, ArrayDeque<Instant>> attempts = new HashMap<>();
+	private final int limit;
+	private final Clock clock;
+	private final Map<Long, ArrayDeque<Instant>> attempts = new HashMap<>();
 
-    @Autowired
-    public GuestbookWriteGuard(@Value("${blog.guestbook.writes-per-minute:3}") int limit) {
-        this(limit, Clock.systemUTC());
-    }
+	@Autowired
+	public GuestbookWriteGuard(@Value("${blog.guestbook.writes-per-minute:3}") int limit) {
+		this(limit, Clock.systemUTC());
+	}
 
-    GuestbookWriteGuard(int limit, Clock clock) {
-        if (limit < 1) {
-            throw new IllegalArgumentException("방명록 등록 제한은 1 이상이어야 합니다.");
-        }
-        this.limit = limit;
-        this.clock = clock;
-    }
+	GuestbookWriteGuard(int limit, Clock clock) {
+		if (limit < 1) {
+			throw new IllegalArgumentException("방명록 등록 제한은 1 이상이어야 합니다.");
+		}
+		this.limit = limit;
+		this.clock = clock;
+	}
 
-    public synchronized void check(Long memberId) {
-        if (memberId == null) {
-            throw new BlogException(ErrorCode.UNAUTHORIZED);
-        }
+	public synchronized void check(Long memberId) {
+		if (memberId == null) {
+			throw new BlogException(ErrorCode.UNAUTHORIZED);
+		}
 
-        Instant now = clock.instant();
-        Instant cutoff = now.minus(Duration.ofMinutes(1));
-        attempts.values().forEach(queue -> {
-            while (!queue.isEmpty() && !queue.getFirst().isAfter(cutoff)) {
-                queue.removeFirst();
-            }
-        });
-        attempts.values().removeIf(ArrayDeque::isEmpty);
+		Instant now = clock.instant();
+		Instant cutoff = now.minus(Duration.ofMinutes(1));
+		attempts.values().forEach(queue -> {
+			while (!queue.isEmpty() && !queue.getFirst().isAfter(cutoff)) {
+				queue.removeFirst();
+			}
+		});
+		attempts.values().removeIf(ArrayDeque::isEmpty);
 
-        // 기억할 회원 수에 끝이 없으면 그 자체가 메모리를 채우는 길이 된다
-        if (!attempts.containsKey(memberId) && attempts.size() >= MAX_MEMBERS) {
-            throw new BlogException(ErrorCode.GUESTBOOK_RATE_LIMITED);
-        }
+		// 기억할 회원 수에 끝이 없으면 그 자체가 메모리를 채우는 길이 된다
+		if (!attempts.containsKey(memberId) && attempts.size() >= MAX_MEMBERS) {
+			throw new BlogException(ErrorCode.GUESTBOOK_RATE_LIMITED);
+		}
 
-        ArrayDeque<Instant> queue = attempts.computeIfAbsent(memberId, ignored -> new ArrayDeque<>());
-        if (queue.size() >= limit) {
-            throw new BlogException(ErrorCode.GUESTBOOK_RATE_LIMITED);
-        }
-        queue.addLast(now);
-    }
+		ArrayDeque<Instant> queue = attempts.computeIfAbsent(memberId, ignored -> new ArrayDeque<>());
+		if (queue.size() >= limit) {
+			throw new BlogException(ErrorCode.GUESTBOOK_RATE_LIMITED);
+		}
+		queue.addLast(now);
+	}
 }

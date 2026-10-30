@@ -5,183 +5,183 @@ const PUBLIC_BLOG_API_BASE = '/api/v1/blog';
 const ADMIN_COMMON_CODE_API_BASE = '/api/v1/admin/common-codes/groups';
 
 export async function getAdminBlogProfile(profileId = 1) {
-  const profile = await getApiData(`${PUBLIC_BLOG_API_BASE}/profile?profileId=${profileId}`);
+	const profile = await getApiData(`${PUBLIC_BLOG_API_BASE}/profile?profileId=${profileId}`);
 
-  return {
-    id: profile?.id ?? profileId,
-    name: profile?.name ?? '',
-    intro: profile?.intro ?? '',
-    job: profile?.job ?? '',
-    avatarImageUrl: profile?.avatarImageUrl ?? '',
-    githubUrl: profile?.githubUrl ?? '',
-    email: profile?.email ?? '',
-    blogStartedAt: profile?.blogStartedAt ?? '',
-    daysSinceStart: toNumberOrNull(profile?.daysSinceStart),
-  };
+	return {
+		id: profile?.id ?? profileId,
+		name: profile?.name ?? '',
+		intro: profile?.intro ?? '',
+		job: profile?.job ?? '',
+		avatarImageUrl: profile?.avatarImageUrl ?? '',
+		githubUrl: profile?.githubUrl ?? '',
+		email: profile?.email ?? '',
+		blogStartedAt: profile?.blogStartedAt ?? '',
+		daysSinceStart: toNumberOrNull(profile?.daysSinceStart),
+	};
 }
 
 export function updateAdminBlogProfile(request) {
-  return sendApiData(`${ADMIN_BLOG_API_BASE}/profile`, {
-    method: 'PUT',
-    body: request,
-  });
+	return sendApiData(`${ADMIN_BLOG_API_BASE}/profile`, {
+		method: 'PUT',
+		body: request,
+	});
 }
 
 export async function getAdminHomePageHero(homePageHeroId = 1) {
-  const hero = await getApiData(`${PUBLIC_BLOG_API_BASE}/home/hero?homePageHeroId=${homePageHeroId}`);
+	const hero = await getApiData(`${PUBLIC_BLOG_API_BASE}/home/hero?homePageHeroId=${homePageHeroId}`);
 
-  return {
-    id: hero?.id ?? homePageHeroId,
-    subTitle: hero?.subTitle ?? '',
-    title: hero?.title ?? '',
-    intro: hero?.intro ?? '',
-    heroImageUrl: hero?.heroImageUrl ?? '',
-  };
+	return {
+		id: hero?.id ?? homePageHeroId,
+		subTitle: hero?.subTitle ?? '',
+		title: hero?.title ?? '',
+		intro: hero?.intro ?? '',
+		heroImageUrl: hero?.heroImageUrl ?? '',
+	};
 }
 
 export function updateAdminHomePageHero(request) {
-  return sendApiData(`${ADMIN_BLOG_API_BASE}/home/hero`, {
-    method: 'PUT',
-    body: request,
-  });
+	return sendApiData(`${ADMIN_BLOG_API_BASE}/home/hero`, {
+		method: 'PUT',
+		body: request,
+	});
 }
 
 export async function getAdminHomePageTopicSection() {
-  const section = await getApiData(`${PUBLIC_BLOG_API_BASE}/home/topic-section`);
+	const section = await getApiData(`${PUBLIC_BLOG_API_BASE}/home/topic-section`);
 
-  return {
-    id: section?.id ?? 1,
-    title: section?.title ?? '',
-    intro: section?.intro ?? '',
-    noteBadge: section?.noteBadge ?? '',
-    note: section?.note ?? '',
-  };
+	return {
+		id: section?.id ?? 1,
+		title: section?.title ?? '',
+		intro: section?.intro ?? '',
+		noteBadge: section?.noteBadge ?? '',
+		note: section?.note ?? '',
+	};
 }
 
 export async function getAdminHomePageTopics() {
-  const topics = await getApiData(`${PUBLIC_BLOG_API_BASE}/home/topics`);
+	const topics = await getApiData(`${PUBLIC_BLOG_API_BASE}/home/topics`);
 
-  return Array.isArray(topics) ? topics.map((topic) => ({
-    id: topic.id ?? null,
-    label: topic.label ?? '',
-    title: topic.title ?? '',
-    description: topic.description ?? '',
-    keywords: Array.isArray(topic.keywords) ? topic.keywords : [],
-  })) : [];
+	return Array.isArray(topics) ? topics.map((topic) => ({
+		id: topic.id ?? null,
+		label: topic.label ?? '',
+		title: topic.title ?? '',
+		description: topic.description ?? '',
+		keywords: Array.isArray(topic.keywords) ? topic.keywords : [],
+	})) : [];
 }
 
 export function updateAdminHomePageTopics(request) {
-  return sendApiData(`${ADMIN_BLOG_API_BASE}/home/topics`, {
-    method: 'PUT',
-    body: request,
-  });
+	return sendApiData(`${ADMIN_BLOG_API_BASE}/home/topics`, {
+		method: 'PUT',
+		body: request,
+	});
 }
 
 export async function getAdminDashboard() {
-  const dashboard = await getApiData(`${ADMIN_BLOG_API_BASE}/dashboard`);
-  return toAdminDashboard(dashboard);
+	const dashboard = await getApiData(`${ADMIN_BLOG_API_BASE}/dashboard`);
+	return toAdminDashboard(dashboard);
 }
 
 export async function getAdminSidebarMenus() {
-  const menus = await getApiData(`${ADMIN_BLOG_API_BASE}/sidebar/menus`);
+	const menus = await getApiData(`${ADMIN_BLOG_API_BASE}/sidebar/menus`);
 
-  return toAdminMenus(menus);
+	return toAdminMenus(menus);
 }
 
 // 메뉴 관리 화면용. 숨긴 메뉴까지 전부 내려온다
 export async function getAdminMenus(condition = {}) {
-  const menus = await getApiData(withQuery(`${ADMIN_BLOG_API_BASE}/menus`, condition));
+	const menus = await getApiData(withQuery(`${ADMIN_BLOG_API_BASE}/menus`, condition));
 
-  return toAdminMenus(menus);
+	return toAdminMenus(menus);
 }
 
 // 빈 값은 보내지 않는다. 서버에서 빈 문자열도 조건으로 잡힐 수 있기 때문
 function withQuery(path, condition) {
-  const searchParams = new URLSearchParams();
+	const searchParams = new URLSearchParams();
 
-  Object.entries(condition).forEach(([key, value]) => {
-    if (value !== null && value !== undefined && value !== '') {
-      searchParams.set(key, String(value));
-    }
-  });
+	Object.entries(condition).forEach(([key, value]) => {
+		if (value !== null && value !== undefined && value !== '') {
+			searchParams.set(key, String(value));
+		}
+	});
 
-  const query = searchParams.toString();
+	const query = searchParams.toString();
 
-  return query ? `${path}?${query}` : path;
+	return query ? `${path}?${query}` : path;
 }
 
 // 메뉴 수정. menuType 은 바꿀 수 없어서 보내지 않는다
 export function updateAdminMenu(menuId, request) {
-  return sendApiData(`${ADMIN_BLOG_API_BASE}/menus/${menuId}`, {
-    method: 'PUT',
-    body: request,
-  });
+	return sendApiData(`${ADMIN_BLOG_API_BASE}/menus/${menuId}`, {
+		method: 'PUT',
+		body: request,
+	});
 }
 
 // 글 관리 화면용. 목록 + 상태별 건수 + 페이징 정보가 함께 온다
 export async function getAdminPosts(condition = {}) {
-  const result = await getApiData(withQuery(`${ADMIN_BLOG_API_BASE}/posts`, condition));
+	const result = await getApiData(withQuery(`${ADMIN_BLOG_API_BASE}/posts`, condition));
 
-  return {
-    items: Array.isArray(result?.items) ? result.items.map(toAdminPost) : [],
-    statusCounts: {
-      all: toNumber(result?.statusCounts?.all),
-      published: toNumber(result?.statusCounts?.published),
-      scheduled: toNumber(result?.statusCounts?.scheduled),
-      private: toNumber(result?.statusCounts?.private),
-      draft: toNumber(result?.statusCounts?.draft),
-      trash: toNumber(result?.statusCounts?.trash),
-    },
-    page: toNumber(result?.page),
-    size: toNumber(result?.size),
-    totalElements: toNumber(result?.totalElements),
-    totalPages: toNumber(result?.totalPages),
-  };
+	return {
+		items: Array.isArray(result?.items) ? result.items.map(toAdminPost) : [],
+		statusCounts: {
+			all: toNumber(result?.statusCounts?.all),
+			published: toNumber(result?.statusCounts?.published),
+			scheduled: toNumber(result?.statusCounts?.scheduled),
+			private: toNumber(result?.statusCounts?.private),
+			draft: toNumber(result?.statusCounts?.draft),
+			trash: toNumber(result?.statusCounts?.trash),
+		},
+		page: toNumber(result?.page),
+		size: toNumber(result?.size),
+		totalElements: toNumber(result?.totalElements),
+		totalPages: toNumber(result?.totalPages),
+	};
 }
 
 function toAdminPost(post) {
-  return {
-    id: post.id,
-    title: post.title ?? '제목 없는 글',
-    categoryId: post.categoryId ?? null,
-    categoryName: post.categoryName ?? '미분류',
-    status: post.status ?? 'DRAFT',
-    publishedAt: post.publishedAt ?? null,
-    createdAt: post.createdAt ?? null,
-    deletedAt: post.deletedAt ?? null,
-    restoreUntil: post.restoreUntil ?? null,
-    restorable: post.restorable === true,
-    purgeable: post.purgeable === true,
-    views: toNumber(post.views),
-  };
+	return {
+		id: post.id,
+		title: post.title ?? '제목 없는 글',
+		categoryId: post.categoryId ?? null,
+		categoryName: post.categoryName ?? '미분류',
+		status: post.status ?? 'DRAFT',
+		publishedAt: post.publishedAt ?? null,
+		createdAt: post.createdAt ?? null,
+		deletedAt: post.deletedAt ?? null,
+		restoreUntil: post.restoreUntil ?? null,
+		restorable: post.restorable === true,
+		purgeable: post.purgeable === true,
+		views: toNumber(post.views),
+	};
 }
 
 export async function getAdminPost(postId) {
-  const post = await getApiData(`${ADMIN_BLOG_API_BASE}/posts/${postId}`);
+	const post = await getApiData(`${ADMIN_BLOG_API_BASE}/posts/${postId}`);
 
-  return {
-    id: post?.id ?? null,
-    title: post?.title ?? '',
-    categoryId: post?.categoryId ?? null,
-    categoryName: post?.categoryName ?? '',
-    // null 을 그대로 두면 textarea 에 "null" 이 찍힌다
-    excerpt: post?.excerpt ?? '',
-    content: post?.content ?? '',
-    thumbnailImageUrl: post?.thumbnailImageUrl ?? '',
-    status: post?.status ?? 'DRAFT',
-    publishedAt: post?.publishedAt ?? null,
-    // 로컬 스냅샷이 어느 서버 값을 기준으로 만들어졌는지 비교하는 데 쓴다.
-    // 여기서 빠뜨리면 충돌 감지가 조용히 죽는다
-    updatedAt: post?.updatedAt ?? null,
-  };
+	return {
+		id: post?.id ?? null,
+		title: post?.title ?? '',
+		categoryId: post?.categoryId ?? null,
+		categoryName: post?.categoryName ?? '',
+		// null 을 그대로 두면 textarea 에 "null" 이 찍힌다
+		excerpt: post?.excerpt ?? '',
+		content: post?.content ?? '',
+		thumbnailImageUrl: post?.thumbnailImageUrl ?? '',
+		status: post?.status ?? 'DRAFT',
+		publishedAt: post?.publishedAt ?? null,
+		// 로컬 스냅샷이 어느 서버 값을 기준으로 만들어졌는지 비교하는 데 쓴다.
+		// 여기서 빠뜨리면 충돌 감지가 조용히 죽는다
+		updatedAt: post?.updatedAt ?? null,
+	};
 }
 
 export function createAdminPost(request) {
-  return sendApiData(`${ADMIN_BLOG_API_BASE}/posts`, { method: 'POST', body: request });
+	return sendApiData(`${ADMIN_BLOG_API_BASE}/posts`, { method: 'POST', body: request });
 }
 
 export function updateAdminPost(postId, request) {
-  return sendApiData(`${ADMIN_BLOG_API_BASE}/posts/${postId}`, { method: 'PUT', body: request });
+	return sendApiData(`${ADMIN_BLOG_API_BASE}/posts/${postId}`, { method: 'PUT', body: request });
 }
 
 // 발행·내리기는 수정(PUT)과 나눠져 있다.
@@ -193,29 +193,29 @@ export function updateAdminPost(postId, request) {
  * 비우면 지금 발행이다.
  */
 export function publishAdminPost(postId, publishedAt = null) {
-  return sendApiData(`${ADMIN_BLOG_API_BASE}/posts/${postId}/publish`, {
-    method: 'POST',
-    body: { publishedAt },
-  });
+	return sendApiData(`${ADMIN_BLOG_API_BASE}/posts/${postId}/publish`, {
+		method: 'POST',
+		body: { publishedAt },
+	});
 }
 
 export function unpublishAdminPost(postId) {
-  return sendApiData(`${ADMIN_BLOG_API_BASE}/posts/${postId}/unpublish`, { method: 'POST' });
+	return sendApiData(`${ADMIN_BLOG_API_BASE}/posts/${postId}/unpublish`, { method: 'POST' });
 }
 
 export function restoreAdminPost(postId) {
-  return sendApiData(`${ADMIN_BLOG_API_BASE}/posts/${postId}/restore`, { method: 'POST' });
+	return sendApiData(`${ADMIN_BLOG_API_BASE}/posts/${postId}/restore`, { method: 'POST' });
 }
 
 export function deleteAdminPost(postId) {
-  return sendApiData(`${ADMIN_BLOG_API_BASE}/posts/${postId}`, { method: 'DELETE' });
+	return sendApiData(`${ADMIN_BLOG_API_BASE}/posts/${postId}`, { method: 'DELETE' });
 }
 
 export function purgeAdminPost(postId, confirmation) {
-  return sendApiData(`${ADMIN_BLOG_API_BASE}/posts/${postId}/permanent`, {
-    method: 'DELETE',
-    body: confirmation,
-  });
+	return sendApiData(`${ADMIN_BLOG_API_BASE}/posts/${postId}/permanent`, {
+		method: 'DELETE',
+		body: confirmation,
+	});
 }
 
 /**
@@ -224,28 +224,28 @@ export function purgeAdminPost(postId, confirmation) {
  * viewer 는 MEMBER·ADMIN·ANONYMOUS·BOT 중 하나이고 비우면 전체다.
  */
 export async function getAdminPostViews(postId, { viewer = '', page = 1, size = 20 } = {}) {
-  const result = await getApiData(withQuery(`${ADMIN_BLOG_API_BASE}/posts/${postId}/views`, {
-    viewer,
-    page: Math.max(0, page - 1),
-    size,
-  }));
+	const result = await getApiData(withQuery(`${ADMIN_BLOG_API_BASE}/posts/${postId}/views`, {
+		viewer,
+		page: Math.max(0, page - 1),
+		size,
+	}));
 
-  return {
-    postTitle: result?.postTitle ?? '',
-    totalViews: toNumber(result?.totalViews),
-    recordingStartedAt: result?.recordingStartedAt ?? null,
-    counts: {
-      all: toNumber(result?.counts?.all),
-      member: toNumber(result?.counts?.member),
-      admin: toNumber(result?.counts?.admin),
-      anonymous: toNumber(result?.counts?.anonymous),
-      bot: toNumber(result?.counts?.bot),
-    },
-    items: Array.isArray(result?.items) ? result.items.map(toAdminPostView) : [],
-    page: toNumber(result?.page) + 1,
-    totalElements: toNumber(result?.totalElements),
-    totalPages: toNumber(result?.totalPages),
-  };
+	return {
+		postTitle: result?.postTitle ?? '',
+		totalViews: toNumber(result?.totalViews),
+		recordingStartedAt: result?.recordingStartedAt ?? null,
+		counts: {
+			all: toNumber(result?.counts?.all),
+			member: toNumber(result?.counts?.member),
+			admin: toNumber(result?.counts?.admin),
+			anonymous: toNumber(result?.counts?.anonymous),
+			bot: toNumber(result?.counts?.bot),
+		},
+		items: Array.isArray(result?.items) ? result.items.map(toAdminPostView) : [],
+		page: toNumber(result?.page) + 1,
+		totalElements: toNumber(result?.totalElements),
+		totalPages: toNumber(result?.totalPages),
+	};
 }
 
 /**
@@ -253,134 +253,134 @@ export async function getAdminPostViews(postId, { viewer = '', page = 1, size = 
  * 날짜는 서울 기준 'YYYY-MM-DD' 문자열 그대로 둔다 — Date 로 바꾸면 브라우저 시간대에 따라 하루가 밀린다.
  */
 export async function getAdminViewStats(days) {
-  const result = await getApiData(withQuery(`${ADMIN_BLOG_API_BASE}/stats/views`, { days }));
+	const result = await getApiData(withQuery(`${ADMIN_BLOG_API_BASE}/stats/views`, { days }));
 
-  return {
-    days: toNumber(result?.days),
-    from: result?.from ?? '',
-    to: result?.to ?? '',
-    recordingStartedAt: result?.recordingStartedAt ?? null,
-    pageViews: toNumber(result?.pageViews),
-    memberViews: toNumber(result?.memberViews),
-    anonymousViews: toNumber(result?.anonymousViews),
-    uniqueMembers: toNumber(result?.uniqueMembers),
-    excludedAdminViews: toNumber(result?.excludedAdminViews),
-    excludedBotViews: toNumber(result?.excludedBotViews),
-    daily: Array.isArray(result?.daily) ? result.daily.map((day) => ({
-      date: day.date,
-      pageViews: toNumber(day.pageViews),
-      memberViews: toNumber(day.memberViews),
-      anonymousViews: toNumber(day.anonymousViews),
-    })) : [],
-    devices: Array.isArray(result?.devices) ? result.devices.map((device) => ({
-      deviceType: device.deviceType,
-      pageViews: toNumber(device.pageViews),
-    })) : [],
-  };
+	return {
+		days: toNumber(result?.days),
+		from: result?.from ?? '',
+		to: result?.to ?? '',
+		recordingStartedAt: result?.recordingStartedAt ?? null,
+		pageViews: toNumber(result?.pageViews),
+		memberViews: toNumber(result?.memberViews),
+		anonymousViews: toNumber(result?.anonymousViews),
+		uniqueMembers: toNumber(result?.uniqueMembers),
+		excludedAdminViews: toNumber(result?.excludedAdminViews),
+		excludedBotViews: toNumber(result?.excludedBotViews),
+		daily: Array.isArray(result?.daily) ? result.daily.map((day) => ({
+			date: day.date,
+			pageViews: toNumber(day.pageViews),
+			memberViews: toNumber(day.memberViews),
+			anonymousViews: toNumber(day.anonymousViews),
+		})) : [],
+		devices: Array.isArray(result?.devices) ? result.devices.map((device) => ({
+			deviceType: device.deviceType,
+			pageViews: toNumber(device.pageViews),
+		})) : [],
+	};
 }
 
 /** 기간 안 조회 기록이 많은 글부터. 화면은 1쪽부터, 서버는 0쪽부터 센다 */
 export async function getAdminViewStatsPosts({ days, page = 1, size = 10 } = {}) {
-  const result = await getApiData(withQuery(`${ADMIN_BLOG_API_BASE}/stats/views/posts`, {
-    days,
-    page: Math.max(0, page - 1),
-    size,
-  }));
+	const result = await getApiData(withQuery(`${ADMIN_BLOG_API_BASE}/stats/views/posts`, {
+		days,
+		page: Math.max(0, page - 1),
+		size,
+	}));
 
-  return {
-    items: Array.isArray(result?.items) ? result.items.map((post) => ({
-      id: post.postId,
-      title: post.title ?? '찾을 수 없는 글',
-      status: post.status ?? null,
-      deleted: post.deleted === true,
-      pageViews: toNumber(post.pageViews),
-      uniqueMembers: toNumber(post.uniqueMembers),
-      anonymousViews: toNumber(post.anonymousViews),
-      totalViews: toNumber(post.totalViews),
-      commentCount: toNumber(post.commentCount),
-      likeCount: toNumber(post.likeCount),
-    })) : [],
-    page: toNumber(result?.page) + 1,
-    totalElements: toNumber(result?.totalElements),
-    totalPages: toNumber(result?.totalPages),
-  };
+	return {
+		items: Array.isArray(result?.items) ? result.items.map((post) => ({
+			id: post.postId,
+			title: post.title ?? '찾을 수 없는 글',
+			status: post.status ?? null,
+			deleted: post.deleted === true,
+			pageViews: toNumber(post.pageViews),
+			uniqueMembers: toNumber(post.uniqueMembers),
+			anonymousViews: toNumber(post.anonymousViews),
+			totalViews: toNumber(post.totalViews),
+			commentCount: toNumber(post.commentCount),
+			likeCount: toNumber(post.likeCount),
+		})) : [],
+		page: toNumber(result?.page) + 1,
+		totalElements: toNumber(result?.totalElements),
+		totalPages: toNumber(result?.totalPages),
+	};
 }
 
 function toAdminPostView(view) {
-  return {
-    id: view.id,
-    viewedAt: view.viewedAt ?? null,
-    viewerType: view.viewerType ?? 'ANONYMOUS',
-    memberId: view.memberId ?? null,
-    nickname: view.nickname ?? '',
-    memberStatus: view.memberStatus ?? null,
-    memberStatusName: view.memberStatusName ?? '',
-  };
+	return {
+		id: view.id,
+		viewedAt: view.viewedAt ?? null,
+		viewerType: view.viewerType ?? 'ANONYMOUS',
+		memberId: view.memberId ?? null,
+		nickname: view.nickname ?? '',
+		memberStatus: view.memberStatus ?? null,
+		memberStatusName: view.memberStatusName ?? '',
+	};
 }
 
 export async function getAdminComments(condition = {}) {
-  const result = await getApiData(withQuery(`${ADMIN_BLOG_API_BASE}/comments`, condition));
+	const result = await getApiData(withQuery(`${ADMIN_BLOG_API_BASE}/comments`, condition));
 
-  return {
-    items: Array.isArray(result?.items) ? result.items.map(toAdminComment) : [],
-    statusCounts: {
-      all: toNumber(result?.statusCounts?.all),
-      unanswered: toNumber(result?.statusCounts?.unanswered),
-      hidden: toNumber(result?.statusCounts?.hidden),
-      reported: toNumber(result?.statusCounts?.reported),
-    },
-    page: toNumber(result?.page),
-    size: toNumber(result?.size),
-    totalElements: toNumber(result?.totalElements),
-    totalPages: toNumber(result?.totalPages),
-  };
+	return {
+		items: Array.isArray(result?.items) ? result.items.map(toAdminComment) : [],
+		statusCounts: {
+			all: toNumber(result?.statusCounts?.all),
+			unanswered: toNumber(result?.statusCounts?.unanswered),
+			hidden: toNumber(result?.statusCounts?.hidden),
+			reported: toNumber(result?.statusCounts?.reported),
+		},
+		page: toNumber(result?.page),
+		size: toNumber(result?.size),
+		totalElements: toNumber(result?.totalElements),
+		totalPages: toNumber(result?.totalPages),
+	};
 }
 
 export async function getAdminMembers(condition = {}) {
-  const result = await getApiData(withQuery(`${ADMIN_BLOG_API_BASE}/members`, condition));
+	const result = await getApiData(withQuery(`${ADMIN_BLOG_API_BASE}/members`, condition));
 
-  return {
-    items: Array.isArray(result?.items) ? result.items.map(toAdminMember) : [],
-    statusCounts: {
-      all: toNumber(result?.statusCounts?.all),
-      active: toNumber(result?.statusCounts?.active),
-      suspended: toNumber(result?.statusCounts?.suspended),
-      withdrawn: toNumber(result?.statusCounts?.withdrawn),
-    },
-    page: toNumber(result?.page),
-    size: toNumber(result?.size),
-    totalElements: toNumber(result?.totalElements),
-    totalPages: toNumber(result?.totalPages),
-  };
+	return {
+		items: Array.isArray(result?.items) ? result.items.map(toAdminMember) : [],
+		statusCounts: {
+			all: toNumber(result?.statusCounts?.all),
+			active: toNumber(result?.statusCounts?.active),
+			suspended: toNumber(result?.statusCounts?.suspended),
+			withdrawn: toNumber(result?.statusCounts?.withdrawn),
+		},
+		page: toNumber(result?.page),
+		size: toNumber(result?.size),
+		totalElements: toNumber(result?.totalElements),
+		totalPages: toNumber(result?.totalPages),
+	};
 }
 
 export function suspendAdminMember(memberId) {
-  return sendApiData(`${ADMIN_BLOG_API_BASE}/members/${memberId}/suspend`, { method: 'POST' });
+	return sendApiData(`${ADMIN_BLOG_API_BASE}/members/${memberId}/suspend`, { method: 'POST' });
 }
 
 export function unsuspendAdminMember(memberId) {
-  return sendApiData(`${ADMIN_BLOG_API_BASE}/members/${memberId}/unsuspend`, { method: 'POST' });
+	return sendApiData(`${ADMIN_BLOG_API_BASE}/members/${memberId}/unsuspend`, { method: 'POST' });
 }
 
 function toAdminMember(member) {
-  return {
-    id: member.id,
-    nickname: member.nickname ?? '이름 없는 회원',
-    email: member.email ?? '',
-    provider: member.provider ?? '',
-    status: member.status ?? 'ACTIVE',
-    // 화면에 보일 이름. 서버가 공통 코드 MEMBER_STATUS 에서 붙여 준다
-    statusName: member.statusName ?? null,
-    commentCount: toNumber(member.commentCount),
-    createdAt: member.createdAt ?? null,
-  };
+	return {
+		id: member.id,
+		nickname: member.nickname ?? '이름 없는 회원',
+		email: member.email ?? '',
+		provider: member.provider ?? '',
+		status: member.status ?? 'ACTIVE',
+		// 화면에 보일 이름. 서버가 공통 코드 MEMBER_STATUS 에서 붙여 준다
+		statusName: member.statusName ?? null,
+		commentCount: toNumber(member.commentCount),
+		createdAt: member.createdAt ?? null,
+	};
 }
 
 export function replyAdminComment(commentId, content) {
-  return sendApiData(`${ADMIN_BLOG_API_BASE}/comments/${commentId}/replies`, {
-    method: 'POST',
-    body: { content },
-  });
+	return sendApiData(`${ADMIN_BLOG_API_BASE}/comments/${commentId}/replies`, {
+		method: 'POST',
+		body: { content },
+	});
 }
 
 /**
@@ -390,381 +390,376 @@ export function replyAdminComment(commentId, content) {
  * 가리킬 것이 있으려면 그때 적어 두는 수밖에 없다.
  */
 export function updateAdminCommentVisibility(commentId, hidden, reason = null) {
-  return sendApiData(`${ADMIN_BLOG_API_BASE}/comments/${commentId}/visibility`, {
-    method: 'PUT',
-    body: { hidden, reason },
-  });
+	return sendApiData(`${ADMIN_BLOG_API_BASE}/comments/${commentId}/visibility`, {
+		method: 'PUT',
+		body: { hidden, reason },
+	});
 }
 
 /** 댓글 상세. 지금 본문, 신고와 조치, 변경 기록 */
 export async function getAdminCommentDetail(commentId) {
-  const detail = await getApiData(`${ADMIN_BLOG_API_BASE}/comments/${commentId}`);
+	const detail = await getApiData(`${ADMIN_BLOG_API_BASE}/comments/${commentId}`);
 
-  return {
-    id: detail?.id ?? commentId,
-    postId: detail?.postId ?? null,
-    postTitle: detail?.postTitle ?? '제목 없는 글',
-    parentId: detail?.parentId ?? null,
-    nickname: detail?.nickname ?? '알 수 없는 회원',
-    memberRole: detail?.memberRole ?? 'USER',
-    content: detail?.content ?? '',
-    createdAt: detail?.createdAt ?? null,
-    deleted: Boolean(detail?.deleted),
-    hiddenByAdmin: Boolean(detail?.hiddenByAdmin),
-    edited: Boolean(detail?.edited),
-    deletedAt: detail?.deletedAt ?? null,
-    contentRetainedUntil: detail?.contentRetainedUntil ?? null,
-    contentPurged: Boolean(detail?.contentPurged),
-    postPurged: Boolean(detail?.postPurged),
-    reports: Array.isArray(detail?.reports) ? detail.reports : [],
-    moderations: Array.isArray(detail?.moderations) ? detail.moderations : [],
-    histories: Array.isArray(detail?.histories) ? detail.histories : [],
-  };
+	return {
+		id: detail?.id ?? commentId,
+		postId: detail?.postId ?? null,
+		postTitle: detail?.postTitle ?? '제목 없는 글',
+		parentId: detail?.parentId ?? null,
+		nickname: detail?.nickname ?? '알 수 없는 회원',
+		memberRole: detail?.memberRole ?? 'USER',
+		content: detail?.content ?? '',
+		createdAt: detail?.createdAt ?? null,
+		deleted: Boolean(detail?.deleted),
+		hiddenByAdmin: Boolean(detail?.hiddenByAdmin),
+		edited: Boolean(detail?.edited),
+		deletedAt: detail?.deletedAt ?? null,
+		contentRetainedUntil: detail?.contentRetainedUntil ?? null,
+		contentPurged: Boolean(detail?.contentPurged),
+		postPurged: Boolean(detail?.postPurged),
+		reports: Array.isArray(detail?.reports) ? detail.reports : [],
+		moderations: Array.isArray(detail?.moderations) ? detail.moderations : [],
+		histories: Array.isArray(detail?.histories) ? detail.histories : [],
+	};
 }
 
 /** 신고를 봤지만 댓글은 그대로 둔다 */
 export function dismissAdminCommentReports(commentId, reason = null) {
-  return sendApiData(`${ADMIN_BLOG_API_BASE}/comments/${commentId}/reports/dismiss`, {
-    method: 'POST',
-    body: { reason },
-  });
+	return sendApiData(`${ADMIN_BLOG_API_BASE}/comments/${commentId}/reports/dismiss`, {
+		method: 'POST',
+		body: { reason },
+	});
 }
 
 function toAdminComment(comment) {
-  return {
-    id: comment.id,
-    postId: comment.postId,
-    postTitle: comment.postTitle ?? '제목 없는 글',
-    parentId: comment.parentId ?? null,
-    nickname: comment.nickname ?? '알 수 없는 회원',
-    memberRole: comment.memberRole ?? 'USER',
-    content: comment.content ?? '',
-    createdAt: comment.createdAt ?? null,
-    hidden: Boolean(comment.hidden),
-    answered: Boolean(comment.answered),
-    reportCount: Number(comment.reportCount ?? 0),
-    unhandledReportCount: Number(comment.unhandledReportCount ?? 0),
-    contentPurged: Boolean(comment.contentPurged),
-    postPurged: Boolean(comment.postPurged),
-    // 글쓴이가 지운 댓글(지운 뒤 가린 것 포함). 운영자는 자기가 가린 댓글만 되돌린다
-    deletedByWriter: Boolean(comment.deletedByWriter),
-  };
+	return {
+		id: comment.id,
+		postId: comment.postId,
+		postTitle: comment.postTitle ?? '제목 없는 글',
+		parentId: comment.parentId ?? null,
+		nickname: comment.nickname ?? '알 수 없는 회원',
+		memberRole: comment.memberRole ?? 'USER',
+		content: comment.content ?? '',
+		createdAt: comment.createdAt ?? null,
+		hidden: Boolean(comment.hidden),
+		answered: Boolean(comment.answered),
+		reportCount: Number(comment.reportCount ?? 0),
+		unhandledReportCount: Number(comment.unhandledReportCount ?? 0),
+		contentPurged: Boolean(comment.contentPurged),
+		postPurged: Boolean(comment.postPurged),
+		// 글쓴이가 지운 댓글(지운 뒤 가린 것 포함). 운영자는 자기가 가린 댓글만 되돌린다
+		deletedByWriter: Boolean(comment.deletedByWriter),
+	};
 }
 
 export async function getAdminGuestbook(condition = {}) {
-  const result = await getApiData(withQuery(`${ADMIN_BLOG_API_BASE}/guestbook`, condition));
+	const result = await getApiData(withQuery(`${ADMIN_BLOG_API_BASE}/guestbook`, condition));
 
-  return {
-    items: Array.isArray(result?.items) ? result.items.map(toAdminGuestbookEntry) : [],
-    statusCounts: {
-      all: toNumber(result?.statusCounts?.all),
-      reported: toNumber(result?.statusCounts?.reported),
-      hidden: toNumber(result?.statusCounts?.hidden),
-      deleted: toNumber(result?.statusCounts?.deleted),
-    },
-    page: toNumber(result?.page),
-    size: toNumber(result?.size),
-    totalElements: toNumber(result?.totalElements),
-    totalPages: toNumber(result?.totalPages),
-  };
+	return {
+		items: Array.isArray(result?.items) ? result.items.map(toAdminGuestbookEntry) : [],
+		statusCounts: {
+			all: toNumber(result?.statusCounts?.all),
+			reported: toNumber(result?.statusCounts?.reported),
+			hidden: toNumber(result?.statusCounts?.hidden),
+			deleted: toNumber(result?.statusCounts?.deleted),
+		},
+		page: toNumber(result?.page),
+		size: toNumber(result?.size),
+		totalElements: toNumber(result?.totalElements),
+		totalPages: toNumber(result?.totalPages),
+	};
 }
 
 /** 방명록 글 하나와 신고 목록. 신고한 사람은 서버가 내보내지 않는다 */
 export async function getAdminGuestbookDetail(entryId) {
-  const detail = await getApiData(`${ADMIN_BLOG_API_BASE}/guestbook/${entryId}`);
+	const detail = await getApiData(`${ADMIN_BLOG_API_BASE}/guestbook/${entryId}`);
 
-  return {
-    entry: toAdminGuestbookEntry(detail?.entry ?? { id: entryId }),
-    deletedAt: detail?.deletedAt ?? null,
-    retainedUntil: detail?.retainedUntil ?? null,
-    reports: Array.isArray(detail?.reports) ? detail.reports : [],
-  };
+	return {
+		entry: toAdminGuestbookEntry(detail?.entry ?? { id: entryId }),
+		deletedAt: detail?.deletedAt ?? null,
+		retainedUntil: detail?.retainedUntil ?? null,
+		reports: Array.isArray(detail?.reports) ? detail.reports : [],
+	};
 }
 
 /** 운영자 답글. 글마다 하나라 달기와 고치기가 같은 요청이다 */
 export function saveAdminGuestbookReply(entryId, content) {
-  return sendApiData(`${ADMIN_BLOG_API_BASE}/guestbook/${entryId}/reply`, {
-    method: 'PUT',
-    body: { content },
-  });
+	return sendApiData(`${ADMIN_BLOG_API_BASE}/guestbook/${entryId}/reply`, {
+		method: 'PUT',
+		body: { content },
+	});
 }
 
 export function deleteAdminGuestbookReply(entryId) {
-  return sendApiData(`${ADMIN_BLOG_API_BASE}/guestbook/${entryId}/reply`, { method: 'DELETE' });
+	return sendApiData(`${ADMIN_BLOG_API_BASE}/guestbook/${entryId}/reply`, { method: 'DELETE' });
 }
 
 /** 가리거나 되돌린다. 걸린 신고는 서버가 같이 처리한다 */
 export function updateAdminGuestbookVisibility(entryId, hidden) {
-  return sendApiData(`${ADMIN_BLOG_API_BASE}/guestbook/${entryId}/visibility`, {
-    method: 'PUT',
-    body: { hidden },
-  });
+	return sendApiData(`${ADMIN_BLOG_API_BASE}/guestbook/${entryId}/visibility`, {
+		method: 'PUT',
+		body: { hidden },
+	});
 }
 
 export function dismissAdminGuestbookReports(entryId) {
-  return sendApiData(`${ADMIN_BLOG_API_BASE}/guestbook/${entryId}/reports/dismiss`, { method: 'POST' });
+	return sendApiData(`${ADMIN_BLOG_API_BASE}/guestbook/${entryId}/reports/dismiss`, { method: 'POST' });
 }
 
 function toAdminGuestbookEntry(entry) {
-  return {
-    id: entry.id,
-    memberId: entry.memberId ?? null,
-    nickname: entry.nickname ?? '알 수 없는 회원',
-    writtenByAdmin: Boolean(entry.writtenByAdmin),
-    content: entry.content ?? '',
-    secret: Boolean(entry.secret),
-    edited: Boolean(entry.edited),
-    createdAt: entry.createdAt ?? null,
-    deleted: Boolean(entry.deleted),
-    hiddenByAdmin: Boolean(entry.hiddenByAdmin),
-    contentPurged: Boolean(entry.contentPurged),
-    replyContent: entry.replyContent ?? null,
-    repliedAt: entry.repliedAt ?? null,
-    reportCount: toNumber(entry.reportCount),
-    unhandledReportCount: toNumber(entry.unhandledReportCount),
-    deletedByWriter: Boolean(entry.deletedByWriter),
-  };
+	return {
+		id: entry.id,
+		memberId: entry.memberId ?? null,
+		nickname: entry.nickname ?? '알 수 없는 회원',
+		writtenByAdmin: Boolean(entry.writtenByAdmin),
+		content: entry.content ?? '',
+		secret: Boolean(entry.secret),
+		edited: Boolean(entry.edited),
+		createdAt: entry.createdAt ?? null,
+		deleted: Boolean(entry.deleted),
+		hiddenByAdmin: Boolean(entry.hiddenByAdmin),
+		contentPurged: Boolean(entry.contentPurged),
+		replyContent: entry.replyContent ?? null,
+		repliedAt: entry.repliedAt ?? null,
+		reportCount: toNumber(entry.reportCount),
+		unhandledReportCount: toNumber(entry.unhandledReportCount),
+		deletedByWriter: Boolean(entry.deletedByWriter),
+	};
 }
 
 // 메뉴 등록. 수정과 달리 menuType 을 보낸다 (만들 때만 정할 수 있다)
 export function createAdminMenu(request) {
-  return sendApiData(`${ADMIN_BLOG_API_BASE}/menus`, {
-    method: 'POST',
-    body: request,
-  });
+	return sendApiData(`${ADMIN_BLOG_API_BASE}/menus`, {
+		method: 'POST',
+		body: request,
+	});
 }
 
 export function deleteAdminMenu(menuId) {
-  return sendApiData(`${ADMIN_BLOG_API_BASE}/menus/${menuId}`, {
-    method: 'DELETE',
-  });
+	return sendApiData(`${ADMIN_BLOG_API_BASE}/menus/${menuId}`, {
+		method: 'DELETE',
+	});
 }
 
 // 공통 코드 그룹 목록. 검색어는 그룹과 그 안 코드의 값·이름에서 찾는다
 export async function getAdminCommonCodeGroups(condition = {}) {
-  const result = await getApiData(withQuery(ADMIN_COMMON_CODE_API_BASE, condition));
+	const result = await getApiData(withQuery(ADMIN_COMMON_CODE_API_BASE, condition));
 
-  return {
-    items: Array.isArray(result?.items) ? result.items.map(toAdminCommonCodeGroup) : [],
-    page: toNumber(result?.page),
-    size: toNumber(result?.size),
-    totalElements: toNumber(result?.totalElements),
-    totalPages: toNumber(result?.totalPages),
-  };
+	return {
+		items: Array.isArray(result?.items) ? result.items.map(toAdminCommonCodeGroup) : [],
+		page: toNumber(result?.page),
+		size: toNumber(result?.size),
+		totalElements: toNumber(result?.totalElements),
+		totalPages: toNumber(result?.totalPages),
+	};
 }
 
 // 그룹 추가. 그룹 코드는 만든 뒤 바꿀 수 없다
 export async function createAdminCommonCodeGroup(request) {
-  return toAdminCommonCodeGroup(await sendApiData(ADMIN_COMMON_CODE_API_BASE, {
-    method: 'POST',
-    body: request,
-  }));
+	return toAdminCommonCodeGroup(await sendApiData(ADMIN_COMMON_CODE_API_BASE, {
+		method: 'POST',
+		body: request,
+	}));
 }
 
 // 그룹의 이름·설명·사용 여부. 서버 코드가 쓰는 그룹은 끌 수 없다
 export async function updateAdminCommonCodeGroup(groupCode, request) {
-  return toAdminCommonCodeGroup(await sendApiData(`${ADMIN_COMMON_CODE_API_BASE}/${encodeURIComponent(groupCode)}`, {
-    method: 'PUT',
-    body: request,
-  }));
+	return toAdminCommonCodeGroup(await sendApiData(`${ADMIN_COMMON_CODE_API_BASE}/${encodeURIComponent(groupCode)}`, {
+		method: 'PUT',
+		body: request,
+	}));
 }
 
 // 그룹의 코드 전부. 사용하지 않는 코드도 온다
 export async function getAdminCommonCodes(groupCode) {
-  const codes = await getApiData(`${ADMIN_COMMON_CODE_API_BASE}/${encodeURIComponent(groupCode)}/codes`);
+	const codes = await getApiData(`${ADMIN_COMMON_CODE_API_BASE}/${encodeURIComponent(groupCode)}/codes`);
 
-  return Array.isArray(codes) ? codes : [];
+	return Array.isArray(codes) ? codes : [];
 }
 
 // 코드 추가. 서버 코드가 쓰는 그룹에는 넣을 수 없다
 export function createAdminCommonCode(groupCode, request) {
-  return sendApiData(`${ADMIN_COMMON_CODE_API_BASE}/${encodeURIComponent(groupCode)}/codes`, {
-    method: 'POST',
-    body: request,
-  });
+	return sendApiData(`${ADMIN_COMMON_CODE_API_BASE}/${encodeURIComponent(groupCode)}/codes`, {
+		method: 'POST',
+		body: request,
+	});
 }
 
 // 코드의 이름·설명·순서·사용 여부. 코드 값은 바꾸지 않는다
 export function updateAdminCommonCode(groupCode, code, request) {
-  return sendApiData(`${ADMIN_COMMON_CODE_API_BASE}/${encodeURIComponent(groupCode)}/codes/${encodeURIComponent(code)}`, {
-    method: 'PUT',
-    body: request,
-  });
+	return sendApiData(`${ADMIN_COMMON_CODE_API_BASE}/${encodeURIComponent(groupCode)}/codes/${encodeURIComponent(code)}`, {
+		method: 'PUT',
+		body: request,
+	});
 }
 
 function toAdminCommonCodeGroup(group) {
-  return {
-    groupCode: group?.groupCode ?? '',
-    groupName: group?.groupName ?? '',
-    description: group?.description ?? '',
-    enabled: Boolean(group?.enabled),
-    managedByEnum: Boolean(group?.managedByEnum),
-    codeCount: toNumber(group?.codeCount),
-    updatedAt: group?.updatedAt ?? null,
-  };
+	return {
+		groupCode: group?.groupCode ?? '',
+		groupName: group?.groupName ?? '',
+		description: group?.description ?? '',
+		enabled: Boolean(group?.enabled),
+		managedByEnum: Boolean(group?.managedByEnum),
+		codeCount: toNumber(group?.codeCount),
+		updatedAt: group?.updatedAt ?? null,
+	};
 }
 
 // 카테고리 관리 화면용. 공개 목록과 달리 글 수가 함께 내려온다
 export async function getAdminCategories(condition = {}) {
-  const categories = await getApiData(withQuery(`${ADMIN_BLOG_API_BASE}/categories`, condition));
+	const categories = await getApiData(withQuery(`${ADMIN_BLOG_API_BASE}/categories`, condition));
 
-  return Array.isArray(categories) ? categories.map(toAdminCategory) : [];
+	return Array.isArray(categories) ? categories.map(toAdminCategory) : [];
 }
 
 export function createAdminCategory(request) {
-  return sendApiData(`${ADMIN_BLOG_API_BASE}/categories`, {
-    method: 'POST',
-    body: request,
-  });
+	return sendApiData(`${ADMIN_BLOG_API_BASE}/categories`, {
+		method: 'POST',
+		body: request,
+	});
 }
 
 export function updateAdminCategory(categoryId, request) {
-  return sendApiData(`${ADMIN_BLOG_API_BASE}/categories/${categoryId}`, {
-    method: 'PUT',
-    body: request,
-  });
+	return sendApiData(`${ADMIN_BLOG_API_BASE}/categories/${categoryId}`, {
+		method: 'PUT',
+		body: request,
+	});
 }
 
 export function deleteAdminCategory(categoryId) {
-  return sendApiData(`${ADMIN_BLOG_API_BASE}/categories/${categoryId}`, {
-    method: 'DELETE',
-  });
+	return sendApiData(`${ADMIN_BLOG_API_BASE}/categories/${categoryId}`, {
+		method: 'DELETE',
+	});
 }
 
 function toAdminCategory(category) {
-  return {
-    id: category.id,
-    name: category.name ?? '이름 없는 카테고리',
-    sortOrder: toNumber(category.sortOrder),
-    // 전용 API 에서 내려줄 값. 없으면 화면에 "연결 전"으로 표시한다
-    postCount: toNumberOrNull(category.postCount),
-    updatedAt: category.updatedAt ?? null,
-  };
+	return {
+		id: category.id,
+		name: category.name ?? '이름 없는 카테고리',
+		sortOrder: toNumber(category.sortOrder),
+		// 전용 API 에서 내려줄 값. 없으면 화면에 "연결 전"으로 표시한다
+		postCount: toNumberOrNull(category.postCount),
+		updatedAt: category.updatedAt ?? null,
+	};
 }
 
 function toAdminDashboard(dashboard) {
-  return {
-    daysSinceStart: toNumberOrNull(dashboard?.daysSinceStart),
-    draftPostCount: toNumberOrNull(dashboard?.draftPostCount),
-    totalViews: toNumberOrNull(dashboard?.totalViews),
-    publishedPostCount: toNumberOrNull(dashboard?.publishedPostCount),
-    postCountThisMonth: toNumberOrNull(dashboard?.postCountThisMonth),
-    reportedCommentCount: toNumberOrNull(dashboard?.reportedCommentCount),
-    mostViewedCategory: dashboard?.mostViewedCategory ?? null,
-    categoryShares: Array.isArray(dashboard?.categoryShares)
-      ? dashboard.categoryShares.map(toCategoryShare)
-      : [],
-  };
+	return {
+		daysSinceStart: toNumberOrNull(dashboard?.daysSinceStart),
+		draftPostCount: toNumberOrNull(dashboard?.draftPostCount),
+		totalViews: toNumberOrNull(dashboard?.totalViews),
+		publishedPostCount: toNumberOrNull(dashboard?.publishedPostCount),
+		postCountThisMonth: toNumberOrNull(dashboard?.postCountThisMonth),
+		reportedCommentCount: toNumberOrNull(dashboard?.reportedCommentCount),
+		mostViewedCategory: dashboard?.mostViewedCategory ?? null,
+		categoryShares: Array.isArray(dashboard?.categoryShares)
+			? dashboard.categoryShares.map(toCategoryShare)
+			: [],
+	};
 }
 
 function toAdminMenus(menus) {
-  const source = Array.isArray(menus) ? menus : menus?.items;
+	const source = Array.isArray(menus) ? menus : menus?.items;
 
-  if (!Array.isArray(source)) {
-    return [];
-  }
+	if (!Array.isArray(source)) {
+		return [];
+	}
 
-  return source.map(toAdminMenu);
+	return source.map(toAdminMenu);
 }
 
 function toAdminMenu(menu) {
-  const routePath = menu.routePath ?? menu.path ?? '';
+	const routePath = menu.routePath ?? menu.path ?? '';
 
-  return {
-    id: menu.id,
-    parentId: menu.parentId ?? null,
-    menuName: menu.menuName ?? menu.label ?? menu.name ?? '이름 없는 메뉴',
-    menuDescription: menu.menuDescription ?? menu.description ?? '',
-    menuType: menu.menuType ?? 'ITEM',
-    routePath,
-    routeName: menu.routeName ?? '',
-    sortOrder: toNumber(menu.sortOrder),
-    visible: toVisible(menu),
-    // 수정 충돌 감지용. 저장 때 그대로 돌려보낸다
-    updatedAt: menu.updatedAt ?? null,
-    system: Boolean(menu.system),
-    items: Array.isArray(menu.items) ? menu.items.map(toAdminMenu) : [],
-  };
+	return {
+		id: menu.id,
+		parentId: menu.parentId ?? null,
+		menuName: menu.menuName ?? menu.label ?? menu.name ?? '이름 없는 메뉴',
+		menuDescription: menu.menuDescription ?? menu.description ?? '',
+		menuType: menu.menuType ?? 'ITEM',
+		routePath,
+		routeName: menu.routeName ?? '',
+		sortOrder: toNumber(menu.sortOrder),
+		visible: toVisible(menu),
+		// 수정 충돌 감지용. 저장 때 그대로 돌려보낸다
+		updatedAt: menu.updatedAt ?? null,
+		system: Boolean(menu.system),
+		items: Array.isArray(menu.items) ? menu.items.map(toAdminMenu) : [],
+	};
 }
 
 function toCategoryShare(categoryShare) {
-  return {
-    categoryId: categoryShare.categoryId,
-    name: categoryShare.name ?? '미분류',
-    postCount: toNumber(categoryShare.postCount),
-  };
+	return {
+		categoryId: categoryShare.categoryId,
+		name: categoryShare.name ?? '미분류',
+		postCount: toNumber(categoryShare.postCount),
+	};
 }
 
 function toNumber(value) {
-  const numberValue = Number(value);
-  return Number.isFinite(numberValue) ? numberValue : 0;
+	const numberValue = Number(value);
+	return Number.isFinite(numberValue) ? numberValue : 0;
 }
 
 function toNumberOrNull(value) {
-  if (value === null || value === undefined || value === '') {
-    return null;
-  }
+	if (value === null || value === undefined || value === '') {
+		return null;
+	}
 
-  const numberValue = Number(value);
-  return Number.isFinite(numberValue) ? numberValue : null;
+	const numberValue = Number(value);
+	return Number.isFinite(numberValue) ? numberValue : null;
 }
 
 function toVisible(menu) {
-  if (typeof menu.visible === 'boolean') {
-    return menu.visible;
-  }
+	if (typeof menu.visible === 'boolean') {
+		return menu.visible;
+	}
 
-  return true;
+	return true;
 }
 
-/**
- * 본문에 넣을 이미지를 올린다.
- *
- * 응답의 url 을 그대로 마크다운에 박는다. 파일은 R2 에 있고 DB 에는 기록만 남는다.
- */
 /** 이미지 목록. 올린 지 일주일 안 된 것은 서버가 빼고 준다 */
 export async function getAdminImages({ onlyUnused = false, page = 0, size = 20 } = {}) {
-  const params = new URLSearchParams({
-    onlyUnused: String(onlyUnused), page: String(page), size: String(size),
-  });
-  const data = await getApiData(`${ADMIN_BLOG_API_BASE}/images?${params.toString()}`);
+	const params = new URLSearchParams({
+		onlyUnused: String(onlyUnused), page: String(page), size: String(size),
+	});
+	const data = await getApiData(`${ADMIN_BLOG_API_BASE}/images?${params.toString()}`);
 
-  return {
-    items: (Array.isArray(data?.items) ? data.items : [])
-      .map((item) => ({ ...item, usages: Array.isArray(item.usages) ? item.usages : [] })),
-    unusedBytes: data?.unusedBytes ?? 0,
-    page: data?.page ?? 0,
-    size: data?.size ?? size,
-    totalElements: data?.totalElements ?? 0,
-    totalPages: data?.totalPages ?? 0,
-  };
+	return {
+		items: (Array.isArray(data?.items) ? data.items : [])
+			.map((item) => ({ ...item, usages: Array.isArray(item.usages) ? item.usages : [] })),
+		unusedBytes: data?.unusedBytes ?? 0,
+		page: data?.page ?? 0,
+		size: data?.size ?? size,
+		totalElements: data?.totalElements ?? 0,
+		totalPages: data?.totalPages ?? 0,
+	};
 }
 
 /** 고른 이미지를 지운다. 서버가 지우기 직전에 참조를 한 번 더 본다 */
 export async function cleanupAdminImages(imageIds) {
-  const result = await sendApiData(`${ADMIN_BLOG_API_BASE}/images/cleanup`, {
-    method: 'POST',
-    body: { imageIds },
-  });
+	const result = await sendApiData(`${ADMIN_BLOG_API_BASE}/images/cleanup`, {
+		method: 'POST',
+		body: { imageIds },
+	});
 
-  return {
-    requestedCount: toNumber(result?.requestedCount),
-    deletedCount: toNumber(result?.deletedCount),
-    skippedUsedCount: toNumber(result?.skippedUsedCount),
-    notFoundCount: toNumber(result?.notFoundCount),
-    failedCount: toNumber(result?.failedCount),
-  };
+	return {
+		requestedCount: toNumber(result?.requestedCount),
+		deletedCount: toNumber(result?.deletedCount),
+		skippedUsedCount: toNumber(result?.skippedUsedCount),
+		notFoundCount: toNumber(result?.notFoundCount),
+		failedCount: toNumber(result?.failedCount),
+	};
 }
 
 export async function uploadAdminImage(file) {
-  const form = new FormData();
-  form.append('file', file);
+	const form = new FormData();
+	form.append('file', file);
 
-  const image = await sendApiFile(`${ADMIN_BLOG_API_BASE}/images`, form);
+	const image = await sendApiFile(`${ADMIN_BLOG_API_BASE}/images`, form);
 
-  return {
-    id: image?.id ?? null,
-    url: image?.url ?? '',
-    originalName: image?.originalName ?? '',
-  };
+	return {
+		id: image?.id ?? null,
+		url: image?.url ?? '',
+		originalName: image?.originalName ?? '',
+	};
 }

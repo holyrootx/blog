@@ -9,37 +9,37 @@
  * @returns {{text: string, hit: boolean}[]} 순서대로 이어 붙이면 원문이 된다
  */
 export function splitByKeyword(text, keyword) {
-  const source = text ?? '';
+	const source = text ?? '';
 
-  if (!keyword) {
-    return [{ text: source, hit: false }];
-  }
+	if (!keyword) {
+		return [{ text: source, hit: false }];
+	}
 
-  const pieces = [];
-  let from = 0;
+	const pieces = [];
+	let from = 0;
 
-  // 서버가 대소문자를 가려 찾으므로 여기서도 그대로 비교한다.
-  // 한쪽만 느슨하면 걸리지도 않은 글자에 형광펜이 그어진다
-  for (;;) {
-    const found = source.indexOf(keyword, from);
+	// 서버가 대소문자를 가려 찾으므로 여기서도 그대로 비교한다.
+	// 한쪽만 느슨하면 걸리지도 않은 글자에 형광펜이 그어진다
+	for (;;) {
+		const found = source.indexOf(keyword, from);
 
-    if (found === -1) {
-      break;
-    }
+		if (found === -1) {
+			break;
+		}
 
-    if (found > from) {
-      pieces.push({ text: source.slice(from, found), hit: false });
-    }
+		if (found > from) {
+			pieces.push({ text: source.slice(from, found), hit: false });
+		}
 
-    pieces.push({ text: source.slice(found, found + keyword.length), hit: true });
-    from = found + keyword.length;
-  }
+		pieces.push({ text: source.slice(found, found + keyword.length), hit: true });
+		from = found + keyword.length;
+	}
 
-  if (from < source.length) {
-    pieces.push({ text: source.slice(from), hit: false });
-  }
+	if (from < source.length) {
+		pieces.push({ text: source.slice(from), hit: false });
+	}
 
-  return pieces.length > 0 ? pieces : [{ text: source, hit: false }];
+	return pieces.length > 0 ? pieces : [{ text: source, hit: false }];
 }
 
 /**
@@ -53,11 +53,11 @@ export function splitByKeyword(text, keyword) {
  * 여기에 걸리지 않는다.</p>
  */
 export function endsWithIncompleteHangul(keyword) {
-  if (!keyword) {
-    return false;
-  }
+	if (!keyword) {
+		return false;
+	}
 
-  const last = keyword.charCodeAt(keyword.length - 1);
+	const last = keyword.charCodeAt(keyword.length - 1);
 
-  return last >= 0x3131 && last <= 0x318e;
+	return last >= 0x3131 && last <= 0x318e;
 }

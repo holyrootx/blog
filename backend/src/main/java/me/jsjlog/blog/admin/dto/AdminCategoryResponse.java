@@ -8,11 +8,11 @@ import java.time.LocalDateTime;
  * 글이 달린 카테고리는 삭제할 수 없으므로 화면에서 판단할 근거가 필요하다.
  */
 public record AdminCategoryResponse(
-        Long id,
-        String name,
-        Long sortOrder,
-        Long postCount,
-        // 수정 충돌 감지용. 화면이 불러온 값을 저장 때 그대로 돌려보낸다
-        LocalDateTime updatedAt
+		Long id,
+		String name,
+		Long sortOrder,
+		Long postCount,
+		// 수정 충돌 감지용. 화면이 불러온 값을 저장 때 그대로 돌려보낸다
+		LocalDateTime updatedAt
 ) {
 }

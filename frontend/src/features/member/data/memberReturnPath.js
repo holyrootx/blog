@@ -11,27 +11,27 @@
 const STORAGE_KEY = 'blog.member.returnPath';
 
 export function rememberReturnPath(path) {
-  // 외부 주소로 보내는 통로가 되지 않게 우리 경로만 받는다.
-  // "//evil.com" 은 브라우저가 다른 출처로 읽으므로 같이 막는다
-  if (typeof path !== 'string' || !path.startsWith('/') || path.startsWith('//')) {
-    return;
-  }
+	// 외부 주소로 보내는 통로가 되지 않게 우리 경로만 받는다.
+	// "//evil.com" 은 브라우저가 다른 출처로 읽으므로 같이 막는다
+	if (typeof path !== 'string' || !path.startsWith('/') || path.startsWith('//')) {
+		return;
+	}
 
-  try {
-    window.sessionStorage.setItem(STORAGE_KEY, path);
-  } catch {
-    // 시크릿 모드나 저장 차단 환경이면 못 적는다. 홈으로 가는 것뿐이라 그냥 넘어간다
-  }
+	try {
+		window.sessionStorage.setItem(STORAGE_KEY, path);
+	} catch {
+		// 시크릿 모드나 저장 차단 환경이면 못 적는다. 홈으로 가는 것뿐이라 그냥 넘어간다
+	}
 }
 
 /** 한 번 쓰고 지운다. 남겨 두면 다음 로그인에도 엉뚱한 곳으로 간다 */
 export function takeReturnPath() {
-  try {
-    const path = window.sessionStorage.getItem(STORAGE_KEY);
-    window.sessionStorage.removeItem(STORAGE_KEY);
+	try {
+		const path = window.sessionStorage.getItem(STORAGE_KEY);
+		window.sessionStorage.removeItem(STORAGE_KEY);
 
-    return path && path.startsWith('/') && !path.startsWith('//') ? path : null;
-  } catch {
-    return null;
-  }
+		return path && path.startsWith('/') && !path.startsWith('//') ? path : null;
+	} catch {
+		return null;
+	}
 }

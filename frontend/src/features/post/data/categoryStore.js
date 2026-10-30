@@ -13,12 +13,12 @@ import { getCategories } from '../api/postApi';
 let request = null;
 
 export function loadCategories() {
-  if (!request) {
-    request = getCategories()
-      .then((found) => (Array.isArray(found) ? found : []))
-      // 분류를 못 받아도 글은 읽을 수 있어야 한다. 분류 줄만 빠진다
-      .catch(() => []);
-  }
+	if (!request) {
+		request = getCategories()
+			.then((found) => (Array.isArray(found) ? found : []))
+		// 분류를 못 받아도 글은 읽을 수 있어야 한다. 분류 줄만 빠진다
+			.catch(() => []);
+	}
 
-  return request;
+	return request;
 }

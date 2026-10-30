@@ -25,67 +25,67 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
-    private final OAuth2FrontendRedirectUriFactory redirectUriFactory;
-    private final MemberSessionManager memberSessions;
+	private final OAuth2FrontendRedirectUriFactory redirectUriFactory;
+	private final MemberSessionManager memberSessions;
 
-    @Override
-    public void onAuthenticationSuccess(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            Authentication authentication
-    ) throws IOException {
-        Object principal = authentication.getPrincipal();
+	@Override
+	public void onAuthenticationSuccess(
+			HttpServletRequest request,
+			HttpServletResponse response,
+			Authentication authentication
+	) throws IOException {
+		Object principal = authentication.getPrincipal();
 
-        if (principal instanceof MemberPrincipal memberPrincipal) {
-            memberSessions.onAuthentication(request, memberPrincipal);
-            clearPendingSession(request);
-            redirect(response, "success");
-            return;
-        }
+		if (principal instanceof MemberPrincipal memberPrincipal) {
+			memberSessions.onAuthentication(request, memberPrincipal);
+			clearPendingSession(request);
+			redirect(response, "success");
+			return;
+		}
 
-        if (principal instanceof PendingOAuthPrincipal pendingPrincipal) {
-            keepPendingSessionOnly(request, pendingPrincipal);
-            redirect(response, resultOf(pendingPrincipal.getLoginState()));
-            return;
-        }
+		if (principal instanceof PendingOAuthPrincipal pendingPrincipal) {
+			keepPendingSessionOnly(request, pendingPrincipal);
+			redirect(response, resultOf(pendingPrincipal.getLoginState()));
+			return;
+		}
 
-        throw new IllegalStateException(
-                "처리할 수 없는 OAuth2 principal 입니다: " + principal.getClass().getName()
-        );
-    }
+		throw new IllegalStateException(
+				"처리할 수 없는 OAuth2 principal 입니다: " + principal.getClass().getName()
+		);
+	}
 
-    private void keepPendingSessionOnly(
-            HttpServletRequest request,
-            PendingOAuthPrincipal pendingPrincipal
-    ) {
-        memberSessions.removeRegistration(request);
-        HttpSession session = request.getSession();
-        session.setAttribute(PendingOAuthSession.ATTRIBUTE_NAME, PendingOAuthSession.from(pendingPrincipal));
+	private void keepPendingSessionOnly(
+			HttpServletRequest request,
+			PendingOAuthPrincipal pendingPrincipal
+	) {
+		memberSessions.removeRegistration(request);
+		HttpSession session = request.getSession();
+		session.setAttribute(PendingOAuthSession.ATTRIBUTE_NAME, PendingOAuthSession.from(pendingPrincipal));
 
-        // 인증 필터가 성공 핸들러를 호출하기 전에 SecurityContext 를 세션에 저장한다.
-        // Holder 만 비우면 다음 요청에서 대기 사용자가 다시 로그인 상태로 복원되므로
-        // 세션에 저장된 컨텍스트도 함께 제거한다.
-        session.removeAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY);
-        SecurityContextHolder.clearContext();
-    }
+		// 인증 필터가 성공 핸들러를 호출하기 전에 SecurityContext 를 세션에 저장한다.
+		// Holder 만 비우면 다음 요청에서 대기 사용자가 다시 로그인 상태로 복원되므로
+		// 세션에 저장된 컨텍스트도 함께 제거한다.
+		session.removeAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY);
+		SecurityContextHolder.clearContext();
+	}
 
-    private void clearPendingSession(HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
+	private void clearPendingSession(HttpServletRequest request) {
+		HttpSession session = request.getSession(false);
 
-        if (session != null) {
-            session.removeAttribute(PendingOAuthSession.ATTRIBUTE_NAME);
-        }
-    }
+		if (session != null) {
+			session.removeAttribute(PendingOAuthSession.ATTRIBUTE_NAME);
+		}
+	}
 
-    private void redirect(HttpServletResponse response, String result) throws IOException {
-        response.sendRedirect(redirectUriFactory.create(result));
-    }
+	private void redirect(HttpServletResponse response, String result) throws IOException {
+		response.sendRedirect(redirectUriFactory.create(result));
+	}
 
-    private static String resultOf(OAuthLoginState loginState) {
-        return switch (loginState) {
-            case SIGNUP_REQUIRED -> "signup-required";
-            case REACTIVATION_REQUIRED -> "reactivation-required";
-        };
-    }
+	private static String resultOf(OAuthLoginState loginState) {
+		return switch (loginState) {
+			case SIGNUP_REQUIRED -> "signup-required";
+			case REACTIVATION_REQUIRED -> "reactivation-required";
+		};
+	}
 
 }

@@ -28,37 +28,37 @@ import me.jsjlog.blog.member.domain.Member;
 @Getter
 @Entity
 @Table(
-        name = "post_reaction",
-        uniqueConstraints = @UniqueConstraint(
-                name = "uk_post_reaction_post_member_type",
-                columnNames = {"post_id", "member_id", "reaction_type"}
-        ),
-        indexes = {
-                @Index(name = "idx_post_reaction_member", columnList = "member_id")
-        }
+		name = "post_reaction",
+		uniqueConstraints = @UniqueConstraint(
+				name = "uk_post_reaction_post_member_type",
+				columnNames = {"post_id", "member_id", "reaction_type"}
+		),
+		indexes = {
+				@Index(name = "idx_post_reaction_member", columnList = "member_id")
+		}
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class PostReaction extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "post_id", nullable = false)
-    private Post post;
+	@ManyToOne(fetch = FetchType.LAZY, optional = false)
+	@JoinColumn(name = "post_id", nullable = false)
+	private Post post;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "member_id", nullable = false)
-    private Member member;
+	@ManyToOne(fetch = FetchType.LAZY, optional = false)
+	@JoinColumn(name = "member_id", nullable = false)
+	private Member member;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "reaction_type", nullable = false, length = 20)
-    private PostReactionType type;
+	@Enumerated(EnumType.STRING)
+	@Column(name = "reaction_type", nullable = false, length = 20)
+	private PostReactionType type;
 
-    public PostReaction(Post post, Member member, PostReactionType type) {
-        this.post = post;
-        this.member = member;
-        this.type = type;
-    }
+	public PostReaction(Post post, Member member, PostReactionType type) {
+		this.post = post;
+		this.member = member;
+		this.type = type;
+	}
 }

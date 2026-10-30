@@ -12,18 +12,18 @@ import org.springframework.data.repository.query.Param;
 
 public interface PostReactionRepository extends JpaRepository<PostReaction, Long> {
 
-    Optional<PostReaction> findByPostIdAndMemberIdAndType(
-            Long postId,
-            Long memberId,
-            PostReactionType type
-    );
+	Optional<PostReaction> findByPostIdAndMemberIdAndType(
+			Long postId,
+			Long memberId,
+			PostReactionType type
+	);
 
-    List<PostReaction> findAllByPostIdAndMemberId(Long postId, Long memberId);
+	List<PostReaction> findAllByPostIdAndMemberId(Long postId, Long memberId);
 
-    long countByPostIdAndType(Long postId, PostReactionType type);
+	long countByPostIdAndType(Long postId, PostReactionType type);
 
-    @Modifying
-    @Query("delete from PostReaction r where r.post.id = :postId")
-    int deleteAllForPost(@Param("postId") Long postId);
+	@Modifying
+	@Query("delete from PostReaction r where r.post.id = :postId")
+	int deleteAllForPost(@Param("postId") Long postId);
 
 }

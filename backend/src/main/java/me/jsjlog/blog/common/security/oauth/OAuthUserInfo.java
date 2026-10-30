@@ -14,34 +14,34 @@ import org.springframework.util.StringUtils;
  * 비어 올 수 있다 — 특히 카카오·네이버의 이메일과 닉네임은 선택 동의 항목이다.</p>
  */
 public record OAuthUserInfo(
-        AuthProvider provider,
-        String providerUserId,
-        String nickname,
-        String email,
-        String profileImageUrl
+		AuthProvider provider,
+		String providerUserId,
+		String nickname,
+		String email,
+		String profileImageUrl
 ) {
 
-    /**
-     * 닉네임은 회원의 필수 값인데 제공자가 안 줄 수 있다. 부르는 쪽이 대체 이름을
-     * 정해야 하는 상황을 빠뜨리지 않도록 물어볼 자리를 만들어 둔다.
-     */
-    public boolean hasNickname() {
-        return StringUtils.hasText(nickname);
-    }
+	/**
+	 * 닉네임은 회원의 필수 값인데 제공자가 안 줄 수 있다. 부르는 쪽이 대체 이름을
+	 * 정해야 하는 상황을 빠뜨리지 않도록 물어볼 자리를 만들어 둔다.
+	 */
+	public boolean hasNickname() {
+		return StringUtils.hasText(nickname);
+	}
 
-    public boolean hasEmail() {
-        return StringUtils.hasText(email);
-    }
+	public boolean hasEmail() {
+		return StringUtils.hasText(email);
+	}
 
-    /**
-     * 이메일과 프로필 주소는 찍지 않는다.
-     *
-     * 이 객체는 로그인 실패를 쫓을 때 로그에 얹히기 쉬운 자리에 있다. record 의 기본
-     * toString 을 그대로 두면 로그 파일에 회원 이메일이 그대로 쌓인다.
-     */
-    @Override
-    public String toString() {
-        return "OAuthUserInfo{provider=%s, providerUserId=%s, hasNickname=%s, hasEmail=%s}"
-                .formatted(provider, providerUserId, hasNickname(), hasEmail());
-    }
+	/**
+	 * 이메일과 프로필 주소는 찍지 않는다.
+	 *
+	 * 이 객체는 로그인 실패를 쫓을 때 로그에 얹히기 쉬운 자리에 있다. record 의 기본
+	 * toString 을 그대로 두면 로그 파일에 회원 이메일이 그대로 쌓인다.
+	 */
+	@Override
+	public String toString() {
+		return "OAuthUserInfo{provider=%s, providerUserId=%s, hasNickname=%s, hasEmail=%s}"
+				.formatted(provider, providerUserId, hasNickname(), hasEmail());
+	}
 }

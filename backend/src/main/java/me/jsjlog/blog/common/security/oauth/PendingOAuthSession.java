@@ -11,24 +11,24 @@ import me.jsjlog.blog.member.domain.AuthProvider;
  * 서버가 보관한다. 가입이 완료되거나 취소되면 세션에서 즉시 제거해야 한다.</p>
  */
 public record PendingOAuthSession(
-        AuthProvider provider,
-        String providerUserId,
-        String suggestedNickname,
-        String email,
-        String profileImageUrl,
-        OAuthLoginState loginState
+		AuthProvider provider,
+		String providerUserId,
+		String suggestedNickname,
+		String email,
+		String profileImageUrl,
+		OAuthLoginState loginState
 ) implements Serializable {
 
-    public static final String ATTRIBUTE_NAME = PendingOAuthSession.class.getName();
+	public static final String ATTRIBUTE_NAME = PendingOAuthSession.class.getName();
 
-    public static PendingOAuthSession from(PendingOAuthPrincipal principal) {
-        return new PendingOAuthSession(
-                principal.getProvider(),
-                principal.getProviderUserId(),
-                principal.getSuggestedNickname(),
-                principal.getEmail(),
-                principal.getProfileImageUrl(),
-                principal.getLoginState()
-        );
-    }
+	public static PendingOAuthSession from(PendingOAuthPrincipal principal) {
+		return new PendingOAuthSession(
+				principal.getProvider(),
+				principal.getProviderUserId(),
+				principal.getSuggestedNickname(),
+				principal.getEmail(),
+				principal.getProfileImageUrl(),
+				principal.getLoginState()
+		);
+	}
 }

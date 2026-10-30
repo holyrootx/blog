@@ -20,60 +20,60 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class MemberPrincipalTest {
 
-    @Test
-    @DisplayName("소셜 회원의 인증 이름은 회원 번호다 — 비어 있으면 로그인이 깨진다")
-    void socialPrincipalHasNonEmptyAuthenticationName() {
-        Member member = socialMember(42L);
-        MemberPrincipal principal = MemberPrincipal.ofSocial(member);
+	@Test
+	@DisplayName("소셜 회원의 인증 이름은 회원 번호다 — 비어 있으면 로그인이 깨진다")
+	void socialPrincipalHasNonEmptyAuthenticationName() {
+		Member member = socialMember(42L);
+		MemberPrincipal principal = MemberPrincipal.ofSocial(member);
 
-        OAuth2AuthenticationToken token = new OAuth2AuthenticationToken(
-                principal,
-                principal.getAuthorities(),
-                "google"
-        );
+		OAuth2AuthenticationToken token = new OAuth2AuthenticationToken(
+				principal,
+				principal.getAuthorities(),
+				"google"
+		);
 
-        // OAuth2AuthorizedClient 가 이 값을 principalName 으로 받는다
-        assertThat(token.getName()).isEqualTo("42");
-        assertThat(token.getName()).isNotBlank();
-    }
+		// OAuth2AuthorizedClient 가 이 값을 principalName 으로 받는다
+		assertThat(token.getName()).isEqualTo("42");
+		assertThat(token.getName()).isNotBlank();
+	}
 
-    @Test
-    @DisplayName("아이디가 있으면 그대로 쓴다")
-    void localPrincipalKeepsUsername() {
-        Member member = Member.ofLocalAdmin("tjdwn3377", "hash", "정성주");
-        setId(member, 1L);
+	@Test
+	@DisplayName("아이디가 있으면 그대로 쓴다")
+	void localPrincipalKeepsUsername() {
+		Member member = Member.ofLocalAdmin("tjdwn3377", "hash", "정성주");
+		setId(member, 1L);
 
-        assertThat(MemberPrincipal.ofLocal(member).getUsername()).isEqualTo("tjdwn3377");
-    }
+		assertThat(MemberPrincipal.ofLocal(member).getUsername()).isEqualTo("tjdwn3377");
+	}
 
-    @Test
-    @DisplayName("getName 은 언제나 회원 번호다 — 제공자 식별자가 감사 컬럼으로 새지 않게")
-    void nameIsAlwaysMemberId() {
-        assertThat(MemberPrincipal.ofSocial(socialMember(7L)).getName()).isEqualTo("7");
-    }
+	@Test
+	@DisplayName("getName 은 언제나 회원 번호다 — 제공자 식별자가 감사 컬럼으로 새지 않게")
+	void nameIsAlwaysMemberId() {
+		assertThat(MemberPrincipal.ofSocial(socialMember(7L)).getName()).isEqualTo("7");
+	}
 
-    private static Member socialMember(Long id) {
-        Member member = Member.ofSocial(
-                AuthProvider.GOOGLE,
-                "108712345678901234567",
-                "정성주",
-                "tjdwn1171@gmail.com",
-                "https://lh3.googleusercontent.com/a/abc"
-        );
+	private static Member socialMember(Long id) {
+		Member member = Member.ofSocial(
+				AuthProvider.GOOGLE,
+				"108712345678901234567",
+				"정성주",
+				"tjdwn1171@gmail.com",
+				"https://lh3.googleusercontent.com/a/abc"
+		);
 
-        setId(member, id);
+		setId(member, id);
 
-        return member;
-    }
+		return member;
+	}
 
-    /** 식별자는 DB 가 넣어 주는 값이라 테스트에서는 직접 채운다 */
-    private static void setId(Member member, Long id) {
-        try {
-            Field field = Member.class.getDeclaredField("id");
-            field.setAccessible(true);
-            field.set(member, id);
-        } catch (ReflectiveOperationException e) {
-            throw new IllegalStateException(e);
-        }
-    }
+	/** 식별자는 DB 가 넣어 주는 값이라 테스트에서는 직접 채운다 */
+	private static void setId(Member member, Long id) {
+		try {
+			Field field = Member.class.getDeclaredField("id");
+			field.setAccessible(true);
+			field.set(member, id);
+		} catch (ReflectiveOperationException e) {
+			throw new IllegalStateException(e);
+		}
+	}
 }

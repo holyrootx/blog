@@ -24,31 +24,31 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AdminCategoryController {
 
-    private final AdminCategoryService adminCategoryService;
+	private final AdminCategoryService adminCategoryService;
 
-    @GetMapping("/categories")
-    public ApiResponse<List<AdminCategoryResponse>> getCategories(AdminCategorySearchCondition condition) {
-        List<AdminCategoryResponse> categories = adminCategoryService.getCategoryList(condition);
-        return ApiResponse.ok(categories);
-    }
+	@GetMapping("/categories")
+	public ApiResponse<List<AdminCategoryResponse>> getCategories(AdminCategorySearchCondition condition) {
+		List<AdminCategoryResponse> categories = adminCategoryService.getCategoryList(condition);
+		return ApiResponse.ok(categories);
+	}
 
-    @PostMapping("/categories")
-    public ApiResponse<Long> createCategory(@RequestBody AdminCategoryRequest request) {
-        Long categoryId = adminCategoryService.createCategory(request);
-        return ApiResponse.ok(categoryId);
-    }
+	@PostMapping("/categories")
+	public ApiResponse<Long> createCategory(@RequestBody AdminCategoryRequest request) {
+		Long categoryId = adminCategoryService.createCategory(request);
+		return ApiResponse.ok(categoryId);
+	}
 
-    @PutMapping("/categories/{categoryId}")
-    public ApiResponse<Void> updateCategory(@PathVariable Long categoryId,
-                                            @RequestBody AdminCategoryRequest request) {
-        adminCategoryService.updateCategory(categoryId, request);
-        return ApiResponse.ok();
-    }
+	@PutMapping("/categories/{categoryId}")
+	public ApiResponse<Void> updateCategory(@PathVariable Long categoryId,
+											@RequestBody AdminCategoryRequest request) {
+		adminCategoryService.updateCategory(categoryId, request);
+		return ApiResponse.ok();
+	}
 
-    @DeleteMapping("/categories/{categoryId}")
-    public ApiResponse<Void> deleteCategory(@PathVariable Long categoryId) {
-        adminCategoryService.deleteCategory(categoryId);
-        return ApiResponse.ok();
-    }
+	@DeleteMapping("/categories/{categoryId}")
+	public ApiResponse<Void> deleteCategory(@PathVariable Long categoryId) {
+		adminCategoryService.deleteCategory(categoryId);
+		return ApiResponse.ok();
+	}
 
 }

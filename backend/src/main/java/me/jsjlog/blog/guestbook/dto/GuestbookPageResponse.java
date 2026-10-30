@@ -9,12 +9,12 @@ import java.util.List;
  * "몇 쪽쯤에 썼다" 로 기억하는 경우가 많다.</p>
  */
 public record GuestbookPageResponse(
-        List<GuestbookEntryResponse> items,
-        int page,
-        int size,
-        long totalElements,
-        int totalPages,
-        /** 화면이 글자 수 안내에 쓴다. 서버 제한과 어긋나지 않게 여기서 준다 */
-        int maxLength
+		List<GuestbookEntryResponse> items,
+		int page,
+		int size,
+		long totalElements,
+		int totalPages,
+		/** 화면이 글자 수 안내에 쓴다. 서버 제한과 어긋나지 않게 여기서 준다 */
+		int maxLength
 ) {
 }

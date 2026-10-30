@@ -1,882 +1,874 @@
-/* 회원 로그인·가입 — 공개 화면 쪽이라 블로그 톤을 그대로 쓴다 */
-
 @use '../base/breakpoints' as bp;
 
 /* 공개 화면 공통 카드(.public-shell__main) 안에 들어간다. 헤더 아래 남은 자리 가운데에 판을 둔다 */
 .member-auth {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 70vh;
-  padding: 24px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 70vh;
+	padding: 24px;
 }
 
 .member-auth__panel {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  max-width: 420px;
-  padding: 32px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--surface);
-  box-shadow: var(--shadow);
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+	max-width: 420px;
+	padding: 32px;
+	border: 1px solid var(--line);
+	border-radius: var(--radius);
+	background: var(--surface);
+	box-shadow: var(--shadow);
 }
 
 .member-auth__loading {
-  color: var(--text-muted);
-  font-size: 14px;
+	color: var(--text-muted);
+	font-size: 14px;
 }
 
 .member-auth__title {
-  margin: 0;
-  color: var(--text);
-  font-size: 22px;
-  font-weight: 700;
+	margin: 0;
+	color: var(--text);
+	font-size: 22px;
+	font-weight: 700;
 }
 
 .member-auth__description {
-  margin: 10px 0 0;
-  color: var(--text-muted);
-  font-size: 14px;
-  line-height: 1.6;
+	margin: 10px 0 0;
+	color: var(--text-muted);
+	font-size: 14px;
+	line-height: 1.6;
 }
 
 .member-auth__label {
-  margin-top: 24px;
-  color: var(--text);
-  font-size: 13px;
-  font-weight: 600;
+	margin-top: 24px;
+	color: var(--text);
+	font-size: 13px;
+	font-weight: 600;
 }
 
 .member-auth__input {
-  margin-top: 8px;
-  height: 44px;
-  padding: 0 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--surface);
-  color: var(--text);
-  font-size: 15px;
+	margin-top: 8px;
+	height: 44px;
+	padding: 0 12px;
+	border: 1px solid var(--line);
+	border-radius: var(--radius);
+	background: var(--surface);
+	color: var(--text);
+	font-size: 15px;
 }
 
 .member-auth__input:focus {
-  border-color: var(--accent);
-  outline: 2px solid var(--accent-soft);
-  outline-offset: 1px;
+	border-color: var(--accent);
+	outline: 2px solid var(--accent-soft);
+	outline-offset: 1px;
 }
 
 .member-auth__counter {
-  margin: 6px 0 0;
-  color: var(--text-subtle);
-  font-size: 12px;
-  text-align: right;
+	margin: 6px 0 0;
+	color: var(--text-subtle);
+	font-size: 12px;
+	text-align: right;
 }
 
 .member-auth__error {
-  margin: 12px 0 0;
-  padding: 10px 12px;
-  border-radius: var(--radius);
-  background: var(--accent-soft);
-  color: var(--accent-dark);
-  font-size: 13px;
-  line-height: 1.5;
+	margin: 12px 0 0;
+	padding: 10px 12px;
+	border-radius: var(--radius);
+	background: var(--accent-soft);
+	color: var(--accent-dark);
+	font-size: 13px;
+	line-height: 1.5;
 }
 
 .member-auth__actions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-  margin-top: 24px;
+	display: flex;
+	gap: 8px;
+	justify-content: flex-end;
+	margin-top: 24px;
 }
 
 /* 두 선택지는 무게가 같다. 한쪽을 강조하면 되돌릴 수 없는 쪽을 눌러 버린다 */
 .member-auth__choices {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-top: 24px;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	margin-top: 24px;
 }
 
 .member-auth__choice {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 16px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--surface-muted);
-  text-align: left;
-  cursor: pointer;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	padding: 16px;
+	border: 1px solid var(--line);
+	border-radius: var(--radius);
+	background: var(--surface-muted);
+	text-align: left;
+	cursor: pointer;
 }
 
 .member-auth__choice:hover:not(:disabled) {
-  border-color: var(--accent);
+	border-color: var(--accent);
 }
 
 .member-auth__choice:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+	opacity: 0.5;
+	cursor: not-allowed;
 }
 
 .member-auth__choice-title {
-  color: var(--text);
-  font-size: 15px;
-  font-weight: 700;
+	color: var(--text);
+	font-size: 15px;
+	font-weight: 700;
 }
 
 .member-auth__choice-detail {
-  color: var(--text-muted);
-  font-size: 13px;
-  line-height: 1.6;
+	color: var(--text-muted);
+	font-size: 13px;
+	line-height: 1.6;
 }
 
 .member-auth__providers {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin: 24px 0 0;
-  padding: 0;
-  list-style: none;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	margin: 24px 0 0;
+	padding: 0;
+	list-style: none;
 }
 
 .member-auth__provider {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 46px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--surface);
-  color: var(--text);
-  font-size: 15px;
-  font-weight: 600;
-  text-decoration: none;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 46px;
+	border: 1px solid var(--line);
+	border-radius: var(--radius);
+	background: var(--surface);
+	color: var(--text);
+	font-size: 15px;
+	font-weight: 600;
+	text-decoration: none;
 }
 
 .member-auth__provider:hover {
-  border-color: var(--accent);
+	border-color: var(--accent);
 }
 
 /* 제공자 색은 각 브랜드 가이드 값이다. 토큰으로 빼지 않는다 — 우리 디자인이 아니다 */
 .member-auth__provider--kakao {
-  border-color: var(--brand-kakao);
-  background: var(--brand-kakao);
-  color: var(--brand-kakao-text);
+	border-color: var(--brand-kakao);
+	background: var(--brand-kakao);
+	color: var(--brand-kakao-text);
 }
 
 .member-auth__provider--naver {
-  border-color: var(--brand-naver);
-  background: var(--brand-naver);
-  color: var(--text);
+	border-color: var(--brand-naver);
+	background: var(--brand-naver);
+	color: var(--text);
 }
 
 .member-auth__back {
-  margin-top: 20px;
-  color: var(--text-muted);
-  font-size: 13px;
-  text-align: center;
-  text-decoration: none;
+	margin-top: 20px;
+	color: var(--text-muted);
+	font-size: 13px;
+	text-align: center;
+	text-decoration: none;
 }
 
 .member-auth__back:hover {
-  color: var(--accent-dark);
+	color: var(--accent-dark);
 }
 
 @include bp.upto(sm) {
-  .member-auth {
-    padding: 16px;
-  }
+	.member-auth {
+		padding: 16px;
+	}
 
-  .member-auth__panel {
-    padding: 24px 20px;
-  }
+	.member-auth__panel {
+		padding: 24px 20px;
+	}
 
-  .member-auth__actions {
-    flex-direction: column-reverse;
-  }
+	.member-auth__actions {
+		flex-direction: column-reverse;
+	}
 
-  /* 좁은 화면에서는 두 단추가 위아래로 서므로 폭을 꽉 채운다.
-     .ui-button 전체가 아니라 이 영역 안에서만 */
-  .member-auth__actions .ui-button {
-    width: 100%;
-  }
+	/* 좁은 화면에서는 두 단추가 위아래로 서므로 폭을 꽉 채운다.
+		 .ui-button 전체가 아니라 이 영역 안에서만 */
+	.member-auth__actions .ui-button {
+		width: 100%;
+	}
 }
 
-/* ── 헤더 회원 메뉴 ───────────────────────── */
-
 .member-menu {
-  position: relative;
+	position: relative;
 }
 
 .member-menu__trigger {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 6px 4px 4px;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  background: none;
-  color: var(--text);
-  font-family: inherit;
-  font-size: 13.5px;
-  font-weight: 600;
-  cursor: pointer;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 4px 6px 4px 4px;
+	border: 1px solid transparent;
+	border-radius: 999px;
+	background: none;
+	color: var(--text);
+	font-family: inherit;
+	font-size: 13.5px;
+	font-weight: 600;
+	cursor: pointer;
 }
 
 .member-menu__trigger:hover,
 .member-menu__trigger[aria-expanded='true'] {
-  border-color: var(--line);
-  background: var(--surface);
+	border-color: var(--line);
+	background: var(--surface);
 }
 
 .member-menu__avatar {
-  display: flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: 1px solid var(--line);
-  border-radius: 50%;
-  background: var(--surface-muted);
-  color: var(--text-muted);
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1;
-  object-fit: cover;
-  user-select: none;
+	display: flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	border: 1px solid var(--line);
+	border-radius: 50%;
+	background: var(--surface-muted);
+	color: var(--text-muted);
+	font-size: 12px;
+	font-weight: 700;
+	line-height: 1;
+	object-fit: cover;
+	user-select: none;
 }
 
 .member-menu__nickname {
-  max-width: 120px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+	max-width: 120px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .member-menu__dropdown {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 20;
-  display: flex;
-  flex-direction: column;
-  min-width: 140px;
-  padding: 6px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--surface);
-  box-shadow: var(--shadow);
+	position: absolute;
+	top: calc(100% + 6px);
+	right: 0;
+	z-index: 20;
+	display: flex;
+	flex-direction: column;
+	min-width: 140px;
+	padding: 6px;
+	border: 1px solid var(--line);
+	border-radius: var(--radius);
+	background: var(--surface);
+	box-shadow: var(--shadow);
 }
 
 .member-menu__item {
-  padding: 9px 10px;
-  border: 0;
-  border-radius: 6px;
-  background: none;
-  color: var(--text-muted);
-  font-family: inherit;
-  font-size: 13.5px;
-  font-weight: 600;
-  text-align: left;
-  text-decoration: none;
-  cursor: pointer;
+	padding: 9px 10px;
+	border: 0;
+	border-radius: 6px;
+	background: none;
+	color: var(--text-muted);
+	font-family: inherit;
+	font-size: 13.5px;
+	font-weight: 600;
+	text-align: left;
+	text-decoration: none;
+	cursor: pointer;
 }
 
 .member-menu__item:hover {
-  background: var(--surface-muted);
-  color: var(--accent-dark);
+	background: var(--surface-muted);
+	color: var(--accent-dark);
 }
 
-/* ── 내 설정 화면 ─────────────────────────── */
-
 .member-settings {
-  width: min(760px, 100%);
-  margin: 0 auto;
-  padding: 40px 24px 80px;
+	width: min(760px, 100%);
+	margin: 0 auto;
+	padding: 40px 24px 80px;
 }
 
 .member-settings__head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 16px;
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 16px;
 }
 
 .member-settings__title {
-  margin: 0;
-  font-size: 26px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
+	margin: 0;
+	font-size: 26px;
+	font-weight: 800;
+	letter-spacing: -0.02em;
 }
 
 .member-settings__back {
-  color: var(--text-muted);
-  font-size: 13px;
-  text-decoration: none;
+	color: var(--text-muted);
+	font-size: 13px;
+	text-decoration: none;
 }
 
 .member-settings__back:hover {
-  color: var(--accent-dark);
+	color: var(--accent-dark);
 }
 
 .member-settings__section {
-  margin-top: 28px;
-  padding: 24px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--surface);
+	margin-top: 28px;
+	padding: 24px;
+	border: 1px solid var(--line);
+	border-radius: var(--radius);
+	background: var(--surface);
 }
 
 .member-settings__section--danger {
-  border-color: var(--member-danger-line);
-  background: var(--member-danger-bg);
+	border-color: var(--member-danger-line);
+	background: var(--member-danger-bg);
 }
 
 /* 제목과 사진이 한 줄. 사진은 못 바꾸는 값이라 여기 두고, 아래 줄에는 바꾸는 것만 남긴다 */
 .member-settings__section-head {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin-bottom: 16px;
 }
 
 .member-settings__section-title {
-  margin: 0 0 16px;
-  font-size: 16px;
-  font-weight: 700;
+	margin: 0 0 16px;
+	font-size: 16px;
+	font-weight: 700;
 }
 
 .member-settings__section-head .member-settings__section-title {
-  margin: 0;
+	margin: 0;
 }
 
 /* 닉네임 한 줄: 라벨·입력칸·단추. 설명글은 이 줄 밖에 둔다 —
-   안에 있으면 줄의 바닥이 글줄이 되어 단추가 입력칸보다 내려간다 */
+	 안에 있으면 줄의 바닥이 글줄이 되어 단추가 입력칸보다 내려간다 */
 .member-settings__profile {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+	display: flex;
+	align-items: center;
+	gap: 12px;
 }
 
 .member-settings__avatar {
-  display: flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  border: 1px solid var(--line);
-  border-radius: 50%;
-  background: var(--surface-muted);
-  color: var(--text-muted);
-  font-size: 17px;
-  font-weight: 700;
-  line-height: 1;
-  object-fit: cover;
-  user-select: none;
+	display: flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	width: 44px;
+	height: 44px;
+	border: 1px solid var(--line);
+	border-radius: 50%;
+	background: var(--surface-muted);
+	color: var(--text-muted);
+	font-size: 17px;
+	font-weight: 700;
+	line-height: 1;
+	object-fit: cover;
+	user-select: none;
 }
 
 /* 입력칸 앞에 나란히 선다. 바로 위 "프로필" 과 같은 크기라 둘의 무게가 맞는다 */
 .member-settings__label {
-  flex: none;
-  font-size: 16px;
-  font-weight: 700;
+	flex: none;
+	font-size: 16px;
+	font-weight: 700;
 }
 
 .member-settings__input {
-  flex: 1;
-  min-width: 0;
-  height: 40px;
-  padding: 0 12px;
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  background: var(--surface);
-  color: var(--text);
-  font-family: inherit;
-  font-size: 14px;
+	flex: 1;
+	min-width: 0;
+	height: 40px;
+	padding: 0 12px;
+	border: 1px solid var(--line);
+	border-radius: 7px;
+	background: var(--surface);
+	color: var(--text);
+	font-family: inherit;
+	font-size: 14px;
 }
 
 .member-settings__input:focus {
-  border-color: var(--accent);
-  outline: none;
+	border-color: var(--accent);
+	outline: none;
 }
 
 .member-settings__hint,
 .member-settings__note {
-  margin: 8px 0 0;
-  color: var(--text-subtle);
-  font-size: 12.5px;
-  line-height: 1.7;
+	margin: 8px 0 0;
+	color: var(--text-subtle);
+	font-size: 12.5px;
+	line-height: 1.7;
 }
 
 .member-settings__note strong {
-  color: var(--text-muted);
+	color: var(--text-muted);
 }
 
 .member-settings__error,
 .member-settings__done {
-  margin: 12px 0 0;
-  font-size: 13px;
+	margin: 12px 0 0;
+	font-size: 13px;
 }
 
 .member-settings__error {
-  color: var(--accent-dark);
+	color: var(--accent-dark);
 }
 
 .member-settings__done {
-  color: var(--text-muted);
+	color: var(--text-muted);
 }
 
 .member-settings__empty {
-  margin: 0;
-  color: var(--text-subtle);
-  font-size: 13.5px;
+	margin: 0;
+	color: var(--text-subtle);
+	font-size: 13.5px;
 }
 
 .member-settings-skeleton__title {
-  width: 120px;
-  height: 34px;
+	width: 120px;
+	height: 34px;
 }
 
 .member-settings-skeleton__back {
-  width: 124px;
-  height: 20px;
+	width: 124px;
+	height: 20px;
 }
 
 .member-settings-skeleton__heading {
-  width: 100px;
-  height: 24px;
+	width: 100px;
+	height: 24px;
 }
 
 .member-settings-skeleton__body {
-  display: grid;
-  grid-template-columns: 52px minmax(0, 1fr);
-  gap: 16px;
-  align-items: center;
-  margin-top: 22px;
+	display: grid;
+	grid-template-columns: 52px minmax(0, 1fr);
+	gap: 16px;
+	align-items: center;
+	margin-top: 22px;
 }
 
 .member-settings-skeleton__body > .ui-skeleton {
-  width: 52px;
-  height: 52px;
+	width: 52px;
+	height: 52px;
 }
 
 .member-settings-skeleton__body > div {
-  display: grid;
-  gap: 10px;
+	display: grid;
+	gap: 10px;
 }
 
 .member-settings-skeleton__body > div .ui-skeleton:nth-child(1) {
-  width: 38%;
-  height: 16px;
+	width: 38%;
+	height: 16px;
 }
 
 .member-settings-skeleton__body > div .ui-skeleton:nth-child(2) {
-  width: 86%;
-  height: 42px;
+	width: 86%;
+	height: 42px;
 }
 
 .member-settings-skeleton__body > div .ui-skeleton:nth-child(3) {
-  width: 64%;
-  height: 14px;
+	width: 64%;
+	height: 14px;
 }
 
 .member-settings__actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 16px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-top: 16px;
 }
 
 .member-settings__confirm {
-  margin-right: 4px;
-  color: var(--text-muted);
-  font-size: 13.5px;
-  font-weight: 600;
+	margin-right: 4px;
+	color: var(--text-muted);
+	font-size: 13.5px;
+	font-weight: 600;
 }
 
 .member-settings__danger-button {
-  border-color: var(--accent-dark);
-  background: var(--accent-dark);
-  color: var(--on-accent);
+	border-color: var(--accent-dark);
+	background: var(--accent-dark);
+	color: var(--on-accent);
 }
 
 /* 최근 본 글. 그림 자리를 먼저 정해 두고 글은 옆에서 줄바꿈한다 — 폰에서도 그림이 줄지 않는다 */
 .member-recent {
-  margin: 14px 0 0;
-  padding: 0;
-  list-style: none;
+	margin: 14px 0 0;
+	padding: 0;
+	list-style: none;
 }
 
 .member-recent__item {
-  border-top: 1px solid var(--line);
+	border-top: 1px solid var(--line);
 }
 
 .member-recent__item:first-child {
-  border-top: 0;
+	border-top: 0;
 }
 
 .member-recent__link {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  padding: 12px 0;
-  color: var(--text);
-  text-decoration: none;
+	display: flex;
+	align-items: flex-start;
+	gap: 14px;
+	padding: 12px 0;
+	color: var(--text);
+	text-decoration: none;
 }
 
 .member-recent__item:first-child .member-recent__link {
-  padding-top: 0;
+	padding-top: 0;
 }
 
 .member-recent__image {
-  flex: 0 0 96px;
-  width: 96px;
-  height: auto;
-  aspect-ratio: 16 / 9;
-  border-radius: 6px;
-  object-fit: cover;
+	flex: 0 0 96px;
+	width: 96px;
+	height: auto;
+	aspect-ratio: 16 / 9;
+	border-radius: 6px;
+	object-fit: cover;
 }
 
 .member-recent__body {
-  display: grid;
-  flex: 1 1 auto;
-  gap: 3px;
-  min-width: 0;
+	display: grid;
+	flex: 1 1 auto;
+	gap: 3px;
+	min-width: 0;
 }
 
 .member-recent__category {
-  color: var(--accent-dark);
-  font-size: 12px;
-  font-weight: 700;
+	color: var(--accent-dark);
+	font-size: 12px;
+	font-weight: 700;
 }
 
 .member-recent__title {
-  display: -webkit-box;
-  overflow: hidden;
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 1.45;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  word-break: keep-all;
-  overflow-wrap: anywhere;
+	display: -webkit-box;
+	overflow: hidden;
+	font-size: 15px;
+	font-weight: 700;
+	line-height: 1.45;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+	word-break: keep-all;
+	overflow-wrap: anywhere;
 }
 
 .member-recent__link:hover .member-recent__title,
 .member-recent__link:focus-visible .member-recent__title {
-  color: var(--accent-dark);
-  text-decoration: underline;
+	color: var(--accent-dark);
+	text-decoration: underline;
 }
 
 .member-recent__date {
-  color: var(--text-subtle);
-  font-size: 12px;
+	color: var(--text-subtle);
+	font-size: 12px;
 }
 
 .member-recent__more {
-  display: flex;
-  justify-content: center;
-  margin-top: 12px;
+	display: flex;
+	justify-content: center;
+	margin-top: 12px;
 }
 
 /* 뼈대는 실제 줄과 같은 높이를 잡는다. 분류·제목·시각 세 줄이다 */
 .member-recent--skeleton .ui-skeleton:nth-child(1) {
-  width: 52px;
-  height: 14px;
+	width: 52px;
+	height: 14px;
 }
 
 .member-recent--skeleton .ui-skeleton:nth-child(2) {
-  width: 80%;
-  height: 20px;
+	width: 80%;
+	height: 20px;
 }
 
 .member-recent--skeleton .ui-skeleton:nth-child(3) {
-  width: 140px;
-  height: 14px;
+	width: 140px;
+	height: 14px;
 }
 
 .member-comments {
-  margin: 0;
-  padding: 0;
-  list-style: none;
+	margin: 0;
+	padding: 0;
+	list-style: none;
 }
 
 .member-comments__item {
-  padding: 14px 0;
-  border-top: 1px solid var(--line);
+	padding: 14px 0;
+	border-top: 1px solid var(--line);
 }
 
 .member-comments__item:first-child {
-  border-top: 0;
-  padding-top: 0;
+	border-top: 0;
+	padding-top: 0;
 }
 
 .member-comments__post {
-  color: var(--text);
-  font-size: 13px;
-  font-weight: 700;
-  text-decoration: none;
+	color: var(--text);
+	font-size: 13px;
+	font-weight: 700;
+	text-decoration: none;
 }
 
 .member-comments__post:hover {
-  color: var(--accent-dark);
-  text-decoration: underline;
+	color: var(--accent-dark);
+	text-decoration: underline;
 }
 
 .member-comments__content {
-  margin: 6px 0 0;
-  font-size: 14.5px;
-  line-height: 1.7;
+	margin: 6px 0 0;
+	font-size: 14.5px;
+	line-height: 1.7;
 }
 
 .member-comments__content--hidden {
-  color: var(--text-subtle);
-  font-style: italic;
+	color: var(--text-subtle);
+	font-style: italic;
 }
 
 .member-comments__date {
-  display: block;
-  margin-top: 6px;
-  color: var(--text-subtle);
-  font-size: 12px;
+	display: block;
+	margin-top: 6px;
+	color: var(--text-subtle);
+	font-size: 12px;
 }
 
 .member-comments--skeleton .member-comments__item {
-  display: grid;
-  gap: 9px;
+	display: grid;
+	gap: 9px;
 }
 
 .member-comments--skeleton .ui-skeleton:nth-child(1) {
-  width: 46%;
-  height: 16px;
+	width: 46%;
+	height: 16px;
 }
 
 .member-comments--skeleton .ui-skeleton:nth-child(2) {
-  width: 92%;
-  height: 18px;
+	width: 92%;
+	height: 18px;
 }
 
 .member-comments--skeleton .ui-skeleton:nth-child(3) {
-  width: 90px;
-  height: 14px;
+	width: 90px;
+	height: 14px;
 }
 
 @include bp.upto(sm) {
-  .member-settings__profile {
-    flex-wrap: wrap;
-  }
+	.member-settings__profile {
+		flex-wrap: wrap;
+	}
 
-  .member-menu__nickname {
-    display: none;
-  }
+	.member-menu__nickname {
+		display: none;
+	}
 }
 
-/* ── 헤더 알림 종 ─────────────────────────── */
-
 .notification-bell {
-  position: relative;
+	position: relative;
 }
 
 .notification-bell__trigger {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  padding: 0;
-  border: 1px solid transparent;
-  border-radius: 50%;
-  background: none;
-  cursor: pointer;
+	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 34px;
+	height: 34px;
+	padding: 0;
+	border: 1px solid transparent;
+	border-radius: 50%;
+	background: none;
+	cursor: pointer;
 }
 
 .notification-bell__trigger:hover,
 .notification-bell__trigger[aria-expanded='true'] {
-  border-color: var(--line);
-  background: var(--surface);
+	border-color: var(--line);
+	background: var(--surface);
 }
 
 .notification-bell__icon {
-  font-size: 16px;
-  line-height: 1;
+	font-size: 16px;
+	line-height: 1;
 }
 
 /* 숫자는 종 위에 올라탄다. 옆에 두면 헤더 폭이 숫자에 따라 흔들린다 */
 .notification-bell__badge {
-  position: absolute;
-  top: 0;
-  right: 0;
-  min-width: 17px;
-  padding: 0 4px;
-  border-radius: 999px;
-  background: var(--accent-strong);
-  color: var(--on-accent);
-  font-size: 10.5px;
-  font-weight: 700;
-  line-height: 17px;
-  text-align: center;
+	position: absolute;
+	top: 0;
+	right: 0;
+	min-width: 17px;
+	padding: 0 4px;
+	border-radius: 999px;
+	background: var(--accent-strong);
+	color: var(--on-accent);
+	font-size: 10.5px;
+	font-weight: 700;
+	line-height: 17px;
+	text-align: center;
 }
 
 .notification-bell__dropdown {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 20;
-  width: min(320px, calc(100vw - 32px));
-  padding: 6px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--surface);
-  box-shadow: var(--shadow);
+	position: absolute;
+	top: calc(100% + 6px);
+	right: 0;
+	z-index: 20;
+	width: min(320px, calc(100vw - 32px));
+	padding: 6px;
+	border: 1px solid var(--line);
+	border-radius: var(--radius);
+	background: var(--surface);
+	box-shadow: var(--shadow);
 }
 
 .notification-bell__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 6px 8px 10px;
-  border-bottom: 1px solid var(--line);
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 6px 8px 10px;
+	border-bottom: 1px solid var(--line);
 }
 
 .notification-bell__title {
-  font-size: 13px;
-  font-weight: 700;
+	font-size: 13px;
+	font-weight: 700;
 }
 
 .notification-bell__read-all {
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--text-subtle);
-  font-family: inherit;
-  font-size: 12px;
-  text-decoration: underline;
-  cursor: pointer;
+	padding: 0;
+	border: 0;
+	background: none;
+	color: var(--text-subtle);
+	font-family: inherit;
+	font-size: 12px;
+	text-decoration: underline;
+	cursor: pointer;
 }
 
 .notification-bell__read-all:hover {
-  color: var(--accent-dark);
+	color: var(--accent-dark);
 }
 
 .notification-bell__empty {
-  margin: 0;
-  padding: 18px 8px;
-  color: var(--text-subtle);
-  font-size: 13px;
-  text-align: center;
+	margin: 0;
+	padding: 18px 8px;
+	color: var(--text-subtle);
+	font-size: 13px;
+	text-align: center;
 }
 
 .notification-bell__feedback {
-  padding: 0.75rem 1rem;
-  color: var(--text-subtle);
-  font-size: 0.8125rem;
-  line-height: 1.6;
+	padding: 0.75rem 1rem;
+	color: var(--text-subtle);
+	font-size: 0.8125rem;
+	line-height: 1.6;
 }
 
 .notification-bell__feedback p {
-  margin: 0 0 0.5rem;
+	margin: 0 0 0.5rem;
 }
 
 .member-settings__feedback {
-  margin-bottom: 1rem;
+	margin-bottom: 1rem;
 }
 
 .notification-bell__list {
-  max-height: 60vh;
-  margin: 0;
-  padding: 0;
-  overflow-y: auto;
-  list-style: none;
+	max-height: 60vh;
+	margin: 0;
+	padding: 0;
+	overflow-y: auto;
+	list-style: none;
 }
 
 .notification-bell__list--skeleton .notification-bell__item {
-  display: grid;
-  gap: 8px;
-  pointer-events: none;
+	display: grid;
+	gap: 8px;
+	pointer-events: none;
 }
 
 .notification-bell__list--skeleton .ui-skeleton:nth-child(1) {
-  width: 68%;
-  height: 16px;
+	width: 68%;
+	height: 16px;
 }
 
 .notification-bell__list--skeleton .ui-skeleton:nth-child(2) {
-  width: 92%;
-  height: 14px;
+	width: 92%;
+	height: 14px;
 }
 
 .notification-bell__list--skeleton .ui-skeleton:nth-child(3) {
-  width: 42%;
-  height: 13px;
+	width: 42%;
+	height: 13px;
 }
 
 .notification-bell__item {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  width: 100%;
-  padding: 10px 8px;
-  border: 0;
-  border-radius: 6px;
-  background: none;
-  font-family: inherit;
-  text-align: left;
-  cursor: pointer;
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+	width: 100%;
+	padding: 10px 8px;
+	border: 0;
+	border-radius: 6px;
+	background: none;
+	font-family: inherit;
+	text-align: left;
+	cursor: pointer;
 }
 
 .notification-bell__item:hover {
-  background: var(--surface-muted);
+	background: var(--surface-muted);
 }
 
 /* 안 읽은 것만 왼쪽에 표시가 붙는다. 색만 바꾸면 흑백 화면에서 구분이 안 된다 */
 .notification-bell__item--unread {
-  border-left: 3px solid var(--accent);
-  border-radius: 0 6px 6px 0;
+	border-left: 3px solid var(--accent);
+	border-radius: 0 6px 6px 0;
 }
 
 .notification-bell__message {
-  color: var(--text);
-  font-size: 13px;
-  font-weight: 600;
+	color: var(--text);
+	font-size: 13px;
+	font-weight: 600;
 }
 
 .notification-bell__preview {
-  overflow: hidden;
-  color: var(--text-muted);
-  font-size: 12.5px;
-  line-height: 1.5;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+	overflow: hidden;
+	color: var(--text-muted);
+	font-size: 12.5px;
+	line-height: 1.5;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .notification-bell__post {
-  color: var(--text-subtle);
-  font-size: 11.5px;
+	color: var(--text-subtle);
+	font-size: 11.5px;
 }
 
 /* 글 제목과 시각을 한 줄에. 제목이 길면 줄여서 시각 자리를 지킨다 —
-   언제 온 알림인지가 제목 뒷부분보다 먼저 필요하다 */
+	 언제 온 알림인지가 제목 뒷부분보다 먼저 필요하다 */
 .notification-bell__foot {
-  display: flex;
-  gap: 8px;
-  align-items: baseline;
-  justify-content: space-between;
+	display: flex;
+	gap: 8px;
+	align-items: baseline;
+	justify-content: space-between;
 }
 
 .notification-bell__foot .notification-bell__post {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .notification-bell__time {
-  flex: 0 0 auto;
-  color: var(--text-subtle);
-  font-size: 11.5px;
+	flex: 0 0 auto;
+	color: var(--text-subtle);
+	font-size: 11.5px;
 }
 
 /*
@@ -889,43 +881,43 @@
  * "2일 전" 이 있던 자리를 덮으면서 왼쪽으로 펼쳐진다
  */
 .notification-bell__item {
-  position: relative;
+	position: relative;
 }
 
 .notification-bell__item::after {
-  position: absolute;
-  right: 8px;
-  bottom: 6px;
-  padding: 3px 8px;
-  border-radius: 5px;
-  background: var(--text);
-  color: var(--surface);
-  font-size: 11px;
-  white-space: nowrap;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.12s;
-  content: attr(data-exact-time);
+	position: absolute;
+	right: 8px;
+	bottom: 6px;
+	padding: 3px 8px;
+	border-radius: 5px;
+	background: var(--text);
+	color: var(--surface);
+	font-size: 11px;
+	white-space: nowrap;
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 0.12s;
+	content: attr(data-exact-time);
 }
 
 .notification-bell__item:hover::after,
 .notification-bell__item:focus-visible::after {
-  opacity: 1;
+	opacity: 1;
 }
 
 /* 마우스가 없는 기기. 올릴 수가 없으니 시각을 아예 같이 적는다 */
 .notification-bell__exact {
-  display: none;
+	display: none;
 }
 
 @media (hover: none) {
-  .notification-bell__item::after {
-    content: none;
-  }
+	.notification-bell__item::after {
+		content: none;
+	}
 
-  .notification-bell__exact {
-    display: inline;
-  }
+	.notification-bell__exact {
+		display: inline;
+	}
 }
 
 /*
@@ -943,40 +935,40 @@
  * position 을 풀면 엉뚱한 조상에 붙는다.
  */
 @include bp.upto(sm) {
-  .blog-header .notification-bell {
-    position: static;
-  }
+	.blog-header .notification-bell {
+		position: static;
+	}
 
-  .blog-header .notification-bell__dropdown {
-    right: 0;
-    left: 0;
-    width: auto;
-  }
+	.blog-header .notification-bell__dropdown {
+		right: 0;
+		left: 0;
+		width: auto;
+	}
 }
 
 /* 비로그인일 때 헤더에 뜨는 로그인 버튼.
-   회원 메뉴와 높이를 맞춘다 — 로그인 전후로 헤더 높이가 달라지면 안 된다 */
+	 회원 메뉴와 높이를 맞춘다 — 로그인 전후로 헤더 높이가 달라지면 안 된다 */
 .member-menu__signin {
-  height: 34px;
-  padding: 0 14px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--surface);
-  color: var(--text-muted);
-  font-family: inherit;
-  font-size: 13.5px;
-  font-weight: 600;
-  cursor: pointer;
+	height: 34px;
+	padding: 0 14px;
+	border: 1px solid var(--line);
+	border-radius: 999px;
+	background: var(--surface);
+	color: var(--text-muted);
+	font-family: inherit;
+	font-size: 13.5px;
+	font-weight: 600;
+	cursor: pointer;
 }
 
 .member-menu__signin:hover {
-  border-color: var(--accent);
-  color: var(--accent-dark);
+	border-color: var(--accent);
+	color: var(--accent-dark);
 }
 
 /* 작은 폰에서 헤더 한 줄에 서도록 덜어낸다(public/_home.scss 의 xs 와 같은 사정) */
 @include bp.upto(xs) {
-  .member-menu__signin {
-    padding: 0 10px;
-  }
+	.member-menu__signin {
+		padding: 0 10px;
+	}
 }

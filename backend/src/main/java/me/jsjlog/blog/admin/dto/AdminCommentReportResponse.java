@@ -12,31 +12,31 @@ import java.time.LocalDateTime;
  * 것은 무엇이 문제라는 주장이지 누가 했는지가 아니다.</p>
  */
 public record AdminCommentReportResponse(
-        Long id,
-        String reason,
-        String reasonLabel,
-        String detail,
-        LocalDateTime reportedAt,
-        boolean handled,
-        // 신고받은 뒤에 글쓴이가 고칠 수 있어서, 지금 본문이 아니라 신고 당시 본문을 보여 준다.
-        // 확인할 수 없으면 본문은 비우고 까닭을 상태로 알린다
-        String reportedContent,
-        ReportedContent.Status reportedContentStatus,
-        // 신고 뒤에 고쳤는가. 확인할 수 없으면 null 이다
-        Boolean editedAfterReport
+		Long id,
+		String reason,
+		String reasonLabel,
+		String detail,
+		LocalDateTime reportedAt,
+		boolean handled,
+		// 신고받은 뒤에 글쓴이가 고칠 수 있어서, 지금 본문이 아니라 신고 당시 본문을 보여 준다.
+		// 확인할 수 없으면 본문은 비우고 까닭을 상태로 알린다
+		String reportedContent,
+		ReportedContent.Status reportedContentStatus,
+		// 신고 뒤에 고쳤는가. 확인할 수 없으면 null 이다
+		Boolean editedAfterReport
 ) {
 
-    public static AdminCommentReportResponse from(CommentReport report, ReportedContent reported) {
-        return new AdminCommentReportResponse(
-                report.getId(),
-                report.getReason().name(),
-                report.getReason().getLabel(),
-                report.getDetail(),
-                report.getCreatedAt(),
-                report.getHandledAt() != null,
-                reported.content(),
-                reported.status(),
-                reported.editedAfterReport()
-        );
-    }
+	public static AdminCommentReportResponse from(CommentReport report, ReportedContent reported) {
+		return new AdminCommentReportResponse(
+				report.getId(),
+				report.getReason().name(),
+				report.getReason().getLabel(),
+				report.getDetail(),
+				report.getCreatedAt(),
+				report.getHandledAt() != null,
+				reported.content(),
+				reported.status(),
+				reported.editedAfterReport()
+		);
+	}
 }

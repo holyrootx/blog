@@ -16,9 +16,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @SpringBootApplication
 public class BlogApplication {
 
-	/**
-	 * 로컬 실행, 운영 서버 실행, 테스트 실행에서 모두 사용하는 애플리케이션 진입점입니다.
-	 */
 	public static void main(String[] args) {
 		SpringApplication.run(BlogApplication.class, args);
 	}

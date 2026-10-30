@@ -14,16 +14,16 @@ import java.time.OffsetDateTime;
  * 관리자 PC 의 시간대에 따라 다른 시각이 보인다.</p>
  */
 public record AdminPostViewResponse(
-        Long id,
-        OffsetDateTime viewedAt,
-        AdminPostViewerType viewerType,
-        Long memberId,
-        String nickname,
-        MemberStatusCode memberStatus,
-        String memberStatusName
+		Long id,
+		OffsetDateTime viewedAt,
+		AdminPostViewerType viewerType,
+		Long memberId,
+		String nickname,
+		MemberStatusCode memberStatus,
+		String memberStatusName
 ) {
 
-    public AdminPostViewResponse withMemberStatusName(String name) {
-        return new AdminPostViewResponse(id, viewedAt, viewerType, memberId, nickname, memberStatus, name);
-    }
+	public AdminPostViewResponse withMemberStatusName(String name) {
+		return new AdminPostViewResponse(id, viewedAt, viewerType, memberId, nickname, memberStatus, name);
+	}
 }

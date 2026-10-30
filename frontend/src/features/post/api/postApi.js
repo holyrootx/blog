@@ -1,10 +1,10 @@
 import { getApiData, sendApiData } from '../../../shared/api/blogApiClient';
 import { toPostBody, toPostToc } from '../../../shared/post/postContentMapper';
 import {
-  formatDate,
-  formatNumber,
-  getFallbackPostImageUrl,
-  toPostCard,
+	formatDate,
+	formatNumber,
+	getFallbackPostImageUrl,
+	toPostCard,
 } from '../../../shared/post/postCardMapper';
 
 const DEFAULT_RELATED_POST_SIZE = 3;
@@ -13,7 +13,7 @@ const COMMENT_PLACEHOLDER = '따뜻한 댓글 하나가 다음 글을 쓰게 만
 const COMMENT_MAX_LENGTH = 1000;
 
 export function getCategories() {
-  return getApiData('/api/v1/blog/categories');
+	return getApiData('/api/v1/blog/categories');
 }
 
 /**
@@ -23,35 +23,35 @@ export function getCategories() {
  * 화면 곳곳에서 빼고 더하면 언젠가 한 곳을 빠뜨린다.
  */
 export async function getPosts({
-  page = 1,
-  size = 12,
-  categoryId = null,
-  sort = 'latest',
-  keyword = '',
+	page = 1,
+	size = 12,
+	categoryId = null,
+	sort = 'latest',
+	keyword = '',
 } = {}) {
-  const params = new URLSearchParams({
-    page: String(Math.max(0, page - 1)),
-    size: String(size),
-    sort,
-  });
+	const params = new URLSearchParams({
+		page: String(Math.max(0, page - 1)),
+		size: String(size),
+		sort,
+	});
 
-  if (categoryId) {
-    params.set('categoryId', String(categoryId));
-  }
+	if (categoryId) {
+		params.set('categoryId', String(categoryId));
+	}
 
-  if (keyword) {
-    params.set('q', keyword);
-  }
+	if (keyword) {
+		params.set('q', keyword);
+	}
 
-  const result = await getApiData(`/api/v1/blog/posts?${params.toString()}`);
+	const result = await getApiData(`/api/v1/blog/posts?${params.toString()}`);
 
-  return {
-    items: Array.isArray(result?.items) ? result.items.map(toPostCard) : [],
-    page: (result?.page ?? 0) + 1,
-    size: result?.size ?? size,
-    totalElements: result?.totalElements ?? 0,
-    totalPages: result?.totalPages ?? 0,
-  };
+	return {
+		items: Array.isArray(result?.items) ? result.items.map(toPostCard) : [],
+		page: (result?.page ?? 0) + 1,
+		size: result?.size ?? size,
+		totalElements: result?.totalElements ?? 0,
+		totalPages: result?.totalPages ?? 0,
+	};
 }
 
 /**
@@ -61,111 +61,113 @@ export async function getPosts({
  * 여기서는 검색 기록을 남기지 않는다 — 덜 친 말까지 쌓이면 나중에 쓸 수 없는 기록이 된다.
  */
 export async function getPostSuggestions(keyword, { signal } = {}) {
-  const params = new URLSearchParams({ q: keyword });
+	const params = new URLSearchParams({ q: keyword });
 
-  const posts = await getApiData(`/api/v1/blog/posts/suggest?${params.toString()}`, { signal });
+	const posts = await getApiData(`/api/v1/blog/posts/suggest?${params.toString()}`, { signal });
 
-  return Array.isArray(posts) ? posts : [];
+	return Array.isArray(posts) ? posts : [];
 }
 
 export async function getPostDetail(postId) {
-  const post = await getApiData(`/api/v1/blog/posts/${postId}`);
-  return toPostDetail(post);
+	const post = await getApiData(`/api/v1/blog/posts/${postId}`);
+	return toPostDetail(post);
 }
 
 export function setPostReaction(postId, type) {
-  return sendApiData(`/api/v1/blog/posts/${postId}/reaction`, {
-    method: 'PUT',
-    body: { type },
-  });
+	return sendApiData(`/api/v1/blog/posts/${postId}/reaction`, {
+		method: 'PUT',
+		body: { type },
+	});
 }
 
 export function removePostReaction(postId, type) {
-  const searchParams = new URLSearchParams({ type });
+	const searchParams = new URLSearchParams({ type });
 
-  return sendApiData(`/api/v1/blog/posts/${postId}/reaction?${searchParams.toString()}`, {
-    method: 'DELETE',
-  });
+	return sendApiData(`/api/v1/blog/posts/${postId}/reaction?${searchParams.toString()}`, {
+		method: 'DELETE',
+	});
 }
 
 export async function getAdjacentPosts(postId) {
-  const adjacentPosts = await getApiData(`/api/v1/blog/posts/${postId}/adjacent`);
+	const adjacentPosts = await getApiData(`/api/v1/blog/posts/${postId}/adjacent`);
 
-  return {
-    prev: adjacentPosts?.previousPost ?? null,
-    next: adjacentPosts?.nextPost ?? null,
-  };
+	return {
+		prev: adjacentPosts?.previousPost ?? null,
+		next: adjacentPosts?.nextPost ?? null,
+	};
 }
 
 export async function getRelatedPosts(postId, size = DEFAULT_RELATED_POST_SIZE) {
-  const searchParams = new URLSearchParams({
-    size: String(size),
-  });
+	const searchParams = new URLSearchParams({
+		size: String(size),
+	});
 
-  const posts = await getApiData(`/api/v1/blog/posts/${postId}/related?${searchParams.toString()}`);
-  return Array.isArray(posts) ? posts.map(toPostCard) : null;
+	const posts = await getApiData(`/api/v1/blog/posts/${postId}/related?${searchParams.toString()}`);
+	return Array.isArray(posts) ? posts.map(toPostCard) : null;
 }
 
 export async function getPostComments(
-  postId,
-  { cursor = null, size = DEFAULT_COMMENT_PAGE_SIZE } = {},
+	postId,
+	{ cursor = null, size = DEFAULT_COMMENT_PAGE_SIZE } = {},
 ) {
-  const searchParams = new URLSearchParams({
-    size: String(size),
-  });
+	const searchParams = new URLSearchParams({
+		size: String(size),
+	});
 
-  if (cursor !== null && cursor !== undefined) {
-    searchParams.set('cursor', String(cursor));
-  }
+	if (cursor !== null && cursor !== undefined) {
+		searchParams.set('cursor', String(cursor));
+	}
 
-  const comments = await getApiData(`/api/v1/blog/posts/${postId}/comments?${searchParams.toString()}`);
-  return toCommentPage(comments);
+	const comments = await getApiData(`/api/v1/blog/posts/${postId}/comments?${searchParams.toString()}`);
+	return toCommentPage(comments);
 }
 
 export async function getCommentReplies(postId, commentId, { cursor, size = 20 } = {}) {
-  const query = new URLSearchParams({ size: String(size) });
-  if (cursor !== null && cursor !== undefined) query.set('cursor', String(cursor));
-  const page = await getApiData(`/api/v1/blog/posts/${postId}/comments/${commentId}/replies?${query}`);
-  return {
-    items: Array.isArray(page?.items) ? page.items.map(toCommentReply) : [],
-    nextCursor: page?.nextCursor ?? null,
-    hasNext: Boolean(page?.hasNext),
-  };
+	const query = new URLSearchParams({ size: String(size) });
+	if (cursor !== null && cursor !== undefined) {
+		query.set('cursor', String(cursor));
+	}
+	const page = await getApiData(`/api/v1/blog/posts/${postId}/comments/${commentId}/replies?${query}`);
+	return {
+		items: Array.isArray(page?.items) ? page.items.map(toCommentReply) : [],
+		nextCursor: page?.nextCursor ?? null,
+		hasNext: Boolean(page?.hasNext),
+	};
 }
 
 export async function getCommentContext(postId, commentId, { signal } = {}) {
-  const context = await getApiData(`/api/v1/blog/posts/${postId}/comments/${commentId}/context`, { signal });
-  return { targetCommentId: context.targetCommentId, item: toCommentPage({ items: [context.item] }).items[0] };
+	const context = await getApiData(`/api/v1/blog/posts/${postId}/comments/${commentId}/context`, { signal });
+	return { targetCommentId: context.targetCommentId, item: toCommentPage({ items: [context.item] }).items[0] };
 }
 
 export function createPostComment(postId, { content, parentId = null }) {
-  return sendApiData(`/api/v1/blog/posts/${postId}/comments`, {
-    method: 'POST',
-    body: { content, parentId },
-  });
+	return sendApiData(`/api/v1/blog/posts/${postId}/comments`, {
+		method: 'POST',
+		body: { content, parentId },
+	});
 }
 
 export function setCommentReaction(commentId, type) {
-  return sendApiData(`/api/v1/blog/comments/${commentId}/reaction`, {
-    method: 'PUT',
-    body: { type },
-  });
+	return sendApiData(`/api/v1/blog/comments/${commentId}/reaction`, {
+		method: 'PUT',
+		body: { type },
+	});
 }
 
 export function removeCommentReaction(commentId, type) {
-  const searchParams = new URLSearchParams({ type });
+	const searchParams = new URLSearchParams({ type });
 
-  return sendApiData(`/api/v1/blog/comments/${commentId}/reaction?${searchParams.toString()}`, {
-    method: 'DELETE',
-  });
+	return sendApiData(`/api/v1/blog/comments/${commentId}/reaction?${searchParams.toString()}`, {
+		method: 'DELETE',
+	});
 }
 
 /** 내 댓글 고치기. 남의 댓글이면 서버가 COMMENT_NOT_MINE 으로 거절한다 */
 export function updatePostComment(commentId, content) {
-  return sendApiData(`/api/v1/blog/comments/${commentId}`, {
-    method: 'PUT',
-    body: { content },
-  });
+	return sendApiData(`/api/v1/blog/comments/${commentId}`, {
+		method: 'PUT',
+		body: { content },
+	});
 }
 
 /**
@@ -175,9 +177,9 @@ export function updatePostComment(commentId, content) {
  * 그대로 남아야 해서, 서버가 표시만 바꾼다.
  */
 export function deletePostComment(commentId) {
-  return sendApiData(`/api/v1/blog/comments/${commentId}`, {
-    method: 'DELETE',
-  });
+	return sendApiData(`/api/v1/blog/comments/${commentId}`, {
+		method: 'DELETE',
+	});
 }
 
 /**
@@ -186,116 +188,116 @@ export function deletePostComment(commentId) {
  * 사유는 서버의 CommentReportReason 과 같은 말을 쓴다. detail 은 기타일 때만 채운다.
  */
 export function reportComment(commentId, { reason, detail = null }) {
-  return sendApiData(`/api/v1/blog/comments/${commentId}/reports`, {
-    method: 'POST',
-    body: { reason, detail },
-  });
+	return sendApiData(`/api/v1/blog/comments/${commentId}/reports`, {
+		method: 'POST',
+		body: { reason, detail },
+	});
 }
 
 function toPostDetail(post) {
-  const body = toPostBody(post.content);
+	const body = toPostBody(post.content);
 
-  return {
-    structuredData: post.structuredData ?? null,
-    post: {
-      id: post.id,
-      categoryId: post.categoryId,
-      category: post.categoryName,
-      title: post.title,
-      excerpt: post.excerpt,
-      publishedAt: formatDate(post.publishedAt),
-      publishedAtIso: post.publishedAt,
-      views: formatNumber(post.views),
-      likeCount: Number(post.likeCount ?? 0),
-      dislikeCount: Number(post.dislikeCount ?? 0),
-      likedByMe: Boolean(post.likedByMe),
-      dislikedByMe: Boolean(post.dislikedByMe),
-      coverImageUrl: post.thumbnailImageUrl || getFallbackPostImageUrl(),
-      coverImageAlt: `${post.title} 대표 이미지`,
-      tags: [],
-      commentCount: 0,
-    },
-    body,
-    toc: toPostToc(body),
-  };
+	return {
+		structuredData: post.structuredData ?? null,
+		post: {
+			id: post.id,
+			categoryId: post.categoryId,
+			category: post.categoryName,
+			title: post.title,
+			excerpt: post.excerpt,
+			publishedAt: formatDate(post.publishedAt),
+			publishedAtIso: post.publishedAt,
+			views: formatNumber(post.views),
+			likeCount: Number(post.likeCount ?? 0),
+			dislikeCount: Number(post.dislikeCount ?? 0),
+			likedByMe: Boolean(post.likedByMe),
+			dislikedByMe: Boolean(post.dislikedByMe),
+			coverImageUrl: post.thumbnailImageUrl || getFallbackPostImageUrl(),
+			coverImageAlt: `${post.title} 대표 이미지`,
+			tags: [],
+			commentCount: 0,
+		},
+		body,
+		toc: toPostToc(body),
+	};
 }
 
 function toCommentPage(commentPage) {
-  return {
-    total: Number(commentPage?.total ?? 0),
-    items: Array.isArray(commentPage?.items) ? commentPage.items.map(toCommentItem) : [],
-    nextCursor: commentPage?.nextCursor ?? null,
-    hasNext: Boolean(commentPage?.hasNext),
-    placeholder: COMMENT_PLACEHOLDER,
-    maxLength: COMMENT_MAX_LENGTH,
-  };
+	return {
+		total: Number(commentPage?.total ?? 0),
+		items: Array.isArray(commentPage?.items) ? commentPage.items.map(toCommentItem) : [],
+		nextCursor: commentPage?.nextCursor ?? null,
+		hasNext: Boolean(commentPage?.hasNext),
+		placeholder: COMMENT_PLACEHOLDER,
+		maxLength: COMMENT_MAX_LENGTH,
+	};
 }
 
 function toCommentItem(comment) {
-  const deleted = Boolean(comment.deleted);
+	const deleted = Boolean(comment.deleted);
 
-  return {
-    id: comment.id,
-    author: deleted ? '' : getCommentNickname(comment),
-    createdAt: formatDateTime(comment.createdAt),
-    createdAtIso: comment.createdAt ?? '',
-    content: deleted ? '' : (comment.content ?? ''),
-    isAuthor: Boolean(comment.authorComment),
-    deleted,
-    likeCount: Number(comment.likeCount ?? 0),
-    dislikeCount: Number(comment.dislikeCount ?? 0),
-    likedByMe: Boolean(comment.likedByMe),
-    dislikedByMe: Boolean(comment.dislikedByMe),
-    mine: Boolean(comment.mine),
-    edited: Boolean(comment.edited),
-    hiddenByAdmin: Boolean(comment.hiddenByAdmin),
-    reportedByMe: Boolean(comment.reportedByMe),
-    replyHasNext: Boolean(comment.replyHasNext),
-    replyNextCursor: comment.replyNextCursor ?? null,
-    replies: Array.isArray(comment.replies) ? comment.replies.map(toCommentReply) : [],
-  };
+	return {
+		id: comment.id,
+		author: deleted ? '' : getCommentNickname(comment),
+		createdAt: formatDateTime(comment.createdAt),
+		createdAtIso: comment.createdAt ?? '',
+		content: deleted ? '' : (comment.content ?? ''),
+		isAuthor: Boolean(comment.authorComment),
+		deleted,
+		likeCount: Number(comment.likeCount ?? 0),
+		dislikeCount: Number(comment.dislikeCount ?? 0),
+		likedByMe: Boolean(comment.likedByMe),
+		dislikedByMe: Boolean(comment.dislikedByMe),
+		mine: Boolean(comment.mine),
+		edited: Boolean(comment.edited),
+		hiddenByAdmin: Boolean(comment.hiddenByAdmin),
+		reportedByMe: Boolean(comment.reportedByMe),
+		replyHasNext: Boolean(comment.replyHasNext),
+		replyNextCursor: comment.replyNextCursor ?? null,
+		replies: Array.isArray(comment.replies) ? comment.replies.map(toCommentReply) : [],
+	};
 }
 
 function toCommentReply(reply) {
-  return {
-    id: reply.id,
-    author: getCommentNickname(reply),
-    createdAt: formatDateTime(reply.createdAt),
-    createdAtIso: reply.createdAt ?? '',
-    content: reply.content ?? '',
-    isAuthor: Boolean(reply.authorComment),
-    deleted: Boolean(reply.deleted),
-    likeCount: Number(reply.likeCount ?? 0),
-    dislikeCount: Number(reply.dislikeCount ?? 0),
-    likedByMe: Boolean(reply.likedByMe),
-    dislikedByMe: Boolean(reply.dislikedByMe),
-    mine: Boolean(reply.mine),
-    edited: Boolean(reply.edited),
-    reportedByMe: Boolean(reply.reportedByMe),
-  };
+	return {
+		id: reply.id,
+		author: getCommentNickname(reply),
+		createdAt: formatDateTime(reply.createdAt),
+		createdAtIso: reply.createdAt ?? '',
+		content: reply.content ?? '',
+		isAuthor: Boolean(reply.authorComment),
+		deleted: Boolean(reply.deleted),
+		likeCount: Number(reply.likeCount ?? 0),
+		dislikeCount: Number(reply.dislikeCount ?? 0),
+		likedByMe: Boolean(reply.likedByMe),
+		dislikedByMe: Boolean(reply.dislikedByMe),
+		mine: Boolean(reply.mine),
+		edited: Boolean(reply.edited),
+		reportedByMe: Boolean(reply.reportedByMe),
+	};
 }
 
 function getCommentNickname(comment) {
-  return comment.nickname ?? comment.author ?? '';
+	return comment.nickname ?? comment.author ?? '';
 }
 
 function formatDateTime(value) {
-  if (!value) {
-    return '';
-  }
+	if (!value) {
+		return '';
+	}
 
-  const date = new Date(value);
+	const date = new Date(value);
 
-  if (Number.isNaN(date.getTime())) {
-    return '';
-  }
+	if (Number.isNaN(date.getTime())) {
+		return '';
+	}
 
-  const datePart = formatDate(value);
-  const timePart = new Intl.DateTimeFormat('ko-KR', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).format(date);
+	const datePart = formatDate(value);
+	const timePart = new Intl.DateTimeFormat('ko-KR', {
+		hour: '2-digit',
+		minute: '2-digit',
+		hour12: false,
+	}).format(date);
 
-  return `${datePart} ${timePart}`;
+	return `${datePart} ${timePart}`;
 }

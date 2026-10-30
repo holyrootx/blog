@@ -11,20 +11,20 @@ import { socialLoginUrl } from '../api/memberAuthApi';
  * 알 수 없어서, 서버가 받아 보고 판단한다.
  */
 const PROVIDERS = [
-  { id: 'google', label: '구글로 계속하기' },
-  { id: 'kakao', label: '카카오로 계속하기' },
-  { id: 'naver', label: '네이버로 계속하기' },
+	{ id: 'google', label: '구글로 계속하기' },
+	{ id: 'kakao', label: '카카오로 계속하기' },
+	{ id: 'naver', label: '네이버로 계속하기' },
 ];
 </script>
 
 <template>
-  <ul class="member-auth__providers">
-    <li v-for="provider in PROVIDERS" :key="provider.id">
-      <a
-        class="member-auth__provider"
-        :class="`member-auth__provider--${provider.id}`"
-        :href="socialLoginUrl(provider.id)"
-      >{{ provider.label }}</a>
-    </li>
-  </ul>
+	<ul class="member-auth__providers">
+		<li v-for="provider in PROVIDERS" :key="provider.id">
+			<a
+				class="member-auth__provider"
+				:class="`member-auth__provider--${provider.id}`"
+				:href="socialLoginUrl(provider.id)"
+			>{{ provider.label }}</a>
+		</li>
+	</ul>
 </template>

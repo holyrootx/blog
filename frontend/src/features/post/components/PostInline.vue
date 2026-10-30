@@ -7,35 +7,35 @@ import { h } from 'vue';
 const TAGS = { bold: 'strong', italic: 'em', strike: 's', underline: 'u' };
 
 function renderToken(token) {
-  let node = token.text;
+	let node = token.text;
 
-  if (TAGS[token.type]) {
-    node = h(TAGS[token.type], token.text);
-  } else if (token.type === 'code') {
-    node = h('code', { class: 'post-body__inline-code' }, token.text);
-  } else if (token.type === 'link') {
-    // 본문 링크는 외부로 나가는 경우가 많아 새 탭으로 열고 referrer 를 넘기지 않는다
-    node = h('a', {
-      class: 'post-body__link',
-      href: token.href,
-      target: '_blank',
-      rel: 'noopener noreferrer',
-    }, token.text);
-  }
+	if (TAGS[token.type]) {
+		node = h(TAGS[token.type], token.text);
+	} else if (token.type === 'code') {
+		node = h('code', { class: 'post-body__inline-code' }, token.text);
+	} else if (token.type === 'link') {
+		// 본문 링크는 외부로 나가는 경우가 많아 새 탭으로 열고 referrer 를 넘기지 않는다
+		node = h('a', {
+			class: 'post-body__link',
+			href: token.href,
+			target: '_blank',
+			rel: 'noopener noreferrer',
+		}, token.text);
+	}
 
-  return token.color ? h('span', { class: ['post-color', `post-color--${token.color}`] }, [node]) : node;
+	return token.color ? h('span', { class: ['post-color', `post-color--${token.color}`] }, [node]) : node;
 }
 
 export default {
-  name: 'PostInline',
-  props: {
-    tokens: {
-      type: Array,
-      default: () => [],
-    },
-  },
-  setup(props) {
-    return () => props.tokens.map(renderToken);
-  },
+	name: 'PostInline',
+	props: {
+		tokens: {
+			type: Array,
+			default: () => [],
+		},
+	},
+	setup(props) {
+		return () => props.tokens.map(renderToken);
+	},
 };
 </script>

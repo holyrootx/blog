@@ -34,73 +34,72 @@ import java.time.LocalDateTime;
 @Getter
 @Entity
 @Table(
-        name = "comment_moderation",
-        indexes = {
-                @Index(name = "idx_comment_moderation_comment", columnList = "comment_id")
-        }
+		name = "comment_moderation",
+		indexes = {
+				@Index(name = "idx_comment_moderation_comment", columnList = "comment_id")
+		}
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class CommentModeration {
 
-    /** 사유 길이. 운영자가 자기가 보려고 적는 메모라 길 필요가 없다 */
-    public static final int MAX_REASON_LENGTH = 200;
+	/** 사유 길이. 운영자가 자기가 보려고 적는 메모라 길 필요가 없다 */
+	public static final int MAX_REASON_LENGTH = 200;
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "comment_id", nullable = false)
-    private Comment comment;
+	@ManyToOne(fetch = FetchType.LAZY, optional = false)
+	@JoinColumn(name = "comment_id", nullable = false)
+	private Comment comment;
 
-    /** 조치한 운영자 */
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "admin_id", nullable = false)
-    private Member admin;
+	@ManyToOne(fetch = FetchType.LAZY, optional = false)
+	@JoinColumn(name = "admin_id", nullable = false)
+	private Member admin;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "action", nullable = false, length = 20)
-    private CommentModerationAction action;
+	@Enumerated(EnumType.STRING)
+	@Column(name = "action", nullable = false, length = 20)
+	private CommentModerationAction action;
 
-    @Column(name = "reason", length = MAX_REASON_LENGTH)
-    private String reason;
+	@Column(name = "reason", length = MAX_REASON_LENGTH)
+	private String reason;
 
-    @Column(name = "acted_at", nullable = false)
-    private LocalDateTime actedAt;
+	@Column(name = "acted_at", nullable = false)
+	private LocalDateTime actedAt;
 
-    private CommentModeration(
-            Comment comment,
-            Member admin,
-            CommentModerationAction action,
-            String reason
-    ) {
-        this.comment = comment;
-        this.admin = admin;
-        this.action = action;
-        this.reason = trim(reason);
-        this.actedAt = LocalDateTime.now();
-    }
+	private CommentModeration(
+			Comment comment,
+			Member admin,
+			CommentModerationAction action,
+			String reason
+	) {
+		this.comment = comment;
+		this.admin = admin;
+		this.action = action;
+		this.reason = trim(reason);
+		this.actedAt = LocalDateTime.now();
+	}
 
-    public static CommentModeration of(
-            Comment comment,
-            Member admin,
-            CommentModerationAction action,
-            String reason
-    ) {
-        return new CommentModeration(comment, admin, action, reason);
-    }
+	public static CommentModeration of(
+			Comment comment,
+			Member admin,
+			CommentModerationAction action,
+			String reason
+	) {
+		return new CommentModeration(comment, admin, action, reason);
+	}
 
-    private static String trim(String reason) {
-        if (reason == null) {
-            return null;
-        }
+	private static String trim(String reason) {
+		if (reason == null) {
+			return null;
+		}
 
-        String text = reason.trim();
+		String text = reason.trim();
 
-        if (text.isEmpty()) {
-            return null;
-        }
+		if (text.isEmpty()) {
+			return null;
+		}
 
-        return text.length() <= MAX_REASON_LENGTH ? text : text.substring(0, MAX_REASON_LENGTH);
-    }
+		return text.length() <= MAX_REASON_LENGTH ? text : text.substring(0, MAX_REASON_LENGTH);
+	}
 }

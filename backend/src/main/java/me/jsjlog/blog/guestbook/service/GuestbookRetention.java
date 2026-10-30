@@ -26,33 +26,33 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class GuestbookRetention {
 
-    private final GuestbookEntryRepository entryRepository;
-    private final GuestbookReportRepository reportRepository;
+	private final GuestbookEntryRepository entryRepository;
+	private final GuestbookReportRepository reportRepository;
 
-    // 댓글 정리와 같은 시각에 돈다. 손님이 적은 새벽이다
-    @Transactional
-    @Scheduled(cron = "${blog.retention.purge-cron:0 30 4 * * *}", zone = "Asia/Seoul")
-    public void purgeExpired() {
-        purgeExpired(LocalDateTime.now());
-    }
+	// 댓글 정리와 같은 시각에 돈다. 손님이 적은 새벽이다
+	@Transactional
+	@Scheduled(cron = "${blog.retention.purge-cron:0 30 4 * * *}", zone = "Asia/Seoul")
+	public void purgeExpired() {
+		purgeExpired(LocalDateTime.now());
+	}
 
-    @Transactional
-    public int purgeExpired(LocalDateTime now) {
-        LocalDateTime cutoff = now.minus(CommentRetention.RETENTION);
-        List<Long> candidates = entryRepository.findExpiredDeletedIds(cutoff);
+	@Transactional
+	public int purgeExpired(LocalDateTime now) {
+		LocalDateTime cutoff = now.minus(CommentRetention.RETENTION);
+		List<Long> candidates = entryRepository.findExpiredDeletedIds(cutoff);
 
-        if (candidates.isEmpty()) {
-            return 0;
-        }
+		if (candidates.isEmpty()) {
+			return 0;
+		}
 
-        entryRepository.purgeContent(candidates, cutoff, now);
-        List<Long> purgedIds = entryRepository.findPurgedIn(candidates);
+		entryRepository.purgeContent(candidates, cutoff, now);
+		List<Long> purgedIds = entryRepository.findPurgedIn(candidates);
 
-        if (!purgedIds.isEmpty()) {
-            reportRepository.clearReportedContent(purgedIds);
-            log.info("[보관 정리] 지운 방명록 원문 {}건 파기", purgedIds.size());
-        }
+		if (!purgedIds.isEmpty()) {
+			reportRepository.clearReportedContent(purgedIds);
+			log.info("[보관 정리] 지운 방명록 원문 {}건 파기", purgedIds.size());
+		}
 
-        return purgedIds.size();
-    }
+		return purgedIds.size();
+	}
 }

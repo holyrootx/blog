@@ -12,52 +12,52 @@ const DEFAULT_IMAGE = '/images/blog-hero-workspace.webp';
  * 이 함수는 앱 안에서 다른 화면으로 이동했을 때 같은 정보를 갱신한다.
  */
 export function applyDocumentMeta({
-  title,
-  description = DEFAULT_DESCRIPTION,
-  image = DEFAULT_IMAGE,
-  path,
-  type = 'website',
-  robots = 'index,follow',
-  structuredData = null,
+	title,
+	description = DEFAULT_DESCRIPTION,
+	image = DEFAULT_IMAGE,
+	path,
+	type = 'website',
+	robots = 'index,follow',
+	structuredData = null,
 } = {}) {
-  const fullTitle = title ? `${title} · ${SITE_NAME}` : SITE_NAME;
-  const url = absolute(path ?? location.pathname);
+	const fullTitle = title ? `${title} · ${SITE_NAME}` : SITE_NAME;
+	const url = absolute(path ?? location.pathname);
 
-  document.title = fullTitle;
+	document.title = fullTitle;
 
-  meta('name', 'description', description);
-  meta('name', 'robots', robots);
+	meta('name', 'description', description);
+	meta('name', 'robots', robots);
 
-  meta('property', 'og:type', type);
-  meta('property', 'og:site_name', SITE_NAME);
-  meta('property', 'og:title', title ?? SITE_NAME);
-  meta('property', 'og:description', description);
-  meta('property', 'og:url', url);
-  meta('property', 'og:image', absolute(image || DEFAULT_IMAGE));
+	meta('property', 'og:type', type);
+	meta('property', 'og:site_name', SITE_NAME);
+	meta('property', 'og:title', title ?? SITE_NAME);
+	meta('property', 'og:description', description);
+	meta('property', 'og:url', url);
+	meta('property', 'og:image', absolute(image || DEFAULT_IMAGE));
 
-  // 카드 종류를 안 주면 트위터는 제목만 있는 작은 카드로 그린다
-  meta('name', 'twitter:card', 'summary_large_image');
-  meta('name', 'twitter:title', title ?? SITE_NAME);
-  meta('name', 'twitter:description', description);
-  meta('name', 'twitter:image', absolute(image || DEFAULT_IMAGE));
+	// 카드 종류를 안 주면 트위터는 제목만 있는 작은 카드로 그린다
+	meta('name', 'twitter:card', 'summary_large_image');
+	meta('name', 'twitter:title', title ?? SITE_NAME);
+	meta('name', 'twitter:description', description);
+	meta('name', 'twitter:image', absolute(image || DEFAULT_IMAGE));
 
-  canonical(robots.startsWith('noindex') ? null : url);
-  applyStructuredData(robots.startsWith('noindex') ? null : structuredData);
+	canonical(robots.startsWith('noindex') ? null : url);
+	applyStructuredData(robots.startsWith('noindex') ? null : structuredData);
 }
 
 function applyStructuredData(data) {
-  let tag = document.head.querySelector('script#post-structured-data');
-  if (!data || data['@type'] !== 'BlogPosting') {
-    tag?.remove();
-    return;
-  }
-  if (!tag) {
-    tag = document.createElement('script');
-    tag.id = 'post-structured-data';
-    tag.type = 'application/ld+json';
-    document.head.appendChild(tag);
-  }
-  tag.textContent = JSON.stringify(data).replace(/</g, '\\u003c');
+	let tag = document.head.querySelector('script#post-structured-data');
+	if (!data || data['@type'] !== 'BlogPosting') {
+		tag?.remove();
+		return;
+	}
+	if (!tag) {
+		tag = document.createElement('script');
+		tag.id = 'post-structured-data';
+		tag.type = 'application/ld+json';
+		document.head.appendChild(tag);
+	}
+	tag.textContent = JSON.stringify(data).replace(/</g, '\\u003c');
 }
 
 /**
@@ -67,57 +67,57 @@ function applyStructuredData(data) {
  * 설명으로 읽히지 않는다.
  */
 export function summarize(body, limit = 160) {
-  const plain = (body ?? [])
-    .filter((block) => block.type === 'paragraph' || block.type === 'quote')
-    .map((block) => (block.inline ?? []).map((token) => token.text ?? '').join(''))
-    .join(' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+	const plain = (body ?? [])
+		.filter((block) => block.type === 'paragraph' || block.type === 'quote')
+		.map((block) => (block.inline ?? []).map((token) => token.text ?? '').join(''))
+		.join(' ')
+		.replace(/\s+/g, ' ')
+		.trim();
 
-  if (!plain) {
-    return DEFAULT_DESCRIPTION;
-  }
+	if (!plain) {
+		return DEFAULT_DESCRIPTION;
+	}
 
-  return plain.length > limit ? `${plain.slice(0, limit).trimEnd()}…` : plain;
+	return plain.length > limit ? `${plain.slice(0, limit).trimEnd()}…` : plain;
 }
 
 function meta(keyName, keyValue, content) {
-  if (!content) {
-    return;
-  }
+	if (!content) {
+		return;
+	}
 
-  let tag = document.head.querySelector(`meta[${keyName}="${keyValue}"]`);
+	let tag = document.head.querySelector(`meta[${keyName}="${keyValue}"]`);
 
-  if (!tag) {
-    tag = document.createElement('meta');
-    tag.setAttribute(keyName, keyValue);
-    document.head.appendChild(tag);
-  }
+	if (!tag) {
+		tag = document.createElement('meta');
+		tag.setAttribute(keyName, keyValue);
+		document.head.appendChild(tag);
+	}
 
-  tag.setAttribute('content', content);
+	tag.setAttribute('content', content);
 }
 
 function canonical(url) {
-  let tag = document.head.querySelector('link[rel="canonical"]');
+	let tag = document.head.querySelector('link[rel="canonical"]');
 
-  if (!url) {
-    tag?.remove();
-    return;
-  }
+	if (!url) {
+		tag?.remove();
+		return;
+	}
 
-  if (!tag) {
-    tag = document.createElement('link');
-    tag.setAttribute('rel', 'canonical');
-    document.head.appendChild(tag);
-  }
+	if (!tag) {
+		tag = document.createElement('link');
+		tag.setAttribute('rel', 'canonical');
+		document.head.appendChild(tag);
+	}
 
-  tag.setAttribute('href', url);
+	tag.setAttribute('href', url);
 }
 
 function absolute(value) {
-  if (!value) {
-    return location.origin;
-  }
+	if (!value) {
+		return location.origin;
+	}
 
-  return /^https?:\/\//.test(value) ? value : new URL(value, location.origin).href;
+	return /^https?:\/\//.test(value) ? value : new URL(value, location.origin).href;
 }

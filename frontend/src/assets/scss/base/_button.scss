@@ -9,19 +9,19 @@
  * 다르고, 쓰는 토큰 묶음도 다르다. 억지로 합치면 둘 중 하나가 달라진다.
  */
 .ui-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 42px;
-  padding: 0 18px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--surface);
-  color: var(--text-muted);
-  font-size: 14px;
-  font-weight: 600;
-  text-align: center;
-  cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	height: 42px;
+	padding: 0 18px;
+	border: 1px solid var(--line);
+	border-radius: var(--radius);
+	background: var(--surface);
+	color: var(--text-muted);
+	font-size: 14px;
+	font-weight: 600;
+	text-align: center;
+	cursor: pointer;
 }
 
 /*
@@ -35,41 +35,41 @@
  * 말까지 108px 로 늘어나 있었다.
  */
 .ui-button--steady {
-  min-width: 108px;
+	min-width: 108px;
 }
 
 /* 글 끝 반응 줄(좋아요·댓글·공유). 한 줄에 서는 것들이라 모양을 맞춘다 */
 .ui-button--pill {
-  border-radius: 999px;
+	border-radius: 999px;
 }
 
 .ui-button:hover,
 .ui-button:focus-visible {
-  border-color: var(--accent);
-  outline: none;
+	border-color: var(--accent);
+	outline: none;
 }
 
 .ui-button--accent {
-  border-color: var(--accent-strong);
-  background: var(--accent-strong);
-  color: var(--on-accent);
-  font-weight: 700;
+	border-color: var(--accent-strong);
+	background: var(--accent-strong);
+	color: var(--on-accent);
+	font-weight: 700;
 }
 
 .ui-button--accent:hover:not(:disabled) {
-  border-color: var(--accent-dark);
-  background: var(--accent-dark);
+	border-color: var(--accent-dark);
+	background: var(--accent-dark);
 }
 
 /* 눌러 둔 상태(좋아요 등). 색으로만 알리지 않도록 aria-pressed 를 같이 준다 */
 .ui-button--on {
-  border-color: var(--accent-soft);
-  background: var(--accent-soft);
-  color: var(--accent-dark);
-  font-weight: 700;
+	border-color: var(--accent-soft);
+	background: var(--accent-soft);
+	color: var(--accent-dark);
+	font-weight: 700;
 }
 
 .ui-button:disabled {
-  cursor: wait;
-  opacity: 0.55;
+	cursor: wait;
+	opacity: 0.55;
 }

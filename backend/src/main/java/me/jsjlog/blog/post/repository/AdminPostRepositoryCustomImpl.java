@@ -17,122 +17,121 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class AdminPostRepositoryCustomImpl implements AdminPostRepositoryCustom {
 
-    private final JPAQueryFactory jpaQueryFactory;
+	private final JPAQueryFactory jpaQueryFactory;
 
-    @Override
-    public List<AdminPostSummaryResponse> getAdminPosts(AdminPostSearchCondition condition) {
+	@Override
+	public List<AdminPostSummaryResponse> getAdminPosts(AdminPostSearchCondition condition) {
 
-        QPost post = QPost.post;
+		QPost post = QPost.post;
 
-        return jpaQueryFactory
-                .select(Projections.constructor(
-                        AdminPostSummaryResponse.class,
-                        post.id,
-                        post.title,
-                        post.category.id,
-                        post.category.name,
-                        post.status,
-                        post.publishedAt,
-                        post.createdAt,
-                        post.views,
-                        post.deletedAt
-                ))
-                .from(post)
-                .join(post.category)
-                .where(toPredicate(condition, true))
-                // 휴지통은 최근 삭제순, 일반 목록은 최근 작성순이다.
-                .orderBy(condition.trashOrDefault() ? post.deletedAt.desc() : post.createdAt.desc(), post.id.desc())
-                .offset((long) condition.pageOrDefault() * condition.sizeOrDefault())
-                .limit(condition.sizeOrDefault())
-                .fetch();
-    }
+		return jpaQueryFactory
+				.select(Projections.constructor(
+						AdminPostSummaryResponse.class,
+						post.id,
+						post.title,
+						post.category.id,
+						post.category.name,
+						post.status,
+						post.publishedAt,
+						post.createdAt,
+						post.views,
+						post.deletedAt
+				))
+				.from(post)
+				.join(post.category)
+				.where(toPredicate(condition, true))
+				.orderBy(condition.trashOrDefault() ? post.deletedAt.desc() : post.createdAt.desc(), post.id.desc())
+				.offset((long) condition.pageOrDefault() * condition.sizeOrDefault())
+				.limit(condition.sizeOrDefault())
+				.fetch();
+	}
 
-    @Override
-    public long countAdminPosts(AdminPostSearchCondition condition) {
+	@Override
+	public long countAdminPosts(AdminPostSearchCondition condition) {
 
-        QPost post = QPost.post;
+		QPost post = QPost.post;
 
-        Long total = jpaQueryFactory
-                .select(post.count())
-                .from(post)
-                .where(toPredicate(condition, true))
-                .fetchOne();
+		Long total = jpaQueryFactory
+				.select(post.count())
+				.from(post)
+				.where(toPredicate(condition, true))
+				.fetchOne();
 
-        return Objects.requireNonNullElse(total, 0L);
-    }
+		return Objects.requireNonNullElse(total, 0L);
+	}
 
-    @Override
-    public AdminPostStatusCounts countByStatus(AdminPostSearchCondition condition) {
+	@Override
+	public AdminPostStatusCounts countByStatus(AdminPostSearchCondition condition) {
 
-        QPost post = QPost.post;
+		QPost post = QPost.post;
 
-        // status 는 빼고 센다. 발행 탭을 보고 있어도 임시저장 건수가 보여야 한다
-        BooleanBuilder builder = toPredicate(condition, false);
+		// status 는 빼고 센다. 발행 탭을 보고 있어도 임시저장 건수가 보여야 한다
+		BooleanBuilder builder = toPredicate(condition, false);
 
-        long published = countWithStatus(builder, PostStatus.PUBLISHED);
-        long scheduled = countWithStatus(builder, PostStatus.SCHEDULED);
-        long privateCount = countWithStatus(builder, PostStatus.PRIVATE);
-        long draft = countWithStatus(builder, PostStatus.DRAFT);
-        long trash = Objects.requireNonNullElse(jpaQueryFactory
-                .select(post.count())
-                .from(post)
-                .where(builder, post.deletedAt.isNotNull())
-                .fetchOne(), 0L);
+		long published = countWithStatus(builder, PostStatus.PUBLISHED);
+		long scheduled = countWithStatus(builder, PostStatus.SCHEDULED);
+		long privateCount = countWithStatus(builder, PostStatus.PRIVATE);
+		long draft = countWithStatus(builder, PostStatus.DRAFT);
+		long trash = Objects.requireNonNullElse(jpaQueryFactory
+				.select(post.count())
+				.from(post)
+				.where(builder, post.deletedAt.isNotNull())
+				.fetchOne(), 0L);
 
-        return new AdminPostStatusCounts(
-                published + scheduled + privateCount + draft,
-                published,
-                scheduled,
-                privateCount,
-                draft,
-                trash
-        );
-    }
+		return new AdminPostStatusCounts(
+				published + scheduled + privateCount + draft,
+				published,
+				scheduled,
+				privateCount,
+				draft,
+				trash
+		);
+	}
 
-    private long countWithStatus(BooleanBuilder baseBuilder, PostStatus status) {
+	private long countWithStatus(BooleanBuilder baseBuilder, PostStatus status) {
 
-        QPost post = QPost.post;
+		QPost post = QPost.post;
 
-        // 원본을 건드리지 않도록 복사해서 상태 조건만 덧붙인다
-        BooleanBuilder builder = new BooleanBuilder(baseBuilder.getValue());
-        builder.and(post.status.eq(status));
-        builder.and(post.deletedAt.isNull());
+		// 원본을 건드리지 않도록 복사해서 상태 조건만 덧붙인다
+		BooleanBuilder builder = new BooleanBuilder(baseBuilder.getValue());
+		builder.and(post.status.eq(status));
+		builder.and(post.deletedAt.isNull());
 
-        Long count = jpaQueryFactory
-                .select(post.count())
-                .from(post)
-                .where(builder)
-                .fetchOne();
+		Long count = jpaQueryFactory
+				.select(post.count())
+				.from(post)
+				.where(builder)
+				.fetchOne();
 
-        return Objects.requireNonNullElse(count, 0L);
-    }
+		return Objects.requireNonNullElse(count, 0L);
+	}
 
-    /**
-     * @param withStatus 상태 조건을 포함할지. 상태별 건수를 셀 때는 빼야 한다
-     */
-    private BooleanBuilder toPredicate(AdminPostSearchCondition condition, boolean withStatus) {
+	/**
+	 * @param withStatus 상태 조건을 포함할지. 상태별 건수를 셀 때는 빼야 한다
+	 */
+	private BooleanBuilder toPredicate(AdminPostSearchCondition condition, boolean withStatus) {
 
-        QPost post = QPost.post;
+		QPost post = QPost.post;
 
-        BooleanBuilder builder = new BooleanBuilder(post.contentPurgedAt.isNull());
+		BooleanBuilder builder = new BooleanBuilder(post.contentPurgedAt.isNull());
 
-        if (withStatus) {
-            builder.and(condition.trashOrDefault() ? post.deletedAt.isNotNull() : post.deletedAt.isNull());
-        }
+		if (withStatus) {
+			builder.and(condition.trashOrDefault() ? post.deletedAt.isNotNull() : post.deletedAt.isNull());
+		}
 
-        if (withStatus && !condition.trashOrDefault() && condition.status() != null) {
-            builder.and(post.status.eq(condition.status()));
-        }
+		if (withStatus && !condition.trashOrDefault() && condition.status() != null) {
+			builder.and(post.status.eq(condition.status()));
+		}
 
-        if (condition.categoryId() != null) {
-            builder.and(post.category.id.eq(condition.categoryId()));
-        }
+		if (condition.categoryId() != null) {
+			builder.and(post.category.id.eq(condition.categoryId()));
+		}
 
-        // 제목만 검색한다. 본문까지 넣으면 마크다운 문법에 엉뚱한 글이 걸린다
-        if (!StringUtils.isNullOrEmpty(condition.keyword())) {
-            builder.and(post.title.contains(condition.keyword()));
-        }
+		// 제목만 검색한다. 본문까지 넣으면 마크다운 문법에 엉뚱한 글이 걸린다
+		if (!StringUtils.isNullOrEmpty(condition.keyword())) {
+			builder.and(post.title.contains(condition.keyword()));
+		}
 
-        return builder;
-    }
+		return builder;
+	}
 }

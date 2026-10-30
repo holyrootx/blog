@@ -34,99 +34,103 @@ const isAdmin = computed(() => member.value?.role === 'ROLE_ADMIN');
 const initial = computed(() => Array.from(member.value?.nickname ?? '')[0] ?? '');
 
 function closeOnOutside(event) {
-  if (open.value && root.value && !root.value.contains(event.target)) {
-    open.value = false;
-  }
+	if (open.value && root.value && !root.value.contains(event.target)) {
+		open.value = false;
+	}
 }
 
 function closeOnEscape(event) {
-  if (event.key === 'Escape') {
-    open.value = false;
-  }
+	if (event.key === 'Escape') {
+		open.value = false;
+	}
 }
 
 onMounted(() => {
-  document.addEventListener('click', closeOnOutside);
-  document.addEventListener('keydown', closeOnEscape);
+	document.addEventListener('click', closeOnOutside);
+	document.addEventListener('keydown', closeOnEscape);
 });
 
 onBeforeUnmount(() => {
-  document.removeEventListener('click', closeOnOutside);
-  document.removeEventListener('keydown', closeOnEscape);
+	document.removeEventListener('click', closeOnOutside);
+	document.removeEventListener('keydown', closeOnEscape);
 });
 
 // 화면을 옮기면 닫는다. 열어 둔 채로 이동하면 새 화면 위에 그대로 떠 있다
 watch(() => route.fullPath, () => {
-  open.value = false;
+	open.value = false;
 });
 
 function goToLogin() {
-  // 로그인은 제공자 화면까지 다녀오는 길이라 라우터 상태가 남지 않는다.
-  // 보던 자리를 적어 두지 않으면 돌아왔을 때 홈으로 떨어진다
-  rememberReturnPath(route.fullPath);
-  router.push({ name: 'member-login' });
+	// 로그인은 제공자 화면까지 다녀오는 길이라 라우터 상태가 남지 않는다.
+	// 보던 자리를 적어 두지 않으면 돌아왔을 때 홈으로 떨어진다
+	rememberReturnPath(route.fullPath);
+	router.push({ name: 'member-login' });
 }
 
 async function signOut() {
-  if (signingOut.value) return;
-  signingOut.value = true;
-  try {
-    await signOutMember();
-    open.value = false;
-    if (route.name === 'member-settings') await router.replace({ name: 'home' });
-  } catch {
-    notifyError('로그아웃을 확인하지 못했습니다. 다시 시도해 주세요.');
-  } finally {
-    signingOut.value = false;
-  }
+	if (signingOut.value) {
+		return;
+	}
+	signingOut.value = true;
+	try {
+		await signOutMember();
+		open.value = false;
+		if (route.name === 'member-settings') {
+			await router.replace({ name: 'home' });
+		}
+	} catch {
+		notifyError('로그아웃을 확인하지 못했습니다. 다시 시도해 주세요.');
+	} finally {
+		signingOut.value = false;
+	}
 }
 </script>
 
 <template>
-  <button
-    v-if="sessionResolved && !isSignedIn"
-    class="member-menu__signin"
-    type="button"
-    @click="goToLogin"
-  >로그인</button>
+	<button
+		v-if="sessionResolved && !isSignedIn"
+		class="member-menu__signin"
+		type="button"
+		@click="goToLogin"
+	>로그인</button>
 
-  <div v-else-if="isSignedIn" ref="root" class="member-menu">
-    <button
-      class="member-menu__trigger"
-      type="button"
-      :aria-expanded="open"
-      aria-haspopup="menu"
-      @click="open = !open"
-    >
-      <img
-        v-if="member.profileImageUrl"
-        class="member-menu__avatar"
-        :src="member.profileImageUrl"
-        alt=""
-        referrerpolicy="no-referrer"
-      />
-      <span v-else class="member-menu__avatar">{{ initial }}</span>
-      <span class="member-menu__nickname">{{ member.nickname }}</span>
-    </button>
+	<div v-else-if="isSignedIn" ref="root" class="member-menu">
+		<button
+			class="member-menu__trigger"
+			type="button"
+			:aria-expanded="open"
+			aria-haspopup="menu"
+			@click="open = !open"
+		>
+			<img
+				v-if="member.profileImageUrl"
+				class="member-menu__avatar"
+				:src="member.profileImageUrl"
+				alt=""
+				referrerpolicy="no-referrer"
+			/>
+			<span v-else class="member-menu__avatar">{{ initial }}</span>
+			<span class="member-menu__nickname">{{ member.nickname }}</span>
+		</button>
 
-    <div v-if="open" class="member-menu__dropdown" role="menu">
-      <RouterLink class="member-menu__item" role="menuitem" :to="{ name: 'member-settings', hash: '#recent-posts' }">
-        최근 본 글
-      </RouterLink>
-      <RouterLink class="member-menu__item" role="menuitem" :to="{ name: 'member-settings' }">
-        내 설정
-      </RouterLink>
-      <RouterLink
-        v-if="isAdmin"
-        class="member-menu__item"
-        role="menuitem"
-        :to="{ name: 'admin-dashboard' }"
-      >
-        관리자
-      </RouterLink>
-      <button class="member-menu__item" type="button" role="menuitem" :disabled="signingOut" @click="signOut">
-        로그아웃
-      </button>
-    </div>
-  </div>
+		<div v-if="open" class="member-menu__dropdown" role="menu">
+			<RouterLink class="member-menu__item" role="menuitem" :to="{ name: 'member-settings', hash: '#recent-posts' }">
+				최근 본 글
+			</RouterLink>
+			<RouterLink class="member-menu__item" role="menuitem" :to="{ name: 'member-settings' }">
+				내 설정
+			</RouterLink>
+			<RouterLink
+				v-if="isAdmin"
+				class="member-menu__item"
+				role="menuitem"
+				:to="{ name: 'admin-dashboard' }"
+			>
+				관리자
+			</RouterLink>
+			<button class="member-menu__item" type="button" role="menuitem" :disabled="signingOut" @click="signOut">
+				로그아웃
+			</button>
+		</div>
+	</div>
 </template>

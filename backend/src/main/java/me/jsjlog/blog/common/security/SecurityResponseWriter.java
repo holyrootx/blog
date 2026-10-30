@@ -28,22 +28,22 @@ import java.nio.charset.StandardCharsets;
 @RequiredArgsConstructor
 public class SecurityResponseWriter {
 
-    private final ObjectMapper objectMapper;
+	private final ObjectMapper objectMapper;
 
-    public void writeError(HttpServletRequest request, HttpServletResponse response, ErrorCode errorCode)
-            throws IOException {
-        write(response, errorCode.getHttpStatus(), ErrorResponse.of(errorCode, request.getRequestURI()));
-    }
+	public void writeError(HttpServletRequest request, HttpServletResponse response, ErrorCode errorCode)
+			throws IOException {
+		write(response, errorCode.getHttpStatus(), ErrorResponse.of(errorCode, request.getRequestURI()));
+	}
 
-    public void writeOk(HttpServletResponse response, Object data) throws IOException {
-        write(response, HttpStatus.OK, ApiResponse.ok(data));
-    }
+	public void writeOk(HttpServletResponse response, Object data) throws IOException {
+		write(response, HttpStatus.OK, ApiResponse.ok(data));
+	}
 
-    private void write(HttpServletResponse response, HttpStatus status, Object body) throws IOException {
-        response.setStatus(status.value());
-        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+	private void write(HttpServletResponse response, HttpStatus status, Object body) throws IOException {
+		response.setStatus(status.value());
+		response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+		response.setCharacterEncoding(StandardCharsets.UTF_8.name());
 
-        objectMapper.writeValue(response.getOutputStream(), body);
-    }
+		objectMapper.writeValue(response.getOutputStream(), body);
+	}
 }

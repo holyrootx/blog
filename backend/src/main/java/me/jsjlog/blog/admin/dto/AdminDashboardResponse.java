@@ -9,13 +9,13 @@ import java.util.List;
  * 0으로 주면 진짜 0인지 미구현인지 구분할 수 없다.
  */
 public record AdminDashboardResponse(
-        Long daysSinceStart,
-        Long draftPostCount,
-        Long totalViews,
-        Long publishedPostCount,
-        Long postCountThisMonth,
-        Long reportedCommentCount,
-        String mostViewedCategory,
-        List<AdminCategoryShareResponse> categoryShares
+		Long daysSinceStart,
+		Long draftPostCount,
+		Long totalViews,
+		Long publishedPostCount,
+		Long postCountThisMonth,
+		Long reportedCommentCount,
+		String mostViewedCategory,
+		List<AdminCategoryShareResponse> categoryShares
 ) {
 }

@@ -9,7 +9,7 @@ package me.jsjlog.blog.common.upload;
  */
 public record ImageThumbnail(byte[] content, String contentType, int width, int height) {
 
-    public long size() {
-        return content.length;
-    }
+	public long size() {
+		return content.length;
+	}
 }

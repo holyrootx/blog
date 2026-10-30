@@ -13,26 +13,26 @@ export { refreshCsrfToken } from '../../../shared/api/csrfApi';
  * fetch 가 상대경로라 같은 출처이고, 기본값으로 쿠키가 실린다 — credentials 를 따로 줄 필요가 없다.
  */
 export async function loginAdmin(username, password) {
-  const session = await sendApiData(`${ADMIN_AUTH_API_BASE}/login`, {
-    method: 'POST',
-    body: { username, password },
-  });
+	const session = await sendApiData(`${ADMIN_AUTH_API_BASE}/login`, {
+		method: 'POST',
+		body: { username, password },
+	});
 
-  return toAdminSession(session);
+	return toAdminSession(session);
 }
 
 /** 세션이 아직 살아 있는지. 없으면 서버가 401 을 주고 ApiError 가 던져진다 */
 export async function getAdminSession() {
-  return toAdminSession(await getApiData(`${ADMIN_AUTH_API_BASE}/me`));
+	return toAdminSession(await getApiData(`${ADMIN_AUTH_API_BASE}/me`));
 }
 
 export function logoutAdmin() {
-  return sendApiData(`${ADMIN_AUTH_API_BASE}/logout`, { method: 'POST' });
+	return sendApiData(`${ADMIN_AUTH_API_BASE}/logout`, { method: 'POST' });
 }
 
 function toAdminSession(session) {
-  return {
-    username: session?.username ?? '',
-    role: session?.role ?? '',
-  };
+	return {
+		username: session?.username ?? '',
+		role: session?.role ?? '',
+	};
 }

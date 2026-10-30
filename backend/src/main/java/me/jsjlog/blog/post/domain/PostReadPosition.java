@@ -29,37 +29,37 @@ import java.time.LocalDateTime;
 @Getter
 @Entity
 @Table(
-        name = "post_read_position",
-        uniqueConstraints = @UniqueConstraint(
-                name = "uk_post_read_position_member_post",
-                columnNames = {"member_id", "post_id"}
-        )
+		name = "post_read_position",
+		uniqueConstraints = @UniqueConstraint(
+				name = "uk_post_read_position_member_post",
+				columnNames = {"member_id", "post_id"}
+		)
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class PostReadPosition {
 
-    /** 덩어리 안에서의 위치를 천분율로 둔다. 0 이 덩어리 맨 위, 1000 이 맨 아래다 */
-    public static final int MAX_BLOCK_OFFSET = 1000;
+	/** 덩어리 안에서의 위치를 천분율로 둔다. 0 이 덩어리 맨 위, 1000 이 맨 아래다 */
+	public static final int MAX_BLOCK_OFFSET = 1000;
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
 
-    @Column(name = "member_id", nullable = false, updatable = false)
-    private Long memberId;
+	@Column(name = "member_id", nullable = false, updatable = false)
+	private Long memberId;
 
-    @Column(name = "post_id", nullable = false, updatable = false)
-    private Long postId;
+	@Column(name = "post_id", nullable = false, updatable = false)
+	private Long postId;
 
-    @Column(name = "block_index", nullable = false)
-    private int blockIndex;
+	@Column(name = "block_index", nullable = false)
+	private int blockIndex;
 
-    @Column(name = "block_offset", nullable = false)
-    private int blockOffset;
+	@Column(name = "block_offset", nullable = false)
+	private int blockOffset;
 
-    @Column(name = "block_hash", nullable = false, length = 8)
-    private String blockHash;
+	@Column(name = "block_hash", nullable = false, length = 8)
+	private String blockHash;
 
-    @Column(name = "saved_at", nullable = false)
-    private LocalDateTime savedAt;
+	@Column(name = "saved_at", nullable = false)
+	private LocalDateTime savedAt;
 }

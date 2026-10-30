@@ -14,21 +14,21 @@ import java.util.Objects;
  */
 public final class ConcurrencyGuard {
 
-    private ConcurrencyGuard() {
-    }
+	private ConcurrencyGuard() {
+	}
 
-    /**
-     * @param expected 화면이 들고 있던 값. null 이면 검사하지 않는다
-     *                 (이 값을 안 보내는 호출자까지 막지는 않는다)
-     * @param actual   지금 서버 값
-     */
-    public static void check(LocalDateTime expected, LocalDateTime actual) {
-        if (expected == null) {
-            return;
-        }
+	/**
+	 * @param expected 화면이 들고 있던 값. null 이면 검사하지 않는다
+	 *                 (이 값을 안 보내는 호출자까지 막지는 않는다)
+	 * @param actual   지금 서버 값
+	 */
+	public static void check(LocalDateTime expected, LocalDateTime actual) {
+		if (expected == null) {
+			return;
+		}
 
-        if (!Objects.equals(expected, actual)) {
-            throw new BlogException(ErrorCode.MODIFIED_BY_OTHERS);
-        }
-    }
+		if (!Objects.equals(expected, actual)) {
+			throw new BlogException(ErrorCode.MODIFIED_BY_OTHERS);
+		}
+	}
 }

@@ -13,9 +13,9 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum CommentModerationAction {
 
-    HIDE("가림"),
-    RESTORE("되돌림"),
-    DISMISS("문제 없음");
+	HIDE("가림"),
+	RESTORE("되돌림"),
+	DISMISS("문제 없음");
 
-    private final String label;
+	private final String label;
 }

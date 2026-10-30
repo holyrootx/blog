@@ -16,19 +16,19 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/admin/blog/stats/views")
 public class AdminViewStatsController {
 
-    private final AdminViewStatsService adminViewStatsService;
+	private final AdminViewStatsService adminViewStatsService;
 
-    @GetMapping
-    public ApiResponse<AdminViewStatsResponse> getSummary(@RequestParam(required = false) Integer days) {
-        return ApiResponse.ok(adminViewStatsService.getSummary(days));
-    }
+	@GetMapping
+	public ApiResponse<AdminViewStatsResponse> getSummary(@RequestParam(required = false) Integer days) {
+		return ApiResponse.ok(adminViewStatsService.getSummary(days));
+	}
 
-    @GetMapping("/posts")
-    public ApiResponse<AdminPostViewStatsListResponse> getPosts(
-            @RequestParam(required = false) Integer days,
-            @RequestParam(required = false) Integer page,
-            @RequestParam(required = false) Integer size
-    ) {
-        return ApiResponse.ok(adminViewStatsService.getPosts(days, page, size));
-    }
+	@GetMapping("/posts")
+	public ApiResponse<AdminPostViewStatsListResponse> getPosts(
+			@RequestParam(required = false) Integer days,
+			@RequestParam(required = false) Integer page,
+			@RequestParam(required = false) Integer size
+	) {
+		return ApiResponse.ok(adminViewStatsService.getPosts(days, page, size));
+	}
 }

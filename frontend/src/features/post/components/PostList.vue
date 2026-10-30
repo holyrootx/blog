@@ -10,48 +10,48 @@ import PostInline from './PostInline.vue';
 defineOptions({ name: 'PostList' });
 
 defineProps({
-  list: {
-    type: Object,
-    required: true,
-  },
-  depth: {
-    type: Number,
-    default: 0,
-  },
+	list: {
+		type: Object,
+		required: true,
+	},
+	depth: {
+		type: Number,
+		default: 0,
+	},
 });
 </script>
 
 <template>
-  <component
-    :is="list.ordered ? 'ol' : 'ul'"
-    class="post-body__list"
-    :class="[
-      list.ordered ? 'post-body__list--ordered' : 'post-body__list--bullet',
-      `post-body__list--depth-${depth % 3}`,
-      { 'post-body__list--todo': !list.ordered && list.items.some((item) => item.checked !== null) },
-    ]"
-  >
-    <li
-      v-for="(item, index) in list.items"
-      :key="index"
-      :class="{
-        'post-body__todo': item.checked !== null,
-        'post-body__todo--done': item.checked === true,
-      }"
-    >
-      <template v-if="item.checked !== null">
-        <!-- 읽기 전용 표시다. 브라우저의 비활성 체크 상자는 회색으로 흐려져 완료 여부가 잘 안 보인다 -->
-        <span
-          class="post-body__todo-box"
-          :class="{ 'post-body__todo-box--done': item.checked }"
-          role="img"
-          :aria-label="item.checked ? '완료한 일' : '할 일'"
-        ><span v-if="item.checked" aria-hidden="true">✓</span></span>
-        <span class="post-body__todo-text"><PostInline :tokens="item.inline" /></span>
-      </template>
-      <PostInline v-else :tokens="item.inline" />
+	<component
+		:is="list.ordered ? 'ol' : 'ul'"
+		class="post-body__list"
+		:class="[
+			list.ordered ? 'post-body__list--ordered' : 'post-body__list--bullet',
+			`post-body__list--depth-${depth % 3}`,
+			{ 'post-body__list--todo': !list.ordered && list.items.some((item) => item.checked !== null) },
+		]"
+	>
+		<li
+			v-for="(item, index) in list.items"
+			:key="index"
+			:class="{
+				'post-body__todo': item.checked !== null,
+				'post-body__todo--done': item.checked === true,
+			}"
+		>
+			<template v-if="item.checked !== null">
+				<!-- 읽기 전용 표시다. 브라우저의 비활성 체크 상자는 회색으로 흐려져 완료 여부가 잘 안 보인다 -->
+				<span
+					class="post-body__todo-box"
+					:class="{ 'post-body__todo-box--done': item.checked }"
+					role="img"
+					:aria-label="item.checked ? '완료한 일' : '할 일'"
+				><span v-if="item.checked" aria-hidden="true">✓</span></span>
+				<span class="post-body__todo-text"><PostInline :tokens="item.inline" /></span>
+			</template>
+			<PostInline v-else :tokens="item.inline" />
 
-      <PostList v-for="(child, childIndex) in item.children" :key="childIndex" :list="child" :depth="depth + 1" />
-    </li>
-  </component>
+			<PostList v-for="(child, childIndex) in item.children" :key="childIndex" :list="child" :depth="depth + 1" />
+		</li>
+	</component>
 </template>

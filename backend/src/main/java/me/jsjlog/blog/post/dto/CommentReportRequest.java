@@ -9,7 +9,7 @@ import me.jsjlog.blog.post.domain.CommentReportReason;
  * 광고나 욕설은 댓글을 열어 보면 바로 알 수 있어서 덧붙일 말이 딱히 없다.</p>
  */
 public record CommentReportRequest(
-        CommentReportReason reason,
-        String detail
+		CommentReportReason reason,
+		String detail
 ) {
 }

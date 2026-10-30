@@ -19,12 +19,12 @@ onMounted(refreshBlogProfile);
 </script>
 
 <template>
-  <div class="public-shell">
-    <BlogHeader :title="title" />
-    <RouterView />
-    <footer class="public-footer">
-      <RouterLink to="/privacy">개인정보처리방침</RouterLink>
-      <RouterLink to="/terms">서비스 이용약관</RouterLink>
-    </footer>
-  </div>
+	<div class="public-shell">
+		<BlogHeader :title="title" />
+		<RouterView />
+		<footer class="public-footer">
+			<RouterLink to="/privacy">개인정보처리방침</RouterLink>
+			<RouterLink to="/terms">서비스 이용약관</RouterLink>
+		</footer>
+	</div>
 </template>

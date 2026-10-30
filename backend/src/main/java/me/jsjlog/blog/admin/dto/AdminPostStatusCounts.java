@@ -10,11 +10,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * private 은 자바 예약어라 필드명을 쓸 수 없어 JSON 이름만 맞춘다.
  */
 public record AdminPostStatusCounts(
-        long all,
-        long published,
-        long scheduled,
-        @JsonProperty("private") long privateCount,
-        long draft,
-        long trash
+		long all,
+		long published,
+		long scheduled,
+		@JsonProperty("private") long privateCount,
+		long draft,
+		long trash
 ) {
 }

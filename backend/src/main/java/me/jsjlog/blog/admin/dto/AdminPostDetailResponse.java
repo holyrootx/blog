@@ -13,15 +13,15 @@ import java.time.LocalDateTime;
  * 화면이 비교하는 데 쓴다.
  */
 public record AdminPostDetailResponse(
-        Long id,
-        String title,
-        Long categoryId,
-        String categoryName,
-        String excerpt,
-        String content,
-        String thumbnailImageUrl,
-        PostStatus status,
-        LocalDateTime publishedAt,
-        LocalDateTime updatedAt
+		Long id,
+		String title,
+		Long categoryId,
+		String categoryName,
+		String excerpt,
+		String content,
+		String thumbnailImageUrl,
+		PostStatus status,
+		LocalDateTime publishedAt,
+		LocalDateTime updatedAt
 ) {
 }

@@ -34,74 +34,73 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class CommonCodes implements ApplicationRunner {
 
-    private final CommonCodeRepository commonCodeRepository;
+	private final CommonCodeRepository commonCodeRepository;
 
-    private volatile Map<String, Map<String, CommonCode>> byGroup;
+	private volatile Map<String, Map<String, CommonCode>> byGroup;
 
-    @Override
-    public void run(ApplicationArguments args) {
-        reload();
-        List<String> problems = mismatches(CommonCodeEnums.codesByGroup());
-        if (!problems.isEmpty()) {
-            throw new IllegalStateException("공통 코드 표가 enum 과 다릅니다. 시드 SQL 을 확인하세요. " + problems);
-        }
-        log.info("[공통 코드] {}개 그룹을 enum 과 대조했습니다", CommonCodeEnums.codesByGroup().size());
-    }
+	@Override
+	public void run(ApplicationArguments args) {
+		reload();
+		List<String> problems = mismatches(CommonCodeEnums.codesByGroup());
+		if (!problems.isEmpty()) {
+			throw new IllegalStateException("공통 코드 표가 enum 과 다릅니다. 시드 SQL 을 확인하세요. " + problems);
+		}
+		log.info("[공통 코드] {}개 그룹을 enum 과 대조했습니다", CommonCodeEnums.codesByGroup().size());
+	}
 
-    /** 표를 다시 읽는다. 관리 화면에서 고친 뒤, 트랜잭션이 커밋된 다음에 부른다 */
-    public void reload() {
-        Map<String, Map<String, CommonCode>> loaded = new LinkedHashMap<>();
-        for (CommonCode code : commonCodeRepository.findAllByOrderByGroupCodeAscSortOrderAscCodeAsc()) {
-            loaded.computeIfAbsent(code.getGroupCode(), group -> new LinkedHashMap<>()).put(code.getCode(), code);
-        }
-        byGroup = loaded;
-    }
+	/** 표를 다시 읽는다. 관리 화면에서 고친 뒤, 트랜잭션이 커밋된 다음에 부른다 */
+	public void reload() {
+		Map<String, Map<String, CommonCode>> loaded = new LinkedHashMap<>();
+		for (CommonCode code : commonCodeRepository.findAllByOrderByGroupCodeAscSortOrderAscCodeAsc()) {
+			loaded.computeIfAbsent(code.getGroupCode(), group -> new LinkedHashMap<>()).put(code.getCode(), code);
+		}
+		byGroup = loaded;
+	}
 
-    /**
-     * 화면에 보일 이름. 표에 없으면 코드 값을 그대로 돌려준다 — 이름 하나 때문에 목록 전체가
-     * 깨지지 않게 한다. 정상이라면 서버 시작 시 대조에서 이미 걸렸을 일이다.
-     */
-    public String nameOf(CommonCodeType type) {
-        if (type == null) {
-            return null;
-        }
-        CommonCode code = groups().getOrDefault(type.groupCode(), Map.of()).get(type.code());
-        return code == null ? type.code() : code.getCodeName();
-    }
+	/**
+	 * 화면에 보일 이름. 표에 없으면 코드 값을 그대로 돌려준다 — 이름 하나 때문에 목록 전체가
+	 * 깨지지 않게 한다. 정상이라면 서버 시작 시 대조에서 이미 걸렸을 일이다.
+	 */
+	public String nameOf(CommonCodeType type) {
+		if (type == null) {
+			return null;
+		}
+		CommonCode code = groups().getOrDefault(type.groupCode(), Map.of()).get(type.code());
+		return code == null ? type.code() : code.getCodeName();
+	}
 
-    /** 그룹의 코드들. 표시 순서대로 */
-    public List<CommonCode> codesOf(String groupCode) {
-        return groups().getOrDefault(groupCode, Map.of()).values().stream()
-                .sorted(Comparator.comparingInt(CommonCode::getSortOrder).thenComparing(CommonCode::getCode))
-                .toList();
-    }
+	public List<CommonCode> codesOf(String groupCode) {
+		return groups().getOrDefault(groupCode, Map.of()).values().stream()
+				.sorted(Comparator.comparingInt(CommonCode::getSortOrder).thenComparing(CommonCode::getCode))
+				.toList();
+	}
 
-    /** enum 과 표가 어긋난 내용. 비어 있으면 맞다. 테스트도 같은 기준을 쓴다 */
-    public List<String> mismatches(Map<String, Set<String>> enumCodes) {
-        List<String> problems = new ArrayList<>();
-        enumCodes.forEach((group, codes) -> {
-            Set<String> stored = groups().getOrDefault(group, Map.of()).keySet();
-            Set<String> missing = new TreeSet<>(codes);
-            missing.removeAll(stored);
-            Set<String> unknown = new TreeSet<>(stored);
-            unknown.removeAll(codes);
-            if (!missing.isEmpty()) {
-                problems.add(group + " 표에 없음 " + missing);
-            }
-            if (!unknown.isEmpty()) {
-                problems.add(group + " enum 에 없음 " + unknown);
-            }
-        });
-        return problems;
-    }
+	/** enum 과 표가 어긋난 내용. 비어 있으면 맞다. 테스트도 같은 기준을 쓴다 */
+	public List<String> mismatches(Map<String, Set<String>> enumCodes) {
+		List<String> problems = new ArrayList<>();
+		enumCodes.forEach((group, codes) -> {
+			Set<String> stored = groups().getOrDefault(group, Map.of()).keySet();
+			Set<String> missing = new TreeSet<>(codes);
+			missing.removeAll(stored);
+			Set<String> unknown = new TreeSet<>(stored);
+			unknown.removeAll(codes);
+			if (!missing.isEmpty()) {
+				problems.add(group + " 표에 없음 " + missing);
+			}
+			if (!unknown.isEmpty()) {
+				problems.add(group + " enum 에 없음 " + unknown);
+			}
+		});
+		return problems;
+	}
 
-    private Map<String, Map<String, CommonCode>> groups() {
-        Map<String, Map<String, CommonCode>> current = byGroup;
-        if (current == null) {
-            // 서버가 요청을 받기 시작한 뒤 대조가 끝나기 전에 불린 경우
-            reload();
-            current = byGroup;
-        }
-        return current;
-    }
+	private Map<String, Map<String, CommonCode>> groups() {
+		Map<String, Map<String, CommonCode>> current = byGroup;
+		if (current == null) {
+			// 서버가 요청을 받기 시작한 뒤 대조가 끝나기 전에 불린 경우
+			reload();
+			current = byGroup;
+		}
+		return current;
+	}
 }

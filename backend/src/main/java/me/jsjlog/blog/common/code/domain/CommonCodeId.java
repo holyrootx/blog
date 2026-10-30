@@ -12,23 +12,23 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class CommonCodeId implements Serializable {
 
-    private String groupCode;
-    private String code;
+	private String groupCode;
+	private String code;
 
-    public CommonCodeId(String groupCode, String code) {
-        this.groupCode = groupCode;
-        this.code = code;
-    }
+	public CommonCodeId(String groupCode, String code) {
+		this.groupCode = groupCode;
+		this.code = code;
+	}
 
-    @Override
-    public boolean equals(Object other) {
-        return other instanceof CommonCodeId id
-                && Objects.equals(groupCode, id.groupCode)
-                && Objects.equals(code, id.code);
-    }
+	@Override
+	public boolean equals(Object other) {
+		return other instanceof CommonCodeId id
+				&& Objects.equals(groupCode, id.groupCode)
+				&& Objects.equals(code, id.code);
+	}
 
-    @Override
-    public int hashCode() {
-        return Objects.hash(groupCode, code);
-    }
+	@Override
+	public int hashCode() {
+		return Objects.hash(groupCode, code);
+	}
 }

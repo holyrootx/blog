@@ -1,93 +1,93 @@
 @use '../base/breakpoints' as bp;
 
 .public-footer {
-  display: flex;
-  gap: 18px;
-  justify-content: center;
-  padding: 28px 24px 40px;
-  border-top: 1px solid var(--line);
-  color: var(--text-subtle);
-  font-size: 13px;
+	display: flex;
+	gap: 18px;
+	justify-content: center;
+	padding: 28px 24px 40px;
+	border-top: 1px solid var(--line);
+	color: var(--text-subtle);
+	font-size: 13px;
 }
 
 .public-footer a,
 .legal-document a {
-  color: inherit;
+	color: inherit;
 }
 
 .public-footer a:hover,
 .legal-document a:hover {
-  color: var(--accent-dark);
+	color: var(--accent-dark);
 }
 
 /* 공개 화면 공통 카드(.public-shell__main) 안에 들어간다. 바탕과 높이는 카드가 정한다 */
 .legal-document {
-  padding: 48px 24px 80px;
-  color: var(--text-muted);
+	padding: 48px 24px 80px;
+	color: var(--text-muted);
 }
 
 .legal-document__body {
-  width: min(100%, 760px);
-  margin: 0 auto;
+	width: min(100%, 760px);
+	margin: 0 auto;
 }
 
 .legal-document__header {
-  margin: 0 0 36px;
-  padding-bottom: 24px;
-  border-bottom: 1px solid var(--line);
+	margin: 0 0 36px;
+	padding-bottom: 24px;
+	border-bottom: 1px solid var(--line);
 }
 
 .legal-document__header h1 {
-  margin: 0;
-  color: var(--text);
-  font-size: 32px;
-  line-height: 1.3;
+	margin: 0;
+	color: var(--text);
+	font-size: 32px;
+	line-height: 1.3;
 }
 
 .legal-document__header p {
-  margin: 10px 0 0;
-  color: var(--text-subtle);
-  font-size: 13px;
+	margin: 10px 0 0;
+	color: var(--text-subtle);
+	font-size: 13px;
 }
 
 .legal-document section {
-  margin-top: 34px;
+	margin-top: 34px;
 }
 
 .legal-document h2 {
-  margin: 0 0 12px;
-  color: var(--text);
-  font-size: 18px;
-  line-height: 1.5;
+	margin: 0 0 12px;
+	color: var(--text);
+	font-size: 18px;
+	line-height: 1.5;
 }
 
 .legal-document p,
 .legal-document li {
-  font-size: 15px;
-  line-height: 1.85;
+	font-size: 15px;
+	line-height: 1.85;
 }
 
 .legal-document p {
-  margin: 10px 0 0;
+	margin: 10px 0 0;
 }
 
 .legal-document ul {
-  margin: 10px 0 0;
-  padding-left: 22px;
+	margin: 10px 0 0;
+	padding-left: 22px;
 }
 
 @include bp.upto(md) {
-  .legal-document {
-    padding: 36px 20px 72px;
-  }
+	.legal-document {
+		padding: 36px 20px 72px;
+	}
 
-  .legal-document__header h1 {
-    font-size: 26px;
-  }
+	.legal-document__header h1 {
+		font-size: 26px;
+	}
 
-  .public-footer {
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-  }
+	.public-footer {
+		flex-direction: column;
+		align-items: center;
+		gap: 10px;
+	}
 }

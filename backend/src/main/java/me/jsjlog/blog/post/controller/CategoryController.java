@@ -17,13 +17,13 @@ import java.util.List;
 @RequestMapping("/api/v1")
 public class CategoryController {
 
-    private final CategoryService categoryService;
+	private final CategoryService categoryService;
 
-    @GetMapping("/blog/categories")
-    public ApiResponse<List<CategoryResponse>> getCategories(){
-        List<CategoryResponse> categories = categoryService.getCategories();
-        return ApiResponse.ok(categories);
-    }
+	@GetMapping("/blog/categories")
+	public ApiResponse<List<CategoryResponse>> getCategories(){
+		List<CategoryResponse> categories = categoryService.getCategories();
+		return ApiResponse.ok(categories);
+	}
 
 
 

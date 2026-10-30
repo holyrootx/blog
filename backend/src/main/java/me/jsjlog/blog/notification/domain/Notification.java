@@ -37,69 +37,68 @@ import me.jsjlog.blog.post.domain.Comment;
 @Getter
 @Entity
 @Table(
-        name = "notification",
-        // 종을 열 때마다 "내 것 중 안 읽은 것" 을 센다. 두 컬럼을 같이 타는 조회라 같이 묶는다
-        indexes = @Index(name = "ix_notification_recipient", columnList = "recipient_id, read_at")
+		name = "notification",
+		// 종을 열 때마다 "내 것 중 안 읽은 것" 을 센다. 두 컬럼을 같이 타는 조회라 같이 묶는다
+		indexes = @Index(name = "ix_notification_recipient", columnList = "recipient_id, read_at")
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Notification extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
 
-    /** 받는 사람 */
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "recipient_id", nullable = false)
-    private Member recipient;
+	@ManyToOne(fetch = FetchType.LAZY, optional = false)
+	@JoinColumn(name = "recipient_id", nullable = false)
+	private Member recipient;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "type", nullable = false, length = 20)
-    private NotificationType type;
+	@Enumerated(EnumType.STRING)
+	@Column(name = "type", nullable = false, length = 20)
+	private NotificationType type;
 
-    /**
-     * 이 알림을 만든 댓글. 답글이면 답글 자신이다. 방명록 알림이면 비어 있다.
-     *
-     * 화면은 이걸 따라가서 누가 무슨 말을 했는지, 어느 글인지 읽는다.
-     */
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "comment_id")
-    private Comment comment;
+	/**
+	 * 이 알림을 만든 댓글. 답글이면 답글 자신이다. 방명록 알림이면 비어 있다.
+	 *
+	 * 화면은 이걸 따라가서 누가 무슨 말을 했는지, 어느 글인지 읽는다.
+	 */
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "comment_id")
+	private Comment comment;
 
-    /**
-     * 이 알림을 만든 방명록 글. 댓글 알림이면 비어 있다.
-     *
-     * <p>둘 중 하나만 채운다. 표를 따로 두면 종 하나에 두 목록을 섞어 정렬해야 하고,
-     * 읽음 처리도 두 갈래가 된다.</p>
-     */
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "guestbook_entry_id")
-    private GuestbookEntry guestbookEntry;
+	/**
+	 * 이 알림을 만든 방명록 글. 댓글 알림이면 비어 있다.
+	 *
+	 * <p>둘 중 하나만 채운다. 표를 따로 두면 종 하나에 두 목록을 섞어 정렬해야 하고,
+	 * 읽음 처리도 두 갈래가 된다.</p>
+	 */
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "guestbook_entry_id")
+	private GuestbookEntry guestbookEntry;
 
-    /** 읽은 시각. 널이면 안 읽은 것이다 */
-    @Column(name = "read_at")
-    private LocalDateTime readAt;
+	/** 읽은 시각. 널이면 안 읽은 것이다 */
+	@Column(name = "read_at")
+	private LocalDateTime readAt;
 
-    public Notification(Member recipient, NotificationType type, Comment comment) {
-        this.recipient = recipient;
-        this.type = type;
-        this.comment = comment;
-    }
+	public Notification(Member recipient, NotificationType type, Comment comment) {
+		this.recipient = recipient;
+		this.type = type;
+		this.comment = comment;
+	}
 
-    public Notification(Member recipient, NotificationType type, GuestbookEntry guestbookEntry) {
-        this.recipient = recipient;
-        this.type = type;
-        this.guestbookEntry = guestbookEntry;
-    }
+	public Notification(Member recipient, NotificationType type, GuestbookEntry guestbookEntry) {
+		this.recipient = recipient;
+		this.type = type;
+		this.guestbookEntry = guestbookEntry;
+	}
 
-    /** 이미 읽은 알림을 다시 읽어도 처음 읽은 시각을 유지한다 */
-    public void markRead(LocalDateTime readAt) {
-        if (this.readAt == null) {
-            this.readAt = readAt;
-        }
-    }
+	/** 이미 읽은 알림을 다시 읽어도 처음 읽은 시각을 유지한다 */
+	public void markRead(LocalDateTime readAt) {
+		if (this.readAt == null) {
+			this.readAt = readAt;
+		}
+	}
 
-    public boolean isUnread() {
-        return readAt == null;
-    }
+	public boolean isUnread() {
+		return readAt == null;
+	}
 }

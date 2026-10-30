@@ -8,6 +8,6 @@ package me.jsjlog.blog.common.security.oauth;
  */
 public enum OAuthLoginState {
 
-    SIGNUP_REQUIRED,
-    REACTIVATION_REQUIRED
+	SIGNUP_REQUIRED,
+	REACTIVATION_REQUIRED
 }

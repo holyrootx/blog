@@ -20,45 +20,45 @@ import org.springframework.stereotype.Component;
 @Component
 public class OAuthAttributeReaders {
 
-    private final Map<AuthProvider, OAuthAttributeReader> readers;
+	private final Map<AuthProvider, OAuthAttributeReader> readers;
 
-    public OAuthAttributeReaders(List<OAuthAttributeReader> readers) {
-        this.readers = new EnumMap<>(AuthProvider.class);
+	public OAuthAttributeReaders(List<OAuthAttributeReader> readers) {
+		this.readers = new EnumMap<>(AuthProvider.class);
 
-        for (OAuthAttributeReader reader : readers) {
-            OAuthAttributeReader previous = this.readers.put(reader.provider(), reader);
+		for (OAuthAttributeReader reader : readers) {
+			OAuthAttributeReader previous = this.readers.put(reader.provider(), reader);
 
-            // 같은 제공자를 둘이 맡으면 어느 쪽이 이겼는지가 빈 등록 순서에 달린다.
-            // 기동 때 멈추는 편이 낫다 — 운영에서 엉뚱한 파서가 도는 것보다
-            if (previous != null) {
-                throw new IllegalStateException(
-                        "%s 를 읽는 구현이 둘 있습니다: %s, %s".formatted(
-                                reader.provider(),
-                                previous.getClass().getSimpleName(),
-                                reader.getClass().getSimpleName()
-                        )
-                );
-            }
-        }
-    }
+			// 같은 제공자를 둘이 맡으면 어느 쪽이 이겼는지가 빈 등록 순서에 달린다.
+			// 기동 때 멈추는 편이 낫다 — 운영에서 엉뚱한 파서가 도는 것보다
+			if (previous != null) {
+				throw new IllegalStateException(
+						"%s 를 읽는 구현이 둘 있습니다: %s, %s".formatted(
+								reader.provider(),
+								previous.getClass().getSimpleName(),
+								reader.getClass().getSimpleName()
+						)
+				);
+			}
+		}
+	}
 
-    /**
-     * @param registrationId Spring Security 설정에 적은 등록 이름 (google, kakao, naver)
-     * @param attributes 제공자가 준 원본 응답
-     */
-    public OAuthUserInfo read(String registrationId, Map<String, Object> attributes) {
-        AuthProvider provider = AuthProvider.from(registrationId);
-        OAuthAttributeReader reader = readers.get(provider);
+	/**
+	 * @param registrationId Spring Security 설정에 적은 등록 이름 (google, kakao, naver)
+	 * @param attributes 제공자가 준 원본 응답
+	 */
+	public OAuthUserInfo read(String registrationId, Map<String, Object> attributes) {
+		AuthProvider provider = AuthProvider.from(registrationId);
+		OAuthAttributeReader reader = readers.get(provider);
 
-        // 설정에는 등록했는데 읽는 구현을 안 만든 경우다. 열어 둔 로그인 버튼이
-        // 콜백에서만 죽는 상황이라 원인을 알기 어려우니 제공자 이름을 남긴다
-        if (reader == null) {
-            throw new BlogException(
-                    ErrorCode.OAUTH_PROVIDER_NOT_SUPPORTED,
-                    "%s 응답을 읽는 구현이 없습니다.".formatted(provider)
-            );
-        }
+		// 설정에는 등록했는데 읽는 구현을 안 만든 경우다. 열어 둔 로그인 버튼이
+		// 콜백에서만 죽는 상황이라 원인을 알기 어려우니 제공자 이름을 남긴다
+		if (reader == null) {
+			throw new BlogException(
+					ErrorCode.OAUTH_PROVIDER_NOT_SUPPORTED,
+					"%s 응답을 읽는 구현이 없습니다.".formatted(provider)
+			);
+		}
 
-        return reader.read(attributes);
-    }
+		return reader.read(attributes);
+	}
 }

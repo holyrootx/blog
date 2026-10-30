@@ -34,58 +34,58 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 class SearchLogFailureTest {
 
-    private static final String FAILING_KEYWORD = "기록실패";
+	private static final String FAILING_KEYWORD = "기록실패";
 
-    @DynamicPropertySource
-    static void isolatedDatabase(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", () -> "jdbc:h2:mem:search_log_failure;"
-                + "MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1");
-    }
+	@DynamicPropertySource
+	static void isolatedDatabase(DynamicPropertyRegistry registry) {
+		registry.add("spring.datasource.url", () -> "jdbc:h2:mem:search_log_failure;"
+				+ "MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1");
+	}
 
-    @Autowired
-    private MockMvc mockMvc;
+	@Autowired
+	private MockMvc mockMvc;
 
-    @Autowired
-    private PostRepository postRepository;
+	@Autowired
+	private PostRepository postRepository;
 
-    @Autowired
-    private CategoryRepository categoryRepository;
+	@Autowired
+	private CategoryRepository categoryRepository;
 
-    @Autowired
-    private SearchLogRepository searchLogRepository;
+	@Autowired
+	private SearchLogRepository searchLogRepository;
 
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
+	@Autowired
+	private JdbcTemplate jdbcTemplate;
 
-    @BeforeEach
-    void setUp() {
-        if (postRepository.count() == 0) {
-            Category category = categoryRepository.save(new Category("검색 기록", 1L));
-            Post post = new Post(FAILING_KEYWORD + " 이 들어간 글", "요약", "본문", category, null, null);
-            post.publish(LocalDateTime.now().minusDays(1));
-            postRepository.save(post);
-            jdbcTemplate.execute("alter table search_log add constraint search_log_test_reject"
-                    + " check (keyword <> '" + FAILING_KEYWORD + "')");
-        }
-        searchLogRepository.deleteAll();
-    }
+	@BeforeEach
+	void setUp() {
+		if (postRepository.count() == 0) {
+			Category category = categoryRepository.save(new Category("검색 기록", 1L));
+			Post post = new Post(FAILING_KEYWORD + " 이 들어간 글", "요약", "본문", category, null, null);
+			post.publish(LocalDateTime.now().minusDays(1));
+			postRepository.save(post);
+			jdbcTemplate.execute("alter table search_log add constraint search_log_test_reject"
+					+ " check (keyword <> '" + FAILING_KEYWORD + "')");
+		}
+		searchLogRepository.deleteAll();
+	}
 
-    @Test
-    @DisplayName("검색 기록 INSERT 가 실패해도 검색은 200 으로 결과를 준다")
-    void searchSucceedsWhenLoggingFails() throws Exception {
-        mockMvc.perform(get("/api/v1/blog/posts").param("q", FAILING_KEYWORD))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.items[0].title").value(FAILING_KEYWORD + " 이 들어간 글"));
+	@Test
+	@DisplayName("검색 기록 INSERT 가 실패해도 검색은 200 으로 결과를 준다")
+	void searchSucceedsWhenLoggingFails() throws Exception {
+		mockMvc.perform(get("/api/v1/blog/posts").param("q", FAILING_KEYWORD))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.items[0].title").value(FAILING_KEYWORD + " 이 들어간 글"));
 
-        assertThat(searchLogRepository.count()).isZero();
-    }
+		assertThat(searchLogRepository.count()).isZero();
+	}
 
-    @Test
-    @DisplayName("기록이 되는 검색어는 그대로 남는다")
-    void normalSearchIsStillLogged() throws Exception {
-        mockMvc.perform(get("/api/v1/blog/posts").param("q", "들어간"))
-                .andExpect(status().isOk());
+	@Test
+	@DisplayName("기록이 되는 검색어는 그대로 남는다")
+	void normalSearchIsStillLogged() throws Exception {
+		mockMvc.perform(get("/api/v1/blog/posts").param("q", "들어간"))
+				.andExpect(status().isOk());
 
-        assertThat(searchLogRepository.count()).isEqualTo(1);
-    }
+		assertThat(searchLogRepository.count()).isEqualTo(1);
+	}
 }

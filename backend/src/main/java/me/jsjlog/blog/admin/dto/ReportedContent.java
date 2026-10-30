@@ -8,21 +8,19 @@ package me.jsjlog.blog.admin.dto;
  */
 public record ReportedContent(String content, Status status, Boolean editedAfterReport) {
 
-    public enum Status {
-        /** 기록으로 확인했다 */
-        CONFIRMED,
-        /** 보관 기간이 지나 기록이나 원문을 파기해서 확인할 수 없다 */
-        EXPIRED,
-        /** 기록 기능이 생기기 전이라 남은 기록이 없어 확인할 수 없다 */
-        NOT_RECORDED
-    }
+	public enum Status {
+		CONFIRMED,
+		/** 보관 기간이 지나 기록이나 원문을 파기해서 확인할 수 없다 */
+		EXPIRED,
+		/** 기록 기능이 생기기 전이라 남은 기록이 없어 확인할 수 없다 */
+		NOT_RECORDED
+	}
 
-    public static ReportedContent confirmed(String content, boolean editedAfterReport) {
-        return new ReportedContent(content, Status.CONFIRMED, editedAfterReport);
-    }
+	public static ReportedContent confirmed(String content, boolean editedAfterReport) {
+		return new ReportedContent(content, Status.CONFIRMED, editedAfterReport);
+	}
 
-    /** 본문도, 신고 뒤에 고쳤는지도 모른다 */
-    public static ReportedContent unknown(Status reason) {
-        return new ReportedContent(null, reason, null);
-    }
+	public static ReportedContent unknown(Status reason) {
+		return new ReportedContent(null, reason, null);
+	}
 }

@@ -31,29 +31,29 @@ import org.springframework.stereotype.Component;
 @Component
 public class KakaoAttributeReader extends OAuthAttributeReader {
 
-    @Override
-    public AuthProvider provider() {
-        return AuthProvider.KAKAO;
-    }
+	@Override
+	public AuthProvider provider() {
+		return AuthProvider.KAKAO;
+	}
 
-    @Override
-    protected String providerUserId(Map<String, Object> attributes) {
-        return stringAt(attributes, "id");
-    }
+	@Override
+	protected String providerUserId(Map<String, Object> attributes) {
+		return stringAt(attributes, "id");
+	}
 
-    @Override
-    protected String nickname(Map<String, Object> attributes) {
-        return stringAt(attributes, "kakao_account", "profile", "nickname");
-    }
+	@Override
+	protected String nickname(Map<String, Object> attributes) {
+		return stringAt(attributes, "kakao_account", "profile", "nickname");
+	}
 
-    @Override
-    protected String email(Map<String, Object> attributes) {
-        return stringAt(attributes, "kakao_account", "email");
-    }
+	@Override
+	protected String email(Map<String, Object> attributes) {
+		return stringAt(attributes, "kakao_account", "email");
+	}
 
-    @Override
-    protected String profileImageUrl(Map<String, Object> attributes) {
-        // thumbnail_image_url 도 같은 자리에 오지만 작다. 화면에서 줄이는 게 낫다
-        return stringAt(attributes, "kakao_account", "profile", "profile_image_url");
-    }
+	@Override
+	protected String profileImageUrl(Map<String, Object> attributes) {
+		// thumbnail_image_url 도 같은 자리에 오지만 작다. 화면에서 줄이는 게 낫다
+		return stringAt(attributes, "kakao_account", "profile", "profile_image_url");
+	}
 }

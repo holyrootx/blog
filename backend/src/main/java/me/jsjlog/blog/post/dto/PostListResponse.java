@@ -9,21 +9,21 @@ import java.util.List;
  * "총 N개" 도 보여 줄 수 있다.
  */
 public record PostListResponse(
-        List<PostSummaryResponse> items,
-        int page,
-        int size,
-        long totalElements,
-        int totalPages
+		List<PostSummaryResponse> items,
+		int page,
+		int size,
+		long totalElements,
+		int totalPages
 ) {
 
-    public static PostListResponse of(
-            List<PostSummaryResponse> items,
-            int page,
-            int size,
-            long totalElements
-    ) {
-        int totalPages = size < 1 ? 0 : (int) Math.ceil((double) totalElements / size);
+	public static PostListResponse of(
+			List<PostSummaryResponse> items,
+			int page,
+			int size,
+			long totalElements
+	) {
+		int totalPages = size < 1 ? 0 : (int) Math.ceil((double) totalElements / size);
 
-        return new PostListResponse(items, page, size, totalElements, totalPages);
-    }
+		return new PostListResponse(items, page, size, totalElements, totalPages);
+	}
 }

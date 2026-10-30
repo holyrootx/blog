@@ -11,10 +11,10 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 // JS가 breakpoint를 따로 들고 있으면 CSS와 어긋나서,
 // 좁은 화면에서 "숨었는데 펼치기 버튼이 없는" 상태가 생긴다.
 defineProps({
-  collapsible: {
-    type: Boolean,
-    default: true,
-  },
+	collapsible: {
+		type: Boolean,
+		default: true,
+	},
 });
 
 const emit = defineEmits(['search']);
@@ -30,55 +30,55 @@ let resizeObserver = null;
 let mutationObserver = null;
 
 function measure() {
-  const element = fieldsRef.value;
+	const element = fieldsRef.value;
 
-  if (!element) {
-    return;
-  }
+	if (!element) {
+		return;
+	}
 
-  fieldCount.value = element.children.length;
-  columnCount.value = getComputedStyle(element).gridTemplateColumns.split(' ').length;
+	fieldCount.value = element.children.length;
+	columnCount.value = getComputedStyle(element).gridTemplateColumns.split(' ').length;
 }
 
 onMounted(() => {
-  measure();
+	measure();
 
-  resizeObserver = new ResizeObserver(measure);
-  resizeObserver.observe(fieldsRef.value);
+	resizeObserver = new ResizeObserver(measure);
+	resizeObserver.observe(fieldsRef.value);
 
-  mutationObserver = new MutationObserver(measure);
-  mutationObserver.observe(fieldsRef.value, { childList: true });
+	mutationObserver = new MutationObserver(measure);
+	mutationObserver.observe(fieldsRef.value, { childList: true });
 });
 
 onBeforeUnmount(() => {
-  resizeObserver?.disconnect();
-  mutationObserver?.disconnect();
+	resizeObserver?.disconnect();
+	mutationObserver?.disconnect();
 });
 </script>
 
 <template>
-  <!-- 엔터로도 조회되도록 form 은 유지한다 -->
-  <form
-    class="admin-search"
-    :class="{ 'admin-search--collapsed': collapsible && !expanded }"
-    @submit.prevent="emit('search')"
-  >
-    <div ref="fieldsRef" class="admin-search__fields" :data-visible="columnCount">
-      <slot />
-    </div>
+	<!-- 엔터로도 조회되도록 form 은 유지한다 -->
+	<form
+		class="admin-search"
+		:class="{ 'admin-search--collapsed': collapsible && !expanded }"
+		@submit.prevent="emit('search')"
+	>
+		<div ref="fieldsRef" class="admin-search__fields" :data-visible="columnCount">
+			<slot />
+		</div>
 
-    <div v-if="collapsible && hiddenCount > 0" class="admin-search__footer">
-      <button
-        class="admin-search__toggle"
-        type="button"
-        :aria-expanded="expanded"
-        @click="expanded = !expanded"
-      >
-        {{ expanded ? '접기 ⌃' : `펼치기 ⌄ (+${hiddenCount})` }}
-      </button>
-    </div>
+		<div v-if="collapsible && hiddenCount > 0" class="admin-search__footer">
+			<button
+				class="admin-search__toggle"
+				type="button"
+				:aria-expanded="expanded"
+				@click="expanded = !expanded"
+			>
+				{{ expanded ? '접기 ⌃' : `펼치기 ⌄ (+${hiddenCount})` }}
+			</button>
+		</div>
 
-    <!-- 엔터 조회용. 화면에는 보이지 않는다 -->
-    <button class="admin-search__submit" type="submit" tabindex="-1" aria-hidden="true"></button>
-  </form>
+		<!-- 엔터 조회용. 화면에는 보이지 않는다 -->
+		<button class="admin-search__submit" type="submit" tabindex="-1" aria-hidden="true"></button>
+	</form>
 </template>

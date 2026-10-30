@@ -32,40 +32,40 @@ import java.time.LocalDateTime;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class SearchLog {
 
-    /** 검색어 저장 한도. 넘으면 자른다 — 주소창에 긴 문자열을 넣어 보내는 것만으로 저장이 깨지면 안 된다 */
-    public static final int MAX_KEYWORD_LENGTH = 100;
+	/** 검색어 저장 한도. 넘으면 자른다 — 주소창에 긴 문자열을 넣어 보내는 것만으로 저장이 깨지면 안 된다 */
+	public static final int MAX_KEYWORD_LENGTH = 100;
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
 
-    @Column(name = "keyword", nullable = false, length = MAX_KEYWORD_LENGTH)
-    private String keyword;
+	@Column(name = "keyword", nullable = false, length = MAX_KEYWORD_LENGTH)
+	private String keyword;
 
-    /** 몇 건 나왔는지. 0 인 검색어가 사람들이 기대했는데 없는 글이다 */
-    @Column(name = "result_count", nullable = false)
-    private long resultCount;
+	/** 몇 건 나왔는지. 0 인 검색어가 사람들이 기대했는데 없는 글이다 */
+	@Column(name = "result_count", nullable = false)
+	private long resultCount;
 
-    @Column(name = "searched_at", nullable = false)
-    private LocalDateTime searchedAt;
+	@Column(name = "searched_at", nullable = false)
+	private LocalDateTime searchedAt;
 
-    private SearchLog(String keyword, long resultCount, LocalDateTime searchedAt) {
-        this.keyword = keyword;
-        this.resultCount = resultCount;
-        this.searchedAt = searchedAt;
-    }
+	private SearchLog(String keyword, long resultCount, LocalDateTime searchedAt) {
+		this.keyword = keyword;
+		this.resultCount = resultCount;
+		this.searchedAt = searchedAt;
+	}
 
-    public static SearchLog of(String keyword, long resultCount) {
-        return new SearchLog(trim(keyword), resultCount, LocalDateTime.now());
-    }
+	public static SearchLog of(String keyword, long resultCount) {
+		return new SearchLog(trim(keyword), resultCount, LocalDateTime.now());
+	}
 
-    private static String trim(String keyword) {
-        if (keyword == null) {
-            return "";
-        }
+	private static String trim(String keyword) {
+		if (keyword == null) {
+			return "";
+		}
 
-        return keyword.length() <= MAX_KEYWORD_LENGTH
-                ? keyword
-                : keyword.substring(0, MAX_KEYWORD_LENGTH);
-    }
+		return keyword.length() <= MAX_KEYWORD_LENGTH
+				? keyword
+				: keyword.substring(0, MAX_KEYWORD_LENGTH);
+	}
 }
