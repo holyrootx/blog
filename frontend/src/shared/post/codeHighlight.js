@@ -8,20 +8,19 @@
  * 렌더 경로에 주입 구멍을 두지 않기 위해서다 — 본문 매퍼와 같은 원칙.
  */
 
-/** 코드 블록에서 고를 수 있는 언어 */
 export const CODE_LANGUAGES = [
-  { value: '', label: '언어 없음' },
-  { value: 'java', label: 'Java' },
-  { value: 'javascript', label: 'JavaScript' },
-  { value: 'typescript', label: 'TypeScript' },
-  { value: 'vue', label: 'Vue' },
-  { value: 'python', label: 'Python' },
-  { value: 'sql', label: 'SQL' },
-  { value: 'bash', label: 'Bash' },
-  { value: 'json', label: 'JSON' },
-  { value: 'yaml', label: 'YAML' },
-  { value: 'html', label: 'HTML' },
-  { value: 'css', label: 'CSS' },
+	{ value: '', label: '언어 없음' },
+	{ value: 'java', label: 'Java' },
+	{ value: 'javascript', label: 'JavaScript' },
+	{ value: 'typescript', label: 'TypeScript' },
+	{ value: 'vue', label: 'Vue' },
+	{ value: 'python', label: 'Python' },
+	{ value: 'sql', label: 'SQL' },
+	{ value: 'bash', label: 'Bash' },
+	{ value: 'json', label: 'JSON' },
+	{ value: 'yaml', label: 'YAML' },
+	{ value: 'html', label: 'HTML' },
+	{ value: 'css', label: 'CSS' },
 ];
 
 const JAVA = split(`abstract assert boolean break byte case catch char class const continue default do
@@ -55,153 +54,153 @@ const CSS_WORDS = split(`important media supports keyframes import from to and n
 
 /** 언어별 설정. 없는 언어는 C 계열로 가정한다 */
 const LANGUAGES = {
-  java: { keywords: JAVA, lineComment: ['//'], blockComment: true },
-  javascript: { keywords: JS, lineComment: ['//'], blockComment: true },
-  typescript: { keywords: TS, lineComment: ['//'], blockComment: true },
-  vue: { keywords: TS, lineComment: ['//'], blockComment: true, markup: true },
-  python: { keywords: PYTHON, lineComment: ['#'], blockComment: false },
-  sql: { keywords: SQL, lineComment: ['--'], blockComment: true, ignoreCase: true },
-  bash: { keywords: BASH, lineComment: ['#'], blockComment: false },
-  json: { keywords: JSON_WORDS, lineComment: [], blockComment: false },
-  yaml: { keywords: YAML_WORDS, lineComment: ['#'], blockComment: false },
-  html: { keywords: [], lineComment: [], blockComment: false, markup: true },
-  css: { keywords: CSS_WORDS, lineComment: [], blockComment: true },
+	java: { keywords: JAVA, lineComment: ['//'], blockComment: true },
+	javascript: { keywords: JS, lineComment: ['//'], blockComment: true },
+	typescript: { keywords: TS, lineComment: ['//'], blockComment: true },
+	vue: { keywords: TS, lineComment: ['//'], blockComment: true, markup: true },
+	python: { keywords: PYTHON, lineComment: ['#'], blockComment: false },
+	sql: { keywords: SQL, lineComment: ['--'], blockComment: true, ignoreCase: true },
+	bash: { keywords: BASH, lineComment: ['#'], blockComment: false },
+	json: { keywords: JSON_WORDS, lineComment: [], blockComment: false },
+	yaml: { keywords: YAML_WORDS, lineComment: ['#'], blockComment: false },
+	html: { keywords: [], lineComment: [], blockComment: false, markup: true },
+	css: { keywords: CSS_WORDS, lineComment: [], blockComment: true },
 };
 
 const FALLBACK = { keywords: [...JAVA, ...JS], lineComment: ['//', '#'], blockComment: true };
 
 function split(text) {
-  return text.trim().split(/\s+/);
+	return text.trim().split(/\s+/);
 }
 
 function configFor(language) {
-  const name = String(language ?? '').toLowerCase();
+	const name = String(language ?? '').toLowerCase();
 
-  if (!name) {
-    return FALLBACK;
-  }
+	if (!name) {
+		return FALLBACK;
+	}
 
-  const alias = { js: 'javascript', ts: 'typescript', py: 'python', sh: 'bash', shell: 'bash', yml: 'yaml', xml: 'html' };
+	const alias = { js: 'javascript', ts: 'typescript', py: 'python', sh: 'bash', shell: 'bash', yml: 'yaml', xml: 'html' };
 
-  return LANGUAGES[alias[name] ?? name] ?? FALLBACK;
+	return LANGUAGES[alias[name] ?? name] ?? FALLBACK;
 }
 
 export function toCodeTokens(code, language) {
-  const source = String(code ?? '');
-  const config = configFor(language);
-  const keywords = new Set(config.ignoreCase
-    ? config.keywords.map((word) => word.toLowerCase())
-    : config.keywords);
+	const source = String(code ?? '');
+	const config = configFor(language);
+	const keywords = new Set(config.ignoreCase
+		? config.keywords.map((word) => word.toLowerCase())
+		: config.keywords);
 
-  const tokens = [];
-  let index = 0;
-  let plain = '';
+	const tokens = [];
+	let index = 0;
+	let plain = '';
 
-  function pushPlain() {
-    if (plain) {
-      tokens.push({ text: plain, kind: 'plain' });
-      plain = '';
-    }
-  }
+	function pushPlain() {
+		if (plain) {
+			tokens.push({ text: plain, kind: 'plain' });
+			plain = '';
+		}
+	}
 
-  function push(text, kind) {
-    pushPlain();
-    tokens.push({ text, kind });
-  }
+	function push(text, kind) {
+		pushPlain();
+		tokens.push({ text, kind });
+	}
 
-  while (index < source.length) {
-    const rest = source.slice(index);
+	while (index < source.length) {
+		const rest = source.slice(index);
 
-    if (config.blockComment && rest.startsWith('/*')) {
-      const end = source.indexOf('*/', index + 2);
-      const stop = end === -1 ? source.length : end + 2;
-      push(source.slice(index, stop), 'comment');
-      index = stop;
-      continue;
-    }
+		if (config.blockComment && rest.startsWith('/*')) {
+			const end = source.indexOf('*/', index + 2);
+			const stop = end === -1 ? source.length : end + 2;
+			push(source.slice(index, stop), 'comment');
+			index = stop;
+			continue;
+		}
 
-    // 마크업은 주석 모양이 다르다
-    if (config.markup && rest.startsWith('<!--')) {
-      const end = source.indexOf('-->', index + 4);
-      const stop = end === -1 ? source.length : end + 3;
-      push(source.slice(index, stop), 'comment');
-      index = stop;
-      continue;
-    }
+		// 마크업은 주석 모양이 다르다
+		if (config.markup && rest.startsWith('<!--')) {
+			const end = source.indexOf('-->', index + 4);
+			const stop = end === -1 ? source.length : end + 3;
+			push(source.slice(index, stop), 'comment');
+			index = stop;
+			continue;
+		}
 
-    const marker = config.lineComment.find((item) => rest.startsWith(item));
-    if (marker) {
-      const end = source.indexOf('\n', index);
-      const stop = end === -1 ? source.length : end;
-      push(source.slice(index, stop), 'comment');
-      index = stop;
-      continue;
-    }
+		const marker = config.lineComment.find((item) => rest.startsWith(item));
+		if (marker) {
+			const end = source.indexOf('\n', index);
+			const stop = end === -1 ? source.length : end;
+			push(source.slice(index, stop), 'comment');
+			index = stop;
+			continue;
+		}
 
-    // 태그 이름. <div ...> 의 div 를 칠한다
-    if (config.markup) {
-      const tag = rest.match(/^<\/?([A-Za-z][\w-]*)/);
-      if (tag) {
-        push(tag[0], 'tag');
-        index += tag[0].length;
-        continue;
-      }
-    }
+		// 태그 이름. <div ...> 의 div 를 칠한다
+		if (config.markup) {
+			const tag = rest.match(/^<\/?([A-Za-z][\w-]*)/);
+			if (tag) {
+				push(tag[0], 'tag');
+				index += tag[0].length;
+				continue;
+			}
+		}
 
-    const quote = rest[0];
-    if (quote === '"' || quote === "'" || quote === '`') {
-      let cursor = index + 1;
+		const quote = rest[0];
+		if (quote === '"' || quote === "'" || quote === '`') {
+			let cursor = index + 1;
 
-      while (cursor < source.length) {
-        if (source[cursor] === '\\') {
-          cursor += 2;
-          continue;
-        }
+			while (cursor < source.length) {
+				if (source[cursor] === '\\') {
+					cursor += 2;
+					continue;
+				}
 
-        // 줄을 넘어가면 닫히지 않은 것으로 보고 거기서 끊는다
-        if (source[cursor] === quote || (quote !== '`' && source[cursor] === '\n')) {
-          break;
-        }
+				// 줄을 넘어가면 닫히지 않은 것으로 보고 거기서 끊는다
+				if (source[cursor] === quote || (quote !== '`' && source[cursor] === '\n')) {
+					break;
+				}
 
-        cursor += 1;
-      }
+				cursor += 1;
+			}
 
-      const stop = Math.min(cursor + 1, source.length);
-      push(source.slice(index, stop), 'string');
-      index = stop;
-      continue;
-    }
+			const stop = Math.min(cursor + 1, source.length);
+			push(source.slice(index, stop), 'string');
+			index = stop;
+			continue;
+		}
 
-    const number = rest.match(/^\d[\d_.]*/);
-    if (number && !/[\w$]/.test(source[index - 1] ?? '')) {
-      push(number[0], 'number');
-      index += number[0].length;
-      continue;
-    }
+		const number = rest.match(/^\d[\d_.]*/);
+		if (number && !/[\w$]/.test(source[index - 1] ?? '')) {
+			push(number[0], 'number');
+			index += number[0].length;
+			continue;
+		}
 
-    const word = rest.match(/^[A-Za-z_$@][\w$-]*/);
-    if (word) {
-      const value = word[0];
-      const lookup = config.ignoreCase ? value.toLowerCase() : value;
+		const word = rest.match(/^[A-Za-z_$@][\w$-]*/);
+		if (word) {
+			const value = word[0];
+			const lookup = config.ignoreCase ? value.toLowerCase() : value;
 
-      if (keywords.has(lookup)) {
-        push(value, 'keyword');
-      } else if (/^[A-Z]/.test(value) && !config.markup) {
-        // 클래스·타입 이름. 자바에서 특히 눈에 띄어야 한다
-        push(value, 'type');
-      } else {
-        plain += value;
-      }
+			if (keywords.has(lookup)) {
+				push(value, 'keyword');
+			} else if (/^[A-Z]/.test(value) && !config.markup) {
+				// 클래스·타입 이름. 자바에서 특히 눈에 띄어야 한다
+				push(value, 'type');
+			} else {
+				plain += value;
+			}
 
-      index += value.length;
-      continue;
-    }
+			index += value.length;
+			continue;
+		}
 
-    plain += source[index];
-    index += 1;
-  }
+		plain += source[index];
+		index += 1;
+	}
 
-  pushPlain();
+	pushPlain();
 
-  return tokens;
+	return tokens;
 }

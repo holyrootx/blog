@@ -11,21 +11,21 @@ import org.springframework.data.repository.query.Param;
 
 public interface GuestbookReportRepository extends JpaRepository<GuestbookReport, Long> {
 
-    boolean existsByEntryIdAndMemberId(Long entryId, Long memberId);
+	boolean existsByEntryIdAndMemberId(Long entryId, Long memberId);
 
-    /** 목록에서 "이미 신고함" 을 표시할 글. 한 화면 분량을 한 번에 본다 */
-    @Query("select r.entry.id from GuestbookReport r where r.member.id = :memberId and r.entry.id in :entryIds")
-    List<Long> findReportedEntryIds(
-            @Param("memberId") Long memberId,
-            @Param("entryIds") Collection<Long> entryIds
-    );
+	/** 목록에서 "이미 신고함" 을 표시할 글. 한 화면 분량을 한 번에 본다 */
+	@Query("select r.entry.id from GuestbookReport r where r.member.id = :memberId and r.entry.id in :entryIds")
+	List<Long> findReportedEntryIds(
+			@Param("memberId") Long memberId,
+			@Param("entryIds") Collection<Long> entryIds
+	);
 
-    List<GuestbookReport> findByEntryIdOrderByIdAsc(Long entryId);
+	List<GuestbookReport> findByEntryIdOrderByIdAsc(Long entryId);
 
-    List<GuestbookReport> findByEntryIdAndHandledAtIsNull(Long entryId);
+	List<GuestbookReport> findByEntryIdAndHandledAtIsNull(Long entryId);
 
-    /** 원문을 파기할 때 신고 당시 사본도 같이 지운다. 사본만 남으면 파기한 것이 아니다 */
-    @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query("update GuestbookReport r set r.reportedContent = null where r.entry.id in :entryIds")
-    int clearReportedContent(@Param("entryIds") Collection<Long> entryIds);
+	/** 원문을 파기할 때 신고 당시 사본도 같이 지운다. 사본만 남으면 파기한 것이 아니다 */
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query("update GuestbookReport r set r.reportedContent = null where r.entry.id in :entryIds")
+	int clearReportedContent(@Param("entryIds") Collection<Long> entryIds);
 }

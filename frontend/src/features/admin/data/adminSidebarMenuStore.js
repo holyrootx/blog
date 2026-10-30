@@ -9,11 +9,11 @@ const menus = ref([]);
 let loadPromise = null;
 
 export function useAdminSidebarMenus() {
-  if (!loadPromise) {
-    loadPromise = load();
-  }
+	if (!loadPromise) {
+		loadPromise = load();
+	}
 
-  return { menus };
+	return { menus };
 }
 
 /**
@@ -21,25 +21,25 @@ export function useAdminSidebarMenus() {
  * 캐시를 버리고 다시 읽는다 (새로고침 없이 반영되도록).
  */
 export function reloadAdminSidebarMenus() {
-  loadPromise = load();
-  return loadPromise;
+	loadPromise = load();
+	return loadPromise;
 }
 
 function load() {
-  return getAdminSidebarMenus()
-    .then((loaded) => {
-      menus.value = getVisibleAdminMenus(loaded);
-    })
-    .catch((error) => {
-      menus.value = [];
-      console.warn(error);
-    });
+	return getAdminSidebarMenus()
+		.then((loaded) => {
+			menus.value = getVisibleAdminMenus(loaded);
+		})
+		.catch((error) => {
+			menus.value = [];
+			console.warn(error);
+		});
 }
 
 /** 현재 경로가 속한 그룹의 이름. 못 찾으면 빈 문자열 */
 export function findMenuGroupName(routePath) {
-  const group = menus.value.find((menu) => menu.menuType === 'GROUP'
-    && (menu.items ?? []).some((item) => item.routePath === routePath));
+	const group = menus.value.find((menu) => menu.menuType === 'GROUP'
+		&& (menu.items ?? []).some((item) => item.routePath === routePath));
 
-  return group?.menuName ?? '';
+	return group?.menuName ?? '';
 }

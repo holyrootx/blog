@@ -27,30 +27,30 @@ import org.springframework.stereotype.Component;
 @Component
 public class NaverAttributeReader extends OAuthAttributeReader {
 
-    private static final String RESPONSE = "response";
+	private static final String RESPONSE = "response";
 
-    @Override
-    public AuthProvider provider() {
-        return AuthProvider.NAVER;
-    }
+	@Override
+	public AuthProvider provider() {
+		return AuthProvider.NAVER;
+	}
 
-    @Override
-    protected String providerUserId(Map<String, Object> attributes) {
-        return stringAt(attributes, RESPONSE, "id");
-    }
+	@Override
+	protected String providerUserId(Map<String, Object> attributes) {
+		return stringAt(attributes, RESPONSE, "id");
+	}
 
-    @Override
-    protected String nickname(Map<String, Object> attributes) {
-        return stringAt(attributes, RESPONSE, "nickname");
-    }
+	@Override
+	protected String nickname(Map<String, Object> attributes) {
+		return stringAt(attributes, RESPONSE, "nickname");
+	}
 
-    @Override
-    protected String email(Map<String, Object> attributes) {
-        return stringAt(attributes, RESPONSE, "email");
-    }
+	@Override
+	protected String email(Map<String, Object> attributes) {
+		return stringAt(attributes, RESPONSE, "email");
+	}
 
-    @Override
-    protected String profileImageUrl(Map<String, Object> attributes) {
-        return stringAt(attributes, RESPONSE, "profile_image");
-    }
+	@Override
+	protected String profileImageUrl(Map<String, Object> attributes) {
+		return stringAt(attributes, RESPONSE, "profile_image");
+	}
 }

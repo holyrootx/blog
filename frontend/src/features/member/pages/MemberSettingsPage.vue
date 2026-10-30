@@ -5,10 +5,10 @@ import { RouterLink, useRouter } from 'vue-router';
 import { getMyComments } from '../api/memberAuthApi';
 import { getRecentPosts } from '../api/memberReadingApi';
 import {
-  changeNickname,
-  ensureMemberSession,
-  useMemberAuth,
-  withdraw,
+	changeNickname,
+	ensureMemberSession,
+	useMemberAuth,
+	withdraw,
 } from '../data/memberAuthStore';
 import { notifyError, notifySuccess } from '../../../shared/toast/toastStore';
 import { useSectionLoader } from '../../../shared/composables/useSectionLoader';
@@ -53,358 +53,362 @@ const withdrawConfirming = ref(false);
 const withdrawError = ref('');
 
 const nicknameChanged = computed(
-  () => nickname.value.trim() !== '' && nickname.value.trim() !== (member.value?.nickname ?? ''),
+	() => nickname.value.trim() !== '' && nickname.value.trim() !== (member.value?.nickname ?? ''),
 );
 
 onMounted(async () => {
-  // 앱이 뜰 때 시작한 세션 확인을 여기서 기다린다. 기다리지 않으면 아직 응답이 안 온
-  // 사이에 "로그인 안 함" 으로 읽혀서, 로그인한 사람도 로그인 화면으로 튕긴다
-  await ensureMemberSession();
-  if (disposed) return;
+	// 앱이 뜰 때 시작한 세션 확인을 여기서 기다린다. 기다리지 않으면 아직 응답이 안 온
+	// 사이에 "로그인 안 함" 으로 읽혀서, 로그인한 사람도 로그인 화면으로 튕긴다
+	await ensureMemberSession();
+	if (disposed) {
+		return;
+	}
 
-  if (!isSignedIn.value) {
-    pageLoading.value = false;
-    await router.replace({ name: 'member-login' });
-    return;
-  }
+	if (!isSignedIn.value) {
+		pageLoading.value = false;
+		await router.replace({ name: 'member-login' });
+		return;
+	}
 
-  nickname.value = member.value?.nickname ?? '';
-  pageLoading.value = false;
+	nickname.value = member.value?.nickname ?? '';
+	pageLoading.value = false;
 
-  // 둘은 따로 온다. 한쪽이 늦어도 먼저 온 칸부터 보인다
-  loadRecentPosts();
-  loadMyComments();
+	// 둘은 따로 온다. 한쪽이 늦어도 먼저 온 칸부터 보인다
+	loadRecentPosts();
+	loadMyComments();
 });
 
 /** 처음이면 첫 쪽을, 더 보기면 다음 쪽을 받아 아래에 붙인다 */
 function loadRecentPosts({ more = false } = {}) {
-  const nextPage = more ? recentPage.value + 1 : 1;
-  recentError.value = '';
-  return load('recent', {
-    request: () => getRecentPosts({ page: nextPage, size: RECENT_PAGE_SIZE }),
-    apply: (result) => {
-      // 쪽을 넘기는 사이에 다른 글을 열면 순서가 바뀌어 같은 글이 두 번 올 수 있다
-      const shown = new Set(more ? recentPosts.value.map((post) => post.id) : []);
-      const items = result.items.filter((post) => !shown.has(post.id));
-      recentPosts.value = more ? [...recentPosts.value, ...items] : items;
-      recentPage.value = result.page;
-      recentTotalPages.value = result.totalPages;
-      recentLoaded.value = true;
-    },
-    onError: () => {
-      recentError.value = more ? '최근 본 글을 더 불러오지 못했습니다.' : '최근 본 글을 불러오지 못했습니다.';
-    },
-  });
+	const nextPage = more ? recentPage.value + 1 : 1;
+	recentError.value = '';
+	return load('recent', {
+		request: () => getRecentPosts({ page: nextPage, size: RECENT_PAGE_SIZE }),
+		apply: (result) => {
+			// 쪽을 넘기는 사이에 다른 글을 열면 순서가 바뀌어 같은 글이 두 번 올 수 있다
+			const shown = new Set(more ? recentPosts.value.map((post) => post.id) : []);
+			const items = result.items.filter((post) => !shown.has(post.id));
+			recentPosts.value = more ? [...recentPosts.value, ...items] : items;
+			recentPage.value = result.page;
+			recentTotalPages.value = result.totalPages;
+			recentLoaded.value = true;
+		},
+		onError: () => {
+			recentError.value = more ? '최근 본 글을 더 불러오지 못했습니다.' : '최근 본 글을 불러오지 못했습니다.';
+		},
+	});
 }
 
 function loadMyComments() {
-  commentsError.value = '';
-  return load('comments', {
-    request: getMyComments,
-    apply: (items) => {
-      comments.value = items;
-      commentsLoaded.value = true;
-    },
-    onError: () => {
-      commentsError.value = commentsLoaded.value
-        ? '댓글을 새로 불러오지 못했습니다. 이전에 불러온 목록을 표시합니다.'
-        : '내 댓글을 불러오지 못했습니다.';
-    },
-  });
+	commentsError.value = '';
+	return load('comments', {
+		request: getMyComments,
+		apply: (items) => {
+			comments.value = items;
+			commentsLoaded.value = true;
+		},
+		onError: () => {
+			commentsError.value = commentsLoaded.value
+				? '댓글을 새로 불러오지 못했습니다. 이전에 불러온 목록을 표시합니다.'
+				: '내 댓글을 불러오지 못했습니다.';
+		},
+	});
 }
 
 watch(() => member.value?.id, () => {
-  if (pageLoading.value) return;
-  restart();
-  comments.value = [];
-  commentsLoaded.value = false;
-  commentsError.value = '';
-  recentPosts.value = [];
-  recentPage.value = 0;
-  recentTotalPages.value = 0;
-  recentLoaded.value = false;
-  recentError.value = '';
-  if (!isSignedIn.value) {
-    void router.replace({ name: 'member-login' });
-    return;
-  }
-  nickname.value = member.value?.nickname ?? '';
-  loadRecentPosts();
-  loadMyComments();
+	if (pageLoading.value) {
+		return;
+	}
+	restart();
+	comments.value = [];
+	commentsLoaded.value = false;
+	commentsError.value = '';
+	recentPosts.value = [];
+	recentPage.value = 0;
+	recentTotalPages.value = 0;
+	recentLoaded.value = false;
+	recentError.value = '';
+	if (!isSignedIn.value) {
+		void router.replace({ name: 'member-login' });
+		return;
+	}
+	nickname.value = member.value?.nickname ?? '';
+	loadRecentPosts();
+	loadMyComments();
 }, { flush: 'sync' });
 
 function avatarInitial(name) {
-  return Array.from(name ?? '')[0] ?? '';
+	return Array.from(name ?? '')[0] ?? '';
 }
 
 function formatDate(value) {
-  if (!value) {
-    return '';
-  }
+	if (!value) {
+		return '';
+	}
 
-  return String(value).slice(0, 10).replaceAll('-', '.');
+	return String(value).slice(0, 10).replaceAll('-', '.');
 }
 
 async function saveNickname() {
-  if (savingNickname.value || !nicknameChanged.value) {
-    return;
-  }
+	if (savingNickname.value || !nicknameChanged.value) {
+		return;
+	}
 
-  savingNickname.value = true;
-  nicknameError.value = '';
-  nicknameSaved.value = false;
+	savingNickname.value = true;
+	nicknameError.value = '';
+	nicknameSaved.value = false;
 
-  try {
-    await changeNickname(nickname.value.trim());
+	try {
+		await changeNickname(nickname.value.trim());
 
-    nicknameSaved.value = true;
-    // 입력칸 값이 그대로라 바뀐 티가 안 난다. 화면에 안 보이는 일은 말해 줘야 한다
-    notifySuccess('닉네임을 바꿨습니다.');
-  } catch (error) {
-    nicknameError.value = error?.message ?? '닉네임을 변경하지 못했습니다.';
-    notifyError(nicknameError.value);
-  } finally {
-    savingNickname.value = false;
-  }
+		nicknameSaved.value = true;
+		// 입력칸 값이 그대로라 바뀐 티가 안 난다. 화면에 안 보이는 일은 말해 줘야 한다
+		notifySuccess('닉네임을 바꿨습니다.');
+	} catch (error) {
+		nicknameError.value = error?.message ?? '닉네임을 변경하지 못했습니다.';
+		notifyError(nicknameError.value);
+	} finally {
+		savingNickname.value = false;
+	}
 }
 
 async function confirmWithdraw() {
-  if (withdrawing.value) {
-    return;
-  }
+	if (withdrawing.value) {
+		return;
+	}
 
-  withdrawing.value = true;
-  withdrawError.value = '';
+	withdrawing.value = true;
+	withdrawError.value = '';
 
-  try {
-    await withdraw();
-    await router.replace({ name: 'home' });
-  } catch (error) {
-    withdrawError.value = error?.message ?? '탈퇴하지 못했습니다.';
-    notifyError(withdrawError.value);
-    withdrawConfirming.value = false;
-  } finally {
-    withdrawing.value = false;
-  }
+	try {
+		await withdraw();
+		await router.replace({ name: 'home' });
+	} catch (error) {
+		withdrawError.value = error?.message ?? '탈퇴하지 못했습니다.';
+		notifyError(withdrawError.value);
+		withdrawConfirming.value = false;
+	} finally {
+		withdrawing.value = false;
+	}
 }
 </script>
 
 <template>
-  <main v-if="pageLoading" class="public-shell__main member-settings member-settings--skeleton" aria-busy="true">
-    <header class="member-settings__head" aria-hidden="true">
-      <span class="ui-skeleton member-settings-skeleton__title"></span>
-      <span class="ui-skeleton member-settings-skeleton__back"></span>
-    </header>
+	<main v-if="pageLoading" class="public-shell__main member-settings member-settings--skeleton" aria-busy="true">
+		<header class="member-settings__head" aria-hidden="true">
+			<span class="ui-skeleton member-settings-skeleton__title"></span>
+			<span class="ui-skeleton member-settings-skeleton__back"></span>
+		</header>
 
-    <section v-for="index in 4" :key="index" class="member-settings__section" aria-hidden="true">
-      <span class="ui-skeleton member-settings-skeleton__heading"></span>
-      <div class="member-settings-skeleton__body">
-        <span class="ui-skeleton ui-skeleton--circle"></span>
-        <div>
-          <span class="ui-skeleton"></span>
-          <span class="ui-skeleton"></span>
-          <span class="ui-skeleton"></span>
-        </div>
-      </div>
-    </section>
-  </main>
+		<section v-for="index in 4" :key="index" class="member-settings__section" aria-hidden="true">
+			<span class="ui-skeleton member-settings-skeleton__heading"></span>
+			<div class="member-settings-skeleton__body">
+				<span class="ui-skeleton ui-skeleton--circle"></span>
+				<div>
+					<span class="ui-skeleton"></span>
+					<span class="ui-skeleton"></span>
+					<span class="ui-skeleton"></span>
+				</div>
+			</div>
+		</section>
+	</main>
 
-  <main v-else-if="isSignedIn" class="public-shell__main member-settings">
-    <header class="member-settings__head">
-      <h1 class="member-settings__title">내 설정</h1>
-      <RouterLink class="member-settings__back" to="/">블로그로 돌아가기</RouterLink>
-    </header>
+	<main v-else-if="isSignedIn" class="public-shell__main member-settings">
+		<header class="member-settings__head">
+			<h1 class="member-settings__title">내 설정</h1>
+			<RouterLink class="member-settings__back" to="/">블로그로 돌아가기</RouterLink>
+		</header>
 
-    <section class="member-settings__section" aria-labelledby="settings-profile">
-      <!--
-        사진을 제목 옆에 둔다. 닉네임 입력칸 옆에 두면 "이 사진도 여기서 바꾸나" 로 읽히는데,
-        사진은 소셜 계정에서 가져오는 값이라 여기서 바꿀 수 없다.
-        바꿀 수 있는 것과 없는 것을 줄로 나눈다
-      -->
-      <div class="member-settings__section-head">
-        <h2 id="settings-profile" class="member-settings__section-title">프로필</h2>
+		<section class="member-settings__section" aria-labelledby="settings-profile">
+			<!--
+				사진을 제목 옆에 둔다. 닉네임 입력칸 옆에 두면 "이 사진도 여기서 바꾸나" 로 읽히는데,
+				사진은 소셜 계정에서 가져오는 값이라 여기서 바꿀 수 없다.
+				바꿀 수 있는 것과 없는 것을 줄로 나눈다
+			-->
+			<div class="member-settings__section-head">
+				<h2 id="settings-profile" class="member-settings__section-title">프로필</h2>
 
-        <img
-          v-if="member?.profileImageUrl"
-          class="member-settings__avatar"
-          :src="member.profileImageUrl"
-          alt=""
-          referrerpolicy="no-referrer"
-        />
-        <span v-else class="member-settings__avatar">{{ avatarInitial(member?.nickname) }}</span>
-      </div>
+				<img
+					v-if="member?.profileImageUrl"
+					class="member-settings__avatar"
+					:src="member.profileImageUrl"
+					alt=""
+					referrerpolicy="no-referrer"
+				/>
+				<span v-else class="member-settings__avatar">{{ avatarInitial(member?.nickname) }}</span>
+			</div>
 
-      <div class="member-settings__profile">
-        <label class="member-settings__label" for="settings-nickname">닉네임</label>
-        <input
-          id="settings-nickname"
-          v-model="nickname"
-          class="member-settings__input"
-          type="text"
-          autocomplete="nickname"
-          :maxlength="NICKNAME_MAX_LENGTH"
-        />
-        <button
-          class="ui-button ui-button--accent"
-          type="button"
-          :disabled="savingNickname || !nicknameChanged"
-          @click="saveNickname"
-        >{{ savingNickname ? '저장 중…' : '변경' }}</button>
-      </div>
+			<div class="member-settings__profile">
+				<label class="member-settings__label" for="settings-nickname">닉네임</label>
+				<input
+					id="settings-nickname"
+					v-model="nickname"
+					class="member-settings__input"
+					type="text"
+					autocomplete="nickname"
+					:maxlength="NICKNAME_MAX_LENGTH"
+				/>
+				<button
+					class="ui-button ui-button--accent"
+					type="button"
+					:disabled="savingNickname || !nicknameChanged"
+					@click="saveNickname"
+				>{{ savingNickname ? '저장 중…' : '변경' }}</button>
+			</div>
 
-      <!--
-        설명은 줄 밖에 둔다. 안에 두면 이 줄의 바닥이 입력칸이 아니라 이 글줄이 되어,
-        아바타와 변경 단추가 입력칸보다 한 줄 아래로 내려가 어긋난다
-      -->
-      <p class="member-settings__hint">댓글에 이 이름으로 표시됩니다.</p>
+			<!--
+				설명은 줄 밖에 둔다. 안에 두면 이 줄의 바닥이 입력칸이 아니라 이 글줄이 되어,
+				아바타와 변경 단추가 입력칸보다 한 줄 아래로 내려가 어긋난다
+			-->
+			<p class="member-settings__hint">댓글에 이 이름으로 표시됩니다.</p>
 
-      <p v-if="nicknameError" class="member-settings__error" role="alert">{{ nicknameError }}</p>
-      <p v-else-if="nicknameSaved" class="member-settings__done" role="status">닉네임을 변경했습니다.</p>
+			<p v-if="nicknameError" class="member-settings__error" role="alert">{{ nicknameError }}</p>
+			<p v-else-if="nicknameSaved" class="member-settings__done" role="status">닉네임을 변경했습니다.</p>
 
-      <p class="member-settings__note">
-        프로필 사진은 로그인한 소셜 계정에서 가져옵니다. 바꾸려면 그쪽에서 바꾼 뒤 다시 로그인해 주세요.
-      </p>
-    </section>
+			<p class="member-settings__note">
+				프로필 사진은 로그인한 소셜 계정에서 가져옵니다. 바꾸려면 그쪽에서 바꾼 뒤 다시 로그인해 주세요.
+			</p>
+		</section>
 
-    <section
-      id="recent-posts"
-      class="member-settings__section"
-      aria-labelledby="settings-recent"
-      :aria-busy="loading.recent"
-    >
-      <div class="member-settings__section-head">
-        <h2 id="settings-recent" class="member-settings__section-title">최근 본 글</h2>
-      </div>
-      <p class="member-settings__hint">로그인한 채로 연 글이 마지막으로 본 순서대로 남습니다. 끝까지 읽었는지는 따로 적지 않습니다.</p>
+		<section
+			id="recent-posts"
+			class="member-settings__section"
+			aria-labelledby="settings-recent"
+			:aria-busy="loading.recent"
+		>
+			<div class="member-settings__section-head">
+				<h2 id="settings-recent" class="member-settings__section-title">최근 본 글</h2>
+			</div>
+			<p class="member-settings__hint">로그인한 채로 연 글이 마지막으로 본 순서대로 남습니다. 끝까지 읽었는지는 따로 적지 않습니다.</p>
 
-      <div v-if="recentError" class="member-settings__feedback">
-        <p class="member-settings__error" role="alert">{{ recentError }}</p>
-        <button
-          type="button"
-          class="ui-button"
-          :disabled="loading.recent"
-          @click="loadRecentPosts({ more: recentLoaded })"
-        >다시 시도</button>
-      </div>
+			<div v-if="recentError" class="member-settings__feedback">
+				<p class="member-settings__error" role="alert">{{ recentError }}</p>
+				<button
+					type="button"
+					class="ui-button"
+					:disabled="loading.recent"
+					@click="loadRecentPosts({ more: recentLoaded })"
+				>다시 시도</button>
+			</div>
 
-      <ul v-if="loading.recent && !recentLoaded" class="member-recent member-recent--skeleton" aria-hidden="true">
-        <li v-for="index in 3" :key="index" class="member-recent__item">
-          <span class="member-recent__link">
-            <span class="ui-skeleton member-recent__image"></span>
-            <span class="member-recent__body">
-              <span class="ui-skeleton"></span>
-              <span class="ui-skeleton"></span>
-              <span class="ui-skeleton"></span>
-            </span>
-          </span>
-        </li>
-      </ul>
-      <p v-else-if="recentLoaded && recentPosts.length === 0" class="member-settings__empty">아직 본 글이 없습니다.</p>
+			<ul v-if="loading.recent && !recentLoaded" class="member-recent member-recent--skeleton" aria-hidden="true">
+				<li v-for="index in 3" :key="index" class="member-recent__item">
+					<span class="member-recent__link">
+						<span class="ui-skeleton member-recent__image"></span>
+						<span class="member-recent__body">
+							<span class="ui-skeleton"></span>
+							<span class="ui-skeleton"></span>
+							<span class="ui-skeleton"></span>
+						</span>
+					</span>
+				</li>
+			</ul>
+			<p v-else-if="recentLoaded && recentPosts.length === 0" class="member-settings__empty">아직 본 글이 없습니다.</p>
 
-      <ul v-else-if="recentPosts.length" class="member-recent">
-        <li v-for="post in recentPosts" :key="post.id" class="member-recent__item">
-          <RouterLink class="member-recent__link" :to="{ name: 'post-detail', params: { id: post.id } }">
-            <img
-              class="member-recent__image"
-              :src="post.imageUrl"
-              alt=""
-              width="96"
-              height="54"
-              loading="lazy"
-              decoding="async"
-            />
-            <span class="member-recent__body">
-              <span class="member-recent__category">{{ post.category }}</span>
-              <span class="member-recent__title">{{ post.title }}</span>
-              <time class="member-recent__date" :datetime="post.lastViewedAt">
-                {{ formatSeoulDateTime(post.lastViewedAt) }}에 마지막으로 봄
-              </time>
-            </span>
-          </RouterLink>
-        </li>
-      </ul>
+			<ul v-else-if="recentPosts.length" class="member-recent">
+				<li v-for="post in recentPosts" :key="post.id" class="member-recent__item">
+					<RouterLink class="member-recent__link" :to="{ name: 'post-detail', params: { id: post.id } }">
+						<img
+							class="member-recent__image"
+							:src="post.imageUrl"
+							alt=""
+							width="96"
+							height="54"
+							loading="lazy"
+							decoding="async"
+						/>
+						<span class="member-recent__body">
+							<span class="member-recent__category">{{ post.category }}</span>
+							<span class="member-recent__title">{{ post.title }}</span>
+							<time class="member-recent__date" :datetime="post.lastViewedAt">
+								{{ formatSeoulDateTime(post.lastViewedAt) }}에 마지막으로 봄
+							</time>
+						</span>
+					</RouterLink>
+				</li>
+			</ul>
 
-      <div v-if="recentLoaded && recentPage < recentTotalPages" class="member-recent__more">
-        <button type="button" class="ui-button" :disabled="loading.recent" @click="loadRecentPosts({ more: true })">
-          {{ loading.recent ? '불러오는 중…' : '더 보기' }}
-        </button>
-      </div>
-    </section>
+			<div v-if="recentLoaded && recentPage < recentTotalPages" class="member-recent__more">
+				<button type="button" class="ui-button" :disabled="loading.recent" @click="loadRecentPosts({ more: true })">
+					{{ loading.recent ? '불러오는 중…' : '더 보기' }}
+				</button>
+			</div>
+		</section>
 
-    <section class="member-settings__section" aria-labelledby="settings-comments" :aria-busy="loading.comments">
-      <div class="member-settings__section-head">
-        <h2 id="settings-comments" class="member-settings__section-title">내가 쓴 댓글</h2>
-        <button type="button" class="ui-button" :disabled="loading.comments" @click="loadMyComments">내 댓글 새로고침</button>
-      </div>
-      <div v-if="commentsError" class="member-settings__feedback">
-        <p class="member-settings__error" role="alert">{{ commentsError }}</p>
-        <button type="button" class="ui-button" :disabled="loading.comments" @click="loadMyComments">다시 시도</button>
-      </div>
-      <p v-if="loading.comments" class="member-settings__hint" role="status">댓글을 불러오는 중…</p>
+		<section class="member-settings__section" aria-labelledby="settings-comments" :aria-busy="loading.comments">
+			<div class="member-settings__section-head">
+				<h2 id="settings-comments" class="member-settings__section-title">내가 쓴 댓글</h2>
+				<button type="button" class="ui-button" :disabled="loading.comments" @click="loadMyComments">내 댓글 새로고침</button>
+			</div>
+			<div v-if="commentsError" class="member-settings__feedback">
+				<p class="member-settings__error" role="alert">{{ commentsError }}</p>
+				<button type="button" class="ui-button" :disabled="loading.comments" @click="loadMyComments">다시 시도</button>
+			</div>
+			<p v-if="loading.comments" class="member-settings__hint" role="status">댓글을 불러오는 중…</p>
 
-      <ul v-if="loading.comments && !commentsLoaded" class="member-comments member-comments--skeleton" aria-hidden="true">
-        <li v-for="index in 3" :key="index" class="member-comments__item">
-          <span class="ui-skeleton"></span>
-          <span class="ui-skeleton"></span>
-          <span class="ui-skeleton"></span>
-        </li>
-      </ul>
-      <p v-else-if="commentsLoaded && !commentsError && comments.length === 0" class="member-settings__empty">아직 쓴 댓글이 없습니다.</p>
+			<ul v-if="loading.comments && !commentsLoaded" class="member-comments member-comments--skeleton" aria-hidden="true">
+				<li v-for="index in 3" :key="index" class="member-comments__item">
+					<span class="ui-skeleton"></span>
+					<span class="ui-skeleton"></span>
+					<span class="ui-skeleton"></span>
+				</li>
+			</ul>
+			<p v-else-if="commentsLoaded && !commentsError && comments.length === 0" class="member-settings__empty">아직 쓴 댓글이 없습니다.</p>
 
-      <ul v-else-if="comments.length" class="member-comments">
-        <li v-for="comment in comments" :key="comment.id" class="member-comments__item">
-          <RouterLink
-            class="member-comments__post"
-            :to="{ name: 'post-detail', params: { id: comment.postId } }"
-          >{{ comment.postTitle }}</RouterLink>
+			<ul v-else-if="comments.length" class="member-comments">
+				<li v-for="comment in comments" :key="comment.id" class="member-comments__item">
+					<RouterLink
+						class="member-comments__post"
+						:to="{ name: 'post-detail', params: { id: comment.postId } }"
+					>{{ comment.postTitle }}</RouterLink>
 
-          <!--
-            전에는 둘 다 "관리자가 숨긴 댓글" 이라고 했다. 내가 지운 댓글까지 그렇게
-            나와서, 지운 기억이 없는 사람은 가려진 줄 알고 지운 사람은 없는 일을 의심했다
-          -->
-          <p v-if="comment.hidden" class="member-comments__content member-comments__content--hidden">
-            {{ comment.hiddenByAdmin ? '운영자가 가린 댓글입니다.' : '내가 지운 댓글입니다.' }}
-          </p>
-          <p v-else class="member-comments__content">{{ comment.content }}</p>
+					<!--
+						전에는 둘 다 "관리자가 숨긴 댓글" 이라고 했다. 내가 지운 댓글까지 그렇게
+						나와서, 지운 기억이 없는 사람은 가려진 줄 알고 지운 사람은 없는 일을 의심했다
+					-->
+					<p v-if="comment.hidden" class="member-comments__content member-comments__content--hidden">
+						{{ comment.hiddenByAdmin ? '운영자가 가린 댓글입니다.' : '내가 지운 댓글입니다.' }}
+					</p>
+					<p v-else class="member-comments__content">{{ comment.content }}</p>
 
-          <time class="member-comments__date" :datetime="comment.createdAt">{{ formatDate(comment.createdAt) }}</time>
-        </li>
-      </ul>
-    </section>
+					<time class="member-comments__date" :datetime="comment.createdAt">{{ formatDate(comment.createdAt) }}</time>
+				</li>
+			</ul>
+		</section>
 
-    <section class="member-settings__section member-settings__section--danger" aria-labelledby="settings-withdraw">
-      <h2 id="settings-withdraw" class="member-settings__section-title">회원 탈퇴</h2>
+		<section class="member-settings__section member-settings__section--danger" aria-labelledby="settings-withdraw">
+			<h2 id="settings-withdraw" class="member-settings__section-title">회원 탈퇴</h2>
 
-      <!-- "삭제됩니다" 라고 쓰지 않는다. 댓글은 지워지지 않고 닉네임과 함께 그대로 남는다.
-           지워진다고 적으면 그렇게 기대하고 누르게 되고, 안 지워지면 항의가 온다 -->
-      <p class="member-settings__note">
-        탈퇴하면 이메일, 로그인 정보, 프로필 사진이 지워집니다.
-        <strong>지금까지 쓴 댓글은 지워지지 않고 닉네임과 함께 그대로 남습니다.</strong>
-        30일 안에 같은 소셜 계정으로 다시 로그인하면 예전 계정을 되살릴 수 있고,
-        30일이 지나면 새 회원으로 가입됩니다.
-      </p>
+			<!-- "삭제됩니다" 라고 쓰지 않는다. 댓글은 지워지지 않고 닉네임과 함께 그대로 남는다.
+					 지워진다고 적으면 그렇게 기대하고 누르게 되고, 안 지워지면 항의가 온다 -->
+			<p class="member-settings__note">
+				탈퇴하면 이메일, 로그인 정보, 프로필 사진이 지워집니다.
+				<strong>지금까지 쓴 댓글은 지워지지 않고 닉네임과 함께 그대로 남습니다.</strong>
+				30일 안에 같은 소셜 계정으로 다시 로그인하면 예전 계정을 되살릴 수 있고,
+				30일이 지나면 새 회원으로 가입됩니다.
+			</p>
 
-      <p v-if="withdrawError" class="member-settings__error" role="alert">{{ withdrawError }}</p>
+			<p v-if="withdrawError" class="member-settings__error" role="alert">{{ withdrawError }}</p>
 
-      <div v-if="!withdrawConfirming" class="member-settings__actions">
-        <button class="ui-button" type="button" @click="withdrawConfirming = true">탈퇴하기</button>
-      </div>
+			<div v-if="!withdrawConfirming" class="member-settings__actions">
+				<button class="ui-button" type="button" @click="withdrawConfirming = true">탈퇴하기</button>
+			</div>
 
-      <div v-else class="member-settings__actions">
-        <span class="member-settings__confirm">정말 탈퇴할까요?</span>
-        <button
-          class="ui-button"
-          type="button"
-          :disabled="withdrawing"
-          @click="withdrawConfirming = false"
-        >취소</button>
-        <button
-          class="ui-button member-settings__danger-button"
-          type="button"
-          :disabled="withdrawing"
-          @click="confirmWithdraw"
-        >{{ withdrawing ? '처리 중…' : '탈퇴' }}</button>
-      </div>
-    </section>
-  </main>
+			<div v-else class="member-settings__actions">
+				<span class="member-settings__confirm">정말 탈퇴할까요?</span>
+				<button
+					class="ui-button"
+					type="button"
+					:disabled="withdrawing"
+					@click="withdrawConfirming = false"
+				>취소</button>
+				<button
+					class="ui-button member-settings__danger-button"
+					type="button"
+					:disabled="withdrawing"
+					@click="confirmWithdraw"
+				>{{ withdrawing ? '처리 중…' : '탈퇴' }}</button>
+			</div>
+		</section>
+	</main>
 </template>

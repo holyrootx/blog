@@ -40,135 +40,135 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class OAuthSignupController {
 
-    private final OAuthSignupService signupService;
-    private final MemberSessionManager memberSessions;
-    // 가입 대기 상태에서 정식 인증으로 넘어가는 경계도 필터 로그인과 같은 보호를 적용한다.
-    private final SessionAuthenticationStrategy completionStrategy = new CompositeSessionAuthenticationStrategy(List.of(
-            new ChangeSessionIdAuthenticationStrategy(),
-            new CsrfAuthenticationStrategy(new HttpSessionCsrfTokenRepository())));
+	private final OAuthSignupService signupService;
+	private final MemberSessionManager memberSessions;
+	// 가입 대기 상태에서 정식 인증으로 넘어가는 경계도 필터 로그인과 같은 보호를 적용한다.
+	private final SessionAuthenticationStrategy completionStrategy = new CompositeSessionAuthenticationStrategy(List.of(
+			new ChangeSessionIdAuthenticationStrategy(),
+			new CsrfAuthenticationStrategy(new HttpSessionCsrfTokenRepository())));
 
-    private final HttpSessionSecurityContextRepository securityContextRepository =
-            new HttpSessionSecurityContextRepository();
+	private final HttpSessionSecurityContextRepository securityContextRepository =
+			new HttpSessionSecurityContextRepository();
 
-    @GetMapping("/pending")
-    public ApiResponse<OAuthPendingResponse> pending(HttpServletRequest request) {
-        PendingOAuthSession authenticated = requiredPendingSession(request);
-        PendingOAuthSession current = signupService.refreshPending(authenticated);
-        // 조회는 소셜 인증 결과를 다시 쓰지 않는다. 기다리는 사이 새 로그인·가입·로그아웃이
-        // 끝났다면 이전 인증으로 계산한 선택지도 반환하지 않는다.
-        if (requiredPendingSession(request) != authenticated) {
-            throw new BlogException(ErrorCode.OAUTH_SESSION_EXPIRED);
-        }
-        return ApiResponse.ok(OAuthPendingResponse.from(current));
-    }
+	@GetMapping("/pending")
+	public ApiResponse<OAuthPendingResponse> pending(HttpServletRequest request) {
+		PendingOAuthSession authenticated = requiredPendingSession(request);
+		PendingOAuthSession current = signupService.refreshPending(authenticated);
+		// 조회는 소셜 인증 결과를 다시 쓰지 않는다. 기다리는 사이 새 로그인·가입·로그아웃이
+		// 끝났다면 이전 인증으로 계산한 선택지도 반환하지 않는다.
+		if (requiredPendingSession(request) != authenticated) {
+			throw new BlogException(ErrorCode.OAUTH_SESSION_EXPIRED);
+		}
+		return ApiResponse.ok(OAuthPendingResponse.from(current));
+	}
 
-    @PostMapping("/signup")
-    public ApiResponse<MemberSessionResponse> signup(
-            @Valid @RequestBody OAuthSignupRequest signupRequest,
-            HttpServletRequest request,
-            HttpServletResponse response
-    ) {
-        PendingOAuthSession pendingSession = requiredPendingSession(request);
-        long authenticationStartedAtNanos = System.nanoTime();
-        Member member = signupService.signup(pendingSession, signupRequest.nickname());
-        MemberPrincipal principal = MemberPrincipal.ofSocial(member, authenticationStartedAtNanos);
+	@PostMapping("/signup")
+	public ApiResponse<MemberSessionResponse> signup(
+			@Valid @RequestBody OAuthSignupRequest signupRequest,
+			HttpServletRequest request,
+			HttpServletResponse response
+	) {
+		PendingOAuthSession pendingSession = requiredPendingSession(request);
+		long authenticationStartedAtNanos = System.nanoTime();
+		Member member = signupService.signup(pendingSession, signupRequest.nickname());
+		MemberPrincipal principal = MemberPrincipal.ofSocial(member, authenticationStartedAtNanos);
 
-        completeLogin(request, response, pendingSession, principal);
+		completeLogin(request, response, pendingSession, principal);
 
-        return ApiResponse.ok("회원 가입이 완료되었습니다.", MemberSessionResponse.from(principal));
-    }
+		return ApiResponse.ok("회원 가입이 완료되었습니다.", MemberSessionResponse.from(principal));
+	}
 
-    @PostMapping("/reactivate")
-    public ApiResponse<MemberSessionResponse> reactivate(
-            HttpServletRequest request,
-            HttpServletResponse response
-    ) {
-        PendingOAuthSession pendingSession = requiredPendingSession(request);
-        long authenticationStartedAtNanos = System.nanoTime();
-        Member member = signupService.reactivate(pendingSession);
+	@PostMapping("/reactivate")
+	public ApiResponse<MemberSessionResponse> reactivate(
+			HttpServletRequest request,
+			HttpServletResponse response
+	) {
+		PendingOAuthSession pendingSession = requiredPendingSession(request);
+		long authenticationStartedAtNanos = System.nanoTime();
+		Member member = signupService.reactivate(pendingSession);
 
-        return loginCompletedMember(
-                request,
-                response,
-                pendingSession,
-                member,
-                authenticationStartedAtNanos,
-                "기존 계정이 복구되었습니다."
-        );
-    }
+		return loginCompletedMember(
+				request,
+				response,
+				pendingSession,
+				member,
+				authenticationStartedAtNanos,
+				"기존 계정이 복구되었습니다."
+		);
+	}
 
-    @PostMapping("/rejoin")
-    public ApiResponse<MemberSessionResponse> rejoin(
-            @Valid @RequestBody OAuthSignupRequest signupRequest,
-            HttpServletRequest request,
-            HttpServletResponse response
-    ) {
-        PendingOAuthSession pendingSession = requiredPendingSession(request);
-        long authenticationStartedAtNanos = System.nanoTime();
-        Member member = signupService.rejoin(pendingSession, signupRequest.nickname());
+	@PostMapping("/rejoin")
+	public ApiResponse<MemberSessionResponse> rejoin(
+			@Valid @RequestBody OAuthSignupRequest signupRequest,
+			HttpServletRequest request,
+			HttpServletResponse response
+	) {
+		PendingOAuthSession pendingSession = requiredPendingSession(request);
+		long authenticationStartedAtNanos = System.nanoTime();
+		Member member = signupService.rejoin(pendingSession, signupRequest.nickname());
 
-        return loginCompletedMember(
-                request,
-                response,
-                pendingSession,
-                member,
-                authenticationStartedAtNanos,
-                "새 계정으로 가입되었습니다."
-        );
-    }
+		return loginCompletedMember(
+				request,
+				response,
+				pendingSession,
+				member,
+				authenticationStartedAtNanos,
+				"새 계정으로 가입되었습니다."
+		);
+	}
 
-    private ApiResponse<MemberSessionResponse> loginCompletedMember(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            PendingOAuthSession pendingSession,
-            Member member,
-            long authenticationStartedAtNanos,
-            String message
-    ) {
-        MemberPrincipal principal = MemberPrincipal.ofSocial(member, authenticationStartedAtNanos);
-        completeLogin(request, response, pendingSession, principal);
+	private ApiResponse<MemberSessionResponse> loginCompletedMember(
+			HttpServletRequest request,
+			HttpServletResponse response,
+			PendingOAuthSession pendingSession,
+			Member member,
+			long authenticationStartedAtNanos,
+			String message
+	) {
+		MemberPrincipal principal = MemberPrincipal.ofSocial(member, authenticationStartedAtNanos);
+		completeLogin(request, response, pendingSession, principal);
 
-        return ApiResponse.ok(message, MemberSessionResponse.from(principal));
-    }
+		return ApiResponse.ok(message, MemberSessionResponse.from(principal));
+	}
 
-    private PendingOAuthSession requiredPendingSession(HttpServletRequest request) {
-        try {
-            HttpSession session = request.getSession(false);
-            if (session != null
-                    && session.getAttribute(PendingOAuthSession.ATTRIBUTE_NAME) instanceof PendingOAuthSession pending) {
-                return pending;
-            }
-        } catch (IllegalStateException ignored) {
-            // 세션을 읽는 동안 다른 요청에서 로그아웃한 경우도 만료로 처리한다.
-        }
-        throw new BlogException(ErrorCode.OAUTH_SESSION_EXPIRED);
-    }
+	private PendingOAuthSession requiredPendingSession(HttpServletRequest request) {
+		try {
+			HttpSession session = request.getSession(false);
+			if (session != null
+					&& session.getAttribute(PendingOAuthSession.ATTRIBUTE_NAME) instanceof PendingOAuthSession pending) {
+				return pending;
+			}
+		} catch (IllegalStateException ignored) {
+			// 세션을 읽는 동안 다른 요청에서 로그아웃한 경우도 만료로 처리한다.
+		}
+		throw new BlogException(ErrorCode.OAUTH_SESSION_EXPIRED);
+	}
 
-    private void completeLogin(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            PendingOAuthSession pendingSession,
-            MemberPrincipal principal
-    ) {
-        OAuth2AuthenticationToken authentication = new OAuth2AuthenticationToken(
-                principal,
-                principal.getAuthorities(),
-                pendingSession.provider().name().toLowerCase(Locale.ROOT)
-        );
+	private void completeLogin(
+			HttpServletRequest request,
+			HttpServletResponse response,
+			PendingOAuthSession pendingSession,
+			MemberPrincipal principal
+	) {
+		OAuth2AuthenticationToken authentication = new OAuth2AuthenticationToken(
+				principal,
+				principal.getAuthorities(),
+				pendingSession.provider().name().toLowerCase(Locale.ROOT)
+		);
 
-        try {
-            completionStrategy.onAuthentication(authentication, request, response);
-            memberSessions.onAuthentication(request, principal);
-        } catch (SessionAuthenticationException changedAccount) {
-            throw new BlogException(ErrorCode.UNAUTHORIZED);
-        }
+		try {
+			completionStrategy.onAuthentication(authentication, request, response);
+			memberSessions.onAuthentication(request, principal);
+		} catch (SessionAuthenticationException changedAccount) {
+			throw new BlogException(ErrorCode.UNAUTHORIZED);
+		}
 
-        SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
-        securityContext.setAuthentication(authentication);
-        SecurityContextHolder.setContext(securityContext);
+		SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
+		securityContext.setAuthentication(authentication);
+		SecurityContextHolder.setContext(securityContext);
 
-        HttpSession session = request.getSession();
-        session.removeAttribute(PendingOAuthSession.ATTRIBUTE_NAME);
-        securityContextRepository.saveContext(securityContext, request, response);
-    }
+		HttpSession session = request.getSession();
+		session.removeAttribute(PendingOAuthSession.ATTRIBUTE_NAME);
+		securityContextRepository.saveContext(securityContext, request, response);
+	}
 }

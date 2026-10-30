@@ -32,72 +32,72 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 class AuditingTest {
 
-    private static final String USERNAME = "auditor";
-    private static final String PASSWORD = "test-password";
+	private static final String USERNAME = "auditor";
+	private static final String PASSWORD = "test-password";
 
-    @Autowired
-    private MockMvc mockMvc;
+	@Autowired
+	private MockMvc mockMvc;
 
-    @Autowired
-    private MemberRepository memberRepository;
+	@Autowired
+	private MemberRepository memberRepository;
 
 
-    @Autowired
+	@Autowired
 
-    private MemberStatusHistoryRepository memberStatusHistoryRepository;
+	private MemberStatusHistoryRepository memberStatusHistoryRepository;
 
-    @Autowired
-    private CategoryRepository categoryRepository;
+	@Autowired
+	private CategoryRepository categoryRepository;
 
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+	@Autowired
+	private PasswordEncoder passwordEncoder;
 
-    private Long adminId;
+	private Long adminId;
 
-    @BeforeEach
-    void seedAdmin() {
-        memberStatusHistoryRepository.deleteAll();
-        memberRepository.deleteAll();
-        Member admin = memberRepository.save(
-                Member.ofLocalAdmin(USERNAME, passwordEncoder.encode(PASSWORD), "테스트 관리자"));
-        adminId = admin.getId();
-    }
+	@BeforeEach
+	void seedAdmin() {
+		memberStatusHistoryRepository.deleteAll();
+		memberRepository.deleteAll();
+		Member admin = memberRepository.save(
+				Member.ofLocalAdmin(USERNAME, passwordEncoder.encode(PASSWORD), "테스트 관리자"));
+		adminId = admin.getId();
+	}
 
-    @Test
-    @DisplayName("로그인한 관리자가 만들면 회원 번호가 남는다")
-    void recordsLoggedInAdmin() throws Exception {
-        MvcResult login = mockMvc.perform(post("/api/v1/admin/auth/login").with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"username":"%s","password":"%s"}
-                                """.formatted(USERNAME, PASSWORD)))
-                .andExpect(status().isOk())
-                .andReturn();
+	@Test
+	@DisplayName("로그인한 관리자가 만들면 회원 번호가 남는다")
+	void recordsLoggedInAdmin() throws Exception {
+		MvcResult login = mockMvc.perform(post("/api/v1/admin/auth/login").with(csrf())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{"username":"%s","password":"%s"}
+								""".formatted(USERNAME, PASSWORD)))
+				.andExpect(status().isOk())
+				.andReturn();
 
-        MockHttpSession session = (MockHttpSession) login.getRequest().getSession(false);
+		MockHttpSession session = (MockHttpSession) login.getRequest().getSession(false);
 
-        mockMvc.perform(post("/api/v1/admin/blog/categories").with(csrf())
-                        .session(session)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"updatedAt":null,"name":"감사테스트","sortOrder":9001}
-                                """))
-                .andExpect(status().isOk());
+		mockMvc.perform(post("/api/v1/admin/blog/categories").with(csrf())
+						.session(session)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{"updatedAt":null,"name":"감사테스트","sortOrder":9001}
+								"""))
+				.andExpect(status().isOk());
 
-        Category created = categoryRepository.findAll().stream()
-                .filter(category -> "감사테스트".equals(category.getName()))
-                .findFirst()
-                .orElseThrow();
+		Category created = categoryRepository.findAll().stream()
+				.filter(category -> "감사테스트".equals(category.getName()))
+				.findFirst()
+				.orElseThrow();
 
-        assertThat(created.getCreatedBy()).isEqualTo(String.valueOf(adminId));
-        assertThat(created.getUpdatedBy()).isEqualTo(String.valueOf(adminId));
-    }
+		assertThat(created.getCreatedBy()).isEqualTo(String.valueOf(adminId));
+		assertThat(created.getUpdatedBy()).isEqualTo(String.valueOf(adminId));
+	}
 
-    @Test
-    @DisplayName("로그인 없이 저장하면 system 이 남는다")
-    void recordsSystemWithoutLogin() {
-        Category saved = categoryRepository.save(new Category("시스템테스트", 9002L));
+	@Test
+	@DisplayName("로그인 없이 저장하면 system 이 남는다")
+	void recordsSystemWithoutLogin() {
+		Category saved = categoryRepository.save(new Category("시스템테스트", 9002L));
 
-        assertThat(saved.getCreatedBy()).isEqualTo("system");
-    }
+		assertThat(saved.getCreatedBy()).isEqualTo("system");
+	}
 }

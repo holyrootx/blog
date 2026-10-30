@@ -19,14 +19,14 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class AdminLogoutSuccessHandler implements LogoutSuccessHandler {
 
-    private final SecurityResponseWriter responseWriter;
+	private final SecurityResponseWriter responseWriter;
 
-    @Override
-    public void onLogoutSuccess(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            Authentication authentication
-    ) throws IOException {
-        responseWriter.writeOk(response, null);
-    }
+	@Override
+	public void onLogoutSuccess(
+			HttpServletRequest request,
+			HttpServletResponse response,
+			Authentication authentication
+	) throws IOException {
+		responseWriter.writeOk(response, null);
+	}
 }

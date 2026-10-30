@@ -27,44 +27,44 @@ import me.jsjlog.blog.common.domain.BaseEntity;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class CommonCode extends BaseEntity {
 
-    @Id
-    @Column(name = "group_code", length = 50)
-    private String groupCode;
+	@Id
+	@Column(name = "group_code", length = 50)
+	private String groupCode;
 
-    @Id
-    @Column(name = "code", length = 50)
-    private String code;
+	@Id
+	@Column(name = "code", length = 50)
+	private String code;
 
-    @Column(name = "code_name", nullable = false, length = 100)
-    private String codeName;
+	@Column(name = "code_name", nullable = false, length = 100)
+	private String codeName;
 
-    @Column(name = "description", length = 500)
-    private String description;
+	@Column(name = "description", length = 500)
+	private String description;
 
-    @Column(name = "sort_order", nullable = false)
-    private int sortOrder;
+	@Column(name = "sort_order", nullable = false)
+	private int sortOrder;
 
-    @Column(name = "is_enabled", nullable = false)
-    private boolean enabled;
+	@Column(name = "is_enabled", nullable = false)
+	private boolean enabled;
 
-    private CommonCode(String groupCode, String code, String codeName, String description, int sortOrder) {
-        this.groupCode = groupCode;
-        this.code = code;
-        this.codeName = codeName;
-        this.description = description;
-        this.sortOrder = sortOrder;
-        this.enabled = true;
-    }
+	private CommonCode(String groupCode, String code, String codeName, String description, int sortOrder) {
+		this.groupCode = groupCode;
+		this.code = code;
+		this.codeName = codeName;
+		this.description = description;
+		this.sortOrder = sortOrder;
+		this.enabled = true;
+	}
 
-    public static CommonCode create(String groupCode, String code, String codeName, String description, int sortOrder) {
-        return new CommonCode(groupCode, code, codeName, description, sortOrder);
-    }
+	public static CommonCode create(String groupCode, String code, String codeName, String description, int sortOrder) {
+		return new CommonCode(groupCode, code, codeName, description, sortOrder);
+	}
 
-    /** 코드 값은 바꾸지 않는다. 서버 코드(enum)에 있는 코드의 사용 여부는 부르는 쪽이 막는다 */
-    public void change(String codeName, String description, int sortOrder, boolean enabled) {
-        this.codeName = codeName;
-        this.description = description;
-        this.sortOrder = sortOrder;
-        this.enabled = enabled;
-    }
+	/** 코드 값은 바꾸지 않는다. 서버 코드(enum)에 있는 코드의 사용 여부는 부르는 쪽이 막는다 */
+	public void change(String codeName, String description, int sortOrder, boolean enabled) {
+		this.codeName = codeName;
+		this.description = description;
+		this.sortOrder = sortOrder;
+		this.enabled = enabled;
+	}
 }

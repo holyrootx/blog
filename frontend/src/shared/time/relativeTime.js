@@ -15,69 +15,69 @@ const DAY = 24 * HOUR;
 const RELATIVE_LIMIT_DAYS = 7;
 
 export function formatRelativeTime(value, now = Date.now()) {
-  const time = toTime(value);
+	const time = toTime(value);
 
-  if (time === null) {
-    return '';
-  }
+	if (time === null) {
+		return '';
+	}
 
-  const elapsed = now - time;
+	const elapsed = now - time;
 
-  // 시계가 어긋나면 미래로 계산될 수 있다. "-2분 전" 을 보여주느니 방금으로 둔다
-  if (elapsed < MINUTE) {
-    return '방금';
-  }
+	// 시계가 어긋나면 미래로 계산될 수 있다. "-2분 전" 을 보여주느니 방금으로 둔다
+	if (elapsed < MINUTE) {
+		return '방금';
+	}
 
-  if (elapsed < HOUR) {
-    return `${Math.floor(elapsed / MINUTE)}분 전`;
-  }
+	if (elapsed < HOUR) {
+		return `${Math.floor(elapsed / MINUTE)}분 전`;
+	}
 
-  if (elapsed < DAY) {
-    return `${Math.floor(elapsed / HOUR)}시간 전`;
-  }
+	if (elapsed < DAY) {
+		return `${Math.floor(elapsed / HOUR)}시간 전`;
+	}
 
-  const days = Math.floor(elapsed / DAY);
+	const days = Math.floor(elapsed / DAY);
 
-  if (days === 1) {
-    return '어제';
-  }
+	if (days === 1) {
+		return '어제';
+	}
 
-  if (days < RELATIVE_LIMIT_DAYS) {
-    return `${days}일 전`;
-  }
+	if (days < RELATIVE_LIMIT_DAYS) {
+		return `${days}일 전`;
+	}
 
-  return formatDateTime(value, { year: 'numeric', month: '2-digit', day: '2-digit' });
+	return formatDateTime(value, { year: 'numeric', month: '2-digit', day: '2-digit' });
 }
 
 /** 마우스를 올렸을 때 보여 줄 정확한 시각 */
 export function formatExactTime(value) {
-  return formatDateTime(value, {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
+	return formatDateTime(value, {
+		year: 'numeric',
+		month: '2-digit',
+		day: '2-digit',
+		hour: '2-digit',
+		minute: '2-digit',
+		hour12: false,
+	});
 }
 
 function formatDateTime(value, options) {
-  const time = toTime(value);
+	const time = toTime(value);
 
-  if (time === null) {
-    return '';
-  }
+	if (time === null) {
+		return '';
+	}
 
-  // 글 목록의 날짜 표기와 같은 모양이 되게 맞춘다 (2026. 09. 24)
-  return new Intl.DateTimeFormat('ko-KR', options).format(new Date(time)).replace(/\.$/, '');
+	// 글 목록의 날짜 표기와 같은 모양이 되게 맞춘다 (2026. 09. 24)
+	return new Intl.DateTimeFormat('ko-KR', options).format(new Date(time)).replace(/\.$/, '');
 }
 
 function toTime(value) {
-  if (!value) {
-    return null;
-  }
+	if (!value) {
+		return null;
+	}
 
-  const time = new Date(value).getTime();
+	const time = new Date(value).getTime();
 
-  return Number.isNaN(time) ? null : time;
+	return Number.isNaN(time) ? null : time;
 }

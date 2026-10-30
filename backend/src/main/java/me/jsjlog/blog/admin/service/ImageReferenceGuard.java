@@ -23,52 +23,60 @@ import org.springframework.util.StringUtils;
 @Component
 @RequiredArgsConstructor
 public class ImageReferenceGuard {
-    private static final Pattern IMAGE_URL = Pattern.compile(
-            "!\\[[^\\]]*\\]\\(([^)\\s]+)[^)]*\\)|<img[^>]+src=[\"']([^\"']+)[\"']");
-    private static final Pattern UPLOAD_KEY = Pattern.compile(
-            "\\d{4}/\\d{2}/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(?:-thumbnail[^/]*)?\\.[a-zA-Z0-9]+(?:[?#].*)?");
+	private static final Pattern IMAGE_URL = Pattern.compile(
+			"!\\[[^\\]]*\\]\\(([^)\\s]+)[^)]*\\)|<img[^>]+src=[\"']([^\"']+)[\"']");
+	private static final Pattern UPLOAD_KEY = Pattern.compile(
+			"\\d{4}/\\d{2}/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(?:-thumbnail[^/]*)?\\.[a-zA-Z0-9]+(?:[?#].*)?");
 
-    private final ImageUsageRepository images;
-    private final UploadProperties properties;
+	private final ImageUsageRepository images;
+	private final UploadProperties properties;
 
-    @Transactional(propagation = Propagation.MANDATORY)
-    public void protect(String content, String imageUrl) {
-        Set<String> urls = collectUrls(content, imageUrl);
-        if (urls.isEmpty()) return;
-        List<UploadImage> known = images.findByUrlIn(urls);
-        Set<String> previouslyKnown = known.stream().map(UploadImage::getUrl).collect(Collectors.toSet());
-        Set<String> locked = lockIds(known.stream().map(UploadImage::getId).toList()).stream()
-                .map(UploadImage::getUrl).collect(Collectors.toSet());
-        for (String url : urls) {
-            if (!locked.contains(url) && (previouslyKnown.contains(url) || isManagedUpload(url))) {
-                throw new BlogException(ErrorCode.IMAGE_REFERENCE_UNAVAILABLE);
-            }
-        }
-    }
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void protect(String content, String imageUrl) {
+		Set<String> urls = collectUrls(content, imageUrl);
+		if (urls.isEmpty()) {
+			return;
+		}
+		List<UploadImage> known = images.findByUrlIn(urls);
+		Set<String> previouslyKnown = known.stream().map(UploadImage::getUrl).collect(Collectors.toSet());
+		Set<String> locked = lockIds(known.stream().map(UploadImage::getId).toList()).stream()
+				.map(UploadImage::getUrl).collect(Collectors.toSet());
+		for (String url : urls) {
+			if (!locked.contains(url) && (previouslyKnown.contains(url) || isManagedUpload(url))) {
+				throw new BlogException(ErrorCode.IMAGE_REFERENCE_UNAVAILABLE);
+			}
+		}
+	}
 
-    /** 기본키로 하나씩 잠근다. URL 검색에 잠금을 걸어 업로드 대장 전체를 잠그지 않는다. */
-    @Transactional(propagation = Propagation.MANDATORY)
-    public List<UploadImage> lockIds(Collection<Long> ids) {
-        return ids.stream().filter(Objects::nonNull).distinct().sorted()
-                .map(images::findLockedById).flatMap(java.util.Optional::stream).toList();
-    }
+	/** 기본키로 하나씩 잠근다. URL 검색에 잠금을 걸어 업로드 대장 전체를 잠그지 않는다. */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public List<UploadImage> lockIds(Collection<Long> ids) {
+		return ids.stream().filter(Objects::nonNull).distinct().sorted()
+				.map(images::findLockedById).flatMap(java.util.Optional::stream).toList();
+	}
 
-    private boolean isManagedUpload(String url) {
-        if (properties.r2() == null || !StringUtils.hasText(properties.r2().publicBaseUrl())) return false;
-        String base = properties.r2().publicBaseUrl().replaceAll("/+$", "") + "/";
-        return url.startsWith(base) && UPLOAD_KEY.matcher(url.substring(base.length())).matches();
-    }
+	private boolean isManagedUpload(String url) {
+		if (properties.r2() == null || !StringUtils.hasText(properties.r2().publicBaseUrl())) {
+			return false;
+		}
+		String base = properties.r2().publicBaseUrl().replaceAll("/+$", "") + "/";
+		return url.startsWith(base) && UPLOAD_KEY.matcher(url.substring(base.length())).matches();
+	}
 
-    public static Set<String> collectUrls(String content, String imageUrl) {
-        Set<String> urls = new HashSet<>();
-        if (StringUtils.hasText(content)) {
-            var matcher = IMAGE_URL.matcher(content);
-            while (matcher.find()) {
-                String url = matcher.group(1) != null ? matcher.group(1) : matcher.group(2);
-                if (StringUtils.hasText(url)) urls.add(url.trim());
-            }
-        }
-        if (StringUtils.hasText(imageUrl)) urls.add(imageUrl.trim());
-        return urls;
-    }
+	public static Set<String> collectUrls(String content, String imageUrl) {
+		Set<String> urls = new HashSet<>();
+		if (StringUtils.hasText(content)) {
+			var matcher = IMAGE_URL.matcher(content);
+			while (matcher.find()) {
+				String url = matcher.group(1) != null ? matcher.group(1) : matcher.group(2);
+				if (StringUtils.hasText(url)) {
+					urls.add(url.trim());
+				}
+			}
+		}
+		if (StringUtils.hasText(imageUrl)) {
+			urls.add(imageUrl.trim());
+		}
+		return urls;
+	}
 }

@@ -16,17 +16,17 @@ import java.util.List;
  * @param excludedBotViews   뺀 검색 봇 기록 건수
  */
 public record AdminViewStatsResponse(
-        int days,
-        LocalDate from,
-        LocalDate to,
-        OffsetDateTime recordingStartedAt,
-        long pageViews,
-        long memberViews,
-        long anonymousViews,
-        long uniqueMembers,
-        long excludedAdminViews,
-        long excludedBotViews,
-        List<AdminDailyViewResponse> daily,
-        List<AdminDeviceViewResponse> devices
+		int days,
+		LocalDate from,
+		LocalDate to,
+		OffsetDateTime recordingStartedAt,
+		long pageViews,
+		long memberViews,
+		long anonymousViews,
+		long uniqueMembers,
+		long excludedAdminViews,
+		long excludedBotViews,
+		List<AdminDailyViewResponse> daily,
+		List<AdminDeviceViewResponse> devices
 ) {
 }

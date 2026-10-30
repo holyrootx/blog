@@ -15,11 +15,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class AdminDashboardController {
 
-    private final AdminDashboardService adminDashboardService;
+	private final AdminDashboardService adminDashboardService;
 
-    // GET /api/v1/admin/blog/dashboard
-    @GetMapping("/dashboard")
-    public ApiResponse<AdminDashboardResponse> getDashboard() {
-        return ApiResponse.ok(adminDashboardService.getDashboard());
-    }
+	@GetMapping("/dashboard")
+	public ApiResponse<AdminDashboardResponse> getDashboard() {
+		return ApiResponse.ok(adminDashboardService.getDashboard());
+	}
 }

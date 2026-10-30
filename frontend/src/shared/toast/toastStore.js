@@ -23,30 +23,30 @@ const toasts = ref([]);
 let sequence = 0;
 
 export function useToasts() {
-  return { toasts };
+	return { toasts };
 }
 
 export function notifySuccess(message) {
-  return push(message, 'success');
+	return push(message, 'success');
 }
 
 export function notifyError(message) {
-  return push(message, 'error');
+	return push(message, 'error');
 }
 
 export function dismissToast(id) {
-  toasts.value = toasts.value.filter((toast) => toast.id !== id);
+	toasts.value = toasts.value.filter((toast) => toast.id !== id);
 }
 
 function push(message, kind) {
-  sequence += 1;
+	sequence += 1;
 
-  const toast = { id: sequence, message, kind };
-  toasts.value = [...toasts.value, toast];
+	const toast = { id: sequence, message, kind };
+	toasts.value = [...toasts.value, toast];
 
-  if (kind === 'success') {
-    setTimeout(() => dismissToast(toast.id), SUCCESS_DURATION);
-  }
+	if (kind === 'success') {
+		setTimeout(() => dismissToast(toast.id), SUCCESS_DURATION);
+	}
 
-  return toast.id;
+	return toast.id;
 }

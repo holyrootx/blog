@@ -50,94 +50,94 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @TestPropertySource(properties = "blog.frontend.index-path=../frontend/index.html")
 class PublicPostVisibilityTest {
 
-    @Autowired PostService postService;
-    @Autowired CommentService commentService;
-    @Autowired PostPageService postPageService;
-    @Autowired PostRepository postRepository;
-    @Autowired CommentRepository commentRepository;
-    @Autowired CategoryRepository categoryRepository;
-    @Autowired MemberRepository memberRepository;
-    @Autowired EntityManager entityManager;
+	@Autowired PostService postService;
+	@Autowired CommentService commentService;
+	@Autowired PostPageService postPageService;
+	@Autowired PostRepository postRepository;
+	@Autowired CommentRepository commentRepository;
+	@Autowired CategoryRepository categoryRepository;
+	@Autowired MemberRepository memberRepository;
+	@Autowired EntityManager entityManager;
 
-    private Category category;
-    private Post visible;
-    private Post notYet;
-    private Member member;
+	private Category category;
+	private Post visible;
+	private Post notYet;
+	private Member member;
 
-    @BeforeEach
-    void setUp() {
-        category = categoryRepository.save(new Category("공개 기준", 870L));
-        visible = publish("이미 공개된 글", LocalDateTime.now().minusDays(1));
-        notYet = publish("아직 시각이 안 된 글", LocalDateTime.now().plusDays(1));
-        member = memberRepository.save(Member.ofSocial(AuthProvider.NAVER, "visibility-" + System.nanoTime(),
-                "공개회원", null, null));
-        commentRepository.save(new Comment(notYet, null, member, "시각 전 글에 남은 댓글"));
-        entityManager.flush();
-    }
+	@BeforeEach
+	void setUp() {
+		category = categoryRepository.save(new Category("공개 기준", 870L));
+		visible = publish("이미 공개된 글", LocalDateTime.now().minusDays(1));
+		notYet = publish("아직 시각이 안 된 글", LocalDateTime.now().plusDays(1));
+		member = memberRepository.save(Member.ofSocial(AuthProvider.NAVER, "visibility-" + System.nanoTime(),
+				"공개회원", null, null));
+		commentRepository.save(new Comment(notYet, null, member, "시각 전 글에 남은 댓글"));
+		entityManager.flush();
+	}
 
-    @Test
-    @DisplayName("상세·조회수·댓글 목록·댓글 쓰기가 모두 같은 글을 막는다")
-    void everyEntranceHidesPostBeforeItsTime() {
-        expectNotFound(() -> postService.getPostDetail(notYet.getId(), true, null));
-        expectNotFound(() -> postService.getCommentInPostDetail(notYet.getId(), null, 20L, null));
-        expectNotFound(() -> commentService.createComment(notYet.getId(),
-                new CommentCreateRequest("시각 전 글에 쓰기", null), member.getId()));
+	@Test
+	@DisplayName("상세·조회수·댓글 목록·댓글 쓰기가 모두 같은 글을 막는다")
+	void everyEntranceHidesPostBeforeItsTime() {
+		expectNotFound(() -> postService.getPostDetail(notYet.getId(), true, null));
+		expectNotFound(() -> postService.getCommentInPostDetail(notYet.getId(), null, 20L, null));
+		expectNotFound(() -> commentService.createComment(notYet.getId(),
+				new CommentCreateRequest("시각 전 글에 쓰기", null), member.getId()));
 
-        assertThat(postRepository.increaseViewCount(notYet.getId(), PostStatus.PUBLISHED, LocalDateTime.now())).isZero();
-        assertThat(commentRepository.getCommentPageByPostId(notYet.getId(), null, 20, null).items()).isEmpty();
-        assertThat(commentRepository.findMyComments(member.getId(), LocalDateTime.now(), PageRequest.of(0, 20))).isEmpty();
-        assertThat(postPageService.render(String.valueOf(notYet.getId())).found()).isFalse();
-    }
+		assertThat(postRepository.increaseViewCount(notYet.getId(), PostStatus.PUBLISHED, LocalDateTime.now())).isZero();
+		assertThat(commentRepository.getCommentPageByPostId(notYet.getId(), null, 20, null).items()).isEmpty();
+		assertThat(commentRepository.findMyComments(member.getId(), LocalDateTime.now(), PageRequest.of(0, 20))).isEmpty();
+		assertThat(postPageService.render(String.valueOf(notYet.getId())).found()).isFalse();
+	}
 
-    @Test
-    @DisplayName("목록·대문·검색·이전 다음 글에도 나오지 않는다")
-    void listsSkipPostBeforeItsTime() {
-        PostListCondition condition = new PostListCondition(0, 20, category.getId(), null, null);
+	@Test
+	@DisplayName("목록·대문·검색·이전 다음 글에도 나오지 않는다")
+	void listsSkipPostBeforeItsTime() {
+		PostListCondition condition = new PostListCondition(0, 20, category.getId(), null, null);
 
-        assertThat(postRepository.getPublicPosts(condition)).extracting(PostSummaryResponse::id)
-                .containsExactly(visible.getId());
-        assertThat(postRepository.countPublicPosts(condition)).isEqualTo(1);
-        assertThat(postRepository.getPostsForHomePage("latest", 50L)).extracting(PostSummaryResponse::id)
-                .doesNotContain(notYet.getId());
-        assertThat(postRepository.getPublicPostSuggestions("아직 시각", 10)).extracting(PostSuggestResponse::id)
-                .doesNotContain(notYet.getId());
+		assertThat(postRepository.getPublicPosts(condition)).extracting(PostSummaryResponse::id)
+				.containsExactly(visible.getId());
+		assertThat(postRepository.countPublicPosts(condition)).isEqualTo(1);
+		assertThat(postRepository.getPostsForHomePage("latest", 50L)).extracting(PostSummaryResponse::id)
+				.doesNotContain(notYet.getId());
+		assertThat(postRepository.getPublicPostSuggestions("아직 시각", 10)).extracting(PostSuggestResponse::id)
+				.doesNotContain(notYet.getId());
 
-        // 공개 글에서 다음 글을 끝까지 따라가도 시각이 안 된 글로는 넘어가지 않는다
-        assertThat(nextPostIdsFrom(visible.getId())).doesNotContain(notYet.getId());
+		// 공개 글에서 다음 글을 끝까지 따라가도 시각이 안 된 글로는 넘어가지 않는다
+		assertThat(nextPostIdsFrom(visible.getId())).doesNotContain(notYet.getId());
 
-        AdjacentPostResponse aroundHidden = postRepository.getAdjacentPost(notYet.getId());
-        assertThat(aroundHidden.previousPost()).isNull();
-        assertThat(aroundHidden.nextPost()).isNull();
-    }
+		AdjacentPostResponse aroundHidden = postRepository.getAdjacentPost(notYet.getId());
+		assertThat(aroundHidden.previousPost()).isNull();
+		assertThat(aroundHidden.nextPost()).isNull();
+	}
 
-    @Test
-    @DisplayName("이미 공개된 글은 그대로 보인다")
-    void publishedPostStaysVisible() {
-        assertThat(postService.getPostDetail(visible.getId(), true, null).id()).isEqualTo(visible.getId());
-        assertThat(postPageService.render(String.valueOf(visible.getId())).found()).isTrue();
-    }
+	@Test
+	@DisplayName("이미 공개된 글은 그대로 보인다")
+	void publishedPostStaysVisible() {
+		assertThat(postService.getPostDetail(visible.getId(), true, null).id()).isEqualTo(visible.getId());
+		assertThat(postPageService.render(String.valueOf(visible.getId())).found()).isTrue();
+	}
 
-    private List<Long> nextPostIdsFrom(Long postId) {
-        List<Long> ids = new ArrayList<>();
-        AdjacentPostSummary next = postRepository.getAdjacentPost(postId).nextPost();
+	private List<Long> nextPostIdsFrom(Long postId) {
+		List<Long> ids = new ArrayList<>();
+		AdjacentPostSummary next = postRepository.getAdjacentPost(postId).nextPost();
 
-        // 다른 테스트가 남긴 글이 많아도 끝이 있게 한도를 둔다
-        while (next != null && ids.size() < 1000) {
-            ids.add(next.id());
-            next = postRepository.getAdjacentPost(next.id()).nextPost();
-        }
-        return ids;
-    }
+		// 다른 테스트가 남긴 글이 많아도 끝이 있게 한도를 둔다
+		while (next != null && ids.size() < 1000) {
+			ids.add(next.id());
+			next = postRepository.getAdjacentPost(next.id()).nextPost();
+		}
+		return ids;
+	}
 
-    private Post publish(String title, LocalDateTime publishedAt) {
-        Post post = new Post(title, "요약", "본문", category, null, null);
-        post.publish(publishedAt);
-        return postRepository.save(post);
-    }
+	private Post publish(String title, LocalDateTime publishedAt) {
+		Post post = new Post(title, "요약", "본문", category, null, null);
+		post.publish(publishedAt);
+		return postRepository.save(post);
+	}
 
-    private static void expectNotFound(Runnable call) {
-        assertThatThrownBy(call::run)
-                .isInstanceOfSatisfying(BlogException.class,
-                        error -> assertThat(error.getErrorCode()).isEqualTo(ErrorCode.POST_NOT_FOUND));
-    }
+	private static void expectNotFound(Runnable call) {
+		assertThatThrownBy(call::run)
+				.isInstanceOfSatisfying(BlogException.class,
+						error -> assertThat(error.getErrorCode()).isEqualTo(ErrorCode.POST_NOT_FOUND));
+	}
 }

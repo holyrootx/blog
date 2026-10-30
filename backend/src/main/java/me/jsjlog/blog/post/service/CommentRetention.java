@@ -34,39 +34,39 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class CommentRetention {
 
-    public static final Period RETENTION = Period.ofMonths(6);
+	public static final Period RETENTION = Period.ofMonths(6);
 
-    private final CommentRepository commentRepository;
-    private final ContentHistoryRepository historyRepository;
+	private final CommentRepository commentRepository;
+	private final ContentHistoryRepository historyRepository;
 
-    // 손님이 적은 새벽에 돈다
-    @Transactional
-    @Scheduled(cron = "${blog.retention.purge-cron:0 30 4 * * *}", zone = "Asia/Seoul")
-    public void purgeExpired() {
-        purgeExpired(LocalDateTime.now());
-    }
+	// 손님이 적은 새벽에 돈다
+	@Transactional
+	@Scheduled(cron = "${blog.retention.purge-cron:0 30 4 * * *}", zone = "Asia/Seoul")
+	public void purgeExpired() {
+		purgeExpired(LocalDateTime.now());
+	}
 
-    @Transactional
-    public Result purgeExpired(LocalDateTime now) {
-        LocalDateTime cutoff = now.minus(RETENTION);
-        List<Long> purgedIds = List.of();
-        List<Long> candidates = commentRepository.findExpiredDeletedIds(cutoff);
+	@Transactional
+	public Result purgeExpired(LocalDateTime now) {
+		LocalDateTime cutoff = now.minus(RETENTION);
+		List<Long> purgedIds = List.of();
+		List<Long> candidates = commentRepository.findExpiredDeletedIds(cutoff);
 
-        if (!candidates.isEmpty()) {
-            commentRepository.purgeContent(candidates, cutoff, now);
-            purgedIds = commentRepository.findPurgedIn(candidates);
-        }
+		if (!candidates.isEmpty()) {
+			commentRepository.purgeContent(candidates, cutoff, now);
+			purgedIds = commentRepository.findPurgedIn(candidates);
+		}
 
-        int histories = purgedIds.isEmpty() ? 0 : historyRepository.deleteByTargets(Target.COMMENT, purgedIds);
-        histories += historyRepository.deleteCreatedBefore(cutoff);
+		int histories = purgedIds.isEmpty() ? 0 : historyRepository.deleteByTargets(Target.COMMENT, purgedIds);
+		histories += historyRepository.deleteCreatedBefore(cutoff);
 
-        if (!purgedIds.isEmpty() || histories > 0) {
-            log.info("[보관 정리] 지운 댓글 원문 {}건, 변경 기록 {}건 파기", purgedIds.size(), histories);
-        }
+		if (!purgedIds.isEmpty() || histories > 0) {
+			log.info("[보관 정리] 지운 댓글 원문 {}건, 변경 기록 {}건 파기", purgedIds.size(), histories);
+		}
 
-        return new Result(purgedIds.size(), histories);
-    }
+		return new Result(purgedIds.size(), histories);
+	}
 
-    public record Result(int purgedComments, int deletedHistories) {
-    }
+	public record Result(int purgedComments, int deletedHistories) {
+	}
 }

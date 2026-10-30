@@ -34,73 +34,72 @@ import me.jsjlog.blog.post.domain.CommentReportReason;
 @Getter
 @Entity
 @Table(
-        name = "guestbook_report",
-        uniqueConstraints = @UniqueConstraint(
-                name = "uk_guestbook_report_entry_member",
-                columnNames = {"entry_id", "member_id"}
-        ),
-        indexes = @Index(name = "idx_guestbook_report_entry", columnList = "entry_id")
+		name = "guestbook_report",
+		uniqueConstraints = @UniqueConstraint(
+				name = "uk_guestbook_report_entry_member",
+				columnNames = {"entry_id", "member_id"}
+		),
+		indexes = @Index(name = "idx_guestbook_report_entry", columnList = "entry_id")
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class GuestbookReport extends BaseEntity {
 
-    /** 댓글 신고(CommentReport.MAX_DETAIL_LENGTH)와 같은 값. 신고 창을 같이 쓴다 */
-    public static final int MAX_DETAIL_LENGTH = 200;
+	/** 댓글 신고(CommentReport.MAX_DETAIL_LENGTH)와 같은 값. 신고 창을 같이 쓴다 */
+	public static final int MAX_DETAIL_LENGTH = 200;
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "entry_id", nullable = false)
-    private GuestbookEntry entry;
+	@ManyToOne(fetch = FetchType.LAZY, optional = false)
+	@JoinColumn(name = "entry_id", nullable = false)
+	private GuestbookEntry entry;
 
-    /** 신고한 사람. 관리자 화면에 내보내지 않는다 */
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "member_id", nullable = false)
-    private Member member;
+	/** 신고한 사람. 관리자 화면에 내보내지 않는다 */
+	@ManyToOne(fetch = FetchType.LAZY, optional = false)
+	@JoinColumn(name = "member_id", nullable = false)
+	private Member member;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "reason", nullable = false, length = 20)
-    private CommentReportReason reason;
+	@Enumerated(EnumType.STRING)
+	@Column(name = "reason", nullable = false, length = 20)
+	private CommentReportReason reason;
 
-    @Column(name = "detail", length = MAX_DETAIL_LENGTH)
-    private String detail;
+	@Column(name = "detail", length = MAX_DETAIL_LENGTH)
+	private String detail;
 
-    /** 신고 당시 본문. 원문을 파기할 때 같이 비운다 */
-    @Column(name = "reported_content", length = GuestbookEntry.MAX_CONTENT_LENGTH)
-    private String reportedContent;
+	/** 신고 당시 본문. 원문을 파기할 때 같이 비운다 */
+	@Column(name = "reported_content", length = GuestbookEntry.MAX_CONTENT_LENGTH)
+	private String reportedContent;
 
-    /** 운영자가 이 신고를 보고 판단한 시각. 이게 없으면 이미 본 신고와 새 신고를 가릴 수 없다 */
-    @Column(name = "handled_at")
-    private LocalDateTime handledAt;
+	/** 운영자가 이 신고를 보고 판단한 시각. 이게 없으면 이미 본 신고와 새 신고를 가릴 수 없다 */
+	@Column(name = "handled_at")
+	private LocalDateTime handledAt;
 
-    public GuestbookReport(GuestbookEntry entry, Member member, CommentReportReason reason, String detail) {
-        this.entry = entry;
-        this.member = member;
-        this.reason = reason;
-        this.detail = trim(detail);
-        this.reportedContent = entry.getContent();
-    }
+	public GuestbookReport(GuestbookEntry entry, Member member, CommentReportReason reason, String detail) {
+		this.entry = entry;
+		this.member = member;
+		this.reason = reason;
+		this.detail = trim(detail);
+		this.reportedContent = entry.getContent();
+	}
 
-    /** 이미 처리한 신고는 다시 건드리지 않는다 */
-    public void markHandled(LocalDateTime now) {
-        if (handledAt == null) {
-            this.handledAt = now;
-        }
-    }
+	public void markHandled(LocalDateTime now) {
+		if (handledAt == null) {
+			this.handledAt = now;
+		}
+	}
 
-    private static String trim(String detail) {
-        if (detail == null) {
-            return null;
-        }
+	private static String trim(String detail) {
+		if (detail == null) {
+			return null;
+		}
 
-        String text = detail.trim();
+		String text = detail.trim();
 
-        if (text.isEmpty()) {
-            return null;
-        }
+		if (text.isEmpty()) {
+			return null;
+		}
 
-        return text.length() <= MAX_DETAIL_LENGTH ? text : text.substring(0, MAX_DETAIL_LENGTH);
-    }
+		return text.length() <= MAX_DETAIL_LENGTH ? text : text.substring(0, MAX_DETAIL_LENGTH);
+	}
 }

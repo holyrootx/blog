@@ -14,21 +14,21 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/v1")
 public class BlogProfileController {
 
-    private final BlogProfileService blogProfileService;
+	private final BlogProfileService blogProfileService;
 
-    @GetMapping("/blog/profile")
-    public ApiResponse<BlogProfileResponse> getBlogProfile(@RequestParam(defaultValue = "1") Long profileId){
+	@GetMapping("/blog/profile")
+	public ApiResponse<BlogProfileResponse> getBlogProfile(@RequestParam(defaultValue = "1") Long profileId){
 
-        BlogProfileResponse blogProfile = blogProfileService.getBlogProfile(profileId);
+		BlogProfileResponse blogProfile = blogProfileService.getBlogProfile(profileId);
 
-        return ApiResponse.ok(blogProfile);
-    }
+		return ApiResponse.ok(blogProfile);
+	}
 
 
-    @PutMapping("/admin/blog/profile")
-    public ApiResponse<BlogProfileResponse> updateBlogProfile(
-            @RequestBody UpdateBlogProfileRequest request
-    ) {
-        return ApiResponse.ok(blogProfileService.updateBlogProfile(request));
-    }
+	@PutMapping("/admin/blog/profile")
+	public ApiResponse<BlogProfileResponse> updateBlogProfile(
+			@RequestBody UpdateBlogProfileRequest request
+	) {
+		return ApiResponse.ok(blogProfileService.updateBlogProfile(request));
+	}
 }

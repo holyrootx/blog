@@ -56,182 +56,182 @@ import static org.mockito.Mockito.withSettings;
 @SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:oauth_concurrency;MODE=MySQL;DB_CLOSE_DELAY=-1")
 class OAuthSessionConcurrencyTest {
 
-    @Autowired MemberRepository members;
-    @Autowired MemberSessionManager sessions;
-    @Autowired AdminMemberService adminMembers;
-    @Autowired MemberService memberService;
-    @Autowired MemberStatusService memberStatusService;
-    @Autowired MemberStatusRepository memberStatuses;
-    @Autowired CommentRepository comments;
-    @Autowired NicknameGenerator nicknames;
-    @Autowired PlatformTransactionManager transactions;
-    @Autowired AuditorAware<String> auditorProvider;
-    @Autowired JdbcTemplate jdbc;
+	@Autowired MemberRepository members;
+	@Autowired MemberSessionManager sessions;
+	@Autowired AdminMemberService adminMembers;
+	@Autowired MemberService memberService;
+	@Autowired MemberStatusService memberStatusService;
+	@Autowired MemberStatusRepository memberStatuses;
+	@Autowired CommentRepository comments;
+	@Autowired NicknameGenerator nicknames;
+	@Autowired PlatformTransactionManager transactions;
+	@Autowired AuditorAware<String> auditorProvider;
+	@Autowired JdbcTemplate jdbc;
 
-    private Member reader;
-    private MemberRepository pausedMembers;
-    private CountDownLatch snapshotLoaded;
-    private CountDownLatch continueLogin;
+	private Member reader;
+	private MemberRepository pausedMembers;
+	private CountDownLatch snapshotLoaded;
+	private CountDownLatch continueLogin;
 
-    @BeforeEach
-    void seed() {
-        reader = members.saveAndFlush(Member.ofSocial(AuthProvider.GOOGLE, UUID.randomUUID().toString(),
-                "독자", "before@example.test", "https://example.test/before.png"));
-        pausedMembers = mock(MemberRepository.class, withSettings().defaultAnswer(delegatesTo(members)));
-        snapshotLoaded = new CountDownLatch(1);
-        continueLogin = new CountDownLatch(1);
-        doAnswer(invocation -> pauseAfterRead(members.findByProviderAndProviderUserId(
-                invocation.getArgument(0), invocation.getArgument(1))))
-                .when(pausedMembers).findByProviderAndProviderUserId(AuthProvider.GOOGLE, reader.getProviderUserId());
-    }
+	@BeforeEach
+	void seed() {
+		reader = members.saveAndFlush(Member.ofSocial(AuthProvider.GOOGLE, UUID.randomUUID().toString(),
+				"독자", "before@example.test", "https://example.test/before.png"));
+		pausedMembers = mock(MemberRepository.class, withSettings().defaultAnswer(delegatesTo(members)));
+		snapshotLoaded = new CountDownLatch(1);
+		continueLogin = new CountDownLatch(1);
+		doAnswer(invocation -> pauseAfterRead(members.findByProviderAndProviderUserId(
+				invocation.getArgument(0), invocation.getArgument(1))))
+				.when(pausedMembers).findByProviderAndProviderUserId(AuthProvider.GOOGLE, reader.getProviderUserId());
+	}
 
-    @Test
-    void adminLookupStartedBeforeRevocationCannotCreateFreshAuthenticationAfterRestore() throws Exception {
-        Member admin = members.saveAndFlush(Member.ofLocalAdmin("admin-" + UUID.randomUUID(), "hash", "관리자"));
-        doAnswer(invocation -> pauseAfterRead(members.findByUsernameAndRole(admin.getUsername(), MemberRole.ADMIN)))
-                .when(pausedMembers).findByUsernameAndRole(admin.getUsername(), MemberRole.ADMIN);
+	@Test
+	void adminLookupStartedBeforeRevocationCannotCreateFreshAuthenticationAfterRestore() throws Exception {
+		Member admin = members.saveAndFlush(Member.ofLocalAdmin("admin-" + UUID.randomUUID(), "hash", "관리자"));
+		doAnswer(invocation -> pauseAfterRead(members.findByUsernameAndRole(admin.getUsername(), MemberRole.ADMIN)))
+				.when(pausedMembers).findByUsernameAndRole(admin.getUsername(), MemberRole.ADMIN);
 
-        MemberPrincipal principal = runPaused(
-                () -> new TransactionTemplate(transactions).execute(transaction ->
-                        new AdminUserDetailsService(pausedMembers).loadUserByUsername(admin.getUsername())),
-                () -> {
-                    new TransactionTemplate(transactions).executeWithoutResult(transaction -> {
-                        members.findById(admin.getId()).orElseThrow().suspend(LocalDateTime.now());
-                        sessions.revokeAfterCommit(admin.getId());
-                    });
-                    new TransactionTemplate(transactions).executeWithoutResult(transaction ->
-                            members.findById(admin.getId()).orElseThrow().unsuspend(LocalDateTime.now()));
-                });
+		MemberPrincipal principal = runPaused(
+				() -> new TransactionTemplate(transactions).execute(transaction ->
+						new AdminUserDetailsService(pausedMembers).loadUserByUsername(admin.getUsername())),
+				() -> {
+					new TransactionTemplate(transactions).executeWithoutResult(transaction -> {
+						members.findById(admin.getId()).orElseThrow().suspend(LocalDateTime.now());
+						sessions.revokeAfterCommit(admin.getId());
+					});
+					new TransactionTemplate(transactions).executeWithoutResult(transaction ->
+							members.findById(admin.getId()).orElseThrow().unsuspend(LocalDateTime.now()));
+				});
 
-        assertThatThrownBy(() -> sessions.onAuthentication(new MockHttpServletRequest(), principal))
-                .isInstanceOf(SessionAuthenticationException.class);
-    }
+		assertThatThrownBy(() -> sessions.onAuthentication(new MockHttpServletRequest(), principal))
+				.isInstanceOf(SessionAuthenticationException.class);
+	}
 
-    @Test
-    void socialLookupStartedBeforeRevocationCannotCreateFreshAuthenticationAfterRestore() throws Exception {
-        OAuth2User principal = runPaused(this::loadSocialUser, () -> {
-            adminMembers.suspend(reader.getId(), null);
-            adminMembers.unsuspend(reader.getId(), null);
-        });
-        assertThatThrownBy(() -> sessions.onAuthentication(new MockHttpServletRequest(), (MemberPrincipal) principal))
-                .isInstanceOf(SessionAuthenticationException.class);
-    }
+	@Test
+	void socialLookupStartedBeforeRevocationCannotCreateFreshAuthenticationAfterRestore() throws Exception {
+		OAuth2User principal = runPaused(this::loadSocialUser, () -> {
+			adminMembers.suspend(reader.getId(), null);
+			adminMembers.unsuspend(reader.getId(), null);
+		});
+		assertThatThrownBy(() -> sessions.onAuthentication(new MockHttpServletRequest(), (MemberPrincipal) principal))
+				.isInstanceOf(SessionAuthenticationException.class);
+	}
 
-    @Test
-    void normalProfileSynchronizationKeepsCurrentValuesAndAuditFields() {
-        jdbc.update("update member set updated_by = 'previous-auditor' where id = ?", reader.getId());
-        Member before = members.findById(reader.getId()).orElseThrow();
-        continueLogin.countDown();
-        MemberPrincipal principal = (MemberPrincipal) loadSocialUser();
-        Member current = members.findById(reader.getId()).orElseThrow();
-        assertThat(current.getEmail()).isEqualTo("after@example.test");
-        assertThat(current.getProfileImageUrl()).isEqualTo("https://example.test/after.png");
-        assertThat(principal.getProfileImageUrl()).isEqualTo(current.getProfileImageUrl());
-        assertThat(current.getStatusCode()).isEqualTo(MemberStatusCode.ACTIVE);
-        assertThat(current.getNickname()).isEqualTo("독자");
-        assertThat(current.getUpdatedAt()).isAfter(before.getUpdatedAt());
-        assertThat(current.getUpdatedBy()).isEqualTo("system");
-        assertThat(current.getCreatedAt()).isEqualTo(before.getCreatedAt());
-        assertThat(current.getCreatedBy()).isEqualTo(before.getCreatedBy());
-    }
+	@Test
+	void normalProfileSynchronizationKeepsCurrentValuesAndAuditFields() {
+		jdbc.update("update member set updated_by = 'previous-auditor' where id = ?", reader.getId());
+		Member before = members.findById(reader.getId()).orElseThrow();
+		continueLogin.countDown();
+		MemberPrincipal principal = (MemberPrincipal) loadSocialUser();
+		Member current = members.findById(reader.getId()).orElseThrow();
+		assertThat(current.getEmail()).isEqualTo("after@example.test");
+		assertThat(current.getProfileImageUrl()).isEqualTo("https://example.test/after.png");
+		assertThat(principal.getProfileImageUrl()).isEqualTo(current.getProfileImageUrl());
+		assertThat(current.getStatusCode()).isEqualTo(MemberStatusCode.ACTIVE);
+		assertThat(current.getNickname()).isEqualTo("독자");
+		assertThat(current.getUpdatedAt()).isAfter(before.getUpdatedAt());
+		assertThat(current.getUpdatedBy()).isEqualTo("system");
+		assertThat(current.getCreatedAt()).isEqualTo(before.getCreatedAt());
+		assertThat(current.getCreatedBy()).isEqualTo(before.getCreatedBy());
+	}
 
-    @Test
-    void profileSynchronizationCannotUndoCommittedSuspension() throws Exception {
-        Object outcome = runPaused(this::loadSocialUserOrError, () -> adminMembers.suspend(reader.getId(), null));
-        Member current = members.findById(reader.getId()).orElseThrow();
-        assertThat(current).extracting(Member::getStatusCode, Member::getEmail)
-                .containsExactly(MemberStatusCode.SUSPENDED, "before@example.test");
-        assertThat(outcome).isInstanceOf(OAuth2AuthenticationException.class);
-    }
+	@Test
+	void profileSynchronizationCannotUndoCommittedSuspension() throws Exception {
+		Object outcome = runPaused(this::loadSocialUserOrError, () -> adminMembers.suspend(reader.getId(), null));
+		Member current = members.findById(reader.getId()).orElseThrow();
+		assertThat(current).extracting(Member::getStatusCode, Member::getEmail)
+				.containsExactly(MemberStatusCode.SUSPENDED, "before@example.test");
+		assertThat(outcome).isInstanceOf(OAuth2AuthenticationException.class);
+	}
 
-    @Test
-    void profileSynchronizationCannotRestoreWithdrawnAccountOrErasedEmail() throws Exception {
-        Object outcome = runPaused(this::loadSocialUserOrError, () -> memberService.withdraw(reader.getId()));
-        Member current = members.findById(reader.getId()).orElseThrow();
-        assertThat(current).extracting(Member::getStatusCode, Member::getEmail)
-                .containsExactly(MemberStatusCode.WITHDRAWN, null);
-        assertThat(current.getNickname()).isEqualTo("독자");
-        assertThat(current.getProfileImageUrl()).isNull();
-        assertThat(current.getProviderUserId()).isNull();
-        assertThat(memberStatuses.findById(reader.getId()).orElseThrow().getRestoreProviderUserId())
-                .isEqualTo(reader.getProviderUserId());
-        assertThat(current.getUsername()).isNull();
-        assertThat(current.getPasswordHash()).isNull();
-        assertThat(outcome).isInstanceOf(OAuth2AuthenticationException.class);
-    }
+	@Test
+	void profileSynchronizationCannotRestoreWithdrawnAccountOrErasedEmail() throws Exception {
+		Object outcome = runPaused(this::loadSocialUserOrError, () -> memberService.withdraw(reader.getId()));
+		Member current = members.findById(reader.getId()).orElseThrow();
+		assertThat(current).extracting(Member::getStatusCode, Member::getEmail)
+				.containsExactly(MemberStatusCode.WITHDRAWN, null);
+		assertThat(current.getNickname()).isEqualTo("독자");
+		assertThat(current.getProfileImageUrl()).isNull();
+		assertThat(current.getProviderUserId()).isNull();
+		assertThat(memberStatuses.findById(reader.getId()).orElseThrow().getRestoreProviderUserId())
+				.isEqualTo(reader.getProviderUserId());
+		assertThat(current.getUsername()).isNull();
+		assertThat(current.getPasswordHash()).isNull();
+		assertThat(outcome).isInstanceOf(OAuth2AuthenticationException.class);
+	}
 
-    @Test
-    void nicknameEditCannotRestoreWithdrawnAccountOrErasedEmail() throws Exception {
-        doAnswer(invocation -> pauseAfterRead(members.findById(reader.getId())))
-                .when(pausedMembers).findById(reader.getId());
-        MemberService delayedNicknameService = new MemberService(pausedMembers, memberStatusService, sessions, comments, auditorProvider);
-        Object outcome = runPaused(() -> {
-                    try {
-                        return new TransactionTemplate(transactions).execute(transaction ->
-                                delayedNicknameService.changeNickname(reader.getId(), "새 이름"));
-                    } catch (BlogException rejected) {
-                        return rejected;
-                    }
-                },
-                () -> memberService.withdraw(reader.getId()));
-        Member current = members.findById(reader.getId()).orElseThrow();
-        assertThat(current).extracting(Member::getStatusCode, Member::getEmail)
-                .containsExactly(MemberStatusCode.WITHDRAWN, null);
-        assertThat(current.getNickname()).isEqualTo("독자");
-        assertThat(current.getProfileImageUrl()).isNull();
-        assertThat(current.getProviderUserId()).isNull();
-        assertThat(memberStatuses.findById(reader.getId()).orElseThrow().getRestoreProviderUserId())
-                .isEqualTo(reader.getProviderUserId());
-        assertThat(outcome).isInstanceOf(BlogException.class);
-    }
+	@Test
+	void nicknameEditCannotRestoreWithdrawnAccountOrErasedEmail() throws Exception {
+		doAnswer(invocation -> pauseAfterRead(members.findById(reader.getId())))
+				.when(pausedMembers).findById(reader.getId());
+		MemberService delayedNicknameService = new MemberService(pausedMembers, memberStatusService, sessions, comments, auditorProvider);
+		Object outcome = runPaused(() -> {
+					try {
+						return new TransactionTemplate(transactions).execute(transaction ->
+								delayedNicknameService.changeNickname(reader.getId(), "새 이름"));
+					} catch (BlogException rejected) {
+						return rejected;
+					}
+				},
+				() -> memberService.withdraw(reader.getId()));
+		Member current = members.findById(reader.getId()).orElseThrow();
+		assertThat(current).extracting(Member::getStatusCode, Member::getEmail)
+				.containsExactly(MemberStatusCode.WITHDRAWN, null);
+		assertThat(current.getNickname()).isEqualTo("독자");
+		assertThat(current.getProfileImageUrl()).isNull();
+		assertThat(current.getProviderUserId()).isNull();
+		assertThat(memberStatuses.findById(reader.getId()).orElseThrow().getRestoreProviderUserId())
+				.isEqualTo(reader.getProviderUserId());
+		assertThat(outcome).isInstanceOf(BlogException.class);
+	}
 
-    private Optional<Member> pauseAfterRead(Optional<Member> snapshot) throws InterruptedException {
-        snapshotLoaded.countDown();
-        if (!continueLogin.await(5, TimeUnit.SECONDS)) {
-            throw new AssertionError("조회 후 로그인 재개 신호를 받지 못했습니다.");
-        }
-        return snapshot;
-    }
+	private Optional<Member> pauseAfterRead(Optional<Member> snapshot) throws InterruptedException {
+		snapshotLoaded.countDown();
+		if (!continueLogin.await(5, TimeUnit.SECONDS)) {
+			throw new AssertionError("조회 후 로그인 재개 신호를 받지 못했습니다.");
+		}
+		return snapshot;
+	}
 
-    private <T> T runPaused(Callable<T> login, Runnable concurrentChange) throws Exception {
-        try (var executor = Executors.newSingleThreadExecutor()) {
-            var future = executor.submit(login);
-            try {
-                assertThat(snapshotLoaded.await(5, TimeUnit.SECONDS)).isTrue();
-                concurrentChange.run();
-            } finally {
-                continueLogin.countDown();
-            }
-            return future.get(5, TimeUnit.SECONDS);
-        }
-    }
+	private <T> T runPaused(Callable<T> login, Runnable concurrentChange) throws Exception {
+		try (var executor = Executors.newSingleThreadExecutor()) {
+			var future = executor.submit(login);
+			try {
+				assertThat(snapshotLoaded.await(5, TimeUnit.SECONDS)).isTrue();
+				concurrentChange.run();
+			} finally {
+				continueLogin.countDown();
+			}
+			return future.get(5, TimeUnit.SECONDS);
+		}
+	}
 
-    private Object loadSocialUserOrError() {
-        try {
-            return loadSocialUser();
-        } catch (OAuth2AuthenticationException rejected) {
-            return rejected;
-        }
-    }
+	private Object loadSocialUserOrError() {
+		try {
+			return loadSocialUser();
+		} catch (OAuth2AuthenticationException rejected) {
+			return rejected;
+		}
+	}
 
-    private OAuth2User loadSocialUser() {
-        var providerUser = new DefaultOAuth2User(List.of(new SimpleGrantedAuthority("ROLE_USER")), Map.of(
-                "sub", reader.getProviderUserId(),
-                "name", "제공자 이름",
-                "email", "after@example.test",
-                "picture", "https://example.test/after.png"), "sub");
-        var service = new CustomOAuth2UserService(request -> providerUser,
-                new OAuthAttributeReaders(List.of(new GoogleAttributeReader())), pausedMembers, memberStatuses, nicknames,
-                auditorProvider);
-        var registration = ClientRegistration.withRegistrationId("google")
-                .clientId("test-client").clientSecret("test-secret")
-                .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
-                .redirectUri("http://localhost/login/oauth2/code/google")
-                .authorizationUri("https://example.test/authorize").tokenUri("https://example.test/token")
-                .userInfoUri("https://example.test/user").userNameAttributeName("sub").build();
-        var token = new OAuth2AccessToken(OAuth2AccessToken.TokenType.BEARER, "test-token",
-                Instant.now(), Instant.now().plusSeconds(60));
-        return new TransactionTemplate(transactions).execute(transaction ->
-                service.loadUser(new OAuth2UserRequest(registration, token)));
-    }
+	private OAuth2User loadSocialUser() {
+		var providerUser = new DefaultOAuth2User(List.of(new SimpleGrantedAuthority("ROLE_USER")), Map.of(
+				"sub", reader.getProviderUserId(),
+				"name", "제공자 이름",
+				"email", "after@example.test",
+				"picture", "https://example.test/after.png"), "sub");
+		var service = new CustomOAuth2UserService(request -> providerUser,
+				new OAuthAttributeReaders(List.of(new GoogleAttributeReader())), pausedMembers, memberStatuses, nicknames,
+				auditorProvider);
+		var registration = ClientRegistration.withRegistrationId("google")
+				.clientId("test-client").clientSecret("test-secret")
+				.authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+				.redirectUri("http://localhost/login/oauth2/code/google")
+				.authorizationUri("https://example.test/authorize").tokenUri("https://example.test/token")
+				.userInfoUri("https://example.test/user").userNameAttributeName("sub").build();
+		var token = new OAuth2AccessToken(OAuth2AccessToken.TokenType.BEARER, "test-token",
+				Instant.now(), Instant.now().plusSeconds(60));
+		return new TransactionTemplate(transactions).execute(transaction ->
+				service.loadUser(new OAuth2UserRequest(registration, token)));
+	}
 }

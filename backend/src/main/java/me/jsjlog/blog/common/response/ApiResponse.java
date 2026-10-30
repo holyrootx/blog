@@ -29,30 +29,14 @@ public record ApiResponse<T>(
 	OffsetDateTime timestamp
 ) {
 
-	/**
-	 * 가장 많이 쓰는 성공 응답 생성 메서드입니다.
-	 *
-	 * <p>예: {@code return ApiResponse.ok(profileService.getProfile());}</p>
-	 */
 	public static <T> ApiResponse<T> ok(T data) {
 		return new ApiResponse<>(true, "OK", "요청이 성공했습니다.", data, OffsetDateTime.now());
 	}
 
-	/**
-	 * 기본 성공 메시지를 상황에 맞게 바꿔야 할 때 사용합니다.
-	 *
-	 * <p>예: 저장 API에서 {@code "프로필이 저장되었습니다."}처럼
-	 * 조금 더 구체적인 메시지를 내려주고 싶을 때 사용합니다.</p>
-	 */
 	public static <T> ApiResponse<T> ok(String message, T data) {
 		return new ApiResponse<>(true, "OK", message, data, OffsetDateTime.now());
 	}
 
-	/**
-	 * 응답 데이터가 없는 성공 처리에 사용합니다.
-	 *
-	 * <p>예: 삭제, 로그아웃, 단순 상태 변경처럼 본문 data가 필요 없는 API.</p>
-	 */
 	public static ApiResponse<Void> ok() {
 		return new ApiResponse<>(true, "OK", "요청이 성공했습니다.", null, OffsetDateTime.now());
 	}

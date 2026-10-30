@@ -22,38 +22,38 @@ import me.jsjlog.blog.member.domain.Member;
 @Getter
 @Entity
 @Table(
-        name = "comment_reaction",
-        uniqueConstraints = @UniqueConstraint(
-                name = "uk_comment_reaction_comment_member_type",
-                columnNames = {"comment_id", "member_id", "reaction_type"}
-        ),
-        indexes = {
-                @Index(name = "idx_comment_reaction_member", columnList = "member_id")
-        }
+		name = "comment_reaction",
+		uniqueConstraints = @UniqueConstraint(
+				name = "uk_comment_reaction_comment_member_type",
+				columnNames = {"comment_id", "member_id", "reaction_type"}
+		),
+		indexes = {
+				@Index(name = "idx_comment_reaction_member", columnList = "member_id")
+		}
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class CommentReaction extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "comment_id", nullable = false)
-    private Comment comment;
+	@ManyToOne(fetch = FetchType.LAZY, optional = false)
+	@JoinColumn(name = "comment_id", nullable = false)
+	private Comment comment;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "member_id", nullable = false)
-    private Member member;
+	@ManyToOne(fetch = FetchType.LAZY, optional = false)
+	@JoinColumn(name = "member_id", nullable = false)
+	private Member member;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "reaction_type", nullable = false, length = 20)
-    private CommentReactionType type;
+	@Enumerated(EnumType.STRING)
+	@Column(name = "reaction_type", nullable = false, length = 20)
+	private CommentReactionType type;
 
-    public CommentReaction(Comment comment, Member member, CommentReactionType type) {
-        this.comment = comment;
-        this.member = member;
-        this.type = type;
-    }
+	public CommentReaction(Comment comment, Member member, CommentReactionType type) {
+		this.comment = comment;
+		this.member = member;
+		this.type = type;
+	}
 
 }

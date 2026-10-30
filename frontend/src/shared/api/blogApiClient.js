@@ -3,12 +3,12 @@
  * 화면에서 code 로 분기하거나 message 를 그대로 보여줄 수 있게 한다.
  */
 export class ApiError extends Error {
-  constructor(message, code, status) {
-    super(message);
-    this.name = 'ApiError';
-    this.code = code;
-    this.status = status;
-  }
+	constructor(message, code, status) {
+		super(message);
+		this.name = 'ApiError';
+		this.code = code;
+		this.status = status;
+	}
 }
 
 /**
@@ -20,16 +20,16 @@ let unauthorizedHandler = null;
 let authenticationGeneration = 0;
 
 export function getAuthenticationGeneration() {
-  return authenticationGeneration;
+	return authenticationGeneration;
 }
 
 export function advanceAuthenticationGeneration() {
-  authenticationGeneration += 1;
-  csrf = null;
+	authenticationGeneration += 1;
+	csrf = null;
 }
 
 export function onUnauthorized(handler) {
-  unauthorizedHandler = handler;
+	unauthorizedHandler = handler;
 }
 
 /**
@@ -37,9 +37,9 @@ export function onUnauthorized(handler) {
  * 이걸 구분하지 않으면 비밀번호를 틀릴 때마다 로그인 화면으로 다시 튕긴다.
  */
 function notifyIfSessionExpired(code, generation) {
-  if (code === 'UNAUTHORIZED' && generation === authenticationGeneration) {
-    unauthorizedHandler?.();
-  }
+	if (code === 'UNAUTHORIZED' && generation === authenticationGeneration) {
+		unauthorizedHandler?.();
+	}
 }
 
 /**
@@ -50,30 +50,30 @@ function notifyIfSessionExpired(code, generation) {
  * 한 글자 전으로 되돌아간다.</p>
  */
 export async function getApiData(path, { signal } = {}) {
-  const generation = authenticationGeneration;
-  const response = await fetch(path, {
-    headers: {
-      Accept: 'application/json',
-    },
-    signal,
-  });
+	const generation = authenticationGeneration;
+	const response = await fetch(path, {
+		headers: {
+			Accept: 'application/json',
+		},
+		signal,
+	});
 
-  // 실패 응답에도 본문이 있으므로 먼저 읽는다. 없을 수도 있어 실패는 삼킨다
-  const body = await response.json().catch(() => null);
+	// 실패 응답에도 본문이 있으므로 먼저 읽는다. 없을 수도 있어 실패는 삼킨다
+	const body = await response.json().catch(() => null);
 
-  // 서버가 준 code·message 를 버리지 않는다.
-  // 버리면 화면은 "불러오지 못했습니다"만 알고 왜 실패했는지 알 수 없다
-  if (!response.ok || body?.success === false) {
-    notifyIfSessionExpired(body?.code, generation);
+	// 서버가 준 code·message 를 버리지 않는다.
+	// 버리면 화면은 "불러오지 못했습니다"만 알고 왜 실패했는지 알 수 없다
+	if (!response.ok || body?.success === false) {
+		notifyIfSessionExpired(body?.code, generation);
 
-    throw new ApiError(
-      body?.message ?? `요청에 실패했습니다. (status=${response.status})`,
-      body?.code,
-      response.status,
-    );
-  }
+		throw new ApiError(
+			body?.message ?? `요청에 실패했습니다. (status=${response.status})`,
+			body?.code,
+			response.status,
+		);
+	}
 
-  return body?.data ?? null;
+	return body?.data ?? null;
 }
 
 /**
@@ -85,11 +85,11 @@ export async function getApiData(path, { signal } = {}) {
 let csrf = null;
 
 export function setCsrfToken(next) {
-  csrf = next;
+	csrf = next;
 }
 
 function csrfHeader() {
-  return csrf?.headerName ? { [csrf.headerName]: csrf.token } : {};
+	return csrf?.headerName ? { [csrf.headerName]: csrf.token } : {};
 }
 
 /**
@@ -101,7 +101,7 @@ function csrfHeader() {
 let refreshCsrf = null;
 
 export function onCsrfRejected(refresh) {
-  refreshCsrf = refresh;
+	refreshCsrf = refresh;
 }
 
 /**
@@ -113,7 +113,7 @@ export function onCsrfRejected(refresh) {
  * <p>진짜 권한 부족이었다면 다시 받아도 또 403 이 난다. 요청 한 번 더 나가는 것이 전부다.</p>
  */
 function looksLikeStaleCsrf(status) {
-  return status === 403 && csrf !== null && refreshCsrf !== null;
+	return status === 403 && csrf !== null && refreshCsrf !== null;
 }
 
 /**
@@ -123,42 +123,42 @@ function looksLikeStaleCsrf(status) {
  * 헤더를 만드는데, 우리가 먼저 적으면 그 경계가 빠져 서버가 본문을 못 읽는다.
  */
 export async function sendApiFile(path, formData) {
-  const generation = authenticationGeneration;
-  const response = await fetch(path, {
-    method: 'POST',
-    headers: {
-      Accept: 'application/json',
-      ...csrfHeader(),
-    },
-    body: formData,
-  });
+	const generation = authenticationGeneration;
+	const response = await fetch(path, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			...csrfHeader(),
+		},
+		body: formData,
+	});
 
-  const payload = await response.json().catch(() => null);
+	const payload = await response.json().catch(() => null);
 
-  if (!response.ok || payload?.success === false) {
-    notifyIfSessionExpired(payload?.code, generation);
+	if (!response.ok || payload?.success === false) {
+		notifyIfSessionExpired(payload?.code, generation);
 
-    throw new ApiError(
-      payload?.message ?? `업로드에 실패했습니다. (status=${response.status})`,
-      payload?.code,
-      response.status,
-    );
-  }
+		throw new ApiError(
+			payload?.message ?? `업로드에 실패했습니다. (status=${response.status})`,
+			payload?.code,
+			response.status,
+		);
+	}
 
-  return payload?.data ?? null;
+	return payload?.data ?? null;
 }
 
 function sendOnce(path, method, body, keepalive) {
-  return fetch(path, {
-    method,
-    keepalive,
-    headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-      ...csrfHeader(),
-    },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
+	return fetch(path, {
+		method,
+		keepalive,
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...csrfHeader(),
+		},
+		body: body === undefined ? undefined : JSON.stringify(body),
+	});
 }
 
 /**
@@ -169,30 +169,32 @@ function sendOnce(path, method, body, keepalive) {
  * 다른 앱으로 넘어갈 때 브라우저가 요청을 끊는다.
  */
 export async function sendApiData(path, { method, body, keepalive = false } = {}) {
-  const generation = authenticationGeneration;
-  let response = await sendOnce(path, method, body, keepalive);
+	const generation = authenticationGeneration;
+	let response = await sendOnce(path, method, body, keepalive);
 
-  // 서버가 재시작되거나 로그인·로그아웃으로 토큰이 새로 발급되면 화면이 든 값이 낡는다.
-  // 그대로 두면 새로고침 전까지 저장·등록이 전부 막히므로, 한 번만 다시 받아 재시도한다
-  if (generation === authenticationGeneration && looksLikeStaleCsrf(response.status)) {
-    await refreshCsrf().catch(() => null);
+	// 서버가 재시작되거나 로그인·로그아웃으로 토큰이 새로 발급되면 화면이 든 값이 낡는다.
+	// 그대로 두면 새로고침 전까지 저장·등록이 전부 막히므로, 한 번만 다시 받아 재시도한다
+	if (generation === authenticationGeneration && looksLikeStaleCsrf(response.status)) {
+		await refreshCsrf().catch(() => null);
 
-    // 재인증 중 끝난 이전 요청을 새 계정의 세션으로 재실행하지 않는다.
-    if (generation === authenticationGeneration) response = await sendOnce(path, method, body, keepalive);
-  }
+		// 재인증 중 끝난 이전 요청을 새 계정의 세션으로 재실행하지 않는다.
+		if (generation === authenticationGeneration) {
+			response = await sendOnce(path, method, body, keepalive);
+		}
+	}
 
-  // 에러 응답도 본문이 있으므로 먼저 읽는다. 본문이 없을 수도 있어 실패는 삼킨다
-  const payload = await response.json().catch(() => null);
+	// 에러 응답도 본문이 있으므로 먼저 읽는다. 본문이 없을 수도 있어 실패는 삼킨다
+	const payload = await response.json().catch(() => null);
 
-  if (!response.ok || payload?.success === false) {
-    notifyIfSessionExpired(payload?.code, generation);
+	if (!response.ok || payload?.success === false) {
+		notifyIfSessionExpired(payload?.code, generation);
 
-    throw new ApiError(
-      payload?.message ?? `요청에 실패했습니다. (status=${response.status})`,
-      payload?.code,
-      response.status,
-    );
-  }
+		throw new ApiError(
+			payload?.message ?? `요청에 실패했습니다. (status=${response.status})`,
+			payload?.code,
+			response.status,
+		);
+	}
 
-  return payload?.data ?? null;
+	return payload?.data ?? null;
 }

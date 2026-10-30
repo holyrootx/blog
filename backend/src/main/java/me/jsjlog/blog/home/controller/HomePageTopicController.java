@@ -19,24 +19,24 @@ import java.util.List;
 @RequestMapping("/api/v1")
 public class HomePageTopicController {
 
-    private final HomePageTopicService homePageTopicService;
+	private final HomePageTopicService homePageTopicService;
 
-    @GetMapping("/blog/home/topics")
-    public ApiResponse<List<HomePageTopicResponse>> getHomePageTopics() {
-        List<HomePageTopicResponse> homePageTopicResponseList = homePageTopicService.getHomePageTopics();
-        return ApiResponse.ok(homePageTopicResponseList);
-    }
+	@GetMapping("/blog/home/topics")
+	public ApiResponse<List<HomePageTopicResponse>> getHomePageTopics() {
+		List<HomePageTopicResponse> homePageTopicResponseList = homePageTopicService.getHomePageTopics();
+		return ApiResponse.ok(homePageTopicResponseList);
+	}
 
-    @GetMapping("/blog/home/topic-section")
-    public ApiResponse<HomePageTopicSectionResponse> getHomePageTopicSection() {
-        return ApiResponse.ok(homePageTopicService.getHomePageTopicSection());
-    }
+	@GetMapping("/blog/home/topic-section")
+	public ApiResponse<HomePageTopicSectionResponse> getHomePageTopicSection() {
+		return ApiResponse.ok(homePageTopicService.getHomePageTopicSection());
+	}
 
-    @PutMapping("/admin/blog/home/topics")
-    public ApiResponse<HomePageTopicSettingsResponse> updateHomePageTopics(
-            @RequestBody UpdateHomePageTopicsRequest request
-    ) {
-        return ApiResponse.ok(homePageTopicService.updateHomePageTopics(request));
-    }
+	@PutMapping("/admin/blog/home/topics")
+	public ApiResponse<HomePageTopicSettingsResponse> updateHomePageTopics(
+			@RequestBody UpdateHomePageTopicsRequest request
+	) {
+		return ApiResponse.ok(homePageTopicService.updateHomePageTopics(request));
+	}
 
 }

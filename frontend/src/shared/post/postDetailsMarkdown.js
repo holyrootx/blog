@@ -19,32 +19,32 @@ export const DETAILS_CLOSE = /^<\/details>$/i;
  * @returns {{ title: string, body: string, end: number }} end 는 </details> 줄의 자리
  */
 export function readDetails(lines, start) {
-  const inner = [];
-  let depth = 1;
-  let cursor = start + 1;
+	const inner = [];
+	let depth = 1;
+	let cursor = start + 1;
 
-  for (; cursor < lines.length; cursor += 1) {
-    const trimmed = lines[cursor].trim();
+	for (; cursor < lines.length; cursor += 1) {
+		const trimmed = lines[cursor].trim();
 
-    if (DETAILS_OPEN.test(trimmed)) {
-      depth += 1;
-    } else if (DETAILS_CLOSE.test(trimmed)) {
-      depth -= 1;
+		if (DETAILS_OPEN.test(trimmed)) {
+			depth += 1;
+		} else if (DETAILS_CLOSE.test(trimmed)) {
+			depth -= 1;
 
-      if (depth === 0) {
-        break;
-      }
-    }
+			if (depth === 0) {
+				break;
+			}
+		}
 
-    inner.push(lines[cursor]);
-  }
+		inner.push(lines[cursor]);
+	}
 
-  const first = inner.findIndex((line) => line.trim() !== '');
-  const summary = first >= 0 ? inner[first].trim().match(/^<summary>(.*)<\/summary>$/i) : null;
+	const first = inner.findIndex((line) => line.trim() !== '');
+	const summary = first >= 0 ? inner[first].trim().match(/^<summary>(.*)<\/summary>$/i) : null;
 
-  if (summary) {
-    inner.splice(first, 1);
-  }
+	if (summary) {
+		inner.splice(first, 1);
+	}
 
-  return { title: summary ? summary[1] : '', body: inner.join('\n'), end: cursor };
+	return { title: summary ? summary[1] : '', body: inner.join('\n'), end: cursor };
 }

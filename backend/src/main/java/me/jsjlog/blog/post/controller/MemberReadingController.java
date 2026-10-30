@@ -29,40 +29,40 @@ import java.util.List;
 @RequestMapping("/api/v1/auth/me")
 public class MemberReadingController {
 
-    private final MemberReadingService memberReadingService;
+	private final MemberReadingService memberReadingService;
 
-    @GetMapping("/recent-posts")
-    public ApiResponse<RecentPostListResponse> getRecentPosts(
-            @AuthenticationPrincipal MemberPrincipal principal,
-            @RequestParam(required = false) Integer page,
-            @RequestParam(required = false) Integer size
-    ) {
-        return ApiResponse.ok(memberReadingService.getRecentPosts(principal.getId(), page, size));
-    }
+	@GetMapping("/recent-posts")
+	public ApiResponse<RecentPostListResponse> getRecentPosts(
+			@AuthenticationPrincipal MemberPrincipal principal,
+			@RequestParam(required = false) Integer page,
+			@RequestParam(required = false) Integer size
+	) {
+		return ApiResponse.ok(memberReadingService.getRecentPosts(principal.getId(), page, size));
+	}
 
-    @GetMapping("/viewed-posts")
-    public ApiResponse<List<ViewedPostResponse>> getViewedPosts(
-            @AuthenticationPrincipal MemberPrincipal principal,
-            @RequestParam(required = false) List<Long> postIds
-    ) {
-        return ApiResponse.ok(memberReadingService.getViewedPosts(principal.getId(), postIds));
-    }
+	@GetMapping("/viewed-posts")
+	public ApiResponse<List<ViewedPostResponse>> getViewedPosts(
+			@AuthenticationPrincipal MemberPrincipal principal,
+			@RequestParam(required = false) List<Long> postIds
+	) {
+		return ApiResponse.ok(memberReadingService.getViewedPosts(principal.getId(), postIds));
+	}
 
-    @GetMapping("/reading-positions/{postId}")
-    public ApiResponse<ReadingPositionResponse> getReadingPosition(
-            @AuthenticationPrincipal MemberPrincipal principal,
-            @PathVariable Long postId
-    ) {
-        return ApiResponse.ok(memberReadingService.getReadingPosition(principal.getId(), postId));
-    }
+	@GetMapping("/reading-positions/{postId}")
+	public ApiResponse<ReadingPositionResponse> getReadingPosition(
+			@AuthenticationPrincipal MemberPrincipal principal,
+			@PathVariable Long postId
+	) {
+		return ApiResponse.ok(memberReadingService.getReadingPosition(principal.getId(), postId));
+	}
 
-    @PutMapping("/reading-positions/{postId}")
-    public ApiResponse<Void> saveReadingPosition(
-            @AuthenticationPrincipal MemberPrincipal principal,
-            @PathVariable Long postId,
-            @Valid @RequestBody ReadingPositionRequest request
-    ) {
-        memberReadingService.saveReadingPosition(principal.getId(), postId, request);
-        return ApiResponse.ok();
-    }
+	@PutMapping("/reading-positions/{postId}")
+	public ApiResponse<Void> saveReadingPosition(
+			@AuthenticationPrincipal MemberPrincipal principal,
+			@PathVariable Long postId,
+			@Valid @RequestBody ReadingPositionRequest request
+	) {
+		memberReadingService.saveReadingPosition(principal.getId(), postId, request);
+		return ApiResponse.ok();
+	}
 }

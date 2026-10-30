@@ -15,22 +15,22 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  */
 @ConfigurationProperties(prefix = "blog.upload")
 public record UploadProperties(
-        long maxSizeBytes,
-        List<String> allowedContentTypes,
-        R2 r2
+		long maxSizeBytes,
+		List<String> allowedContentTypes,
+		R2 r2
 ) {
 
-    public record R2(
-            String endpoint,
-            String bucket,
-            String region,
-            String accessKeyId,
-            String secretAccessKey,
-            String publicBaseUrl
-    ) {
-    }
+	public record R2(
+			String endpoint,
+			String bucket,
+			String region,
+			String accessKeyId,
+			String secretAccessKey,
+			String publicBaseUrl
+	) {
+	}
 
-    public boolean allows(String contentType) {
-        return contentType != null && allowedContentTypes.contains(contentType.toLowerCase());
-    }
+	public boolean allows(String contentType) {
+		return contentType != null && allowedContentTypes.contains(contentType.toLowerCase());
+	}
 }

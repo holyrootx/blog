@@ -12,12 +12,14 @@ const CSRF_PATH = '/api/v1/auth/csrf';
  * 관리자 화면만 쓰던 코드인데 회원 가입 화면이 두 번째 사용처가 되어 여기로 옮겼다.
  */
 export async function refreshCsrfToken() {
-  const generation = getAuthenticationGeneration();
-  const token = await getApiData(CSRF_PATH);
+	const generation = getAuthenticationGeneration();
+	const token = await getApiData(CSRF_PATH);
 
-  if (generation === getAuthenticationGeneration()) setCsrfToken(token);
+	if (generation === getAuthenticationGeneration()) {
+		setCsrfToken(token);
+	}
 
-  return token;
+	return token;
 }
 
 // 토큰이 어긋나 403 이 났을 때 클라이언트가 스스로 다시 받아 재시도할 수 있게 심어 둔다.

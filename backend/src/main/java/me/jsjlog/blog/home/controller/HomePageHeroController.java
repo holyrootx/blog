@@ -14,19 +14,19 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/v1")
 public class HomePageHeroController {
 
-    private final HomePageHeroService homePageHeroService;
+	private final HomePageHeroService homePageHeroService;
 
-    @GetMapping("/blog/home/hero")
-    public ApiResponse<HomePageHeroResponse> getHomePageHero(@RequestParam(defaultValue = "1") Long homePageHeroId){
-        HomePageHeroResponse homePageHeroResponse = homePageHeroService.getHomePageHero(homePageHeroId);
-        return ApiResponse.ok(homePageHeroResponse);
-    }
+	@GetMapping("/blog/home/hero")
+	public ApiResponse<HomePageHeroResponse> getHomePageHero(@RequestParam(defaultValue = "1") Long homePageHeroId){
+		HomePageHeroResponse homePageHeroResponse = homePageHeroService.getHomePageHero(homePageHeroId);
+		return ApiResponse.ok(homePageHeroResponse);
+	}
 
-    @PutMapping("/admin/blog/home/hero")
-    public ApiResponse<HomePageHeroResponse> updateHomePageHero(
-            @RequestBody UpdateHomePageHeroRequest request
-    ) {
-        return ApiResponse.ok(homePageHeroService.updateHomePageHero(request));
-    }
+	@PutMapping("/admin/blog/home/hero")
+	public ApiResponse<HomePageHeroResponse> updateHomePageHero(
+			@RequestBody UpdateHomePageHeroRequest request
+	) {
+		return ApiResponse.ok(homePageHeroService.updateHomePageHero(request));
+	}
 
 }

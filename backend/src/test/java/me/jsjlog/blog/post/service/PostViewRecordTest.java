@@ -56,414 +56,414 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 class PostViewRecordTest {
 
-    @DynamicPropertySource
-    static void isolatedDatabase(DynamicPropertyRegistry registry) {
-        MySqlTestDatabase.configure(registry, "post_view_record");
-    }
+	@DynamicPropertySource
+	static void isolatedDatabase(DynamicPropertyRegistry registry) {
+		MySqlTestDatabase.configure(registry, "post_view_record");
+	}
 
-    @Autowired private MockMvc mockMvc;
-    @Autowired private PostService postService;
-    @Autowired private PostViewService postViewService;
-    @Autowired private PostViewRecorder postViewRecorder;
-    @Autowired private MemberReadingService memberReadingService;
-    @Autowired private PostRepository postRepository;
-    @Autowired private PostViewRepository postViewRepository;
-    @Autowired private CategoryRepository categoryRepository;
-    @Autowired private MemberRepository memberRepository;
-    @Autowired private JdbcTemplate jdbcTemplate;
+	@Autowired private MockMvc mockMvc;
+	@Autowired private PostService postService;
+	@Autowired private PostViewService postViewService;
+	@Autowired private PostViewRecorder postViewRecorder;
+	@Autowired private MemberReadingService memberReadingService;
+	@Autowired private PostRepository postRepository;
+	@Autowired private PostViewRepository postViewRepository;
+	@Autowired private CategoryRepository categoryRepository;
+	@Autowired private MemberRepository memberRepository;
+	@Autowired private JdbcTemplate jdbcTemplate;
 
-    private Category category;
+	private Category category;
 
-    @BeforeEach
-    void setUp() {
-        category = categoryRepository.save(new Category("조회 기록 " + System.nanoTime(), 1L));
-    }
+	@BeforeEach
+	void setUp() {
+		category = categoryRepository.save(new Category("조회 기록 " + System.nanoTime(), 1L));
+	}
 
-    @Test
-    @DisplayName("비회원이 같은 세션에서 새로고침해도 기록은 한 줄, 조회수도 1이다")
-    void anonymousRefreshRecordsOnce() throws Exception {
-        Post post = publishedPost();
-        MockHttpSession session = new MockHttpSession();
+	@Test
+	@DisplayName("비회원이 같은 세션에서 새로고침해도 기록은 한 줄, 조회수도 1이다")
+	void anonymousRefreshRecordsOnce() throws Exception {
+		Post post = publishedPost();
+		MockHttpSession session = new MockHttpSession();
 
-        view(post, session, null).andExpect(jsonPath("$.data.views").value(1));
-        view(post, session, null).andExpect(jsonPath("$.data.views").value(1));
+		view(post, session, null).andExpect(jsonPath("$.data.views").value(1));
+		view(post, session, null).andExpect(jsonPath("$.data.views").value(1));
 
-        List<PostView> views = viewsOf(post);
-        assertThat(views).hasSize(1);
-        assertThat(views.getFirst().getMemberId()).isNull();
-    }
+		List<PostView> views = viewsOf(post);
+		assertThat(views).hasSize(1);
+		assertThat(views.getFirst().getMemberId()).isNull();
+	}
 
-    @Test
-    @DisplayName("서로 다른 세션은 각각 기록하고 조회수에도 각각 반영한다")
-    void differentSessionsRecordSeparately() throws Exception {
-        Post post = publishedPost();
+	@Test
+	@DisplayName("서로 다른 세션은 각각 기록하고 조회수에도 각각 반영한다")
+	void differentSessionsRecordSeparately() throws Exception {
+		Post post = publishedPost();
 
-        view(post, new MockHttpSession(), null);
-        view(post, new MockHttpSession(), null).andExpect(jsonPath("$.data.views").value(2));
+		view(post, new MockHttpSession(), null);
+		view(post, new MockHttpSession(), null).andExpect(jsonPath("$.data.views").value(2));
 
-        assertThat(viewsOf(post)).hasSize(2);
-    }
+		assertThat(viewsOf(post)).hasSize(2);
+	}
 
-    @Test
-    @DisplayName("비회원으로 보다가 로그인하면 회원 기록이 따로 생기고, 앞선 비회원 기록은 회원에게 붙지 않는다")
-    void signInAfterAnonymousView() throws Exception {
-        Post post = publishedPost();
-        Member reader = member("로그인독자");
-        MockHttpSession session = new MockHttpSession();
+	@Test
+	@DisplayName("비회원으로 보다가 로그인하면 회원 기록이 따로 생기고, 앞선 비회원 기록은 회원에게 붙지 않는다")
+	void signInAfterAnonymousView() throws Exception {
+		Post post = publishedPost();
+		Member reader = member("로그인독자");
+		MockHttpSession session = new MockHttpSession();
 
-        view(post, session, null);
-        view(post, session, reader).andExpect(jsonPath("$.data.views").value(1));
+		view(post, session, null);
+		view(post, session, reader).andExpect(jsonPath("$.data.views").value(1));
 
-        assertThat(viewsOf(post))
-                .extracting(PostView::getMemberId)
-                .containsExactlyInAnyOrder(null, reader.getId());
-    }
+		assertThat(viewsOf(post))
+				.extracting(PostView::getMemberId)
+				.containsExactlyInAnyOrder(null, reader.getId());
+	}
 
-    @Test
-    @DisplayName("같은 세션에서 계정을 바꾸면 요청마다 그때의 회원으로 기록한다")
-    void accountSwitchInSameSession() throws Exception {
-        Post post = publishedPost();
-        Member first = member("첫계정");
-        Member second = member("둘째계정");
-        MockHttpSession session = new MockHttpSession();
+	@Test
+	@DisplayName("같은 세션에서 계정을 바꾸면 요청마다 그때의 회원으로 기록한다")
+	void accountSwitchInSameSession() throws Exception {
+		Post post = publishedPost();
+		Member first = member("첫계정");
+		Member second = member("둘째계정");
+		MockHttpSession session = new MockHttpSession();
 
-        view(post, session, first);
-        view(post, session, second);
-        view(post, session, first);
+		view(post, session, first);
+		view(post, session, second);
+		view(post, session, first);
 
-        assertThat(viewsOf(post))
-                .extracting(PostView::getMemberId)
-                .containsExactlyInAnyOrder(first.getId(), second.getId());
-    }
+		assertThat(viewsOf(post))
+				.extracting(PostView::getMemberId)
+				.containsExactlyInAnyOrder(first.getId(), second.getId());
+	}
 
-    @Test
-    @DisplayName("브라우저 정보는 저장하지 않고 기기 분류로만 남기며, 검색 봇은 봇으로 남긴다")
-    void deviceTypeFromRequestHeaders() throws Exception {
-        Post post = publishedPost();
+	@Test
+	@DisplayName("브라우저 정보는 저장하지 않고 기기 분류로만 남기며, 검색 봇은 봇으로 남긴다")
+	void deviceTypeFromRequestHeaders() throws Exception {
+		Post post = publishedPost();
 
-        mockMvc.perform(get("/api/v1/blog/posts/{postId}", post.getId()).session(new MockHttpSession())
-                        .header("User-Agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Mobile/15E148"))
-                .andExpect(status().isOk());
-        mockMvc.perform(get("/api/v1/blog/posts/{postId}", post.getId()).session(new MockHttpSession())
-                        .header("User-Agent", "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"))
-                .andExpect(status().isOk());
+		mockMvc.perform(get("/api/v1/blog/posts/{postId}", post.getId()).session(new MockHttpSession())
+						.header("User-Agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Mobile/15E148"))
+				.andExpect(status().isOk());
+		mockMvc.perform(get("/api/v1/blog/posts/{postId}", post.getId()).session(new MockHttpSession())
+						.header("User-Agent", "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"))
+				.andExpect(status().isOk());
 
-        assertThat(viewsOf(post))
-                .extracting(PostView::getDeviceType)
-                .containsExactlyInAnyOrder(DeviceType.MOBILE, DeviceType.BOT);
-    }
+		assertThat(viewsOf(post))
+				.extracting(PostView::getDeviceType)
+				.containsExactlyInAnyOrder(DeviceType.MOBILE, DeviceType.BOT);
+	}
 
-    @Test
-    @DisplayName("공개되지 않은 글과 없는 글은 기록하지 않는다")
-    void unreadablePostIsNotRecorded() throws Exception {
-        Post draft = postRepository.saveAndFlush(new Post("공개 전", "요약", "본문", category, null, null));
-        long before = postViewRepository.count();
+	@Test
+	@DisplayName("공개되지 않은 글과 없는 글은 기록하지 않는다")
+	void unreadablePostIsNotRecorded() throws Exception {
+		Post draft = postRepository.saveAndFlush(new Post("공개 전", "요약", "본문", category, null, null));
+		long before = postViewRepository.count();
 
-        mockMvc.perform(get("/api/v1/blog/posts/{postId}", draft.getId()).session(new MockHttpSession()))
-                .andExpect(status().isNotFound());
-        mockMvc.perform(get("/api/v1/blog/posts/{postId}", Long.MAX_VALUE).session(new MockHttpSession()))
-                .andExpect(status().isNotFound());
+		mockMvc.perform(get("/api/v1/blog/posts/{postId}", draft.getId()).session(new MockHttpSession()))
+				.andExpect(status().isNotFound());
+		mockMvc.perform(get("/api/v1/blog/posts/{postId}", Long.MAX_VALUE).session(new MockHttpSession()))
+				.andExpect(status().isNotFound());
 
-        assertThat(postViewRepository.count()).isEqualTo(before);
-    }
+		assertThat(postViewRepository.count()).isEqualTo(before);
+	}
 
-    @Test
-    @DisplayName("같은 세션의 동시 요청은 기록 한 줄, 조회수 1만 남긴다")
-    void concurrentSameSessionRecordsOnce() throws Exception {
-        Post post = publishedPost();
-        MockHttpSession session = new MockHttpSession();
+	@Test
+	@DisplayName("같은 세션의 동시 요청은 기록 한 줄, 조회수 1만 남긴다")
+	void concurrentSameSessionRecordsOnce() throws Exception {
+		Post post = publishedPost();
+		MockHttpSession session = new MockHttpSession();
 
-        runConcurrently(8, index -> postViewService.getPostDetail(post.getId(), session, null, DeviceType.UNKNOWN));
+		runConcurrently(8, index -> postViewService.getPostDetail(post.getId(), session, null, DeviceType.UNKNOWN));
 
-        assertThat(viewsOf(post)).hasSize(1);
-        assertThat(postRepository.findById(post.getId()).orElseThrow().getViews()).isEqualTo(1L);
-    }
+		assertThat(viewsOf(post)).hasSize(1);
+		assertThat(postRepository.findById(post.getId()).orElseThrow().getViews()).isEqualTo(1L);
+	}
 
-    @Test
-    @DisplayName("다른 세션의 동시 요청은 모두 기록하고 조회수도 모두 반영한다")
-    void concurrentDifferentSessionsAllRecorded() throws Exception {
-        Post post = publishedPost();
+	@Test
+	@DisplayName("다른 세션의 동시 요청은 모두 기록하고 조회수도 모두 반영한다")
+	void concurrentDifferentSessionsAllRecorded() throws Exception {
+		Post post = publishedPost();
 
-        runConcurrently(8, index -> postViewService.getPostDetail(post.getId(), new MockHttpSession(), null, DeviceType.UNKNOWN));
+		runConcurrently(8, index -> postViewService.getPostDetail(post.getId(), new MockHttpSession(), null, DeviceType.UNKNOWN));
 
-        assertThat(viewsOf(post)).hasSize(8);
-        assertThat(postRepository.findById(post.getId()).orElseThrow().getViews()).isEqualTo(8L);
-    }
+		assertThat(viewsOf(post)).hasSize(8);
+		assertThat(postRepository.findById(post.getId()).orElseThrow().getViews()).isEqualTo(8L);
+	}
 
-    @Test
-    @DisplayName("기록 저장이 실패해도 글은 열리고, 다음 요청에서 다시 기록을 시도한다")
-    void recordingFailureDoesNotBlockPost() throws Exception {
-        Post post = publishedPost();
-        MockHttpSession session = new MockHttpSession();
-        jdbcTemplate.execute("alter table post_view add constraint post_view_test_reject"
-                + " check (post_id <> " + post.getId() + ")");
+	@Test
+	@DisplayName("기록 저장이 실패해도 글은 열리고, 다음 요청에서 다시 기록을 시도한다")
+	void recordingFailureDoesNotBlockPost() throws Exception {
+		Post post = publishedPost();
+		MockHttpSession session = new MockHttpSession();
+		jdbcTemplate.execute("alter table post_view add constraint post_view_test_reject"
+				+ " check (post_id <> " + post.getId() + ")");
 
-        try {
-            view(post, session, null).andExpect(jsonPath("$.data.title").value(post.getTitle()));
-            assertThat(viewsOf(post)).isEmpty();
-        } finally {
-            jdbcTemplate.execute("alter table post_view drop constraint post_view_test_reject");
-        }
+		try {
+			view(post, session, null).andExpect(jsonPath("$.data.title").value(post.getTitle()));
+			assertThat(viewsOf(post)).isEmpty();
+		} finally {
+			jdbcTemplate.execute("alter table post_view drop constraint post_view_test_reject");
+		}
 
-        view(post, session, null).andExpect(jsonPath("$.data.views").value(1));
-        assertThat(viewsOf(post)).hasSize(1);
-    }
+		view(post, session, null).andExpect(jsonPath("$.data.views").value(1));
+		assertThat(viewsOf(post)).hasSize(1);
+	}
 
-    @Test
-    @DisplayName("같은 세션이라도 30분이 지나면 다시 기록한다. 조회수는 그대로 세션당 한 번이다")
-    void recordsAgainAfterWindow() {
-        Post post = publishedPost();
-        MockHttpSession session = new MockHttpSession();
-        MovableClock clock = new MovableClock(Instant.parse("2026-10-17T03:00:00Z"));
-        PostViewService service = new PostViewService(postService, postViewRecorder, clock);
+	@Test
+	@DisplayName("같은 세션이라도 30분이 지나면 다시 기록한다. 조회수는 그대로 세션당 한 번이다")
+	void recordsAgainAfterWindow() {
+		Post post = publishedPost();
+		MockHttpSession session = new MockHttpSession();
+		MovableClock clock = new MovableClock(Instant.parse("2026-10-17T03:00:00Z"));
+		PostViewService service = new PostViewService(postService, postViewRecorder, clock);
 
-        service.getPostDetail(post.getId(), session, null, DeviceType.UNKNOWN);
-        clock.advance(Duration.ofMinutes(10));
-        service.getPostDetail(post.getId(), session, null, DeviceType.UNKNOWN);
-        assertThat(viewsOf(post)).hasSize(1);
+		service.getPostDetail(post.getId(), session, null, DeviceType.UNKNOWN);
+		clock.advance(Duration.ofMinutes(10));
+		service.getPostDetail(post.getId(), session, null, DeviceType.UNKNOWN);
+		assertThat(viewsOf(post)).hasSize(1);
 
-        clock.advance(Duration.ofMinutes(21));
-        service.getPostDetail(post.getId(), session, null, DeviceType.UNKNOWN);
+		clock.advance(Duration.ofMinutes(21));
+		service.getPostDetail(post.getId(), session, null, DeviceType.UNKNOWN);
 
-        assertThat(viewsOf(post))
-                .extracting(PostView::getViewedAt)
-                .containsExactlyInAnyOrder(
-                        LocalDateTime.of(2026, 10, 17, 12, 0),
-                        LocalDateTime.of(2026, 10, 17, 12, 31)
-                );
-        assertThat(postRepository.findById(post.getId()).orElseThrow().getViews()).isEqualTo(1L);
-    }
+		assertThat(viewsOf(post))
+				.extracting(PostView::getViewedAt)
+				.containsExactlyInAnyOrder(
+						LocalDateTime.of(2026, 10, 17, 12, 0),
+						LocalDateTime.of(2026, 10, 17, 12, 31)
+				);
+		assertThat(postRepository.findById(post.getId()).orElseThrow().getViews()).isEqualTo(1L);
+	}
 
-    @Test
-    @DisplayName("30분 안에 다시 연 글은 최근 본 글 맨 앞으로 옮기고 실제 열람 시각을 표시한다")
-    void memberRevisitUpdatesReadingTimeAndOrderWithoutAnotherVisit() {
-        Member reader = member("재방문독자");
-        Post first = publishedPost();
-        Post second = publishedPost();
-        MockHttpSession session = new MockHttpSession();
-        MovableClock clock = new MovableClock(Instant.parse("2026-10-17T03:00:00Z"));
-        PostViewService service = new PostViewService(postService, postViewRecorder, clock);
+	@Test
+	@DisplayName("30분 안에 다시 연 글은 최근 본 글 맨 앞으로 옮기고 실제 열람 시각을 표시한다")
+	void memberRevisitUpdatesReadingTimeAndOrderWithoutAnotherVisit() {
+		Member reader = member("재방문독자");
+		Post first = publishedPost();
+		Post second = publishedPost();
+		MockHttpSession session = new MockHttpSession();
+		MovableClock clock = new MovableClock(Instant.parse("2026-10-17T03:00:00Z"));
+		PostViewService service = new PostViewService(postService, postViewRecorder, clock);
 
-        service.getPostDetail(first.getId(), session, reader.getId(), DeviceType.DESKTOP);
-        clock.advance(Duration.ofMinutes(5));
-        service.getPostDetail(second.getId(), session, reader.getId(), DeviceType.MOBILE);
-        clock.advance(Duration.ofMinutes(5));
-        service.getPostDetail(first.getId(), session, reader.getId(), DeviceType.MOBILE);
+		service.getPostDetail(first.getId(), session, reader.getId(), DeviceType.DESKTOP);
+		clock.advance(Duration.ofMinutes(5));
+		service.getPostDetail(second.getId(), session, reader.getId(), DeviceType.MOBILE);
+		clock.advance(Duration.ofMinutes(5));
+		service.getPostDetail(first.getId(), session, reader.getId(), DeviceType.MOBILE);
 
-        var recent = memberReadingService.getRecentPosts(reader.getId(), 0, 1);
-        assertThat(recent.totalElements()).isEqualTo(2);
-        assertThat(recent.items()).singleElement().satisfies(item -> {
-            assertThat(item.postId()).isEqualTo(first.getId());
-            assertThat(item.lastViewedAt().toLocalDateTime()).isEqualTo(LocalDateTime.of(2026, 10, 17, 12, 10));
-        });
-        assertThat(memberReadingService.getRecentPosts(reader.getId(), 1, 1).items())
-                .singleElement().satisfies(item -> assertThat(item.postId()).isEqualTo(second.getId()));
-        assertThat(memberReadingService.getViewedPosts(reader.getId(), List.of(first.getId())))
-                .singleElement().satisfies(item -> assertThat(item.lastViewedAt().toLocalDateTime())
-                        .isEqualTo(LocalDateTime.of(2026, 10, 17, 12, 10)));
-        assertThat(viewsOf(first)).singleElement().satisfies(view -> {
-            assertThat(view.getViewedAt()).isEqualTo(LocalDateTime.of(2026, 10, 17, 12, 0));
-            assertThat(view.getDeviceType()).isEqualTo(DeviceType.DESKTOP);
-        });
-        assertThat(viewsOf(second)).hasSize(1);
-        assertThat(postRepository.findById(first.getId()).orElseThrow().getViews()).isEqualTo(1L);
-    }
+		var recent = memberReadingService.getRecentPosts(reader.getId(), 0, 1);
+		assertThat(recent.totalElements()).isEqualTo(2);
+		assertThat(recent.items()).singleElement().satisfies(item -> {
+			assertThat(item.postId()).isEqualTo(first.getId());
+			assertThat(item.lastViewedAt().toLocalDateTime()).isEqualTo(LocalDateTime.of(2026, 10, 17, 12, 10));
+		});
+		assertThat(memberReadingService.getRecentPosts(reader.getId(), 1, 1).items())
+				.singleElement().satisfies(item -> assertThat(item.postId()).isEqualTo(second.getId()));
+		assertThat(memberReadingService.getViewedPosts(reader.getId(), List.of(first.getId())))
+				.singleElement().satisfies(item -> assertThat(item.lastViewedAt().toLocalDateTime())
+						.isEqualTo(LocalDateTime.of(2026, 10, 17, 12, 10)));
+		assertThat(viewsOf(first)).singleElement().satisfies(view -> {
+			assertThat(view.getViewedAt()).isEqualTo(LocalDateTime.of(2026, 10, 17, 12, 0));
+			assertThat(view.getDeviceType()).isEqualTo(DeviceType.DESKTOP);
+		});
+		assertThat(viewsOf(second)).hasSize(1);
+		assertThat(postRepository.findById(first.getId()).orElseThrow().getViews()).isEqualTo(1L);
+	}
 
-    @Test
-    @DisplayName("마지막 열람 시각 갱신은 30분 집계 창을 연장하지 않고 경계 뒤에도 계속 갱신된다")
-    void memberRevisitDoesNotExtendVisitWindow() {
-        Member reader = member("경계독자");
-        Post post = publishedPost();
-        MockHttpSession session = new MockHttpSession();
-        MovableClock clock = new MovableClock(Instant.parse("2026-10-17T03:00:00Z"));
-        PostViewService service = new PostViewService(postService, postViewRecorder, clock);
+	@Test
+	@DisplayName("마지막 열람 시각 갱신은 30분 집계 창을 연장하지 않고 경계 뒤에도 계속 갱신된다")
+	void memberRevisitDoesNotExtendVisitWindow() {
+		Member reader = member("경계독자");
+		Post post = publishedPost();
+		MockHttpSession session = new MockHttpSession();
+		MovableClock clock = new MovableClock(Instant.parse("2026-10-17T03:00:00Z"));
+		PostViewService service = new PostViewService(postService, postViewRecorder, clock);
 
-        service.getPostDetail(post.getId(), session, reader.getId(), DeviceType.UNKNOWN);
-        clock.advance(Duration.ofMinutes(30).minusSeconds(1));
-        service.getPostDetail(post.getId(), session, reader.getId(), DeviceType.UNKNOWN);
-        assertThat(viewsOf(post)).hasSize(1);
-        assertThat(memberReadingService.getViewedPosts(reader.getId(), List.of(post.getId())))
-                .singleElement().satisfies(item -> assertThat(item.lastViewedAt().toLocalDateTime())
-                        .isEqualTo(LocalDateTime.of(2026, 10, 17, 12, 29, 59)));
+		service.getPostDetail(post.getId(), session, reader.getId(), DeviceType.UNKNOWN);
+		clock.advance(Duration.ofMinutes(30).minusSeconds(1));
+		service.getPostDetail(post.getId(), session, reader.getId(), DeviceType.UNKNOWN);
+		assertThat(viewsOf(post)).hasSize(1);
+		assertThat(memberReadingService.getViewedPosts(reader.getId(), List.of(post.getId())))
+				.singleElement().satisfies(item -> assertThat(item.lastViewedAt().toLocalDateTime())
+						.isEqualTo(LocalDateTime.of(2026, 10, 17, 12, 29, 59)));
 
-        clock.advance(Duration.ofSeconds(1));
-        service.getPostDetail(post.getId(), session, reader.getId(), DeviceType.UNKNOWN);
-        clock.advance(Duration.ofSeconds(1));
-        service.getPostDetail(post.getId(), session, reader.getId(), DeviceType.UNKNOWN);
+		clock.advance(Duration.ofSeconds(1));
+		service.getPostDetail(post.getId(), session, reader.getId(), DeviceType.UNKNOWN);
+		clock.advance(Duration.ofSeconds(1));
+		service.getPostDetail(post.getId(), session, reader.getId(), DeviceType.UNKNOWN);
 
-        assertThat(viewsOf(post)).extracting(PostView::getViewedAt).containsExactlyInAnyOrder(
-                LocalDateTime.of(2026, 10, 17, 12, 0), LocalDateTime.of(2026, 10, 17, 12, 30));
-        assertThat(memberReadingService.getViewedPosts(reader.getId(), List.of(post.getId())))
-                .singleElement().satisfies(item -> assertThat(item.lastViewedAt().toLocalDateTime())
-                        .isEqualTo(LocalDateTime.of(2026, 10, 17, 12, 30, 1)));
-        assertThat(postRepository.findById(post.getId()).orElseThrow().getViews()).isEqualTo(1L);
-    }
+		assertThat(viewsOf(post)).extracting(PostView::getViewedAt).containsExactlyInAnyOrder(
+				LocalDateTime.of(2026, 10, 17, 12, 0), LocalDateTime.of(2026, 10, 17, 12, 30));
+		assertThat(memberReadingService.getViewedPosts(reader.getId(), List.of(post.getId())))
+				.singleElement().satisfies(item -> assertThat(item.lastViewedAt().toLocalDateTime())
+						.isEqualTo(LocalDateTime.of(2026, 10, 17, 12, 30, 1)));
+		assertThat(postRepository.findById(post.getId()).orElseThrow().getViews()).isEqualTo(1L);
+	}
 
-    @Test
-    @DisplayName("계정 전환과 로그아웃 뒤 재방문은 그때 로그인한 회원의 마지막 열람만 갱신한다")
-    void lastViewedAtFollowsCurrentMember() {
-        Member first = member("첫독자");
-        Member second = member("다음독자");
-        Post post = publishedPost();
-        MockHttpSession session = new MockHttpSession();
-        MovableClock clock = new MovableClock(Instant.parse("2026-10-17T03:00:00Z"));
-        PostViewService service = new PostViewService(postService, postViewRecorder, clock);
+	@Test
+	@DisplayName("계정 전환과 로그아웃 뒤 재방문은 그때 로그인한 회원의 마지막 열람만 갱신한다")
+	void lastViewedAtFollowsCurrentMember() {
+		Member first = member("첫독자");
+		Member second = member("다음독자");
+		Post post = publishedPost();
+		MockHttpSession session = new MockHttpSession();
+		MovableClock clock = new MovableClock(Instant.parse("2026-10-17T03:00:00Z"));
+		PostViewService service = new PostViewService(postService, postViewRecorder, clock);
 
-        service.getPostDetail(post.getId(), session, first.getId(), DeviceType.UNKNOWN);
-        clock.advance(Duration.ofMinutes(2));
-        service.getPostDetail(post.getId(), session, second.getId(), DeviceType.UNKNOWN);
-        clock.advance(Duration.ofMinutes(2));
-        service.getPostDetail(post.getId(), session, first.getId(), DeviceType.UNKNOWN);
-        clock.advance(Duration.ofMinutes(2));
-        service.getPostDetail(post.getId(), session, null, DeviceType.UNKNOWN);
-        clock.advance(Duration.ofMinutes(2));
-        service.getPostDetail(post.getId(), session, null, DeviceType.UNKNOWN);
+		service.getPostDetail(post.getId(), session, first.getId(), DeviceType.UNKNOWN);
+		clock.advance(Duration.ofMinutes(2));
+		service.getPostDetail(post.getId(), session, second.getId(), DeviceType.UNKNOWN);
+		clock.advance(Duration.ofMinutes(2));
+		service.getPostDetail(post.getId(), session, first.getId(), DeviceType.UNKNOWN);
+		clock.advance(Duration.ofMinutes(2));
+		service.getPostDetail(post.getId(), session, null, DeviceType.UNKNOWN);
+		clock.advance(Duration.ofMinutes(2));
+		service.getPostDetail(post.getId(), session, null, DeviceType.UNKNOWN);
 
-        assertThat(memberReadingService.getViewedPosts(first.getId(), List.of(post.getId())))
-                .singleElement().satisfies(item -> assertThat(item.lastViewedAt().toLocalDateTime())
-                        .isEqualTo(LocalDateTime.of(2026, 10, 17, 12, 4)));
-        assertThat(memberReadingService.getViewedPosts(second.getId(), List.of(post.getId())))
-                .singleElement().satisfies(item -> assertThat(item.lastViewedAt().toLocalDateTime())
-                        .isEqualTo(LocalDateTime.of(2026, 10, 17, 12, 2)));
-        assertThat(viewsOf(post)).hasSize(3);
-        assertThat(viewsOf(post).stream().filter(view -> view.getMemberId() == null))
-                .singleElement().satisfies(view -> assertThat(view.getLastViewedAt()).isNull());
-        assertThat(postRepository.findById(post.getId()).orElseThrow().getViews()).isEqualTo(1L);
-    }
+		assertThat(memberReadingService.getViewedPosts(first.getId(), List.of(post.getId())))
+				.singleElement().satisfies(item -> assertThat(item.lastViewedAt().toLocalDateTime())
+						.isEqualTo(LocalDateTime.of(2026, 10, 17, 12, 4)));
+		assertThat(memberReadingService.getViewedPosts(second.getId(), List.of(post.getId())))
+				.singleElement().satisfies(item -> assertThat(item.lastViewedAt().toLocalDateTime())
+						.isEqualTo(LocalDateTime.of(2026, 10, 17, 12, 2)));
+		assertThat(viewsOf(post)).hasSize(3);
+		assertThat(viewsOf(post).stream().filter(view -> view.getMemberId() == null))
+				.singleElement().satisfies(view -> assertThat(view.getLastViewedAt()).isNull());
+		assertThat(postRepository.findById(post.getId()).orElseThrow().getViews()).isEqualTo(1L);
+	}
 
-    @Test
-    @DisplayName("여러 창의 갱신이 뒤섞이고 늦은 요청이 끝나도 마지막 열람 시각은 뒤로 가지 않는다")
-    void concurrentAndDelayedUpdatesKeepLatestTime() throws Exception {
-        Member reader = member("여러창독자");
-        Post post = publishedPost();
-        LocalDateTime initial = LocalDateTime.of(2026, 10, 17, 12, 0);
-        postViewRecorder.record(post.getId(), reader.getId(), initial, DeviceType.DESKTOP);
+	@Test
+	@DisplayName("여러 창의 갱신이 뒤섞이고 늦은 요청이 끝나도 마지막 열람 시각은 뒤로 가지 않는다")
+	void concurrentAndDelayedUpdatesKeepLatestTime() throws Exception {
+		Member reader = member("여러창독자");
+		Post post = publishedPost();
+		LocalDateTime initial = LocalDateTime.of(2026, 10, 17, 12, 0);
+		postViewRecorder.record(post.getId(), reader.getId(), initial, DeviceType.DESKTOP);
 
-        runConcurrently(8, index -> postViewRecorder.updateLastViewedAt(
-                post.getId(), reader.getId(), initial.plusMinutes(index + 1)));
-        postViewRecorder.updateLastViewedAt(post.getId(), reader.getId(), initial.plusMinutes(2));
+		runConcurrently(8, index -> postViewRecorder.updateLastViewedAt(
+				post.getId(), reader.getId(), initial.plusMinutes(index + 1)));
+		postViewRecorder.updateLastViewedAt(post.getId(), reader.getId(), initial.plusMinutes(2));
 
-        assertThat(viewsOf(post)).singleElement().satisfies(view -> {
-            assertThat(view.getViewedAt()).isEqualTo(initial);
-            assertThat(view.getLastViewedAt()).isEqualTo(initial.plusMinutes(8));
-        });
-        assertThat(memberReadingService.getViewedPosts(reader.getId(), List.of(post.getId())))
-                .singleElement().satisfies(item -> assertThat(item.lastViewedAt().toLocalDateTime())
-                        .isEqualTo(initial.plusMinutes(8)));
-    }
+		assertThat(viewsOf(post)).singleElement().satisfies(view -> {
+			assertThat(view.getViewedAt()).isEqualTo(initial);
+			assertThat(view.getLastViewedAt()).isEqualTo(initial.plusMinutes(8));
+		});
+		assertThat(memberReadingService.getViewedPosts(reader.getId(), List.of(post.getId())))
+				.singleElement().satisfies(item -> assertThat(item.lastViewedAt().toLocalDateTime())
+						.isEqualTo(initial.plusMinutes(8)));
+	}
 
-    @Test
-    @DisplayName("마지막 열람 갱신이 실패해도 글은 열리고 다음 재방문에서 다시 갱신한다")
-    void lastViewedUpdateFailureDoesNotBlockPostOrRetry() {
-        Member reader = member("갱신재시도독자");
-        Post post = publishedPost();
-        MockHttpSession session = new MockHttpSession();
-        MovableClock clock = new MovableClock(Instant.parse("2026-10-17T03:00:00Z"));
-        PostViewService service = new PostViewService(postService, postViewRecorder, clock);
-        service.getPostDetail(post.getId(), session, reader.getId(), DeviceType.UNKNOWN);
-        jdbcTemplate.execute("alter table post_view add constraint post_view_last_read_test_reject"
-                + " check (post_id <> " + post.getId() + " or last_viewed_at = viewed_at)");
+	@Test
+	@DisplayName("마지막 열람 갱신이 실패해도 글은 열리고 다음 재방문에서 다시 갱신한다")
+	void lastViewedUpdateFailureDoesNotBlockPostOrRetry() {
+		Member reader = member("갱신재시도독자");
+		Post post = publishedPost();
+		MockHttpSession session = new MockHttpSession();
+		MovableClock clock = new MovableClock(Instant.parse("2026-10-17T03:00:00Z"));
+		PostViewService service = new PostViewService(postService, postViewRecorder, clock);
+		service.getPostDetail(post.getId(), session, reader.getId(), DeviceType.UNKNOWN);
+		jdbcTemplate.execute("alter table post_view add constraint post_view_last_read_test_reject"
+				+ " check (post_id <> " + post.getId() + " or last_viewed_at = viewed_at)");
 
-        try {
-            clock.advance(Duration.ofMinutes(1));
-            assertThat(service.getPostDetail(post.getId(), session, reader.getId(), DeviceType.UNKNOWN).title())
-                    .isEqualTo(post.getTitle());
-            assertThat(viewsOf(post)).singleElement().satisfies(view -> assertThat(view.getLastViewedAt())
-                    .isEqualTo(LocalDateTime.of(2026, 10, 17, 12, 0)));
-        } finally {
-            jdbcTemplate.execute("alter table post_view drop constraint post_view_last_read_test_reject");
-        }
+		try {
+			clock.advance(Duration.ofMinutes(1));
+			assertThat(service.getPostDetail(post.getId(), session, reader.getId(), DeviceType.UNKNOWN).title())
+					.isEqualTo(post.getTitle());
+			assertThat(viewsOf(post)).singleElement().satisfies(view -> assertThat(view.getLastViewedAt())
+					.isEqualTo(LocalDateTime.of(2026, 10, 17, 12, 0)));
+		} finally {
+			jdbcTemplate.execute("alter table post_view drop constraint post_view_last_read_test_reject");
+		}
 
-        clock.advance(Duration.ofMinutes(1));
-        service.getPostDetail(post.getId(), session, reader.getId(), DeviceType.UNKNOWN);
-        assertThat(viewsOf(post)).singleElement().satisfies(view -> assertThat(view.getLastViewedAt())
-                .isEqualTo(LocalDateTime.of(2026, 10, 17, 12, 2)));
-        assertThat(postRepository.findById(post.getId()).orElseThrow().getViews()).isEqualTo(1L);
-    }
+		clock.advance(Duration.ofMinutes(1));
+		service.getPostDetail(post.getId(), session, reader.getId(), DeviceType.UNKNOWN);
+		assertThat(viewsOf(post)).singleElement().satisfies(view -> assertThat(view.getLastViewedAt())
+				.isEqualTo(LocalDateTime.of(2026, 10, 17, 12, 2)));
+		assertThat(postRepository.findById(post.getId()).orElseThrow().getViews()).isEqualTo(1L);
+	}
 
-    private Post publishedPost() {
-        Post post = new Post("기록할 글 " + System.nanoTime(), "요약", "본문", category, null, null);
-        post.publish(LocalDateTime.now().minusMinutes(1));
-        return postRepository.saveAndFlush(post);
-    }
+	private Post publishedPost() {
+		Post post = new Post("기록할 글 " + System.nanoTime(), "요약", "본문", category, null, null);
+		post.publish(LocalDateTime.now().minusMinutes(1));
+		return postRepository.saveAndFlush(post);
+	}
 
-    private Member member(String nickname) {
-        return memberRepository.save(Member.ofSocial(
-                AuthProvider.KAKAO, "view-" + System.nanoTime(), nickname, null, null));
-    }
+	private Member member(String nickname) {
+		return memberRepository.save(Member.ofSocial(
+				AuthProvider.KAKAO, "view-" + System.nanoTime(), nickname, null, null));
+	}
 
-    private List<PostView> viewsOf(Post post) {
-        return postViewRepository.findAll().stream()
-                .filter(view -> view.getPostId().equals(post.getId()))
-                .toList();
-    }
+	private List<PostView> viewsOf(Post post) {
+		return postViewRepository.findAll().stream()
+				.filter(view -> view.getPostId().equals(post.getId()))
+				.toList();
+	}
 
-    private org.springframework.test.web.servlet.ResultActions view(Post post, MockHttpSession session, Member member)
-            throws Exception {
-        MockHttpServletRequestBuilder request = get("/api/v1/blog/posts/{postId}", post.getId()).session(session);
-        if (member != null) {
-            request.with(authentication(login(member)));
-        }
-        return mockMvc.perform(request).andExpect(status().isOk());
-    }
+	private org.springframework.test.web.servlet.ResultActions view(Post post, MockHttpSession session, Member member)
+			throws Exception {
+		MockHttpServletRequestBuilder request = get("/api/v1/blog/posts/{postId}", post.getId()).session(session);
+		if (member != null) {
+			request.with(authentication(login(member)));
+		}
+		return mockMvc.perform(request).andExpect(status().isOk());
+	}
 
-    private static Authentication login(Member member) {
-        MemberPrincipal principal = MemberPrincipal.ofSocial(member);
-        return new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
-    }
+	private static Authentication login(Member member) {
+		MemberPrincipal principal = MemberPrincipal.ofSocial(member);
+		return new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
+	}
 
-    private static void runConcurrently(int count, ThrowingTask task) throws Exception {
-        ExecutorService executor = Executors.newFixedThreadPool(count);
-        CountDownLatch start = new CountDownLatch(1);
-        List<Future<?>> futures = new ArrayList<>();
-        try {
-            for (int index = 0; index < count; index++) {
-                int current = index;
-                futures.add(executor.submit(() -> {
-                    start.await();
-                    task.run(current);
-                    return null;
-                }));
-            }
-            start.countDown();
-            for (Future<?> future : futures) {
-                future.get(30, TimeUnit.SECONDS);
-            }
-        } finally {
-            executor.shutdownNow();
-        }
-    }
+	private static void runConcurrently(int count, ThrowingTask task) throws Exception {
+		ExecutorService executor = Executors.newFixedThreadPool(count);
+		CountDownLatch start = new CountDownLatch(1);
+		List<Future<?>> futures = new ArrayList<>();
+		try {
+			for (int index = 0; index < count; index++) {
+				int current = index;
+				futures.add(executor.submit(() -> {
+					start.await();
+					task.run(current);
+					return null;
+				}));
+			}
+			start.countDown();
+			for (Future<?> future : futures) {
+				future.get(30, TimeUnit.SECONDS);
+			}
+		} finally {
+			executor.shutdownNow();
+		}
+	}
 
-    @FunctionalInterface
-    private interface ThrowingTask {
-        void run(int index) throws Exception;
-    }
+	@FunctionalInterface
+	private interface ThrowingTask {
+		void run(int index) throws Exception;
+	}
 
-    /** 서울 시간대로 고정한 시계. 저장된 시각을 사람이 읽는 값으로 바로 비교하려는 것이다 */
-    private static final class MovableClock extends Clock {
-        private Instant now;
+	/** 서울 시간대로 고정한 시계. 저장된 시각을 사람이 읽는 값으로 바로 비교하려는 것이다 */
+	private static final class MovableClock extends Clock {
+		private Instant now;
 
-        private MovableClock(Instant now) {
-            this.now = now;
-        }
+		private MovableClock(Instant now) {
+			this.now = now;
+		}
 
-        void advance(Duration duration) {
-            now = now.plus(duration);
-        }
+		void advance(Duration duration) {
+			now = now.plus(duration);
+		}
 
-        @Override
-        public ZoneId getZone() {
-            return ZoneId.of("Asia/Seoul");
-        }
+		@Override
+		public ZoneId getZone() {
+			return ZoneId.of("Asia/Seoul");
+		}
 
-        @Override
-        public Clock withZone(ZoneId zone) {
-            return this;
-        }
+		@Override
+		public Clock withZone(ZoneId zone) {
+			return this;
+		}
 
-        @Override
-        public Instant instant() {
-            return now;
-        }
-    }
+		@Override
+		public Instant instant() {
+			return now;
+		}
+	}
 }

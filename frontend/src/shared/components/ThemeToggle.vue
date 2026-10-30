@@ -11,66 +11,68 @@ import { canChooseTheme, currentTheme, toggleTheme } from '../theme/themeStore';
  */
 const isDark = computed(() => currentTheme.value === 'dark');
 const label = computed(() => {
-  if (!canChooseTheme.value) return `기기 설정에 따라 ${isDark.value ? '어두운' : '밝은'} 화면 사용 중`;
-  return isDark.value ? '밝은 화면으로 보기' : '어두운 화면으로 보기';
+	if (!canChooseTheme.value) {
+		return `기기 설정에 따라 ${isDark.value ? '어두운' : '밝은'} 화면 사용 중`;
+	}
+	return isDark.value ? '밝은 화면으로 보기' : '어두운 화면으로 보기';
 });
 </script>
 
 <template>
-  <button
-    class="theme-toggle"
-    type="button"
-    :aria-label="label"
-    :title="label"
-    :disabled="!canChooseTheme"
-    @click="toggleTheme"
-  >
-    <svg v-if="isDark" viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" focusable="false">
-      <circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="2" />
-      <path
-        d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-      />
-    </svg>
-    <svg v-else viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" focusable="false">
-      <path
-        d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linejoin="round"
-      />
-    </svg>
-  </button>
+	<button
+		class="theme-toggle"
+		type="button"
+		:aria-label="label"
+		:title="label"
+		:disabled="!canChooseTheme"
+		@click="toggleTheme"
+	>
+		<svg v-if="isDark" viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" focusable="false">
+			<circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="2" />
+			<path
+				d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+			/>
+		</svg>
+		<svg v-else viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" focusable="false">
+			<path
+				d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linejoin="round"
+			/>
+		</svg>
+	</button>
 </template>
 
 <style scoped>
 /* 옆에 서는 알림 종(.notification-bell__trigger)과 크기·모양을 맞춘다 */
 .theme-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  padding: 0;
-  border: 1px solid transparent;
-  border-radius: 50%;
-  background: none;
-  color: inherit;
-  cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 34px;
+	height: 34px;
+	padding: 0;
+	border: 1px solid transparent;
+	border-radius: 50%;
+	background: none;
+	color: inherit;
+	cursor: pointer;
 }
 
 .theme-toggle:hover:not(:disabled),
 .theme-toggle:focus-visible {
-  border-color: var(--line);
-  background: var(--surface);
-  outline: none;
+	border-color: var(--line);
+	background: var(--surface);
+	outline: none;
 }
 
 .theme-toggle:disabled {
-  cursor: default;
-  opacity: 0.6;
+	cursor: default;
+	opacity: 0.6;
 }
 </style>

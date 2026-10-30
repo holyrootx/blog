@@ -10,7 +10,7 @@ const OAUTH_API_BASE = `${MEMBER_AUTH_API_BASE}/oauth`;
  * 브라우저가 통째로 이동해야 한다. XHR 로 부르면 리다이렉트를 따라가다 막힌다.
  */
 export function socialLoginUrl(provider) {
-  return `/oauth2/authorization/${provider}`;
+	return `/oauth2/authorization/${provider}`;
 }
 
 /**
@@ -20,12 +20,12 @@ export function socialLoginUrl(provider) {
  * 구조였다면 값을 바꿔 남의 계정으로 가입할 수 있다.
  */
 export async function getOAuthPending() {
-  const pending = await getApiData(`${OAUTH_API_BASE}/pending`);
+	const pending = await getApiData(`${OAUTH_API_BASE}/pending`);
 
-  return {
-    loginState: pending?.loginState ?? '',
-    suggestedNickname: pending?.suggestedNickname ?? '',
-  };
+	return {
+		loginState: pending?.loginState ?? '',
+		suggestedNickname: pending?.suggestedNickname ?? '',
+	};
 }
 
 /**
@@ -35,28 +35,28 @@ export async function getOAuthPending() {
  * 공개 화면은 로그인 안 한 사람이 보는 것이 정상이다.
  */
 export async function getMemberSession() {
-  const session = await getApiData(`${MEMBER_AUTH_API_BASE}/me`);
+	const session = await getApiData(`${MEMBER_AUTH_API_BASE}/me`);
 
-  return session === null ? null : toMemberSession(session);
+	return session === null ? null : toMemberSession(session);
 }
 
 export function logoutMember() {
-  return sendApiData(`${MEMBER_AUTH_API_BASE}/logout`, { method: 'POST' });
+	return sendApiData(`${MEMBER_AUTH_API_BASE}/logout`, { method: 'POST' });
 }
 
 /** 가입 화면에서 "나중에 바꿀 수 있습니다" 라고 알린 그 기능 */
 export async function changeMemberNickname(nickname) {
-  return toMemberSession(await sendApiData(`${MEMBER_AUTH_API_BASE}/me/nickname`, {
-    method: 'PUT',
-    body: { nickname },
-  }));
+	return toMemberSession(await sendApiData(`${MEMBER_AUTH_API_BASE}/me/nickname`, {
+		method: 'PUT',
+		body: { nickname },
+	}));
 }
 
 /** 내가 쓴 댓글. 어느 글에 썼는지 같이 온다 */
 export async function getMyComments() {
-  const comments = await getApiData(`${MEMBER_AUTH_API_BASE}/me/comments`);
+	const comments = await getApiData(`${MEMBER_AUTH_API_BASE}/me/comments`);
 
-  return Array.isArray(comments) ? comments.map(toMyComment) : [];
+	return Array.isArray(comments) ? comments.map(toMyComment) : [];
 }
 
 /**
@@ -66,48 +66,48 @@ export async function getMyComments() {
  * 스토어의 {@code withdrawMember} 가 그것까지 한다.
  */
 export function withdrawMember() {
-  return sendApiData(`${MEMBER_AUTH_API_BASE}/withdraw`, { method: 'POST' });
+	return sendApiData(`${MEMBER_AUTH_API_BASE}/withdraw`, { method: 'POST' });
 }
 
 function toMyComment(comment) {
-  return {
-    id: comment?.id ?? null,
-    postId: comment?.postId ?? null,
-    postTitle: comment?.postTitle ?? '',
-    content: comment?.content ?? '',
-    createdAt: comment?.createdAt ?? '',
-    hidden: Boolean(comment?.hidden),
-    hiddenByAdmin: Boolean(comment?.hiddenByAdmin),
-  };
+	return {
+		id: comment?.id ?? null,
+		postId: comment?.postId ?? null,
+		postTitle: comment?.postTitle ?? '',
+		content: comment?.content ?? '',
+		createdAt: comment?.createdAt ?? '',
+		hidden: Boolean(comment?.hidden),
+		hiddenByAdmin: Boolean(comment?.hiddenByAdmin),
+	};
 }
 
 /** 신규 가입. 성공하면 그 자리에서 로그인까지 끝난다 */
 export async function signUpMember(nickname) {
-  return toMemberSession(await sendApiData(`${OAUTH_API_BASE}/signup`, {
-    method: 'POST',
-    body: { nickname },
-  }));
+	return toMemberSession(await sendApiData(`${OAUTH_API_BASE}/signup`, {
+		method: 'POST',
+		body: { nickname },
+	}));
 }
 
 /** 탈퇴했던 계정을 되살린다. 닉네임과 예전 댓글이 그대로 돌아온다 */
 export async function reactivateMember() {
-  return toMemberSession(await sendApiData(`${OAUTH_API_BASE}/reactivate`, { method: 'POST' }));
+	return toMemberSession(await sendApiData(`${OAUTH_API_BASE}/reactivate`, { method: 'POST' }));
 }
 
 /** 예전 계정을 두고 새 계정으로 시작한다. 예전 댓글은 남지만 내 것이 아니게 된다 */
 export async function rejoinMember(nickname) {
-  return toMemberSession(await sendApiData(`${OAUTH_API_BASE}/rejoin`, {
-    method: 'POST',
-    body: { nickname },
-  }));
+	return toMemberSession(await sendApiData(`${OAUTH_API_BASE}/rejoin`, {
+		method: 'POST',
+		body: { nickname },
+	}));
 }
 
 function toMemberSession(session) {
-  return {
-    id: session?.id ?? null,
-    nickname: session?.nickname ?? '',
-    // 제공자에서 프사 동의를 안 받았으면 비어 있다. 화면이 대체 표시를 고를 수 있게 빈 문자열로 맞춘다
-    profileImageUrl: session?.profileImageUrl ?? '',
-    role: session?.role ?? '',
-  };
+	return {
+		id: session?.id ?? null,
+		nickname: session?.nickname ?? '',
+		// 제공자에서 프사 동의를 안 받았으면 비어 있다. 화면이 대체 표시를 고를 수 있게 빈 문자열로 맞춘다
+		profileImageUrl: session?.profileImageUrl ?? '',
+		role: session?.role ?? '',
+	};
 }

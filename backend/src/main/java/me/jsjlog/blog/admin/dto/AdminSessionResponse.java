@@ -10,7 +10,7 @@ import me.jsjlog.blog.common.security.MemberPrincipal;
  */
 public record AdminSessionResponse(String username, String role) {
 
-    public static AdminSessionResponse from(MemberPrincipal principal) {
-        return new AdminSessionResponse(principal.getUsername(), principal.getRole().getAuthority());
-    }
+	public static AdminSessionResponse from(MemberPrincipal principal) {
+		return new AdminSessionResponse(principal.getUsername(), principal.getRole().getAuthority());
+	}
 }

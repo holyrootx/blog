@@ -15,34 +15,34 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class PostAccess {
 
-    private final PostRepository postRepository;
+	private final PostRepository postRepository;
 
-    @Transactional(readOnly = true)
-    public Post findActive(Long postId) {
-        return requireActive(postRepository.findById(postId)
-                .orElseThrow(() -> new BlogException(ErrorCode.POST_NOT_FOUND)));
-    }
+	@Transactional(readOnly = true)
+	public Post findActive(Long postId) {
+		return requireActive(postRepository.findById(postId)
+				.orElseThrow(() -> new BlogException(ErrorCode.POST_NOT_FOUND)));
+	}
 
-    // All mutations lock the parent post first, including comment mutations.
-    @Transactional(propagation = Propagation.MANDATORY)
-    public Post lockActive(Long postId) {
-        return requireActive(postRepository.findLockedById(postId)
-                .orElseThrow(() -> new BlogException(ErrorCode.POST_NOT_FOUND)));
-    }
+	// All mutations lock the parent post first, including comment mutations.
+	@Transactional(propagation = Propagation.MANDATORY)
+	public Post lockActive(Long postId) {
+		return requireActive(postRepository.findLockedById(postId)
+				.orElseThrow(() -> new BlogException(ErrorCode.POST_NOT_FOUND)));
+	}
 
-    @Transactional(propagation = Propagation.MANDATORY)
-    public Post lockPublished(Long postId) {
-        Post post = lockActive(postId);
-        if (!post.isPubliclyVisible(LocalDateTime.now())) {
-            throw new BlogException(ErrorCode.POST_NOT_FOUND);
-        }
-        return post;
-    }
+	@Transactional(propagation = Propagation.MANDATORY)
+	public Post lockPublished(Long postId) {
+		Post post = lockActive(postId);
+		if (!post.isPubliclyVisible(LocalDateTime.now())) {
+			throw new BlogException(ErrorCode.POST_NOT_FOUND);
+		}
+		return post;
+	}
 
-    private Post requireActive(Post post) {
-        if (post.isDeleted()) {
-            throw new BlogException(ErrorCode.POST_NOT_FOUND);
-        }
-        return post;
-    }
+	private Post requireActive(Post post) {
+		if (post.isDeleted()) {
+			throw new BlogException(ErrorCode.POST_NOT_FOUND);
+		}
+		return post;
+	}
 }

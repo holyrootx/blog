@@ -10,10 +10,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class SitemapController {
 
-    private final SitemapService sitemapService;
+	private final SitemapService sitemapService;
 
-    @GetMapping(value = "/api/v1/blog/sitemap.xml", produces = MediaType.APPLICATION_XML_VALUE)
-    public String getSitemap() {
-        return sitemapService.publicSitemapXml();
-    }
+	@GetMapping(value = "/api/v1/blog/sitemap.xml", produces = MediaType.APPLICATION_XML_VALUE)
+	public String getSitemap() {
+		return sitemapService.publicSitemapXml();
+	}
 }

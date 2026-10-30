@@ -26,50 +26,52 @@ import me.jsjlog.blog.common.exception.ErrorCode;
 @Component
 public class ThumbnailGenerator {
 
-    /**
-     * 가로 상한.
-     *
-     * <p>화면을 실제로 재서 나온 값이다. 본문 이미지는 882px 에서 멈추고(레이아웃 폭이
-     * 1440px 에서 잠긴다) 레티나 화면은 그 두 배를 요구하므로 1,764px 이 필요하다.
-     * 거기에 여유를 둔 값이 1800 이다. 2000 이상은 어디서도 안 쓰인다.</p>
-     *
-     * <p>원본이 이보다 작으면 <b>키우지 않는다.</b> 늘려 봐야 용량만 늘고 화질은 그대로다.</p>
-     */
-    private static final int MAX_WIDTH = 1800;
+	/**
+	 * 가로 상한.
+	 *
+	 * <p>화면을 실제로 재서 나온 값이다. 본문 이미지는 882px 에서 멈추고(레이아웃 폭이
+	 * 1440px 에서 잠긴다) 레티나 화면은 그 두 배를 요구하므로 1,764px 이 필요하다.
+	 * 거기에 여유를 둔 값이 1800 이다. 2000 이상은 어디서도 안 쓰인다.</p>
+	 *
+	 * <p>원본이 이보다 작으면 <b>키우지 않는다.</b> 늘려 봐야 용량만 늘고 화질은 그대로다.</p>
+	 */
+	private static final int MAX_WIDTH = 1800;
 
-    /**
-     * WebP 품질.
-     *
-     * <p>85 는 확대해야 겨우 차이가 보이는 지점이다. 95 로 올리면 용량이 두 배가 되고,
-     * 75 로 내리면 하늘이나 그라데이션에서 얼룩이 보이기 시작한다.</p>
-     */
-    private static final int QUALITY = 85;
+	/**
+	 * WebP 품질.
+	 *
+	 * <p>85 는 확대해야 겨우 차이가 보이는 지점이다. 95 로 올리면 용량이 두 배가 되고,
+	 * 75 로 내리면 하늘이나 그라데이션에서 얼룩이 보이기 시작한다.</p>
+	 */
+	private static final int QUALITY = 85;
 
-    public ImageThumbnail generate(byte[] original, String contentType) {
-        ImmutableImage source;
-        try {
-            source = ImmutableImage.loader().fromBytes(original);
-        } catch (ImageParseException exception) {
-            throw new BlogException(ErrorCode.IMAGE_INVALID);
-        } catch (IOException | RuntimeException exception) {
-            throw new BlogException(ErrorCode.IMAGE_THUMBNAIL_GENERATION_FAILED);
-        }
-        try {
-            ImmutableImage resized = resize(source);
+	public ImageThumbnail generate(byte[] original, String contentType) {
+		ImmutableImage source;
+		try {
+			source = ImmutableImage.loader().fromBytes(original);
+		} catch (ImageParseException exception) {
+			throw new BlogException(ErrorCode.IMAGE_INVALID);
+		} catch (IOException | RuntimeException exception) {
+			throw new BlogException(ErrorCode.IMAGE_THUMBNAIL_GENERATION_FAILED);
+		}
+		try {
+			ImmutableImage resized = resize(source);
 
-            byte[] content = resized.bytes(WebpWriter.DEFAULT.withQ(QUALITY));
+			byte[] content = resized.bytes(WebpWriter.DEFAULT.withQ(QUALITY));
 
-            return new ImageThumbnail(content, "image/webp", resized.width, resized.height);
-        } catch (IOException | RuntimeException exception) {
-            throw new BlogException(ErrorCode.IMAGE_THUMBNAIL_GENERATION_FAILED);
-        }
-    }
+			return new ImageThumbnail(content, "image/webp", resized.width, resized.height);
+		} catch (IOException | RuntimeException exception) {
+			throw new BlogException(ErrorCode.IMAGE_THUMBNAIL_GENERATION_FAILED);
+		}
+	}
 
-    private ImmutableImage resize(ImmutableImage source) {
-        if (source.width <= MAX_WIDTH) return source;
-        int height = Math.max(1, (int) (MAX_WIDTH / (double) source.width * source.height));
-        // Bicubic 필터는 주변 행도 참조하므로 높이 5px 미만에서는 FastScale을 사용한다.
-        ScaleMethod method = height < 5 ? ScaleMethod.FastScale : ScaleMethod.Bicubic;
-        return source.scaleTo(MAX_WIDTH, height, method);
-    }
+	private ImmutableImage resize(ImmutableImage source) {
+		if (source.width <= MAX_WIDTH) {
+			return source;
+		}
+		int height = Math.max(1, (int) (MAX_WIDTH / (double) source.width * source.height));
+		// Bicubic 필터는 주변 행도 참조하므로 높이 5px 미만에서는 FastScale을 사용한다.
+		ScaleMethod method = height < 5 ? ScaleMethod.FastScale : ScaleMethod.Bicubic;
+		return source.scaleTo(MAX_WIDTH, height, method);
+	}
 }

@@ -17,76 +17,76 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
  */
 public final class PendingOAuthPrincipal implements OAuth2User {
 
-    private final OAuthUserInfo userInfo;
-    private final String suggestedNickname;
-    private final OAuthLoginState loginState;
-    private final Map<String, Object> attributes;
+	private final OAuthUserInfo userInfo;
+	private final String suggestedNickname;
+	private final OAuthLoginState loginState;
+	private final Map<String, Object> attributes;
 
-    private PendingOAuthPrincipal(
-            OAuthUserInfo userInfo,
-            String suggestedNickname,
-            OAuthLoginState loginState
-    ) {
-        this.userInfo = userInfo;
-        this.suggestedNickname = suggestedNickname;
-        this.loginState = loginState;
-        this.attributes = Map.of(
-                "loginState", loginState.name(),
-                "suggestedNickname", suggestedNickname
-        );
-    }
+	private PendingOAuthPrincipal(
+			OAuthUserInfo userInfo,
+			String suggestedNickname,
+			OAuthLoginState loginState
+	) {
+		this.userInfo = userInfo;
+		this.suggestedNickname = suggestedNickname;
+		this.loginState = loginState;
+		this.attributes = Map.of(
+				"loginState", loginState.name(),
+				"suggestedNickname", suggestedNickname
+		);
+	}
 
-    public static PendingOAuthPrincipal signup(OAuthUserInfo userInfo, String suggestedNickname) {
-        return new PendingOAuthPrincipal(userInfo, suggestedNickname, OAuthLoginState.SIGNUP_REQUIRED);
-    }
+	public static PendingOAuthPrincipal signup(OAuthUserInfo userInfo, String suggestedNickname) {
+		return new PendingOAuthPrincipal(userInfo, suggestedNickname, OAuthLoginState.SIGNUP_REQUIRED);
+	}
 
-    public static PendingOAuthPrincipal reactivation(OAuthUserInfo userInfo, String nickname) {
-        return new PendingOAuthPrincipal(userInfo, nickname, OAuthLoginState.REACTIVATION_REQUIRED);
-    }
+	public static PendingOAuthPrincipal reactivation(OAuthUserInfo userInfo, String nickname) {
+		return new PendingOAuthPrincipal(userInfo, nickname, OAuthLoginState.REACTIVATION_REQUIRED);
+	}
 
-    public AuthProvider getProvider() {
-        return userInfo.provider();
-    }
+	public AuthProvider getProvider() {
+		return userInfo.provider();
+	}
 
-    public String getProviderUserId() {
-        return userInfo.providerUserId();
-    }
+	public String getProviderUserId() {
+		return userInfo.providerUserId();
+	}
 
-    public String getSuggestedNickname() {
-        return suggestedNickname;
-    }
+	public String getSuggestedNickname() {
+		return suggestedNickname;
+	}
 
-    public String getEmail() {
-        return userInfo.email();
-    }
+	public String getEmail() {
+		return userInfo.email();
+	}
 
-    public String getProfileImageUrl() {
-        return userInfo.profileImageUrl();
-    }
+	public String getProfileImageUrl() {
+		return userInfo.profileImageUrl();
+	}
 
-    public OAuthLoginState getLoginState() {
-        return loginState;
-    }
+	public OAuthLoginState getLoginState() {
+		return loginState;
+	}
 
-    @Override
-    public Map<String, Object> getAttributes() {
-        return attributes;
-    }
+	@Override
+	public Map<String, Object> getAttributes() {
+		return attributes;
+	}
 
-    @Override
-    public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of();
-    }
+	@Override
+	public Collection<? extends GrantedAuthority> getAuthorities() {
+		return List.of();
+	}
 
-    /** 제공자 식별자가 로그와 감사 컬럼에 노출되지 않게 대기 상태만 반환한다. */
-    @Override
-    public String getName() {
-        return "pending-oauth";
-    }
+	/** 제공자 식별자가 로그와 감사 컬럼에 노출되지 않게 대기 상태만 반환한다. */
+	@Override
+	public String getName() {
+		return "pending-oauth";
+	}
 
-    @Override
-    public String toString() {
-        return "PendingOAuthPrincipal{provider=%s, loginState=%s}"
-                .formatted(userInfo.provider(), loginState);
-    }
+	@Override
+	public String toString() {
+		return "PendingOAuthPrincipal{provider=%s, loginState=%s}"
+				.formatted(userInfo.provider(), loginState);
+	}
 }

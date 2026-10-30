@@ -38,172 +38,172 @@ import static org.mockito.Mockito.doThrow;
 @SpringBootTest
 class PostUpdateImageReleaseTest {
 
-    @DynamicPropertySource
-    static void isolatedDatabase(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url",
-                () -> "jdbc:h2:mem:post_image_release;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1");
-    }
+	@DynamicPropertySource
+	static void isolatedDatabase(DynamicPropertyRegistry registry) {
+		registry.add("spring.datasource.url",
+				() -> "jdbc:h2:mem:post_image_release;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1");
+	}
 
-    @MockitoBean
-    private ImageStorage imageStorage;
+	@MockitoBean
+	private ImageStorage imageStorage;
 
-    @Autowired
-    private AdminPostService adminPosts;
+	@Autowired
+	private AdminPostService adminPosts;
 
-    @Autowired
-    private PostRepository posts;
+	@Autowired
+	private PostRepository posts;
 
-    @Autowired
-    private CategoryRepository categories;
+	@Autowired
+	private CategoryRepository categories;
 
-    @Autowired
-    private UploadImageRepository images;
+	@Autowired
+	private UploadImageRepository images;
 
-    @Autowired
-    private PlatformTransactionManager transactionManager;
+	@Autowired
+	private PlatformTransactionManager transactionManager;
 
-    private TransactionTemplate tx;
-    private Category category;
+	private TransactionTemplate tx;
+	private Category category;
 
-    @BeforeEach
-    void setUp() {
-        tx = new TransactionTemplate(transactionManager);
-        category = tx.execute(status -> categories.save(new Category("이미지 정리 " + UUID.randomUUID(), 950L)));
-    }
+	@BeforeEach
+	void setUp() {
+		tx = new TransactionTemplate(transactionManager);
+		category = tx.execute(status -> categories.save(new Category("이미지 정리 " + UUID.randomUUID(), 950L)));
+	}
 
-    private UploadImage upload() {
-        String key = "2026/10/" + UUID.randomUUID() + ".jpg";
-        String url = "https://images.test/" + key;
-        return tx.execute(status -> images.save(new UploadImage(key, url, "image.jpg", "image/jpeg", 100)));
-    }
+	private UploadImage upload() {
+		String key = "2026/10/" + UUID.randomUUID() + ".jpg";
+		String url = "https://images.test/" + key;
+		return tx.execute(status -> images.save(new UploadImage(key, url, "image.jpg", "image/jpeg", 100)));
+	}
 
-    private Post postWith(String content, String thumbnail) {
-        return tx.execute(status -> posts.save(new Post("이미지 글", "요약", content, category, thumbnail, null)));
-    }
+	private Post postWith(String content, String thumbnail) {
+		return tx.execute(status -> posts.save(new Post("이미지 글", "요약", content, category, thumbnail, null)));
+	}
 
-    private void edit(Post post, String content, String thumbnail) {
-        adminPosts.updatePost(post.getId(),
-                new AdminPostRequest(null, "이미지 글", category.getId(), "요약", content, thumbnail));
-    }
+	private void edit(Post post, String content, String thumbnail) {
+		adminPosts.updatePost(post.getId(),
+				new AdminPostRequest(null, "이미지 글", category.getId(), "요약", content, thumbnail));
+	}
 
-    @Test
-    @DisplayName("본문에서 뺀 이미지는 커밋 뒤에 저장소와 기록에서 지운다")
-    void deletesImageRemovedByEdit() {
-        UploadImage image = upload();
-        Post post = postWith("![사진](" + image.getUrl() + ")", null);
+	@Test
+	@DisplayName("본문에서 뺀 이미지는 커밋 뒤에 저장소와 기록에서 지운다")
+	void deletesImageRemovedByEdit() {
+		UploadImage image = upload();
+		Post post = postWith("![사진](" + image.getUrl() + ")", null);
 
-        edit(post, "사진을 뺀 본문", null);
+		edit(post, "사진을 뺀 본문", null);
 
-        verify(imageStorage).delete(image.getStorageKey());
-        assertThat(images.existsById(image.getId())).isFalse();
-    }
+		verify(imageStorage).delete(image.getStorageKey());
+		assertThat(images.existsById(image.getId())).isFalse();
+	}
 
-    @Test
-    @DisplayName("본문에서 빼도 대표 이미지로 남아 있으면 지우지 않는다")
-    void keepsImageStillUsedAsThumbnail() {
-        UploadImage image = upload();
-        Post post = postWith("![사진](" + image.getUrl() + ")", image.getUrl());
+	@Test
+	@DisplayName("본문에서 빼도 대표 이미지로 남아 있으면 지우지 않는다")
+	void keepsImageStillUsedAsThumbnail() {
+		UploadImage image = upload();
+		Post post = postWith("![사진](" + image.getUrl() + ")", image.getUrl());
 
-        edit(post, "사진을 뺀 본문", image.getUrl());
+		edit(post, "사진을 뺀 본문", image.getUrl());
 
-        verify(imageStorage, never()).delete(anyString());
-        assertThat(images.existsById(image.getId())).isTrue();
-    }
+		verify(imageStorage, never()).delete(anyString());
+		assertThat(images.existsById(image.getId())).isTrue();
+	}
 
-    @Test
-    @DisplayName("다른 글이 같은 이미지를 쓰고 있으면 지우지 않는다")
-    void keepsImageSharedByAnotherPost() {
-        UploadImage image = upload();
-        Post post = postWith("![사진](" + image.getUrl() + ")", null);
-        postWith("다른 글 ![사진](" + image.getUrl() + ")", null);
+	@Test
+	@DisplayName("다른 글이 같은 이미지를 쓰고 있으면 지우지 않는다")
+	void keepsImageSharedByAnotherPost() {
+		UploadImage image = upload();
+		Post post = postWith("![사진](" + image.getUrl() + ")", null);
+		postWith("다른 글 ![사진](" + image.getUrl() + ")", null);
 
-        edit(post, "사진을 뺀 본문", null);
+		edit(post, "사진을 뺀 본문", null);
 
-        verify(imageStorage, never()).delete(anyString());
-        assertThat(images.existsById(image.getId())).isTrue();
-    }
+		verify(imageStorage, never()).delete(anyString());
+		assertThat(images.existsById(image.getId())).isTrue();
+	}
 
-    @Test
-    @DisplayName("휴지통에 있는 글이 쓰는 이미지는 지우지 않는다 — 30일 안에 되살릴 수 있다")
-    void keepsImageUsedByTrashedPost() {
-        UploadImage image = upload();
-        Post post = postWith("![사진](" + image.getUrl() + ")", null);
-        Post trashed = postWith("휴지통 글 ![사진](" + image.getUrl() + ")", null);
-        adminPosts.deletePost(trashed.getId());
+	@Test
+	@DisplayName("휴지통에 있는 글이 쓰는 이미지는 지우지 않는다 — 30일 안에 되살릴 수 있다")
+	void keepsImageUsedByTrashedPost() {
+		UploadImage image = upload();
+		Post post = postWith("![사진](" + image.getUrl() + ")", null);
+		Post trashed = postWith("휴지통 글 ![사진](" + image.getUrl() + ")", null);
+		adminPosts.deletePost(trashed.getId());
 
-        edit(post, "사진을 뺀 본문", null);
+		edit(post, "사진을 뺀 본문", null);
 
-        verify(imageStorage, never()).delete(anyString());
-        assertThat(images.existsById(image.getId())).isTrue();
-    }
+		verify(imageStorage, never()).delete(anyString());
+		assertThat(images.existsById(image.getId())).isTrue();
+	}
 
-    @Test
-    @DisplayName("글을 휴지통으로 보내도 이미지는 지우지 않는다")
-    void trashingPostKeepsImages() {
-        UploadImage image = upload();
-        Post post = postWith("![사진](" + image.getUrl() + ")", null);
+	@Test
+	@DisplayName("글을 휴지통으로 보내도 이미지는 지우지 않는다")
+	void trashingPostKeepsImages() {
+		UploadImage image = upload();
+		Post post = postWith("![사진](" + image.getUrl() + ")", null);
 
-        adminPosts.deletePost(post.getId());
+		adminPosts.deletePost(post.getId());
 
-        verify(imageStorage, never()).delete(anyString());
-        assertThat(images.existsById(image.getId())).isTrue();
-        assertThat(posts.findById(post.getId()).orElseThrow().getDeletedAt())
-                .isBefore(LocalDateTime.now().plusSeconds(1));
-    }
+		verify(imageStorage, never()).delete(anyString());
+		assertThat(images.existsById(image.getId())).isTrue();
+		assertThat(posts.findById(post.getId()).orElseThrow().getDeletedAt())
+				.isBefore(LocalDateTime.now().plusSeconds(1));
+	}
 
-    private Post expiredTrash(UploadImage image) {
-        return tx.execute(status -> {
-            Post post = posts.save(new Post("영구 삭제 대상", "요약", "![사진](" + image.getUrl() + ")",
-                    category, image.getUrl(), null));
-            post.delete(LocalDateTime.now().minusDays(31).withNano(0));
-            return post;
-        });
-    }
+	private Post expiredTrash(UploadImage image) {
+		return tx.execute(status -> {
+			Post post = posts.save(new Post("영구 삭제 대상", "요약", "![사진](" + image.getUrl() + ")",
+					category, image.getUrl(), null));
+			post.delete(LocalDateTime.now().minusDays(31).withNano(0));
+			return post;
+		});
+	}
 
-    private void purge(Post post) {
-        adminPosts.purgePost(post.getId(), new AdminPostPurgeRequest(post.getTitle(), post.getDeletedAt()));
-    }
+	private void purge(Post post) {
+		adminPosts.purgePost(post.getId(), new AdminPostPurgeRequest(post.getTitle(), post.getDeletedAt()));
+	}
 
-    @Test
-    void permanentDeletionRemovesOnlyUnusedImagesAfterCommit() {
-        UploadImage image = upload();
-        Post post = expiredTrash(image);
-        purge(post);
-        verify(imageStorage).delete(image.getStorageKey());
-        assertThat(images.existsById(image.getId())).isFalse();
-        assertThat(posts.findById(post.getId()).orElseThrow().getContent()).isEmpty();
-    }
+	@Test
+	void permanentDeletionRemovesOnlyUnusedImagesAfterCommit() {
+		UploadImage image = upload();
+		Post post = expiredTrash(image);
+		purge(post);
+		verify(imageStorage).delete(image.getStorageKey());
+		assertThat(images.existsById(image.getId())).isFalse();
+		assertThat(posts.findById(post.getId()).orElseThrow().getContent()).isEmpty();
+	}
 
-    @Test
-    void permanentDeletionPreservesSharedImages() {
-        UploadImage image = upload();
-        Post post = expiredTrash(image);
-        postWith("공유 중", image.getUrl());
-        purge(post);
-        verify(imageStorage, never()).delete(anyString());
-        assertThat(images.existsById(image.getId())).isTrue();
-    }
+	@Test
+	void permanentDeletionPreservesSharedImages() {
+		UploadImage image = upload();
+		Post post = expiredTrash(image);
+		postWith("공유 중", image.getUrl());
+		purge(post);
+		verify(imageStorage, never()).delete(anyString());
+		assertThat(images.existsById(image.getId())).isTrue();
+	}
 
-    @Test
-    void rolledBackPermanentDeletionNeverDeletesFiles() {
-        UploadImage image = upload();
-        Post post = expiredTrash(image);
-        tx.executeWithoutResult(status -> {
-            purge(post);
-            status.setRollbackOnly();
-        });
-        verify(imageStorage, never()).delete(anyString());
-        assertThat(posts.findById(post.getId()).orElseThrow().isContentPurged()).isFalse();
-        assertThat(images.existsById(image.getId())).isTrue();
-    }
+	@Test
+	void rolledBackPermanentDeletionNeverDeletesFiles() {
+		UploadImage image = upload();
+		Post post = expiredTrash(image);
+		tx.executeWithoutResult(status -> {
+			purge(post);
+			status.setRollbackOnly();
+		});
+		verify(imageStorage, never()).delete(anyString());
+		assertThat(posts.findById(post.getId()).orElseThrow().isContentPurged()).isFalse();
+		assertThat(images.existsById(image.getId())).isTrue();
+	}
 
-    @Test
-    void failedStorageDeleteKeepsUploadRecordForRetryWithoutRestoringPost() {
-        UploadImage image = upload();
-        Post post = expiredTrash(image);
-        doThrow(new IllegalStateException("storage unavailable")).when(imageStorage).delete(anyString());
-        purge(post);
-        assertThat(images.existsById(image.getId())).isTrue();
-        assertThat(posts.findById(post.getId()).orElseThrow().isContentPurged()).isTrue();
-    }
+	@Test
+	void failedStorageDeleteKeepsUploadRecordForRetryWithoutRestoringPost() {
+		UploadImage image = upload();
+		Post post = expiredTrash(image);
+		doThrow(new IllegalStateException("storage unavailable")).when(imageStorage).delete(anyString());
+		purge(post);
+		assertThat(images.existsById(image.getId())).isTrue();
+		assertThat(posts.findById(post.getId()).orElseThrow().isContentPurged()).isTrue();
+	}
 }

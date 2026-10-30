@@ -20,14 +20,14 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/admin/auth")
 public class AdminAuthController {
 
-    /**
-     * 새로고침했을 때 세션이 아직 살아 있는지 확인한다. 프론트 라우터 가드가 이걸 본다.
-     *
-     * 세션이 없으면 여기까지 오지 않는다 — 인가 규칙에 걸려 401 이 먼저 나간다.
-     */
-    @GetMapping("/me")
-    public ApiResponse<AdminSessionResponse> me(@AuthenticationPrincipal MemberPrincipal principal) {
-        return ApiResponse.ok(AdminSessionResponse.from(principal));
-    }
+	/**
+	 * 새로고침했을 때 세션이 아직 살아 있는지 확인한다. 프론트 라우터 가드가 이걸 본다.
+	 *
+	 * 세션이 없으면 여기까지 오지 않는다 — 인가 규칙에 걸려 401 이 먼저 나간다.
+	 */
+	@GetMapping("/me")
+	public ApiResponse<AdminSessionResponse> me(@AuthenticationPrincipal MemberPrincipal principal) {
+		return ApiResponse.ok(AdminSessionResponse.from(principal));
+	}
 
 }

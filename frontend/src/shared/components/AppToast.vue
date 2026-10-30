@@ -13,24 +13,24 @@ const { toasts } = useToasts();
 </script>
 
 <template>
-  <div class="app-toast" aria-live="polite">
-    <div
-      v-for="toast in toasts"
-      :key="toast.id"
-      class="app-toast__item"
-      :class="`app-toast__item--${toast.kind}`"
-      :role="toast.kind === 'error' ? 'alert' : 'status'"
-    >
-      <span class="app-toast__message">{{ toast.message }}</span>
+	<div class="app-toast" aria-live="polite">
+		<div
+			v-for="toast in toasts"
+			:key="toast.id"
+			class="app-toast__item"
+			:class="`app-toast__item--${toast.kind}`"
+			:role="toast.kind === 'error' ? 'alert' : 'status'"
+		>
+			<span class="app-toast__message">{{ toast.message }}</span>
 
-      <!-- 실패는 저절로 사라지지 않는다. 닫는 길을 열어 둔다 -->
-      <button
-        v-if="toast.kind === 'error'"
-        class="app-toast__close"
-        type="button"
-        aria-label="알림 닫기"
-        @click="dismissToast(toast.id)"
-      >×</button>
-    </div>
-  </div>
+			<!-- 실패는 저절로 사라지지 않는다. 닫는 길을 열어 둔다 -->
+			<button
+				v-if="toast.kind === 'error'"
+				class="app-toast__close"
+				type="button"
+				aria-label="알림 닫기"
+				@click="dismissToast(toast.id)"
+			>×</button>
+		</div>
+	</div>
 </template>

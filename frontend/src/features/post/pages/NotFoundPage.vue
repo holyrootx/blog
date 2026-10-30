@@ -12,18 +12,18 @@ import { RouterLink } from 'vue-router';
 </script>
 
 <template>
-  <main class="public-shell__main not-found">
-    <p class="not-found__code">404</p>
-    <h1 class="not-found__title">찾는 글이 없습니다</h1>
-    <p class="not-found__text">
-      주소가 바뀌었거나 글이 내려갔을 수 있습니다.
-    </p>
+	<main class="public-shell__main not-found">
+		<p class="not-found__code">404</p>
+		<h1 class="not-found__title">찾는 글이 없습니다</h1>
+		<p class="not-found__text">
+			주소가 바뀌었거나 글이 내려갔을 수 있습니다.
+		</p>
 
-    <div class="not-found__actions">
-      <RouterLink class="ui-button" :to="{ name: 'home' }">블로그 홈</RouterLink>
-      <RouterLink class="ui-button ui-button--accent" :to="{ name: 'post-list' }">
-        전체 글 보기
-      </RouterLink>
-    </div>
-  </main>
+		<div class="not-found__actions">
+			<RouterLink class="ui-button" :to="{ name: 'home' }">블로그 홈</RouterLink>
+			<RouterLink class="ui-button ui-button--accent" :to="{ name: 'post-list' }">
+				전체 글 보기
+			</RouterLink>
+		</div>
+	</main>
 </template>

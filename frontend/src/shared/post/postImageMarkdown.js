@@ -40,13 +40,13 @@ export const IMAGE_LINE_PATTERN = /^!\[([^\]]*)\]\(([^)\s]+)(?:\s+"([^"]*)")?\)$
 
 /** 0 은 "지정 없음"이다. 20~100 밖의 값은 범위 안으로 당긴다 */
 export function clampImageWidth(value) {
-  const width = Math.round(Number(value));
+	const width = Math.round(Number(value));
 
-  if (!Number.isFinite(width) || width <= 0) {
-    return 0;
-  }
+	if (!Number.isFinite(width) || width <= 0) {
+		return 0;
+	}
 
-  return Math.min(Math.max(width, MIN_IMAGE_WIDTH), MAX_IMAGE_WIDTH);
+	return Math.min(Math.max(width, MIN_IMAGE_WIDTH), MAX_IMAGE_WIDTH);
 }
 
 /**
@@ -56,17 +56,17 @@ export function clampImageWidth(value) {
  * 줄 하나가 통째로 안 보이는 것보다 폭 하나를 잃는 편이 낫다.
  */
 export function parseImageTitle(title) {
-  const source = String(title ?? '');
-  const percent = source.match(/(\d{1,3})\s*%/);
-  const natural = source.match(/(\d{1,5})\s*[x×]\s*(\d{1,5})/i);
-  const align = source.match(/\b(left|center|right)\b/i);
+	const source = String(title ?? '');
+	const percent = source.match(/(\d{1,3})\s*%/);
+	const natural = source.match(/(\d{1,5})\s*[x×]\s*(\d{1,5})/i);
+	const align = source.match(/\b(left|center|right)\b/i);
 
-  return {
-    width: percent ? clampImageWidth(percent[1]) : 0,
-    align: align ? align[1].toLowerCase() : DEFAULT_IMAGE_ALIGN,
-    naturalWidth: natural ? Number(natural[1]) : 0,
-    naturalHeight: natural ? Number(natural[2]) : 0,
-  };
+	return {
+		width: percent ? clampImageWidth(percent[1]) : 0,
+		align: align ? align[1].toLowerCase() : DEFAULT_IMAGE_ALIGN,
+		naturalWidth: natural ? Number(natural[1]) : 0,
+		naturalHeight: natural ? Number(natural[2]) : 0,
+	};
 }
 
 /**
@@ -76,25 +76,25 @@ export function parseImageTitle(title) {
  * 100% 는 기본값이라 적지 않는다. 적으면 글마다 의미 없는 "100%" 가 붙는다.
  */
 export function formatImageTitle({
-  width = 0,
-  align = DEFAULT_IMAGE_ALIGN,
-  naturalWidth = 0,
-  naturalHeight = 0,
+	width = 0,
+	align = DEFAULT_IMAGE_ALIGN,
+	naturalWidth = 0,
+	naturalHeight = 0,
 } = {}) {
-  const parts = [];
-  const clamped = clampImageWidth(width);
+	const parts = [];
+	const clamped = clampImageWidth(width);
 
-  if (clamped > 0 && clamped < MAX_IMAGE_WIDTH) {
-    parts.push(`${clamped}%`);
-  }
+	if (clamped > 0 && clamped < MAX_IMAGE_WIDTH) {
+		parts.push(`${clamped}%`);
+	}
 
-  if (IMAGE_ALIGNS.includes(align) && align !== DEFAULT_IMAGE_ALIGN) {
-    parts.push(align);
-  }
+	if (IMAGE_ALIGNS.includes(align) && align !== DEFAULT_IMAGE_ALIGN) {
+		parts.push(align);
+	}
 
-  if (naturalWidth > 0 && naturalHeight > 0) {
-    parts.push(`${naturalWidth}x${naturalHeight}`);
-  }
+	if (naturalWidth > 0 && naturalHeight > 0) {
+		parts.push(`${naturalWidth}x${naturalHeight}`);
+	}
 
-  return parts.join(' ');
+	return parts.join(' ');
 }

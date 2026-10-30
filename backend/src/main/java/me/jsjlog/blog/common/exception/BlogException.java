@@ -14,25 +14,16 @@ public class BlogException extends RuntimeException {
 
 	private final ErrorCode errorCode;
 
-	/**
-	 * {@link ErrorCode}에 정의된 기본 메시지를 그대로 사용합니다.
-	 */
 	public BlogException(ErrorCode errorCode) {
 		super(errorCode.getMessage());
 		this.errorCode = errorCode;
 	}
 
-	/**
-	 * 에러 코드는 유지하되, 상황에 맞는 상세 메시지를 내려주고 싶을 때 사용합니다.
-	 */
 	public BlogException(ErrorCode errorCode, String message) {
 		super(message);
 		this.errorCode = errorCode;
 	}
 
-	/**
-	 * 전역 예외 처리기가 HTTP status와 code를 꺼내기 위해 사용합니다.
-	 */
 	public ErrorCode getErrorCode() {
 		return errorCode;
 	}

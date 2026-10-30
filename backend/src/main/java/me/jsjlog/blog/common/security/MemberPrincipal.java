@@ -30,178 +30,177 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
  */
 public class MemberPrincipal implements UserDetails, OAuth2User {
 
-    // 회원 조회 시작 시점이다. 조회 뒤 멈춘 로그인도 폐기 이후 새 인증으로 취급하지 않는다.
-    private final long issuedAtNanos;
+	// 회원 조회 시작 시점이다. 조회 뒤 멈춘 로그인도 폐기 이후 새 인증으로 취급하지 않는다.
+	private final long issuedAtNanos;
 
-    private final Long id;
-    private final String username;
-    private final String passwordHash;
-    private final String nickname;
-    private final String profileImageUrl;
-    private final MemberRole role;
-    private final MemberStatusCode status;
-    private final Map<String, Object> attributes;
+	private final Long id;
+	private final String username;
+	private final String passwordHash;
+	private final String nickname;
+	private final String profileImageUrl;
+	private final MemberRole role;
+	private final MemberStatusCode status;
+	private final Map<String, Object> attributes;
 
-    private MemberPrincipal(
-            Long id,
-            String username,
-            String passwordHash,
-            String nickname,
-            String profileImageUrl,
-            MemberRole role,
-            MemberStatusCode status,
-            Map<String, Object> attributes,
-            long authenticationStartedAtNanos
-    ) {
-        this.issuedAtNanos = authenticationStartedAtNanos;
-        this.id = id;
-        this.username = username;
-        this.passwordHash = passwordHash;
-        this.nickname = nickname;
-        this.profileImageUrl = profileImageUrl;
-        this.role = role;
-        this.status = status;
-        this.attributes = attributes;
-    }
+	private MemberPrincipal(
+			Long id,
+			String username,
+			String passwordHash,
+			String nickname,
+			String profileImageUrl,
+			MemberRole role,
+			MemberStatusCode status,
+			Map<String, Object> attributes,
+			long authenticationStartedAtNanos
+	) {
+		this.issuedAtNanos = authenticationStartedAtNanos;
+		this.id = id;
+		this.username = username;
+		this.passwordHash = passwordHash;
+		this.nickname = nickname;
+		this.profileImageUrl = profileImageUrl;
+		this.role = role;
+		this.status = status;
+		this.attributes = attributes;
+	}
 
-    /** 아이디·비밀번호로 로그인한 경우 */
-    public static MemberPrincipal ofLocal(Member member) {
-        return ofLocal(member, System.nanoTime());
-    }
+	public static MemberPrincipal ofLocal(Member member) {
+		return ofLocal(member, System.nanoTime());
+	}
 
-    public static MemberPrincipal ofLocal(Member member, long authenticationStartedAtNanos) {
-        return new MemberPrincipal(
-                member.getId(),
-                member.getUsername(),
-                member.getPasswordHash(),
-                member.getNickname(),
-                member.getProfileImageUrl(),
-                member.getRole(),
-                member.getStatusCode(),
-                Map.of(),
-                authenticationStartedAtNanos
-        );
-    }
+	public static MemberPrincipal ofLocal(Member member, long authenticationStartedAtNanos) {
+		return new MemberPrincipal(
+				member.getId(),
+				member.getUsername(),
+				member.getPasswordHash(),
+				member.getNickname(),
+				member.getProfileImageUrl(),
+				member.getRole(),
+				member.getStatusCode(),
+				Map.of(),
+				authenticationStartedAtNanos
+		);
+	}
 
-    /**
-     * 소셜로 로그인한 경우.
-     *
-     * <p>{@link OAuth2User#getAttributes()} 에 제공자 응답 원본을 그대로 담지 않는다.
-     * 그 원본은 세션에 실려 남는데, 우리가 쓰는 값은 이미
-     * {@code OAuthAttributeReader} 가 꺼내서 회원 행에 넣었다. 원본을 계속 들고 있으면
-     * 세션마다 이메일과 제공자 식별자가 같이 보관된다.</p>
-     */
-    public static MemberPrincipal ofSocial(Member member) {
-        return ofSocial(member, System.nanoTime());
-    }
+	/**
+	 * 소셜로 로그인한 경우.
+	 *
+	 * <p>{@link OAuth2User#getAttributes()} 에 제공자 응답 원본을 그대로 담지 않는다.
+	 * 그 원본은 세션에 실려 남는데, 우리가 쓰는 값은 이미
+	 * {@code OAuthAttributeReader} 가 꺼내서 회원 행에 넣었다. 원본을 계속 들고 있으면
+	 * 세션마다 이메일과 제공자 식별자가 같이 보관된다.</p>
+	 */
+	public static MemberPrincipal ofSocial(Member member) {
+		return ofSocial(member, System.nanoTime());
+	}
 
-    public static MemberPrincipal ofSocial(Member member, long authenticationStartedAtNanos) {
-        return new MemberPrincipal(
-                member.getId(),
-                member.getUsername(),
-                member.getPasswordHash(),
-                member.getNickname(),
-                member.getProfileImageUrl(),
-                member.getRole(),
-                member.getStatusCode(),
-                Map.of(
-                        "memberId", member.getId(),
-                        "nickname", member.getNickname(),
-                        "role", member.getRole().name()
-                ),
-                authenticationStartedAtNanos
-        );
-    }
+	public static MemberPrincipal ofSocial(Member member, long authenticationStartedAtNanos) {
+		return new MemberPrincipal(
+				member.getId(),
+				member.getUsername(),
+				member.getPasswordHash(),
+				member.getNickname(),
+				member.getProfileImageUrl(),
+				member.getRole(),
+				member.getStatusCode(),
+				Map.of(
+						"memberId", member.getId(),
+						"nickname", member.getNickname(),
+						"role", member.getRole().name()
+				),
+				authenticationStartedAtNanos
+		);
+	}
 
-    public Long getId() {
-        return id;
-    }
+	public Long getId() {
+		return id;
+	}
 
-    public String getNickname() {
-        return nickname;
-    }
+	public String getNickname() {
+		return nickname;
+	}
 
-    /** 제공자가 준 프로필 사진 주소. 동의를 안 받았으면 {@code null} 이다 */
-    public String getProfileImageUrl() {
-        return profileImageUrl;
-    }
+	/** 제공자가 준 프로필 사진 주소. 동의를 안 받았으면 {@code null} 이다 */
+	public String getProfileImageUrl() {
+		return profileImageUrl;
+	}
 
-    public MemberRole getRole() {
-        return role;
-    }
+	public MemberRole getRole() {
+		return role;
+	}
 
-    public MemberStatusCode getStatus() {
-        return status;
-    }
+	public MemberStatusCode getStatus() {
+		return status;
+	}
 
-    public boolean isAdmin() {
-        return role.isAdmin();
-    }
+	public boolean isAdmin() {
+		return role.isAdmin();
+	}
 
-    long issuedAtNanos() {
-        return issuedAtNanos;
-    }
+	long issuedAtNanos() {
+		return issuedAtNanos;
+	}
 
-    boolean matchesCurrentAccount(Member member) {
-        return member != null && Objects.equals(id, member.getId())
-                && status.isActive() && member.getStatusCode().isActive()
-                && role == member.getRole()
-                && (!isAdmin() || (Objects.equals(username, member.getUsername())
-                    && Objects.equals(passwordHash, member.getPasswordHash())));
-    }
+	boolean matchesCurrentAccount(Member member) {
+		return member != null && Objects.equals(id, member.getId())
+				&& status.isActive() && member.getStatusCode().isActive()
+				&& role == member.getRole()
+				&& (!isAdmin() || (Objects.equals(username, member.getUsername())
+					&& Objects.equals(passwordHash, member.getPasswordHash())));
+	}
 
-    /**
-     * 인증 주체의 내부 이름. 감사 컬럼도 이 회원 번호를 사용한다.
-     *
-     * 회원 번호를 쓴다. 닉네임은 unique 가 아니고 바뀔 수 있어서 과거 기록이 가리키는
-     * 대상이 사라지고, 제공자 식별자는 남기면 안 되는 값이다.
-     */
-    @Override
-    public String getName() {
-        return String.valueOf(id);
-    }
+	/**
+	 * 인증 주체의 내부 이름. 감사 컬럼도 이 회원 번호를 사용한다.
+	 *
+	 * 회원 번호를 쓴다. 닉네임은 unique 가 아니고 바뀔 수 있어서 과거 기록이 가리키는
+	 * 대상이 사라지고, 제공자 식별자는 남기면 안 되는 값이다.
+	 */
+	@Override
+	public String getName() {
+		return String.valueOf(id);
+	}
 
-    @Override
-    public Map<String, Object> getAttributes() {
-        return attributes;
-    }
+	@Override
+	public Map<String, Object> getAttributes() {
+		return attributes;
+	}
 
-    @Override
-    public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority(role.getAuthority()));
-    }
+	@Override
+	public Collection<? extends GrantedAuthority> getAuthorities() {
+		return List.of(new SimpleGrantedAuthority(role.getAuthority()));
+	}
 
-    @Override
-    public String getPassword() {
-        return passwordHash;
-    }
+	@Override
+	public String getPassword() {
+		return passwordHash;
+	}
 
-    /**
-     * 소셜 회원은 아이디가 없다. 그래도 {@code null} 을 돌려주면 안 된다.
-     *
-     * <p>Spring Security 의 {@code AbstractAuthenticationToken.getName()} 은 principal 이
-     * {@link UserDetails} 이면 {@link #getName()} 을 보지 않고 <b>이 메서드를 먼저</b> 쓴다.
-     * 두 인터페이스를 같이 구현하고 있어서 그 경로가 항상 이긴다.</p>
-     *
-     * <p>그래서 여기가 비면 소셜 로그인이 인증 직후 500 으로 끝난다 —
-     * {@code OAuth2AuthorizedClient} 가 principalName 이 비었다며 거부한다.
-     * 아이디가 없을 때 회원 번호를 쓰면 인증 이름이 채워진다. 로컬 관리자는 로그인
-     * 아이디를 반환하지만, 감사 컬럼은 {@code AuditingConfig} 가 회원 번호를 직접 읽는다.</p>
-     */
-    @Override
-    public String getUsername() {
-        return username != null ? username : String.valueOf(id);
-    }
+	/**
+	 * 소셜 회원은 아이디가 없다. 그래도 {@code null} 을 돌려주면 안 된다.
+	 *
+	 * <p>Spring Security 의 {@code AbstractAuthenticationToken.getName()} 은 principal 이
+	 * {@link UserDetails} 이면 {@link #getName()} 을 보지 않고 <b>이 메서드를 먼저</b> 쓴다.
+	 * 두 인터페이스를 같이 구현하고 있어서 그 경로가 항상 이긴다.</p>
+	 *
+	 * <p>그래서 여기가 비면 소셜 로그인이 인증 직후 500 으로 끝난다 —
+	 * {@code OAuth2AuthorizedClient} 가 principalName 이 비었다며 거부한다.
+	 * 아이디가 없을 때 회원 번호를 쓰면 인증 이름이 채워진다. 로컬 관리자는 로그인
+	 * 아이디를 반환하지만, 감사 컬럼은 {@code AuditingConfig} 가 회원 번호를 직접 읽는다.</p>
+	 */
+	@Override
+	public String getUsername() {
+		return username != null ? username : String.valueOf(id);
+	}
 
-    /** 정지·탈퇴한 계정은 아이디·비밀번호 인증을 통과하지 못한다 */
-    @Override
-    public boolean isEnabled() {
-        return status.isActive();
-    }
+	/** 정지·탈퇴한 계정은 아이디·비밀번호 인증을 통과하지 못한다 */
+	@Override
+	public boolean isEnabled() {
+		return status.isActive();
+	}
 
-    /** 비밀번호 해시는 찍지 않는다 */
-    @Override
-    public String toString() {
-        return "MemberPrincipal{id=%d, role=%s, status=%s}".formatted(id, role, status);
-    }
+	/** 비밀번호 해시는 찍지 않는다 */
+	@Override
+	public String toString() {
+		return "MemberPrincipal{id=%d, role=%s, status=%s}".formatted(id, role, status);
+	}
 }

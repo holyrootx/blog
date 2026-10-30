@@ -16,10 +16,10 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum CommentReportReason {
 
-    SPAM("광고·도배"),
-    ABUSE("욕설·비방"),
-    ADULT("음란물"),
-    OTHER("기타");
+	SPAM("광고·도배"),
+	ABUSE("욕설·비방"),
+	ADULT("음란물"),
+	OTHER("기타");
 
-    private final String label;
+	private final String label;
 }

@@ -22,42 +22,42 @@ import org.springframework.stereotype.Component;
 @Component
 public class NicknameGenerator {
 
-    /**
-     * 권위를 뜻하는 말(관리자·운영자·주인)은 넣지 않는다. 작성자 구분은 뱃지가 하는데
-     * 이름부터 헷갈리면 뱃지를 보기 전에 오해한다.
-     */
-    private static final List<String> ADJECTIVES = List.of(
-            "졸린", "조용한", "다정한", "성실한", "씩씩한", "따뜻한", "깔끔한", "부지런한",
-            "상냥한", "활발한", "차분한", "든든한", "포근한", "유쾌한", "정직한", "소박한",
-            "진지한", "엉뚱한", "느긋한", "잔잔한", "가벼운", "용감한", "슬기로운", "재빠른",
-            "참한", "멋진", "신난", "너그러운",
-            "멍청한", "못생긴", "게으른", "심술난", "어설픈", "수상한", "시끄러운", "촌스러운"
-    );
+	/**
+	 * 권위를 뜻하는 말(관리자·운영자·주인)은 넣지 않는다. 작성자 구분은 뱃지가 하는데
+	 * 이름부터 헷갈리면 뱃지를 보기 전에 오해한다.
+	 */
+	private static final List<String> ADJECTIVES = List.of(
+			"졸린", "조용한", "다정한", "성실한", "씩씩한", "따뜻한", "깔끔한", "부지런한",
+			"상냥한", "활발한", "차분한", "든든한", "포근한", "유쾌한", "정직한", "소박한",
+			"진지한", "엉뚱한", "느긋한", "잔잔한", "가벼운", "용감한", "슬기로운", "재빠른",
+			"참한", "멋진", "신난", "너그러운",
+			"멍청한", "못생긴", "게으른", "심술난", "어설픈", "수상한", "시끄러운", "촌스러운"
+	);
 
-    private static final List<String> NOUNS = List.of(
-            "고양이", "너구리", "다람쥐", "참새", "토끼", "여우", "수달", "판다",
-            "펭귄", "오징어", "문어", "거북이", "하마", "사슴", "올빼미", "두더지",
-            "개구리", "달팽이", "고래", "고등어", "감자", "도토리", "붕어빵", "구름",
-            "바람", "우산", "연필", "노트", "별빛", "모래"
-    );
+	private static final List<String> NOUNS = List.of(
+			"고양이", "너구리", "다람쥐", "참새", "토끼", "여우", "수달", "판다",
+			"펭귄", "오징어", "문어", "거북이", "하마", "사슴", "올빼미", "두더지",
+			"개구리", "달팽이", "고래", "고등어", "감자", "도토리", "붕어빵", "구름",
+			"바람", "우산", "연필", "노트", "별빛", "모래"
+	);
 
-    /** 두 자리로 고정한다. 앞에 0 이 붙은 이름은 어색하고, 세 자리는 이름이 길어진다 */
-    private static final int NUMBER_MIN = 10;
-    private static final int NUMBER_BOUND = 100;
+	/** 두 자리로 고정한다. 앞에 0 이 붙은 이름은 어색하고, 세 자리는 이름이 길어진다 */
+	private static final int NUMBER_MIN = 10;
+	private static final int NUMBER_BOUND = 100;
 
-    /**
-     * 조합 36 × 30 × 90 = 97,200 가지.
-     *
-     * 난수를 필드로 들고 있지 않은 이유는 이 값이 요청 스레드마다 따로 쓰이기 때문이다.
-     * {@link ThreadLocalRandom} 은 스레드별로 하나씩이라 경쟁이 없다.
-     */
-    public String generate() {
-        ThreadLocalRandom random = ThreadLocalRandom.current();
+	/**
+	 * 조합 36 × 30 × 90 = 97,200 가지.
+	 *
+	 * 난수를 필드로 들고 있지 않은 이유는 이 값이 요청 스레드마다 따로 쓰이기 때문이다.
+	 * {@link ThreadLocalRandom} 은 스레드별로 하나씩이라 경쟁이 없다.
+	 */
+	public String generate() {
+		ThreadLocalRandom random = ThreadLocalRandom.current();
 
-        String adjective = ADJECTIVES.get(random.nextInt(ADJECTIVES.size()));
-        String noun = NOUNS.get(random.nextInt(NOUNS.size()));
-        int number = random.nextInt(NUMBER_MIN, NUMBER_BOUND);
+		String adjective = ADJECTIVES.get(random.nextInt(ADJECTIVES.size()));
+		String noun = NOUNS.get(random.nextInt(NOUNS.size()));
+		int number = random.nextInt(NUMBER_MIN, NUMBER_BOUND);
 
-        return adjective + noun + number;
-    }
+		return adjective + noun + number;
+	}
 }

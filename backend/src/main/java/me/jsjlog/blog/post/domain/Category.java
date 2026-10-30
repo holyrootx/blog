@@ -19,23 +19,23 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Category extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
 
-    @Column(name = "name", nullable = false, unique = true, length = 50)
-    private String name;
+	@Column(name = "name", nullable = false, unique = true, length = 50)
+	private String name;
 
-    @Column(name = "sort_order", nullable = false)
-    private Long sortOrder;
+	@Column(name = "sort_order", nullable = false)
+	private Long sortOrder;
 
-    public Category(String name, Long sortOrder) {
-        this.name = name;
-        this.sortOrder = sortOrder;
-    }
+	public Category(String name, Long sortOrder) {
+		this.name = name;
+		this.sortOrder = sortOrder;
+	}
 
-    public void update(String name, Long sortOrder) {
-        this.name = name;
-        this.sortOrder = sortOrder;
-    }
+	public void update(String name, Long sortOrder) {
+		this.name = name;
+		this.sortOrder = sortOrder;
+	}
 }

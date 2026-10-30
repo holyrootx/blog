@@ -13,72 +13,72 @@ const IMAGE_URL = /!\[[^\]]*\]\(([^)\s]+)[^)]*\)|<img[^>]+src=["']([^"']+)["']/g
 
 /** @returns 주소 → 그 주소를 쓰는 임시저장 글 제목 목록 */
 export function collectDraftImageUrls() {
-  const found = new Map();
+	const found = new Map();
 
-  let keys;
+	let keys;
 
-  try {
-    keys = Object.keys(localStorage).filter((key) => key.startsWith(KEY_PREFIX));
-  } catch (error) {
-    // 저장소를 막아 둔 브라우저. 대조를 못 할 뿐 화면은 돌아가야 한다
-    console.warn(error);
-    return found;
-  }
+	try {
+		keys = Object.keys(localStorage).filter((key) => key.startsWith(KEY_PREFIX));
+	} catch (error) {
+		// 저장소를 막아 둔 브라우저. 대조를 못 할 뿐 화면은 돌아가야 한다
+		console.warn(error);
+		return found;
+	}
 
-  keys.forEach((key) => {
-    const draft = read(key);
-    const form = draft?.form;
+	keys.forEach((key) => {
+		const draft = read(key);
+		const form = draft?.form;
 
-    if (!form) {
-      return;
-    }
+		if (!form) {
+			return;
+		}
 
-    const title = form.title?.trim() || '제목 없는 글';
+		const title = form.title?.trim() || '제목 없는 글';
 
-    urlsIn(form.content).forEach((url) => add(found, url, title));
+		urlsIn(form.content).forEach((url) => add(found, url, title));
 
-    if (form.thumbnailImageUrl) {
-      add(found, form.thumbnailImageUrl.trim(), title);
-    }
-  });
+		if (form.thumbnailImageUrl) {
+			add(found, form.thumbnailImageUrl.trim(), title);
+		}
+	});
 
-  return found;
+	return found;
 }
 
 function urlsIn(content) {
-  if (!content) {
-    return [];
-  }
+	if (!content) {
+		return [];
+	}
 
-  const urls = [];
+	const urls = [];
 
-  for (const match of content.matchAll(IMAGE_URL)) {
-    const url = match[1] ?? match[2];
+	for (const match of content.matchAll(IMAGE_URL)) {
+		const url = match[1] ?? match[2];
 
-    if (url) {
-      urls.push(url.trim());
-    }
-  }
+		if (url) {
+			urls.push(url.trim());
+		}
+	}
 
-  return urls;
+	return urls;
 }
 
 function add(found, url, title) {
-  const titles = found.get(url) ?? [];
+	const titles = found.get(url) ?? [];
 
-  if (!titles.includes(title)) {
-    titles.push(title);
-  }
+	if (!titles.includes(title)) {
+		titles.push(title);
+	}
 
-  found.set(url, titles);
+	found.set(url, titles);
 }
 
 function read(key) {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : null;
-  } catch (error) {
-    console.warn(error);
-    return null;
-  }
+	try {
+		const raw = localStorage.getItem(key);
+		return raw ? JSON.parse(raw) : null;
+	} catch (error) {
+		console.warn(error);
+		return null;
+	}
 }

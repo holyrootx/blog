@@ -25,47 +25,45 @@ import tools.jackson.databind.ObjectMapper;
 @RequiredArgsConstructor
 public class AdminLoginConfigurer extends AbstractHttpConfigurer<AdminLoginConfigurer, HttpSecurity> {
 
-    private final ObjectMapper objectMapper;
-    private final AuthenticationManager authenticationManager;
-    private final AuthenticationSuccessHandler successHandler;
-    private final AuthenticationFailureHandler failureHandler;
-    private final LoginAttemptGuard attemptGuard;
-    private final ClientIpResolver clientIpResolver;
+	private final ObjectMapper objectMapper;
+	private final AuthenticationManager authenticationManager;
+	private final AuthenticationSuccessHandler successHandler;
+	private final AuthenticationFailureHandler failureHandler;
+	private final LoginAttemptGuard attemptGuard;
+	private final ClientIpResolver clientIpResolver;
 
-    @Override
-    public void configure(HttpSecurity http) {
-        AdminLoginFilter filter = new AdminLoginFilter(objectMapper, attemptGuard, clientIpResolver);
+	@Override
+	public void configure(HttpSecurity http) {
+		AdminLoginFilter filter = new AdminLoginFilter(objectMapper, attemptGuard, clientIpResolver);
 
-        filter.setAuthenticationManager(authenticationManager);
-        filter.setAuthenticationSuccessHandler(successHandler);
-        filter.setAuthenticationFailureHandler(failureHandler);
+		filter.setAuthenticationManager(authenticationManager);
+		filter.setAuthenticationSuccessHandler(successHandler);
+		filter.setAuthenticationFailureHandler(failureHandler);
 
-        // 기본값은 요청 하나 동안만 유지되는 저장소다. 그대로 두면 로그인 응답은 200 인데
-        // 다음 요청에서 다시 401 이 된다
-        filter.setSecurityContextRepository(new HttpSessionSecurityContextRepository());
+		// 기본값은 요청 하나 동안만 유지되는 저장소다. 그대로 두면 로그인 응답은 200 인데
+		// 다음 요청에서 다시 401 이 된다
+		filter.setSecurityContextRepository(new HttpSessionSecurityContextRepository());
 
-        SessionAuthenticationStrategy sessionStrategy =
-                http.getSharedObject(SessionAuthenticationStrategy.class);
+		SessionAuthenticationStrategy sessionStrategy =
+				http.getSharedObject(SessionAuthenticationStrategy.class);
 
-        if (sessionStrategy != null) {
-            filter.setSessionAuthenticationStrategy(sessionStrategy);
-        }
+		if (sessionStrategy != null) {
+			filter.setSessionAuthenticationStrategy(sessionStrategy);
+		}
 
-        // 폼 로그인 필터가 서는 자리에 대신 세운다
-        http.addFilterBefore(postProcess(filter), UsernamePasswordAuthenticationFilter.class);
-    }
+		http.addFilterBefore(postProcess(filter), UsernamePasswordAuthenticationFilter.class);
+	}
 
-    /** {@code http.with(...)} 에서 쓰기 좋게 감싼다 */
-    public static AdminLoginConfigurer of(
-            ObjectMapper objectMapper,
-            AuthenticationManager authenticationManager,
-            AuthenticationSuccessHandler successHandler,
-            AuthenticationFailureHandler failureHandler,
-            LoginAttemptGuard attemptGuard,
-            ClientIpResolver clientIpResolver
-    ) {
-        return new AdminLoginConfigurer(
-                objectMapper, authenticationManager, successHandler, failureHandler,
-                attemptGuard, clientIpResolver);
-    }
+	public static AdminLoginConfigurer of(
+			ObjectMapper objectMapper,
+			AuthenticationManager authenticationManager,
+			AuthenticationSuccessHandler successHandler,
+			AuthenticationFailureHandler failureHandler,
+			LoginAttemptGuard attemptGuard,
+			ClientIpResolver clientIpResolver
+	) {
+		return new AdminLoginConfigurer(
+				objectMapper, authenticationManager, successHandler, failureHandler,
+				attemptGuard, clientIpResolver);
+	}
 }

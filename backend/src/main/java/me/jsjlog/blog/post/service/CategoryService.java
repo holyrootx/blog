@@ -15,10 +15,10 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CategoryService {
 
-    private final CategoryRepository categoryRepository;
+	private final CategoryRepository categoryRepository;
 
-    public List<CategoryResponse> getCategories(){
-        Sort sortOrder = Sort.by(Sort.Direction.ASC, "sortOrder");
-        return categoryRepository.findAllBy(sortOrder);
-    }
+	public List<CategoryResponse> getCategories(){
+		Sort sortOrder = Sort.by(Sort.Direction.ASC, "sortOrder");
+		return categoryRepository.findAllBy(sortOrder);
+	}
 }

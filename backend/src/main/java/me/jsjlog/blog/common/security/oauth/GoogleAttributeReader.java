@@ -18,30 +18,30 @@ import org.springframework.stereotype.Component;
 @Component
 public class GoogleAttributeReader extends OAuthAttributeReader {
 
-    @Override
-    public AuthProvider provider() {
-        return AuthProvider.GOOGLE;
-    }
+	@Override
+	public AuthProvider provider() {
+		return AuthProvider.GOOGLE;
+	}
 
-    @Override
-    protected String providerUserId(Map<String, Object> attributes) {
-        return stringAt(attributes, "sub");
-    }
+	@Override
+	protected String providerUserId(Map<String, Object> attributes) {
+		return stringAt(attributes, "sub");
+	}
 
-    @Override
-    protected String nickname(Map<String, Object> attributes) {
-        return stringAt(attributes, "name");
-    }
+	@Override
+	protected String nickname(Map<String, Object> attributes) {
+		return stringAt(attributes, "name");
+	}
 
-    @Override
-    protected String email(Map<String, Object> attributes) {
-        // email_verified 를 보지 않는다. 확인된 이메일이어도 회원을 찾는 데 쓰지 않기로 했고,
-        // 저장만 하는 값에 조건을 달면 "확인된 것만 저장" 같은 규칙이 생겨 나중에 병합 로직을 부른다
-        return stringAt(attributes, "email");
-    }
+	@Override
+	protected String email(Map<String, Object> attributes) {
+		// email_verified 를 보지 않는다. 확인된 이메일이어도 회원을 찾는 데 쓰지 않기로 했고,
+		// 저장만 하는 값에 조건을 달면 "확인된 것만 저장" 같은 규칙이 생겨 나중에 병합 로직을 부른다
+		return stringAt(attributes, "email");
+	}
 
-    @Override
-    protected String profileImageUrl(Map<String, Object> attributes) {
-        return stringAt(attributes, "picture");
-    }
+	@Override
+	protected String profileImageUrl(Map<String, Object> attributes) {
+		return stringAt(attributes, "picture");
+	}
 }

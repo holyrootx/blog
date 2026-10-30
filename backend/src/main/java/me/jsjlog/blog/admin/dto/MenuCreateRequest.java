@@ -10,12 +10,12 @@ import me.jsjlog.blog.admin.domain.MenuType;
  * visible 을 비우면 노출로 만든다.
  */
 public record MenuCreateRequest(
-        Long parentId,
-        String menuName,
-        String menuDescription,
-        MenuType menuType,
-        String routePath,
-        Long sortOrder,
-        Boolean visible
+		Long parentId,
+		String menuName,
+		String menuDescription,
+		MenuType menuType,
+		String routePath,
+		Long sortOrder,
+		Boolean visible
 ) {
 }

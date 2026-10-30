@@ -10,35 +10,35 @@ import me.jsjlog.blog.member.domain.Member;
  * 브라우저 어디에나 남는다.</p>
  */
 public record MemberSessionResponse(
-        Long id,
-        String nickname,
-        /** 동의를 안 받았거나 제공자가 안 주면 null. 화면은 그때 닉네임 첫 글자를 쓴다 */
-        String profileImageUrl,
-        String role
+		Long id,
+		String nickname,
+		/** 동의를 안 받았거나 제공자가 안 주면 null. 화면은 그때 닉네임 첫 글자를 쓴다 */
+		String profileImageUrl,
+		String role
 ) {
 
-    /** 로그인 직후. 그 순간의 principal 이 곧 최신이다 */
-    public static MemberSessionResponse from(MemberPrincipal principal) {
-        return new MemberSessionResponse(
-                principal.getId(),
-                principal.getNickname(),
-                principal.getProfileImageUrl(),
-                principal.getRole().getAuthority()
-        );
-    }
+	/** 로그인 직후. 그 순간의 principal 이 곧 최신이다 */
+	public static MemberSessionResponse from(MemberPrincipal principal) {
+		return new MemberSessionResponse(
+				principal.getId(),
+				principal.getNickname(),
+				principal.getProfileImageUrl(),
+				principal.getRole().getAuthority()
+		);
+	}
 
-    /**
-     * 세션이 이어지는 동안의 조회.
-     *
-     * principal 은 로그인하던 순간의 사본이라 닉네임을 바꿔도 그대로다. 회원 행에서 읽어야
-     * 바꾼 값이 반영된다.
-     */
-    public static MemberSessionResponse from(Member member) {
-        return new MemberSessionResponse(
-                member.getId(),
-                member.getNickname(),
-                member.getProfileImageUrl(),
-                member.getRole().getAuthority()
-        );
-    }
+	/**
+	 * 세션이 이어지는 동안의 조회.
+	 *
+	 * principal 은 로그인하던 순간의 사본이라 닉네임을 바꿔도 그대로다. 회원 행에서 읽어야
+	 * 바꾼 값이 반영된다.
+	 */
+	public static MemberSessionResponse from(Member member) {
+		return new MemberSessionResponse(
+				member.getId(),
+				member.getNickname(),
+				member.getProfileImageUrl(),
+				member.getRole().getAuthority()
+		);
+	}
 }

@@ -26,81 +26,81 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class MemberService {
 
-    /**
-     * 한 번에 내려주는 댓글 수.
-     *
-     * 개인 블로그라 한 사람이 남기는 댓글이 많지 않다. 더 필요해지면 그때 페이지를 붙인다 —
-     * 지금 커서를 만들어 두면 쓰지 않는 코드가 남는다.
-     */
-    private static final int MY_COMMENT_LIMIT = 100;
+	/**
+	 * 한 번에 내려주는 댓글 수.
+	 *
+	 * 개인 블로그라 한 사람이 남기는 댓글이 많지 않다. 더 필요해지면 그때 페이지를 붙인다 —
+	 * 지금 커서를 만들어 두면 쓰지 않는 코드가 남는다.
+	 */
+	private static final int MY_COMMENT_LIMIT = 100;
 
-    private final MemberRepository memberRepository;
-    private final MemberStatusService memberStatusService;
-    private final MemberSessionManager memberSessions;
-    private final CommentRepository commentRepository;
-    private final AuditorAware<String> auditorProvider;
+	private final MemberRepository memberRepository;
+	private final MemberStatusService memberStatusService;
+	private final MemberSessionManager memberSessions;
+	private final CommentRepository commentRepository;
+	private final AuditorAware<String> auditorProvider;
 
-    @Transactional
-    public Member changeNickname(Long memberId, String nickname) {
-        Member member = requiredActiveMember(memberId);
-        String trimmedNickname = nickname.trim();
-        if (memberRepository.updateActiveNickname(memberId, trimmedNickname, LocalDateTime.now(),
-                auditorProvider.getCurrentAuditor().orElse("system")) != 1) {
-            throw new BlogException(ErrorCode.FORBIDDEN);
-        }
-        // 조건부 부분 갱신 이후 분리된 객체다. 응답 값만 맞추고 오래된 상태는 저장하지 않는다.
-        member.changeNickname(trimmedNickname);
+	@Transactional
+	public Member changeNickname(Long memberId, String nickname) {
+		Member member = requiredActiveMember(memberId);
+		String trimmedNickname = nickname.trim();
+		if (memberRepository.updateActiveNickname(memberId, trimmedNickname, LocalDateTime.now(),
+				auditorProvider.getCurrentAuditor().orElse("system")) != 1) {
+			throw new BlogException(ErrorCode.FORBIDDEN);
+		}
+		// 조건부 부분 갱신 이후 분리된 객체다. 응답 값만 맞추고 오래된 상태는 저장하지 않는다.
+		member.changeNickname(trimmedNickname);
 
-        return member;
-    }
+		return member;
+	}
 
-    /**
-     * 탈퇴.
-     *
-     * <p>행을 지우지 않는다. 댓글이 이 행을 가리키고 있어서 지우면 댓글이 사라지고
-     * 답글이 부모를 잃는다. 무엇을 남기고 무엇을 지우는지는 {@link Member#withdraw(LocalDateTime)} 에 있다.</p>
-     *
-     * <p>탈퇴가 커밋된 뒤 다른 브라우저의 인증도 함께 폐기한다.</p>
-     */
-    @Transactional
-    public void withdraw(Long memberId) {
-        Member member = requiredMember(memberId);
+	/**
+	 * 탈퇴.
+	 *
+	 * <p>행을 지우지 않는다. 댓글이 이 행을 가리키고 있어서 지우면 댓글이 사라지고
+	 * 답글이 부모를 잃는다. 무엇을 남기고 무엇을 지우는지는 {@link Member#withdraw(LocalDateTime)} 에 있다.</p>
+	 *
+	 * <p>탈퇴가 커밋된 뒤 다른 브라우저의 인증도 함께 폐기한다.</p>
+	 */
+	@Transactional
+	public void withdraw(Long memberId) {
+		Member member = requiredMember(memberId);
 
-        // 관리자가 탈퇴하면 블로그에 들어갈 사람이 없어진다. 되돌리려면 DB 를 직접 고쳐야 한다
-        if (member.isAdmin()) {
-            throw new BlogException(ErrorCode.MEMBER_ADMIN_CANNOT_WITHDRAW);
-        }
+		// 관리자가 탈퇴하면 블로그에 들어갈 사람이 없어진다. 되돌리려면 DB 를 직접 고쳐야 한다
+		if (member.isAdmin()) {
+			throw new BlogException(ErrorCode.MEMBER_ADMIN_CANNOT_WITHDRAW);
+		}
 
-        if (!member.getStatusCode().isActive()) {
-            throw new BlogException(ErrorCode.FORBIDDEN);
-        }
+		if (!member.getStatusCode().isActive()) {
+			throw new BlogException(ErrorCode.FORBIDDEN);
+		}
 
-        memberStatusService.withdraw(member, LocalDateTime.now());
-        memberSessions.revokeAfterCommit(memberId);
-    }
+		memberStatusService.withdraw(member, LocalDateTime.now());
+		memberSessions.revokeAfterCommit(memberId);
+	}
 
-    @Transactional(readOnly = true)
-    public List<MyCommentResponse> findMyComments(Long memberId) {
-        return commentRepository
-                .findMyComments(memberId, LocalDateTime.now(), PageRequest.of(0, MY_COMMENT_LIMIT))
-                .stream()
-                .map(MyCommentResponse::from)
-                .toList();
-    }
+	@Transactional(readOnly = true)
+	public List<MyCommentResponse> findMyComments(Long memberId) {
+		return commentRepository
+				.findMyComments(memberId, LocalDateTime.now(), PageRequest.of(0, MY_COMMENT_LIMIT))
+				.stream()
+				.map(MyCommentResponse::from)
+				.toList();
+	}
 
-    private Member requiredMember(Long memberId) {
-        return memberRepository
-                .findById(memberId)
-                .orElseThrow(() -> new BlogException(ErrorCode.MEMBER_NOT_FOUND));
-    }
+	private Member requiredMember(Long memberId) {
+		return memberRepository
+				.findById(memberId)
+				.orElseThrow(() -> new BlogException(ErrorCode.MEMBER_NOT_FOUND));
+	}
 
-    private Member requiredActiveMember(Long memberId) {
-        Member member = requiredMember(memberId);
+	private Member requiredActiveMember(Long memberId) {
+		Member member = requiredMember(memberId);
 
-        if (!member.getStatusCode().isActive()) {
-            throw new BlogException(ErrorCode.FORBIDDEN);
-        }
+		if (!member.getStatusCode().isActive()) {
+			throw new BlogException(ErrorCode.FORBIDDEN);
+		}
 
-        return member;
-    }
+		return member;
+	}
 }

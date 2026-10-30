@@ -7,43 +7,43 @@
 const SEOUL = 'Asia/Seoul';
 
 const DATE_TIME_FORMAT = new Intl.DateTimeFormat('ko-KR', {
-  timeZone: SEOUL,
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-  hour: '2-digit',
-  minute: '2-digit',
-  hourCycle: 'h23',
+	timeZone: SEOUL,
+	year: 'numeric',
+	month: '2-digit',
+	day: '2-digit',
+	hour: '2-digit',
+	minute: '2-digit',
+	hourCycle: 'h23',
 });
 
 /** 2026.10.17 21:30 */
 export function formatSeoulDateTime(value) {
-  const parts = toParts(value);
+	const parts = toParts(value);
 
-  return parts ? `${parts.year}.${parts.month}.${parts.day} ${parts.hour}:${parts.minute}` : '';
+	return parts ? `${parts.year}.${parts.month}.${parts.day} ${parts.hour}:${parts.minute}` : '';
 }
 
 /** 2026.10.17 */
 export function formatSeoulDate(value) {
-  const parts = toParts(value);
+	const parts = toParts(value);
 
-  return parts ? `${parts.year}.${parts.month}.${parts.day}` : '';
+	return parts ? `${parts.year}.${parts.month}.${parts.day}` : '';
 }
 
 function toParts(value) {
-  if (!value) {
-    return null;
-  }
+	if (!value) {
+		return null;
+	}
 
-  const date = new Date(value);
+	const date = new Date(value);
 
-  if (Number.isNaN(date.getTime())) {
-    return null;
-  }
+	if (Number.isNaN(date.getTime())) {
+		return null;
+	}
 
-  return Object.fromEntries(
-    DATE_TIME_FORMAT.formatToParts(date)
-      .filter((part) => part.type !== 'literal')
-      .map((part) => [part.type, part.value]),
-  );
+	return Object.fromEntries(
+		DATE_TIME_FORMAT.formatToParts(date)
+			.filter((part) => part.type !== 'literal')
+			.map((part) => [part.type, part.value]),
+	);
 }

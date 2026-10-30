@@ -9,11 +9,11 @@ import java.time.LocalDateTime;
  * @param enabled   비우면 그대로 둔다. 서버 코드(enum)에 있는 코드는 끌 수 없다
  */
 public record AdminCommonCodeUpdateRequest(
-        // 화면이 불러왔던 시점의 값. 지금 서버 값과 다르면 그 사이 누가 고친 것이다
-        LocalDateTime updatedAt,
-        String codeName,
-        String description,
-        Integer sortOrder,
-        Boolean enabled
+		// 화면이 불러왔던 시점의 값. 지금 서버 값과 다르면 그 사이 누가 고친 것이다
+		LocalDateTime updatedAt,
+		String codeName,
+		String description,
+		Integer sortOrder,
+		Boolean enabled
 ) {
 }

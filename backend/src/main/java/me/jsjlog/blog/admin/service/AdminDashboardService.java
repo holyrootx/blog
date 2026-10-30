@@ -17,23 +17,23 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class AdminDashboardService {
 
-    private final AdminDashboardQueryRepository dashboardQueryRepository;
-    private final BlogProfileService blogProfileService;
+	private final AdminDashboardQueryRepository dashboardQueryRepository;
+	private final BlogProfileService blogProfileService;
 
-    @Transactional(readOnly = true)
-    public AdminDashboardResponse getDashboard() {
+	@Transactional(readOnly = true)
+	public AdminDashboardResponse getDashboard() {
 
-        LocalDateTime monthStart = LocalDate.now().withDayOfMonth(1).atStartOfDay();
+		LocalDateTime monthStart = LocalDate.now().withDayOfMonth(1).atStartOfDay();
 
-        return new AdminDashboardResponse(
-                blogProfileService.getDaysSinceStart(),
-                dashboardQueryRepository.countPostsByStatus(PostStatus.DRAFT),
-                dashboardQueryRepository.sumViews(),
-                dashboardQueryRepository.countPostsByStatus(PostStatus.PUBLISHED),
-                dashboardQueryRepository.countPostsCreatedSince(monthStart),
-                dashboardQueryRepository.countReportedComments(),
-                dashboardQueryRepository.getMostViewedCategoryName(),
-                dashboardQueryRepository.getCategoryShares()
-        );
-    }
+		return new AdminDashboardResponse(
+				blogProfileService.getDaysSinceStart(),
+				dashboardQueryRepository.countPostsByStatus(PostStatus.DRAFT),
+				dashboardQueryRepository.sumViews(),
+				dashboardQueryRepository.countPostsByStatus(PostStatus.PUBLISHED),
+				dashboardQueryRepository.countPostsCreatedSince(monthStart),
+				dashboardQueryRepository.countReportedComments(),
+				dashboardQueryRepository.getMostViewedCategoryName(),
+				dashboardQueryRepository.getCategoryShares()
+		);
+	}
 }

@@ -7,10 +7,10 @@ package me.jsjlog.blog.admin.dto;
  * 스스로 봇이라고 밝힌 요청은 비회원에서 빼서 {@code bot} 으로 센다.</p>
  */
 public record AdminPostViewCounts(
-        long all,
-        long member,
-        long admin,
-        long anonymous,
-        long bot
+		long all,
+		long member,
+		long admin,
+		long anonymous,
+		long bot
 ) {
 }

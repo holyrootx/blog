@@ -20,39 +20,39 @@ const { member } = useMemberAuth();
 member.value = { id: 1, nickname: '테스트 회원', role: 'USER' };
 setCsrfToken({ headerName: 'X-CSRF-TOKEN', token: 'fixture-token' });
 const router = createRouter({
-  history: createMemoryHistory(),
-  routes: [
-    { path: '/', component: { render: () => null } },
-    { path: '/login', name: 'member-login', component: { render: () => null } },
-  ],
+	history: createMemoryHistory(),
+	routes: [
+		{ path: '/', component: { render: () => null } },
+		{ path: '/login', name: 'member-login', component: { render: () => null } },
+	],
 });
 await router.push('/');
 const app = createApp({
-  setup: () => () => h('main', { style: 'max-width:900px;margin:24px auto;padding:16px;' }, [
-    mode.value === 'editor'
-      ? h(AdminBlockEditor, { modelValue: markdown.value, 'onUpdate:modelValue': value => { markdown.value = value; } })
-      : mode.value === 'post'
-        ? h(PostBody, { body: toPostBody(markdown.value) })
-        : h(CommentSection, { ref: commentSection, postId: postId.value, comments: comments.value, initialLoading: loading.value }),
-    h(AppToast),
-  ]),
+	setup: () => () => h('main', { style: 'max-width:900px;margin:24px auto;padding:16px;' }, [
+		mode.value === 'editor'
+			? h(AdminBlockEditor, { modelValue: markdown.value, 'onUpdate:modelValue': value => { markdown.value = value; } })
+			: mode.value === 'post'
+				? h(PostBody, { body: toPostBody(markdown.value) })
+				: h(CommentSection, { ref: commentSection, postId: postId.value, comments: comments.value, initialLoading: loading.value }),
+		h(AppToast),
+	]),
 });
 app.use(router).mount('#fixture');
 window.fixture = {
-  async editor(value) { markdown.value = value; mode.value = 'editor'; await nextTick(); },
-  // 저장된 마크다운이 공개 글 화면에서 어떻게 보이는지
-  async post(value) { markdown.value = value; mode.value = 'post'; await nextTick(); },
-  async comments(value, initialLoading = false, id = 1) {
-    postId.value = id;
-    comments.value = value;
-    loading.value = initialLoading;
-    mode.value = 'comments';
-    await nextTick();
-  },
-  async loading(value) { loading.value = value; await nextTick(); },
-  async member(value) { member.value = value; await nextTick(); },
-  focusComment: () => commentSection.value.focusCommentInput(),
-  markdown: () => markdown.value,
-  route: () => router.currentRoute.value.name,
-  unmount: () => app.unmount(),
+	async editor(value) { markdown.value = value; mode.value = 'editor'; await nextTick(); },
+	// 저장된 마크다운이 공개 글 화면에서 어떻게 보이는지
+	async post(value) { markdown.value = value; mode.value = 'post'; await nextTick(); },
+	async comments(value, initialLoading = false, id = 1) {
+		postId.value = id;
+		comments.value = value;
+		loading.value = initialLoading;
+		mode.value = 'comments';
+		await nextTick();
+	},
+	async loading(value) { loading.value = value; await nextTick(); },
+	async member(value) { member.value = value; await nextTick(); },
+	focusComment: () => commentSection.value.focusCommentInput(),
+	markdown: () => markdown.value,
+	route: () => router.currentRoute.value.name,
+	unmount: () => app.unmount(),
 };

@@ -14,16 +14,16 @@ import { toEditorBlocks } from './postEditorBlocks';
 let held = [];
 
 export function holdBlocks(blocks) {
-  // 미리보기 주소는 그 화면에서만 뜻이 있는 값이라 들고 다니지 않는다
-  held = blocks.map((block) => ({ ...block, previewUrl: '' }));
+	// 미리보기 주소는 그 화면에서만 뜻이 있는 값이라 들고 다니지 않는다
+	held = blocks.map((block) => ({ ...block, previewUrl: '' }));
 }
 
 export function heldBlocks() {
-  return held;
+	return held;
 }
 
 export function hasHeldBlocks() {
-  return held.length > 0;
+	return held.length > 0;
 }
 
 /**
@@ -38,21 +38,21 @@ export function hasHeldBlocks() {
  * @returns 블록 배열. 마크다운이 아니거나 비어 있으면 빈 배열
  */
 export function readClipboardBlocks(text) {
-  const trimmed = (text ?? '').trim();
+	const trimmed = (text ?? '').trim();
 
-  if (trimmed === '') {
-    return [];
-  }
+	if (trimmed === '') {
+		return [];
+	}
 
-  const blocks = toEditorBlocks(trimmed);
+	const blocks = toEditorBlocks(trimmed);
 
-  // 단락 하나로만 풀렸고 원문에 서식 기호가 없으면 그냥 글자다. 블록으로 만들 것이
-  // 아니라 커서 자리에 글자로 들어가야 하므로 브라우저에 맡긴다
-  const looksLikeMarkdown = /(^|\n)\s*(#{1,6}\s|```|[-*]\s|>\s|!\[)/.test(trimmed);
+	// 단락 하나로만 풀렸고 원문에 서식 기호가 없으면 그냥 글자다. 블록으로 만들 것이
+	// 아니라 커서 자리에 글자로 들어가야 하므로 브라우저에 맡긴다
+	const looksLikeMarkdown = /(^|\n)\s*(#{1,6}\s|```|[-*]\s|>\s|!\[)/.test(trimmed);
 
-  if (blocks.length <= 1 && !looksLikeMarkdown) {
-    return [];
-  }
+	if (blocks.length <= 1 && !looksLikeMarkdown) {
+		return [];
+	}
 
-  return blocks;
+	return blocks;
 }

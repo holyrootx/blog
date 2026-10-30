@@ -33,24 +33,24 @@ import org.springframework.util.StringUtils;
 @Component
 public class ClientIpResolver {
 
-    /** Nginx 가 {@code $remote_addr} 을 담아 주는 헤더. 이 서버가 믿는 유일한 출처다 */
-    private static final String NGINX_HEADER = "X-Real-IP";
+	/** Nginx 가 {@code $remote_addr} 을 담아 주는 헤더. 이 서버가 믿는 유일한 출처다 */
+	private static final String NGINX_HEADER = "X-Real-IP";
 
-    public String resolve(HttpServletRequest request) {
-        String remoteAddress = request.getRemoteAddr();
-        String realIp = request.getHeader(NGINX_HEADER);
+	public String resolve(HttpServletRequest request) {
+		String remoteAddress = request.getRemoteAddr();
+		String realIp = request.getHeader(NGINX_HEADER);
 
-        if (isLocalProxy(remoteAddress) && StringUtils.hasText(realIp)) {
-            return realIp.trim();
-        }
+		if (isLocalProxy(remoteAddress) && StringUtils.hasText(realIp)) {
+			return realIp.trim();
+		}
 
-        // 운영 방화벽과 별개로, 직접 요청의 헤더로 로그인 제한 기준을 바꿀 수 없게 한다.
-        return remoteAddress;
-    }
+		// 운영 방화벽과 별개로, 직접 요청의 헤더로 로그인 제한 기준을 바꿀 수 없게 한다.
+		return remoteAddress;
+	}
 
-    private boolean isLocalProxy(String address) {
-        return "127.0.0.1".equals(address)
-                || "::1".equals(address)
-                || "0:0:0:0:0:0:0:1".equals(address);
-    }
+	private boolean isLocalProxy(String address) {
+		return "127.0.0.1".equals(address)
+				|| "::1".equals(address)
+				|| "0:0:0:0:0:0:0:1".equals(address);
+	}
 }

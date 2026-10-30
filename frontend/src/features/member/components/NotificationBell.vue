@@ -4,11 +4,11 @@ import { useRoute, useRouter } from 'vue-router';
 import { formatExactTime, formatRelativeTime } from '../../../shared/time/relativeTime';
 
 import {
-  loadNotifications,
-  readAllNotifications,
-  readNotification,
-  refreshUnreadCount,
-  useNotifications,
+	loadNotifications,
+	readAllNotifications,
+	readNotification,
+	refreshUnreadCount,
+	useNotifications,
 } from '../data/notificationStore';
 import { useMemberAuth } from '../data/memberAuthStore';
 import { notifyError } from '../../../shared/toast/toastStore';
@@ -35,7 +35,7 @@ const dropdownId = useId();
 const badge = computed(() => (unreadCount.value > 99 ? '99+' : String(unreadCount.value)));
 
 const label = computed(() =>
-  unreadCount.value > 0 ? `알림 ${unreadCount.value}개` : '알림');
+	unreadCount.value > 0 ? `알림 ${unreadCount.value}개` : '알림');
 
 /**
  * 알림 문구.
@@ -48,57 +48,59 @@ const label = computed(() =>
  * "정성주 님이 내 댓글을 가렸습니다" 가 되어 버린다.</p>
  */
 function messageOf(notification) {
-  if (notification.type === 'REPLY') {
-    return `${notification.actorNickname} 님이 내 댓글에 답글을 남겼습니다`;
-  }
+	if (notification.type === 'REPLY') {
+		return `${notification.actorNickname} 님이 내 댓글에 답글을 남겼습니다`;
+	}
 
-  if (notification.type === 'POST_COMMENT') {
-    return `${notification.actorNickname} 님이 내 글에 댓글을 남겼습니다`;
-  }
+	if (notification.type === 'POST_COMMENT') {
+		return `${notification.actorNickname} 님이 내 글에 댓글을 남겼습니다`;
+	}
 
-  if (notification.type === 'REPORT_RECEIVED') {
-    return `${notification.actorNickname} 님의 댓글이 신고되었습니다`;
-  }
+	if (notification.type === 'REPORT_RECEIVED') {
+		return `${notification.actorNickname} 님의 댓글이 신고되었습니다`;
+	}
 
-  if (notification.type === 'GUESTBOOK_WRITTEN') {
-    return `${notification.actorNickname} 님이 방명록을 남겼습니다`;
-  }
+	if (notification.type === 'GUESTBOOK_WRITTEN') {
+		return `${notification.actorNickname} 님이 방명록을 남겼습니다`;
+	}
 
-  if (notification.type === 'GUESTBOOK_REPORTED') {
-    return `${notification.actorNickname} 님의 방명록 글이 신고되었습니다`;
-  }
+	if (notification.type === 'GUESTBOOK_REPORTED') {
+		return `${notification.actorNickname} 님의 방명록 글이 신고되었습니다`;
+	}
 
-  if (notification.type === 'GUESTBOOK_REPLIED') {
-    return `${notification.actorNickname} 님이 내 방명록에 답글을 남겼습니다`;
-  }
+	if (notification.type === 'GUESTBOOK_REPLIED') {
+		return `${notification.actorNickname} 님이 내 방명록에 답글을 남겼습니다`;
+	}
 
-  // 사유는 서버가 보내지 않는다. 댓글 가림과 같은 까닭이다
-  if (notification.type === 'GUESTBOOK_HIDDEN') {
-    return '내 방명록 글이 운영 기준에 따라 가려졌습니다';
-  }
+	// 사유는 서버가 보내지 않는다. 댓글 가림과 같은 까닭이다
+	if (notification.type === 'GUESTBOOK_HIDDEN') {
+		return '내 방명록 글이 운영 기준에 따라 가려졌습니다';
+	}
 
-  // 사유는 서버가 보내지 않는다. 어떤 댓글에 누가 왜 신고했는지가 좁혀지기 때문이다
-  return '내 댓글이 운영 기준에 따라 가려졌습니다';
+	// 사유는 서버가 보내지 않는다. 어떤 댓글에 누가 왜 신고했는지가 좁혀지기 때문이다
+	return '내 댓글이 운영 기준에 따라 가려졌습니다';
 }
 
 async function toggle() {
-  open.value = !open.value;
+	open.value = !open.value;
 
-  if (open.value) {
-    await reload();
-  }
+	if (open.value) {
+		await reload();
+	}
 }
 
 async function keepFocus(action) {
-  const focused = document.activeElement;
-  const inside = root.value?.contains(focused);
-  await action();
-  await nextTick();
-  if (open.value && inside && !focused.isConnected && document.activeElement === document.body) trigger.value?.focus();
+	const focused = document.activeElement;
+	const inside = root.value?.contains(focused);
+	await action();
+	await nextTick();
+	if (open.value && inside && !focused.isConnected && document.activeElement === document.body) {
+		trigger.value?.focus();
+	}
 }
 
 function reload() {
-  return keepFocus(() => Promise.all([loadNotifications(), refreshUnreadCount()]));
+	return keepFocus(() => Promise.all([loadNotifications(), refreshUnreadCount()]));
 }
 
 /**
@@ -114,172 +116,176 @@ function reload() {
  * </ul>
  */
 async function go(notification) {
-  open.value = false;
+	open.value = false;
 
-  void readNotification(notification.id).then((success) => {
-    if (success === false) notifyError('알림의 읽음 처리를 완료하지 못했습니다.');
-  });
+	void readNotification(notification.id).then((success) => {
+		if (success === false) {
+			notifyError('알림의 읽음 처리를 완료하지 못했습니다.');
+		}
+	});
 
-  if (notification.type === 'REPORT_RECEIVED') {
-    await router.push({ name: 'admin-comments', query: { report: notification.commentId } });
-    return;
-  }
+	if (notification.type === 'REPORT_RECEIVED') {
+		await router.push({ name: 'admin-comments', query: { report: notification.commentId } });
+		return;
+	}
 
-  // 방명록 알림은 운영자에게만 온다. 비밀글도 그대로 보이고 답글·가리기·신고 판단을
-  // 한 창에서 하는 관리자 화면으로 바로 연다
-  if (notification.type === 'GUESTBOOK_WRITTEN' || notification.type === 'GUESTBOOK_REPORTED') {
-    await router.push({ name: 'admin-guestbook', query: { entry: notification.guestbookEntryId } });
-    return;
-  }
+	// 방명록 알림은 운영자에게만 온다. 비밀글도 그대로 보이고 답글·가리기·신고 판단을
+	// 한 창에서 하는 관리자 화면으로 바로 연다
+	if (notification.type === 'GUESTBOOK_WRITTEN' || notification.type === 'GUESTBOOK_REPORTED') {
+		await router.push({ name: 'admin-guestbook', query: { entry: notification.guestbookEntryId } });
+		return;
+	}
 
-  // 답글·가림 알림은 공개 방명록의 내 글로 간다. 가린 글도 쓴 사람에게는 안내 문구로 남아 있다.
-  // 오래된 글이면 뒤쪽에 있어서, 몇 쪽인지는 방명록 화면이 서버에 묻는다
-  if (notification.type === 'GUESTBOOK_REPLIED' || notification.type === 'GUESTBOOK_HIDDEN') {
-    await router.push({ name: 'guestbook', query: { entry: notification.guestbookEntryId } });
-    return;
-  }
+	// 답글·가림 알림은 공개 방명록의 내 글로 간다. 가린 글도 쓴 사람에게는 안내 문구로 남아 있다.
+	// 오래된 글이면 뒤쪽에 있어서, 몇 쪽인지는 방명록 화면이 서버에 묻는다
+	if (notification.type === 'GUESTBOOK_REPLIED' || notification.type === 'GUESTBOOK_HIDDEN') {
+		await router.push({ name: 'guestbook', query: { entry: notification.guestbookEntryId } });
+		return;
+	}
 
-  if (notification.type === 'COMMENT_HIDDEN') {
-    await router.push({ name: 'member-settings' });
-    return;
-  }
+	if (notification.type === 'COMMENT_HIDDEN') {
+		await router.push({ name: 'member-settings' });
+		return;
+	}
 
-  await router.push({
-    name: 'post-detail',
-    params: { id: notification.postId },
-    hash: `#comment-${notification.commentId}`,
-  });
+	await router.push({
+		name: 'post-detail',
+		params: { id: notification.postId },
+		hash: `#comment-${notification.commentId}`,
+	});
 }
 
 function closeOnOutside(event) {
-  // 재시도를 누른 순간 오류 버튼이 사라져도 클릭이 시작된 곳은 창 안이다.
-  if (open.value && root.value && !event.composedPath().includes(root.value)) {
-    open.value = false;
-  }
+	// 재시도를 누른 순간 오류 버튼이 사라져도 클릭이 시작된 곳은 창 안이다.
+	if (open.value && root.value && !event.composedPath().includes(root.value)) {
+		open.value = false;
+	}
 }
 
 function closeOnEscape(event) {
-  if (event.key === 'Escape' && open.value) {
-    open.value = false;
-    if (root.value?.contains(event.target)) {
-      event.preventDefault();
-      trigger.value?.focus();
-    }
-  }
+	if (event.key === 'Escape' && open.value) {
+		open.value = false;
+		if (root.value?.contains(event.target)) {
+			event.preventDefault();
+			trigger.value?.focus();
+		}
+	}
 }
 
 function closeOnFocusout(event) {
-  if (event.relatedTarget && !root.value?.contains(event.relatedTarget)) open.value = false;
+	if (event.relatedTarget && !root.value?.contains(event.relatedTarget)) {
+		open.value = false;
+	}
 }
 
 onMounted(() => {
-  document.addEventListener('click', closeOnOutside);
-  document.addEventListener('keydown', closeOnEscape);
+	document.addEventListener('click', closeOnOutside);
+	document.addEventListener('keydown', closeOnEscape);
 
-  if (isSignedIn.value) {
-    refreshUnreadCount();
-  }
+	if (isSignedIn.value) {
+		refreshUnreadCount();
+	}
 });
 
 onBeforeUnmount(() => {
-  document.removeEventListener('click', closeOnOutside);
-  document.removeEventListener('keydown', closeOnEscape);
+	document.removeEventListener('click', closeOnOutside);
+	document.removeEventListener('keydown', closeOnEscape);
 });
 
 // 화면을 옮길 때마다 숫자만 다시 받는다. 폴링 대신 쓰는 갱신 시점이다
 watch(() => route.fullPath, () => {
-  open.value = false;
+	open.value = false;
 
-  if (isSignedIn.value) {
-    refreshUnreadCount();
-  }
+	if (isSignedIn.value) {
+		refreshUnreadCount();
+	}
 });
 
 // 로그인이 늦게 확인되는 경우가 있다. 그때도 한 번 받아 둔다
 watch(() => member.value?.id, () => {
-  open.value = false;
-  if (isSignedIn.value) {
-    refreshUnreadCount();
-  }
+	open.value = false;
+	if (isSignedIn.value) {
+		refreshUnreadCount();
+	}
 });
 </script>
 
 <template>
-  <div v-if="isSignedIn" ref="root" class="notification-bell" @focusout="closeOnFocusout">
-    <button
-      ref="trigger"
-      class="notification-bell__trigger"
-      type="button"
-      :aria-label="label"
-      :aria-expanded="open"
-      :aria-controls="dropdownId"
-      @click="toggle"
-    >
-      <span class="notification-bell__icon" aria-hidden="true">🔔</span>
-      <span v-if="unreadCount > 0" class="notification-bell__badge">{{ badge }}</span>
-    </button>
+	<div v-if="isSignedIn" ref="root" class="notification-bell" @focusout="closeOnFocusout">
+		<button
+			ref="trigger"
+			class="notification-bell__trigger"
+			type="button"
+			:aria-label="label"
+			:aria-expanded="open"
+			:aria-controls="dropdownId"
+			@click="toggle"
+		>
+			<span class="notification-bell__icon" aria-hidden="true">🔔</span>
+			<span v-if="unreadCount > 0" class="notification-bell__badge">{{ badge }}</span>
+		</button>
 
-    <div v-if="open" :id="dropdownId" class="notification-bell__dropdown" role="region" aria-label="알림 목록" :aria-busy="loading">
-      <div class="notification-bell__head">
-        <span class="notification-bell__title">알림</span>
-        <button
-          v-if="unreadCount > 0"
-          class="notification-bell__read-all"
-          type="button"
-          :disabled="reading"
-          @click="keepFocus(readAllNotifications)"
-        >{{ reading ? '읽음 처리 중…' : '모두 읽음' }}</button>
-      </div>
+		<div v-if="open" :id="dropdownId" class="notification-bell__dropdown" role="region" aria-label="알림 목록" :aria-busy="loading">
+			<div class="notification-bell__head">
+				<span class="notification-bell__title">알림</span>
+				<button
+					v-if="unreadCount > 0"
+					class="notification-bell__read-all"
+					type="button"
+					:disabled="reading"
+					@click="keepFocus(readAllNotifications)"
+				>{{ reading ? '읽음 처리 중…' : '모두 읽음' }}</button>
+			</div>
 
-      <div v-if="loadError || countError" class="notification-bell__feedback">
-        <p v-if="loadError" role="alert">{{ loadError }}</p>
-        <p v-if="countError" role="alert">{{ countError }}</p>
-        <button type="button" class="ui-button" :disabled="loading" @click="reload">다시 시도</button>
-      </div>
-      <p v-if="readError" class="notification-bell__feedback" role="alert">{{ readError }}</p>
-      <p v-if="loading" class="notification-bell__feedback" role="status">알림을 불러오는 중…</p>
-      <ul v-if="loading && !loaded" class="notification-bell__list notification-bell__list--skeleton" aria-hidden="true">
-        <li v-for="index in 3" :key="index" class="notification-bell__item">
-          <span class="ui-skeleton"></span>
-          <span class="ui-skeleton"></span>
-          <span class="ui-skeleton"></span>
-        </li>
-      </ul>
-      <p v-else-if="loaded && !loadError && notifications.length === 0" class="notification-bell__empty">
-        아직 알림이 없습니다.
-      </p>
+			<div v-if="loadError || countError" class="notification-bell__feedback">
+				<p v-if="loadError" role="alert">{{ loadError }}</p>
+				<p v-if="countError" role="alert">{{ countError }}</p>
+				<button type="button" class="ui-button" :disabled="loading" @click="reload">다시 시도</button>
+			</div>
+			<p v-if="readError" class="notification-bell__feedback" role="alert">{{ readError }}</p>
+			<p v-if="loading" class="notification-bell__feedback" role="status">알림을 불러오는 중…</p>
+			<ul v-if="loading && !loaded" class="notification-bell__list notification-bell__list--skeleton" aria-hidden="true">
+				<li v-for="index in 3" :key="index" class="notification-bell__item">
+					<span class="ui-skeleton"></span>
+					<span class="ui-skeleton"></span>
+					<span class="ui-skeleton"></span>
+				</li>
+			</ul>
+			<p v-else-if="loaded && !loadError && notifications.length === 0" class="notification-bell__empty">
+				아직 알림이 없습니다.
+			</p>
 
-      <ul v-else-if="notifications.length" class="notification-bell__list">
-        <li v-for="notification in notifications" :key="notification.id">
-          <!--
-            정확한 시각은 브라우저 기본 툴팁(title) 대신 직접 그린다. 기본 툴팁은
-            환경에 따라 아예 안 뜨고, 뜨더라도 1초를 멈춰 있어야 한다.
+			<ul v-else-if="notifications.length" class="notification-bell__list">
+				<li v-for="notification in notifications" :key="notification.id">
+					<!--
+						정확한 시각은 브라우저 기본 툴팁(title) 대신 직접 그린다. 기본 툴팁은
+						환경에 따라 아예 안 뜨고, 뜨더라도 1초를 멈춰 있어야 한다.
 
-            마우스가 없는 기기에서는 툴팁 자리가 없으므로 시각을 아예 같이 적는다 —
-            그쪽은 hover 라는 것이 존재하지 않는다.
-          -->
-          <button
-            class="notification-bell__item"
-            :class="{ 'notification-bell__item--unread': notification.unread }"
-            type="button"
-            :data-exact-time="formatExactTime(notification.createdAt)"
-            @click="go(notification)"
-          >
-            <span class="notification-bell__message">{{ messageOf(notification) }}</span>
-            <span class="notification-bell__preview">{{ notification.preview }}</span>
-            <span class="notification-bell__foot">
-              <span class="notification-bell__post">{{ notification.postTitle }}</span>
-              <!-- 상대 시각. 알림에서 궁금한 것은 몇 시 몇 분인가가 아니라 새 것인가다 -->
-              <time class="notification-bell__time" :datetime="notification.createdAt">
-                {{ formatRelativeTime(notification.createdAt) }}
-                <span class="notification-bell__exact">
-                  · {{ formatExactTime(notification.createdAt) }}
-                </span>
-              </time>
-            </span>
-          </button>
-        </li>
-      </ul>
-    </div>
-  </div>
+						마우스가 없는 기기에서는 툴팁 자리가 없으므로 시각을 아예 같이 적는다 —
+						그쪽은 hover 라는 것이 존재하지 않는다.
+					-->
+					<button
+						class="notification-bell__item"
+						:class="{ 'notification-bell__item--unread': notification.unread }"
+						type="button"
+						:data-exact-time="formatExactTime(notification.createdAt)"
+						@click="go(notification)"
+					>
+						<span class="notification-bell__message">{{ messageOf(notification) }}</span>
+						<span class="notification-bell__preview">{{ notification.preview }}</span>
+						<span class="notification-bell__foot">
+							<span class="notification-bell__post">{{ notification.postTitle }}</span>
+							<!-- 상대 시각. 알림에서 궁금한 것은 몇 시 몇 분인가가 아니라 새 것인가다 -->
+							<time class="notification-bell__time" :datetime="notification.createdAt">
+								{{ formatRelativeTime(notification.createdAt) }}
+								<span class="notification-bell__exact">
+									· {{ formatExactTime(notification.createdAt) }}
+								</span>
+							</time>
+						</span>
+					</button>
+				</li>
+			</ul>
+		</div>
+	</div>
 </template>
