@@ -60,14 +60,54 @@ public class PostViewService {
 		try {
 			LocalDateTime viewedAt = LocalDateTime.ofInstant(now, clock.getZone());
 			if (history.shouldRecordVisit(postId, memberId, now)) {
-				postViewRecorder.record(postId, memberId, viewedAt, deviceType);
+				Long viewId = postViewRecorder.record(postId, memberId, viewedAt, deviceType);
 				history.markVisitRecorded(postId, memberId, now);
+				if (deviceType != DeviceType.BOT) {
+					history.activeTime().recordVisit(postId, memberId, viewId, now);
+				}
 			} else if (memberId != null) {
 				postViewRecorder.updateLastViewedAt(postId, memberId, viewedAt);
 			}
 		} catch (RuntimeException e) {
 			log.warn("[recordVisit] 조회 기록 실패. postId={}, memberId={}", postId, memberId, e);
 		}
+	}
+
+	/** 기존 세션의 조회에만 연결한다. 토큰은 DB나 쿠키에 저장하는 방문자 식별자가 아니다. */
+	public String startActiveTime(Long postId, HttpSession session, Long memberId) {
+		PostViewHistory history = existingHistory(session);
+		if (history == null) {
+			return null;
+		}
+		synchronized (history) {
+			return history.activeTime().start(postId, memberId, clock.instant());
+		}
+	}
+
+	public void recordActiveTime(Long postId, HttpSession session, Long memberId, String token, long millis) {
+		PostViewHistory history = existingHistory(session);
+		if (history == null) {
+			return;
+		}
+		synchronized (history) {
+			Instant now = clock.instant();
+			var update = history.activeTime().prepare(postId, memberId, token, millis, now);
+			if (update == null) {
+				return;
+			}
+			// 커밋 뒤에만 세션의 수신 위치를 옮긴다. 실패하면 다음 누적 전송으로 다시 시도한다.
+			postViewRecorder.updateActiveTime(update.viewId(), postId, update.totalMillis(),
+					LocalDateTime.ofInstant(now, clock.getZone()));
+			history.activeTime().accept(update);
+		}
+	}
+
+	private PostViewHistory existingHistory(HttpSession session) {
+		if (session == null) {
+			return null;
+		}
+		Object value = session.getAttribute(PostViewHistory.SESSION_ATTRIBUTE_NAME);
+		return value instanceof PostViewHistory history ? history : null;
 	}
 
 	private PostViewHistory getOrCreateHistory(HttpSession session) {

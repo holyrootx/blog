@@ -19,6 +19,8 @@ public record AdminPostViewStatsResponse(
 		long anonymousViews,
 		long totalViews,
 		long commentCount,
-		long likeCount
+		long likeCount,
+		long activeTimeSamples,
+		Double averageActiveTimeMillis
 ) {
 }

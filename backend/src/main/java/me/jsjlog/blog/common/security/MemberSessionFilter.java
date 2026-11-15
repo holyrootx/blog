@@ -30,6 +30,9 @@ public class MemberSessionFilter extends OncePerRequestFilter {
 		return new OrRequestMatcher(
 			PathPatternRequestMatcher.pathPattern(HttpMethod.GET, ApiPaths.Public.HEALTH),
 			PathPatternRequestMatcher.pathPattern(HttpMethod.GET, ApiPaths.Public.BLOG_ALL),
+			// 익명도 측정하지만 기존 세션의 글 조회에만 연결하며 CSRF 검사는 유지한다.
+			PathPatternRequestMatcher.pathPattern(HttpMethod.POST, ApiPaths.Post.ACTIVE_TIME),
+			PathPatternRequestMatcher.pathPattern(HttpMethod.PUT, ApiPaths.Post.ACTIVE_TIME),
 			PathPatternRequestMatcher.pathPattern(HttpMethod.GET, ApiPaths.Auth.MEMBER_ME),
 			PathPatternRequestMatcher.pathPattern(HttpMethod.GET, ApiPaths.Auth.CSRF),
 			PathPatternRequestMatcher.pathPattern(HttpMethod.GET, ApiPaths.Auth.OAUTH_PENDING),
