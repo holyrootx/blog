@@ -452,6 +452,13 @@
 	object-fit: cover;
 }
 
+/* 메인 썸네일은 이미지 속 제목까지 표시하고 모바일 글줄 높이에 늘어나지 않게 한다. */
+.home-section .post-card__image {
+	aspect-ratio: 16 / 9;
+	object-fit: contain;
+	align-self: start;
+}
+
 .post-card__body {
 	padding-top: 12px;
 }
