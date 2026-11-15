@@ -43,6 +43,7 @@ class SmokeTest(unittest.TestCase):
             (json.dumps({"revision": revision}).encode(), "application/json"),
             (json.dumps({"success": True, "data": {"items": []}}).encode(), "application/json"),
             (b"Not found", "text/html"),
+            (self.INDEX, "text/html"),
         ]
 
     def test_matching_release_passes(self):
@@ -63,6 +64,35 @@ class SmokeTest(unittest.TestCase):
                          request.get_header("User-agent"))
         self.assertEqual("no-cache", request.get_header("Cache-control"))
         self.assertEqual(5, opener.call_args.kwargs["timeout"])
+
+    def test_html_requires_no_store_but_static_assets_do_not(self):
+        with patch.object(SMOKE, "urlopen") as opener:
+            response = opener.return_value
+            response.__enter__.return_value = response
+            response.getcode.return_value = 200
+            response.geturl.return_value = "https://public/"
+            response.read.return_value = self.INDEX
+            for cache in ("", "public, max-age=3600", "no-cache"):
+                response.headers = {"Content-Type": "text/html", "Cache-Control": cache}
+                with self.subTest(cache=cache), self.assertRaisesRegex(ValueError, "no-store"):
+                    SMOKE.fetch("https://public/", require_no_store=True)
+            response.headers["Cache-Control"] = "private, no-store"
+            SMOKE.fetch("https://public/", require_no_store=True)
+            response.headers = {"Content-Type": "application/javascript"}
+            SMOKE.fetch("https://public/")
+
+    def test_root_and_callback_require_cache_control_and_match_application_assets(self):
+        with patch.object(SMOKE, "fetch", side_effect=self.responses()) as fetch:
+            SMOKE.verify("http://backend", "https://public", "current", self.index)
+        for call in (fetch.call_args_list[2], fetch.call_args_list[-1]):
+            self.assertTrue(call.kwargs["require_no_store"])
+        self.assertIn("/oauth/callback?result=success&_cb=", fetch.call_args.args[0])
+        for body, kind in [(self.INDEX.replace(b"app.js", b"stale.js"), "text/html"),
+                           (self.INDEX, "application/json")]:
+            responses = self.responses()
+            responses[-1] = (body, kind)
+            with patch.object(SMOKE, "fetch", side_effect=responses), self.assertRaises(ValueError):
+                SMOKE.verify("http://backend", "https://public", "current", self.index)
 
     def verify_html(self, html, expected=True):
         responses = self.responses()
@@ -235,7 +265,7 @@ class PublicHttpContractTest(unittest.TestCase):
                     status, kind, body = 200, "application/json", json.dumps({"success": True, "data": {"items": [PublicRoutesTest.POST]}}).encode()
                 elif path == "/posts/7":
                     status, kind, body = 200, "text/html", PublicRoutesTest.HTML.replace(b"https://public", origin.encode())
-                elif path == "/":
+                elif path in ("/", "/oauth/callback"):
                     status, kind, body = 200, "text/html", SmokeTest.INDEX
                 elif path == "/assets/app.js":
                     status, kind, body = 200, "application/javascript", b"window.ready = true"
@@ -246,6 +276,8 @@ class PublicHttpContractTest(unittest.TestCase):
                     status, kind, body = faults["404"]
                 self.send_response(status)
                 self.send_header("Content-Type", kind)
+                if kind == "text/html":
+                    self.send_header("Cache-Control", "no-store")
                 self.end_headers()
                 self.wfile.write(body)
 

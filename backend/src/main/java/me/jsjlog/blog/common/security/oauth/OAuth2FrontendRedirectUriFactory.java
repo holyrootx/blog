@@ -1,5 +1,7 @@
 package me.jsjlog.blog.common.security.oauth;
 
+import java.util.UUID;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -22,6 +24,8 @@ public class OAuth2FrontendRedirectUriFactory {
 				.fromUriString(frontendBaseUrl)
 				.path(CALLBACK_PATH)
 				.queryParam("result", result)
+				// 새 no-store 응답을 받기 전에 과거 콜백 HTML 캐시가 사용되는 것을 막는다.
+				.queryParam("_cb", UUID.randomUUID().toString())
 				.build()
 				.encode()
 				.toUriString();
