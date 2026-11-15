@@ -164,6 +164,25 @@ async function load(typed) {
 	}
 }
 
+function onKeydown(event) {
+	// 조합 종료 직후에는 isComposing이 false여도 keyCode 229가 남을 수 있다.
+	if (event.isComposing || event.keyCode === 229) {
+		return;
+	}
+
+	switch (event.key) {
+		case 'ArrowDown':
+		case 'ArrowUp':
+			event.preventDefault();
+			move(event.key === 'ArrowDown' ? 1 : -1);
+			break;
+		case 'Enter':
+			event.preventDefault();
+			onEnter();
+			break;
+	}
+}
+
 function move(step) {
 	if (suggestions.value.length === 0) {
 		return;
@@ -230,9 +249,7 @@ onBeforeUnmount(cancelPending);
 			aria-controls="search-results"
 			@input="onInput"
 			@compositionend="onCompositionEnd"
-			@keydown.down.prevent="move(1)"
-			@keydown.up.prevent="move(-1)"
-			@keydown.enter.prevent="onEnter"
+			@keydown="onKeydown"
 		/>
 
 		<p v-if="hint" class="search-panel__hint">{{ hint }}</p>

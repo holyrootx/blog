@@ -716,6 +716,11 @@
 	border-radius: 8px;
 }
 
+.admin-view-stats__active-time {
+	min-height: 0;
+	margin-top: 12px;
+}
+
 .admin-view-stats__chart-card h3,
 .admin-view-stats__posts-head h3 {
 	color: var(--admin-title);
@@ -956,6 +961,21 @@
 
 .admin-daily-chart__table th:first-child {
 	text-align: left;
+}
+
+@media (max-width: 700px) {
+	.admin-view-stats > .admin-panel__header {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.admin-view-stats__tiles {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.admin-view-stats__charts {
+		grid-template-columns: minmax(0, 1fr);
+	}
 }
 
 @media (prefers-reduced-motion: reduce) {

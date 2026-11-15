@@ -66,6 +66,10 @@ public class PostView {
 	@Column(name = "last_viewed_at")
 	private LocalDateTime lastViewedAt;
 
+	/** 측정한 화면 활성 시간. null은 미측정이며 0초로 집계하지 않는다. */
+	@Column(name = "active_time_millis")
+	private Long activeTimeMillis;
+
 	/** 거칠게 접은 기기 분류(검색 봇 포함). 원래 브라우저 정보는 남기지 않는다 */
 	@Enumerated(EnumType.STRING)
 	@Column(
