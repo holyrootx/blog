@@ -11,7 +11,7 @@ from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 
-def fetch(url, expected_status=200):
+def fetch(url, expected_status=200, require_no_store=False):
     request = Request(url, headers={
         "Cache-Control": "no-cache",
         "User-Agent": "jsjlog-deployment-check/1.0 (+https://github.com/holyrootx/blog)",
@@ -26,6 +26,10 @@ def fetch(url, expected_status=200):
     with response:
         if response.getcode() != expected_status or response.geturl() != url:
             raise ValueError("Public route returned an unexpected status or redirect")
+        if require_no_store:
+            directives = {value.strip().lower() for value in response.headers.get("Cache-Control", "").split(",")}
+            if "no-store" not in directives:
+                raise ValueError("Public HTML is missing no-store cache control")
         return response.read(), response.headers.get("Content-Type", "")
 
 
@@ -170,12 +174,16 @@ def verify(backend, public, revision=None, index_file=None):
     posts = read_json(f"{backend}/api/v1/blog/posts?size=1")
     if posts.get("success") is not True or not isinstance(posts.get("data", {}).get("items"), list):
         raise ValueError("Database-backed post list check failed")
-    html, content_type = fetch(f"{public}/?deployment_check={nonce}")
+    html, content_type = fetch(f"{public}/?deployment_check={nonce}", require_no_store=True)
     if "text/html" not in content_type:
         raise ValueError("Public index did not return HTML")
     actual = IndexAssets(html, public)
-    if index_file:
-        check_index_assets(IndexAssets(Path(index_file).read_bytes(), public), actual, public)
+    expected = IndexAssets(Path(index_file).read_bytes() if index_file else html, public)
+    if not index_file:
+        # Without a local manifest, CDN-inserted scripts are not application requirements.
+        expected.assets = [(kind, url) for kind, url in expected.assets
+                           if kind != "script" or same_origin(url, public)]
+    check_index_assets(expected, actual, public)
     script_url = next((url for kind, url in actual.assets
                        if kind == "script" and same_origin(url, public)), None)
     if not script_url:
@@ -188,6 +196,11 @@ def verify(backend, public, revision=None, index_file=None):
         if marker.get("revision") != revision:
             raise ValueError("Public frontend revision does not match this deployment")
     check_public_routes(public, nonce)
+    callback_html, callback_type = fetch(
+        f"{public}/oauth/callback?result=success&_cb=deployment-{nonce}", require_no_store=True)
+    if "text/html" not in callback_type:
+        raise ValueError("Public OAuth callback did not return HTML")
+    check_index_assets(expected, IndexAssets(callback_html, public), public)
 
 
 def main():
@@ -204,7 +217,7 @@ def main():
     for attempt in range(args.attempts):
         try:
             verify(args.backend.rstrip("/"), args.public.rstrip("/"), args.revision, args.index_file)
-            print("Backend, DB, public API, post metadata, 404, assets and revision checks passed.")
+            print("Backend, DB, public API, post metadata, 404, assets, HTML cache and revision checks passed.")
             return
         except Exception as error:
             # HTTP bodies and connection settings may contain operational details.

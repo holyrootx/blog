@@ -61,8 +61,12 @@ beforeEach(async () => {
 });
 afterEach(async () => { await page?.close(); assert.deepEqual(errors, []); });
 
-async function open(result = 'signup-required') {
-	await page.goto(`${server.resolvedUrls.local[0]}oauth/callback?result=${result}`);
+async function open(result = 'signup-required', cacheKey = null) {
+	const query = new URLSearchParams({ result });
+	if (cacheKey) {
+		query.set('_cb', cacheKey);
+	}
+	await page.goto(`${server.resolvedUrls.local[0]}oauth/callback?${query}`);
 }
 async function staleSignup() {
 	await open();
@@ -82,6 +86,14 @@ test('the current server state overrides an old signup URL without submitting a 
 	await choice().waitFor();
 	await page.getByText('예전 이름', { exact: true }).waitFor();
 	assert.deepEqual(actions, []);
+});
+
+test('a cache-distinct callback preserves signup and removes its query after completion', async () => {
+	await open('signup-required', 'new-login');
+	await page.getByRole('heading', { name: '닉네임을 정해 주세요' }).waitFor();
+	await page.getByRole('button', { name: '시작하기', exact: true }).click();
+	await page.waitForURL(server.resolvedUrls.local[0]);
+	assert.deepEqual(actions.map(item => item.action), ['signup']);
 });
 
 test('an expired recovery choice opens the normal signup form', async () => {
