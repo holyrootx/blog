@@ -73,6 +73,14 @@ export async function getPostDetail(postId) {
 	return toPostDetail(post);
 }
 
+export function startPostActiveTime(postId) {
+	return sendApiData(`/api/v1/blog/posts/${postId}/active-time`, { method: 'POST' });
+}
+
+export function savePostActiveTime(postId, body, { keepalive = false } = {}) {
+	return sendApiData(`/api/v1/blog/posts/${postId}/active-time`, { method: 'PUT', body, keepalive });
+}
+
 export function setPostReaction(postId, type) {
 	return sendApiData(`/api/v1/blog/posts/${postId}/reaction`, {
 		method: 'PUT',

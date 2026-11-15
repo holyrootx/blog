@@ -79,6 +79,7 @@ tasks.register('mysqlTest', Test) {
 		includeTestsMatching '*OAuthSignupIntegrityTest'
 		includeTestsMatching '*MySqlRestartPersistenceTest'
 		includeTestsMatching '*PostViewRecordTest'
+		includeTestsMatching '*PostActiveTimeTest'
 		includeTestsMatching '*AdminPostViewApiTest'
 		includeTestsMatching '*MemberReadingApiTest'
 		includeTestsMatching '*AdminViewStatsTest'

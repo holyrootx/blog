@@ -266,6 +266,8 @@ export async function getAdminViewStats(days) {
 		uniqueMembers: toNumber(result?.uniqueMembers),
 		excludedAdminViews: toNumber(result?.excludedAdminViews),
 		excludedBotViews: toNumber(result?.excludedBotViews),
+		activeTimeSamples: toNumber(result?.activeTimeSamples),
+		averageActiveTimeMillis: result?.averageActiveTimeMillis ?? null,
 		daily: Array.isArray(result?.daily) ? result.daily.map((day) => ({
 			date: day.date,
 			pageViews: toNumber(day.pageViews),
@@ -296,6 +298,8 @@ export async function getAdminViewStatsPosts({ days, page = 1, size = 10 } = {})
 			pageViews: toNumber(post.pageViews),
 			uniqueMembers: toNumber(post.uniqueMembers),
 			anonymousViews: toNumber(post.anonymousViews),
+			activeTimeSamples: toNumber(post.activeTimeSamples),
+			averageActiveTimeMillis: post.averageActiveTimeMillis ?? null,
 			totalViews: toNumber(post.totalViews),
 			commentCount: toNumber(post.commentCount),
 			likeCount: toNumber(post.likeCount),

@@ -238,6 +238,40 @@ class AdminViewStatsTest {
 				.andExpect(status().isBadRequest());
 	}
 
+	@Test
+	void activeTimeUsesOnlyMeasuredReaderRecordsWithinTheSelectedPeriod() {
+		// 미측정은 null, 측정한 0은 표본이다. 관리자·봇·기간 밖 큰 값은 평균을 바꾸면 안 된다.
+		jdbcTemplate.update("update post_view set active_time_millis = 900000");
+		jdbcTemplate.update("update post_view set active_time_millis = null where member_id = ?", first.getId());
+		jdbcTemplate.update("update post_view set active_time_millis = 0 where member_id = ? and viewed_at = ?",
+				first.getId(), seoul(10, 11, 0, 0));
+		jdbcTemplate.update("update post_view set active_time_millis = 60000 where member_id = ?", second.getId());
+		jdbcTemplate.update("update post_view set active_time_millis = null where member_id is null and device_type <> 'BOT'");
+		jdbcTemplate.update("update post_view set active_time_millis = 120000 where post_id = ? and viewed_at = ?",
+				quiet.getId(), seoul(10, 15, 8, 0));
+
+		AdminViewStatsResponse summary = service.getSummary(7);
+		assertThat(summary.activeTimeSamples()).isEqualTo(3);
+		assertThat(summary.averageActiveTimeMillis()).isEqualTo(60_000.0);
+		assertThat(summary.pageViews()).isEqualTo(6);
+		List<AdminPostViewStatsResponse> items = service.getPosts(7, 0, 10).items();
+		assertThat(items.getFirst().activeTimeSamples()).isEqualTo(2);
+		assertThat(items.getFirst().averageActiveTimeMillis()).isEqualTo(30_000.0);
+		assertThat(items.get(1).activeTimeSamples()).isEqualTo(1);
+		assertThat(items.get(1).averageActiveTimeMillis()).isEqualTo(120_000.0);
+		assertThat(service.getSummary(30).activeTimeSamples()).isEqualTo(4);
+	}
+
+	@Test
+	void unmeasuredRecordsHaveNoAverageRatherThanZeroSeconds() {
+		assertThat(service.getSummary(7).activeTimeSamples()).isZero();
+		assertThat(service.getSummary(7).averageActiveTimeMillis()).isNull();
+		assertThat(service.getPosts(7, 0, 10).items()).allSatisfy(item -> {
+			assertThat(item.activeTimeSamples()).isZero();
+			assertThat(item.averageActiveTimeMillis()).isNull();
+		});
+	}
+
 	private Post published(Category category, String title, long views) {
 		Post post = new Post(title, "요약", "본문", category, null, null);
 		post.publish(LocalDateTime.of(2026, 9, 1, 9, 0));
