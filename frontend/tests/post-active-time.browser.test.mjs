@@ -25,7 +25,9 @@ beforeEach(async () => {
 	page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
 	page.setDefaultTimeout(6000);
 	page.on('pageerror', error => errors.push(error.message));
-	await page.clock.install();
+	await page.clock.install({ time: new Date('2026-01-01T00:00:00Z') });
+	// 페이지 측정이 시작되기 전에 시계를 멈춰 실행 속도에 따른 시각 경합을 없앤다.
+	await page.clock.pauseAt(new Date('2026-01-01T01:00:00Z'));
 	await page.addInitScript(() => {
 		window.measurementVisible = true;
 		Object.defineProperty(document, 'visibilityState', { get: () => window.measurementVisible ? 'visible' : 'hidden' });
@@ -58,7 +60,6 @@ async function openPost() {
 	await page.goto(`${server.resolvedUrls.local[0]}posts/1`);
 	await page.getByRole('heading', { name: '글 1', exact: true }).waitFor();
 	await settle();
-	await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1));
 }
 
 async function advance(milliseconds) {

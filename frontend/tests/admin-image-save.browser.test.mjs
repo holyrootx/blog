@@ -60,6 +60,7 @@ beforeEach(async () => {
 });
 afterEach(async () => { await page?.close(); assert.deepEqual(errors, []); });
 async function beginUpload(kind) {
+	const previousUploads = uploaded.length;
 	if (kind === 'body') {
 		await page.locator('[contenteditable=true]').first().evaluate((el, base64) => {
 			const data = new DataTransfer();
@@ -74,6 +75,12 @@ async function beginUpload(kind) {
 		await page.keyboard.press('Escape');
 	}
 	await page.getByRole('status').filter({ hasText: '업로드하고 있습니다' }).waitFor();
+	// 업로드 상태 표시는 네트워크 요청 수신보다 먼저 나타날 수 있다.
+	const deadline = Date.now() + 6000;
+	while (uploaded.length === previousUploads && Date.now() < deadline) {
+		await new Promise(resolve => setTimeout(resolve, 10));
+	}
+	assert.equal(uploaded.length, previousUploads + 1);
 }
 async function finishUpload() {
 	assert.ok(uploaded.length);
