@@ -135,6 +135,10 @@ class AdminAuthFlowTest {
 
 		MvcResult result = mockMvc.perform(post(LOGIN).with(csrf())
 						.session(before)
+						.with(request -> {
+							request.setRequestedSessionId(beforeId);
+							return request;
+						})
 						.contentType(MediaType.APPLICATION_JSON)
 						.content(loginBody(USERNAME, PASSWORD)))
 				.andExpect(status().isOk())
