@@ -202,7 +202,8 @@ async function load(path, names, injected = {}) {
 	source = source.replace(/^import[\s\S]*?from ['"][^'"]+['"];\s*/gm, '').replace(/\bexport (?=(async )?function|const|class)/g, '');
 	const context = vm.createContext({ ref, computed, reactive, watch, nextTick, console,
 		setTimeout, clearTimeout, onBeforeUnmount() {}, onMounted() {}, onBeforeRouteLeave() {},
-		notifyError() {}, notifySuccess() {}, advanceAuthenticationGeneration() {}, onMemberSessionCleared() {}, ...injected });
+		notifyError() {}, notifySuccess() {}, advanceAuthenticationGeneration() {}, getAuthenticationGeneration: () => 0,
+		onMemberSessionCleared() {}, ...injected });
 	return vm.runInContext(`"use strict";\n${source}\n;({${names.join(',')}})`, context);
 }
 
