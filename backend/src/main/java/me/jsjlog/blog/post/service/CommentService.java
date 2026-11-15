@@ -23,6 +23,7 @@ import me.jsjlog.blog.history.domain.CommentSnapshot;
 import me.jsjlog.blog.history.domain.ContentHistory.Action;
 import me.jsjlog.blog.history.service.ContentHistoryService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
@@ -160,7 +161,8 @@ public class CommentService {
 		return CommentReportResponse.accepted(commentId);
 	}
 
-	@Transactional
+	// 글 ID 조회가 만든 이전 스냅샷 대신, 글 잠금을 얻은 뒤 커밋된 반응을 읽는다.
+	@Transactional(isolation = Isolation.READ_COMMITTED)
 	public CommentReactionResponse setReaction(
 			Long commentId,
 			CommentReactionType type,
@@ -181,7 +183,8 @@ public class CommentService {
 		return reactionResponse(commentId, memberId);
 	}
 
-	@Transactional
+	// 설정과 취소는 같은 읽기 기준을 써야 대기 중 완료된 요청을 반영할 수 있다.
+	@Transactional(isolation = Isolation.READ_COMMITTED)
 	public CommentReactionResponse removeReaction(
 			Long commentId,
 			CommentReactionType type,

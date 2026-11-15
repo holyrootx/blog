@@ -75,6 +75,7 @@ tasks.register('mysqlTest', Test) {
 		includeTestsMatching '*PostTrashHistoryTest'
 		includeTestsMatching '*CommentRetentionTest'
 		includeTestsMatching '*CommentRetentionConcurrencyTest'
+		includeTestsMatching '*CommentReactionConcurrencyTest'
 		includeTestsMatching '*MemberStatusLifecycleTest'
 		includeTestsMatching '*OAuthSignupIntegrityTest'
 		includeTestsMatching '*MySqlRestartPersistenceTest'
