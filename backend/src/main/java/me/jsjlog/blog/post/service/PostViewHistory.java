@@ -34,6 +34,14 @@ final class PostViewHistory implements Serializable {
 	 * 이 칸이 생기기 전에 만든 세션 객체를 되살리면 비어 있을 수 있어서 쓸 때 만든다.</p>
 	 */
 	private Map<String, Long> recordedVisits;
+	private PostActiveTimeHistory activeTime;
+
+	PostActiveTimeHistory activeTime() {
+		if (activeTime == null) {
+			activeTime = new PostActiveTimeHistory();
+		}
+		return activeTime;
+	}
 
 	boolean hasViewed(Long postId) {
 		return viewedPostIds.contains(postId);
