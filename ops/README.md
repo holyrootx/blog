@@ -46,6 +46,8 @@ PR 병합을 강제 차단하려면 GitHub의 develop/release 보호 규칙에�
 
 ## 서버 배포의 순서와 보관 위치
 
+HTML 캐시 검사는 `/`와 `/oauth/callback`의 `Cache-Control: no-store` 및 앱 자산 참조를 확인한다. 최초 적용 전에 기존 Nginx 설정을 백업하고 HTTPS server의 기존 SPA·루트 location을 `scripts/nginx/blog-spa-routes.conf` 내용으로 교체한 뒤 `nginx -t`와 reload를 수행한다. 해당 설정이 include하는 `ops/nginx/blog-security-headers.conf`는 `/etc/nginx/snippets/blog-security-headers.conf`에 있어야 한다. Nginx 설정은 릴리스 파일 배포가 자동 교체하지 않으므로 이 사전 적용을 누락하면 배포 전 검사에서 중단된다.
+
 1. GitHub Actions가 `release` push를 받고 테스트/빌드를 완료한다. 배포 concurrency group은 한 번에 하나만 실행하고 진행 중 실행을 취소하지 않는다. 기본 GitHub queue는 대기 실행을 최신 실행으로 교체할 수 있어 모든 중간 SHA가 순서대로 배포된다는 의미는 아니다. [GitHub concurrency 문서](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency)
 2. 검증된 키로 `releases/incoming/<sha>-<run>-<attempt>.tar.gz`를 업로드한다. 별도 디렉터리로 풀고 모든 파일의 SHA-256 manifest를 검증한다.
 3. 서버의 `.deploy.lock`으로 수동 배포까지 직렬화한다. 기존 설치의 로컬 HTTP/DB 조회·공개 HTML/JS가 정상인지 먼저 확인하고 `--index-file`로 현재 설치의 앱 자산 참조와 비교한다.
