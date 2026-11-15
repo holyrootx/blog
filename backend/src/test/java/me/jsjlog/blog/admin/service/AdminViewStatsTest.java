@@ -90,6 +90,8 @@ class AdminViewStatsTest {
 	private Member first;
 	private Member second;
 	private Member admin;
+	private PostView firstDayView;
+	private PostView quietMorningView;
 
 	@BeforeEach
 	void setUp() {
@@ -105,10 +107,10 @@ class AdminViewStatsTest {
 
 		// 7일 경계 바깥과 안쪽
 		record(popular, first, seoul(10, 10, 23, 59), DeviceType.MOBILE);
-		record(popular, first, seoul(10, 11, 0, 0), DeviceType.MOBILE);
+		firstDayView = record(popular, first, seoul(10, 11, 0, 0), DeviceType.MOBILE);
 		record(popular, first, seoul(10, 12, 9, 0), DeviceType.DESKTOP);
 		record(popular, second, seoul(10, 12, 21, 0), DeviceType.TABLET);
-		record(quiet, null, seoul(10, 15, 8, 0), DeviceType.DESKTOP);
+		quietMorningView = record(quiet, null, seoul(10, 15, 8, 0), DeviceType.DESKTOP);
 		record(quiet, null, seoul(10, 15, 8, 40), DeviceType.UNKNOWN);
 		record(popular, admin, seoul(10, 16, 10, 0), DeviceType.DESKTOP);
 		record(popular, null, seoul(10, 17, 23, 59), DeviceType.MOBILE);
@@ -243,12 +245,13 @@ class AdminViewStatsTest {
 		// 미측정은 null, 측정한 0은 표본이다. 관리자·봇·기간 밖 큰 값은 평균을 바꾸면 안 된다.
 		jdbcTemplate.update("update post_view set active_time_millis = 900000");
 		jdbcTemplate.update("update post_view set active_time_millis = null where member_id = ?", first.getId());
-		jdbcTemplate.update("update post_view set active_time_millis = 0 where member_id = ? and viewed_at = ?",
-				first.getId(), seoul(10, 11, 0, 0));
+		// JDBC 파라미터는 Hibernate의 시간대 변환을 거치지 않으므로 저장한 행의 ID로 고른다.
+		assertThat(jdbcTemplate.update("update post_view set active_time_millis = 0 where id = ?",
+				firstDayView.getId())).isEqualTo(1);
 		jdbcTemplate.update("update post_view set active_time_millis = 60000 where member_id = ?", second.getId());
 		jdbcTemplate.update("update post_view set active_time_millis = null where member_id is null and device_type <> 'BOT'");
-		jdbcTemplate.update("update post_view set active_time_millis = 120000 where post_id = ? and viewed_at = ?",
-				quiet.getId(), seoul(10, 15, 8, 0));
+		assertThat(jdbcTemplate.update("update post_view set active_time_millis = 120000 where id = ?",
+				quietMorningView.getId())).isEqualTo(1);
 
 		AdminViewStatsResponse summary = service.getSummary(7);
 		assertThat(summary.activeTimeSamples()).isEqualTo(3);
@@ -286,8 +289,8 @@ class AdminViewStatsTest {
 				null, null));
 	}
 
-	private void record(Post post, Member member, LocalDateTime viewedAt, DeviceType deviceType) {
-		postViewRepository.saveAndFlush(PostView.of(post.getId(), member == null ? null : member.getId(), viewedAt,
+	private PostView record(Post post, Member member, LocalDateTime viewedAt, DeviceType deviceType) {
+		return postViewRepository.saveAndFlush(PostView.of(post.getId(), member == null ? null : member.getId(), viewedAt,
 				deviceType));
 	}
 
