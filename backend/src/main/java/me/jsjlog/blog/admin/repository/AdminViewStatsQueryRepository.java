@@ -39,13 +39,15 @@ public class AdminViewStatsQueryRepository {
 
 	private final JPAQueryFactory jpaQueryFactory;
 
-	public record Totals(long pageViews, long memberViews, long uniqueMembers) {
+	public record Totals(long pageViews, long memberViews, long uniqueMembers,
+			long activeTimeSamples, Double averageActiveTimeMillis) {
 	}
 
 	public record DailyCount(LocalDate date, long pageViews, long memberViews) {
 	}
 
-	public record PostCount(Long postId, long pageViews, long uniqueMembers, long memberViews) {
+	public record PostCount(Long postId, long pageViews, long uniqueMembers, long memberViews,
+			long activeTimeSamples, Double averageActiveTimeMillis) {
 	}
 
 	public record PostInfo(Long postId, String title, PostStatus status, boolean deleted, long totalViews) {
@@ -53,16 +55,19 @@ public class AdminViewStatsQueryRepository {
 
 	public Totals totals(LocalDateTime from, LocalDateTime to) {
 		Tuple row = jpaQueryFactory
-				.select(VIEW.count(), VIEW.memberId.count(), VIEW.memberId.countDistinct())
+				.select(VIEW.count(), VIEW.memberId.count(), VIEW.memberId.countDistinct(),
+						VIEW.activeTimeMillis.count(), VIEW.activeTimeMillis.avg())
 				.from(VIEW)
 				.leftJoin(MEMBER).on(MEMBER.id.eq(VIEW.memberId))
 				.where(inRange(from, to), readers())
 				.fetchOne();
 
-		return row == null ? new Totals(0, 0, 0) : new Totals(
+		return row == null ? new Totals(0, 0, 0, 0, null) : new Totals(
 				orZero(row.get(VIEW.count())),
 				orZero(row.get(VIEW.memberId.count())),
-				orZero(row.get(VIEW.memberId.countDistinct()))
+				orZero(row.get(VIEW.memberId.countDistinct())),
+				orZero(row.get(VIEW.activeTimeMillis.count())),
+				row.get(VIEW.activeTimeMillis.avg())
 		);
 	}
 
@@ -127,7 +132,8 @@ public class AdminViewStatsQueryRepository {
 	/** 기간 안 기록이 많은 글부터. 같으면 최근 글(번호가 큰 글)이 먼저다 */
 	public List<PostCount> postCounts(LocalDateTime from, LocalDateTime to, int page, int size) {
 		return jpaQueryFactory
-				.select(VIEW.postId, VIEW.count(), VIEW.memberId.countDistinct(), VIEW.memberId.count())
+				.select(VIEW.postId, VIEW.count(), VIEW.memberId.countDistinct(), VIEW.memberId.count(),
+						VIEW.activeTimeMillis.count(), VIEW.activeTimeMillis.avg())
 				.from(VIEW)
 				.leftJoin(MEMBER).on(MEMBER.id.eq(VIEW.memberId))
 				.where(inRange(from, to), readers())
@@ -141,7 +147,9 @@ public class AdminViewStatsQueryRepository {
 						row.get(VIEW.postId),
 						orZero(row.get(VIEW.count())),
 						orZero(row.get(VIEW.memberId.countDistinct())),
-						orZero(row.get(VIEW.memberId.count()))
+						orZero(row.get(VIEW.memberId.count())),
+						orZero(row.get(VIEW.activeTimeMillis.count())),
+						row.get(VIEW.activeTimeMillis.avg())
 				))
 				.toList();
 	}

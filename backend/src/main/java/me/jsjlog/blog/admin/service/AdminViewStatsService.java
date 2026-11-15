@@ -98,6 +98,8 @@ public class AdminViewStatsService {
 				totals.uniqueMembers(),
 				statsQueryRepository.adminViews(period.from(), period.to()),
 				statsQueryRepository.botViews(period.from(), period.to()),
+				totals.activeTimeSamples(),
+				totals.averageActiveTimeMillis(),
 				dailyViews,
 				Arrays.stream(DeviceType.values())
 						// 검색 봇은 기기가 아니라 따로 센 건수로 보인다
@@ -134,7 +136,9 @@ public class AdminViewStatsService {
 							count.pageViews() - count.memberViews(),
 							post == null ? 0 : post.totalViews(),
 							comments.getOrDefault(count.postId(), 0L),
-							likes.getOrDefault(count.postId(), 0L)
+							likes.getOrDefault(count.postId(), 0L),
+							count.activeTimeSamples(),
+							count.averageActiveTimeMillis()
 					);
 				})
 				.toList();
