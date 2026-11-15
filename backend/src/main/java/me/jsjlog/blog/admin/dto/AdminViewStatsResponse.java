@@ -26,6 +26,8 @@ public record AdminViewStatsResponse(
 		long uniqueMembers,
 		long excludedAdminViews,
 		long excludedBotViews,
+		long activeTimeSamples,
+		Double averageActiveTimeMillis,
 		List<AdminDailyViewResponse> daily,
 		List<AdminDeviceViewResponse> devices
 ) {

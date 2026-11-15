@@ -19,6 +19,17 @@ public interface PostViewRepository extends JpaRepository<PostView, Long> {
 			+ " where view.id = :id and coalesce(view.lastViewedAt, view.viewedAt) < :viewedAt")
 	int advanceLastViewedAt(@Param("id") Long id, @Param("viewedAt") LocalDateTime viewedAt);
 
+	/** 누적값만 전진시켜 재전송이나 늦은 요청이 시간을 두 번 더하지 않게 한다. */
+	@Modifying
+	@Query("update PostView view set view.activeTimeMillis = :millis"
+			+ " where view.id = :id and view.postId = :postId"
+			+ " and (view.activeTimeMillis is null or view.activeTimeMillis < :millis)"
+			+ " and exists (select post.id from Post post where post.id = :postId"
+			+ " and post.status = me.jsjlog.blog.post.domain.PostStatus.PUBLISHED"
+			+ " and post.deletedAt is null and post.publishedAt <= :now)")
+	int advanceActiveTime(@Param("id") Long id, @Param("postId") Long postId,
+			@Param("millis") long millis, @Param("now") LocalDateTime now);
+
 	interface LatestMemberView {
 		Long getId();
 	}

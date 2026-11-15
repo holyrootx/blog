@@ -80,6 +80,28 @@ const openDashboard = async () => {
 	await panel().waitFor();
 };
 
+test('활성 시간 평균과 표본을 보여 주고 미측정과 0초를 구분한다', async () => {
+	summaryHandler = (route, url) => ok(route, summary(Number(url.searchParams.get('days')),
+		{ activeTimeSamples: 3, averageActiveTimeMillis: 75_000 }));
+	postsHandler = route => ok(route, { items: [postRow(1, { activeTimeSamples: 1, averageActiveTimeMillis: 0 }),
+		postRow(2, { activeTimeSamples: 0, averageActiveTimeMillis: null })], page: 0, totalPages: 1 });
+	await openDashboard();
+	const active = panel().locator('.admin-view-stats__active-time');
+	await active.getByText('1분 15초', { exact: true }).waitFor();
+	assert.match(await active.innerText(), /표본 3건/);
+	assert.match(await active.innerText(), /실제 독서 시간은 아니며/);
+	assert.match(await active.innerText(), /1분간 조작이 없으면/);
+	await panel().getByText('0초', { exact: true }).waitFor();
+	await panel().getByText('측정값 없음', { exact: true }).waitFor();
+});
+
+test('활성 시간 표본이 없는 대시보드는 평균을 0초로 만들지 않는다', async () => {
+	await openDashboard();
+	const active = panel().locator('.admin-view-stats__active-time');
+	await active.getByText('측정값 없음', { exact: true }).waitFor();
+	assert.match(await active.innerText(), /표본 0건/);
+});
+
 test('요약 숫자와 날짜별 막대, 기기 비율을 보여 주고 누적 조회와 기준이 다르다고 적는다', async () => {
 	await openDashboard();
 	await panel().locator('.admin-view-stats__tile').nth(3).getByText('6건').waitFor();
@@ -154,7 +176,7 @@ test('글 목록은 순위와 상태를 보이고, 지금 값에는 표시가 �
 	assert.match(header, /댓글\*/);
 	assert.match(header, /좋아요\*/);
 	const rows = await grid.locator('tbody tr').allInnerTexts();
-	assert.match(rows[0], /^1\s+인기 글 1\s+19\s+2\s+5\s+300\s+4\s+7$/);
+	assert.match(rows[0], /^1\s+인기 글 1\s+19\s+2\s+5\s+측정값 없음\s+표본 0건\s+300\s+4\s+7$/);
 	assert.match(rows[1], /인기 글 2\s+비공개/);
 	assert.match(rows[2], /영구 삭제된 글\s+삭제됨/);
 
