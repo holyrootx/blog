@@ -1,6 +1,7 @@
 package me.jsjlog.blog.common.config;
 
 import me.jsjlog.blog.common.security.AdminLoginConfigurer;
+import me.jsjlog.blog.common.security.AuthenticationSessionLockFilter;
 import me.jsjlog.blog.common.security.MemberSessionFilter;
 import me.jsjlog.blog.common.security.MemberSessionManager;
 import me.jsjlog.blog.common.security.SecurityResponseWriter;
@@ -17,6 +18,7 @@ import me.jsjlog.blog.common.security.oauth.OAuth2LoginFailureHandler;
 import me.jsjlog.blog.common.security.oauth.OAuth2LoginSuccessHandler;
 import me.jsjlog.blog.member.domain.MemberRole;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.web.servlet.ServletListenerRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -33,14 +35,20 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.context.SecurityContextHolderFilter;
+import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import tools.jackson.databind.ObjectMapper;
+import org.springframework.web.util.HttpSessionMutexListener;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
+	@Bean
+	public ServletListenerRegistrationBean<HttpSessionMutexListener> sessionMutexListener() {
+		return new ServletListenerRegistrationBean<>(new HttpSessionMutexListener());
+	}
 
 	@Bean
 	public SecurityFilterChain securityFilterChain(
@@ -177,6 +185,8 @@ public class SecurityConfig {
 		// 컨텍스트가 복원된 뒤, CSRF 검사 전에 만료 인증을 제거한다.
 		httpSecurity.addFilterAfter(new MemberSessionFilter(memberSessions, responseWriter),
 				SecurityContextHolderFilter.class);
+		// CSRF 검사를 통과한 뒤 LogoutFilter와 인증 필터가 세션을 바꾸기 전에 잠근다.
+		httpSecurity.addFilterAfter(new AuthenticationSessionLockFilter(), CsrfFilter.class);
 		return httpSecurity.build();
 	}
 
