@@ -1,24 +1,27 @@
 import { after, afterEach, before, beforeEach, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { createServer } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import { chromium } from 'playwright';
 
-let server, browser, page, member, requests, errors, failSave, failPost, startHandler;
+let server, browser, page, member, requests, errors, failSave, failPost, startHandler, cacheDir;
 const ok = (route, data = null) => route.fulfill({ json: { success: true, data } });
 const saves = () => requests.filter(request => request.method === 'PUT' && request.path.endsWith('/active-time'));
 const starts = () => requests.filter(request => request.method === 'POST' && request.path.endsWith('/active-time'));
-const settle = () => new Promise(resolve => setTimeout(resolve, 40));
 
 before(async () => {
-	server = await createServer({ root: fileURLToPath(new URL('..', import.meta.url)), configFile: false,
+	cacheDir = await mkdtemp(join(tmpdir(), 'blog-active-time-test-'));
+	server = await createServer({ root: fileURLToPath(new URL('..', import.meta.url)), configFile: false, cacheDir,
 		plugins: [vue()], server: { host: '127.0.0.1', port: 0 } });
 	await server.listen();
 	browser = await chromium.launch({ headless: true,
 		...(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {}) });
 });
-after(async () => { await browser?.close(); await server?.close(); });
+after(async () => { await browser?.close(); await server?.close(); await rm(cacheDir, { recursive: true, force: true }); });
 beforeEach(async () => {
 	member = null; requests = []; errors = []; failSave = false; failPost = false;
 	startHandler = route => ok(route, { token: `page-${starts().length}` });
@@ -29,6 +32,26 @@ beforeEach(async () => {
 	// 페이지 측정이 시작되기 전에 시계를 멈춰 실행 속도에 따른 시각 경합을 없앤다.
 	await page.clock.pauseAt(new Date('2026-01-01T01:00:00Z'));
 	await page.addInitScript(() => {
+		// 응답 도착뿐 아니라 앱이 JSON 본문을 읽고 처리한 뒤에 가상 시계를 진행한다.
+		window.apiRequests = [];
+		const fetch = window.fetch.bind(window);
+		window.fetch = async (input, options) => {
+			if (!new URL(input, location.href).pathname.startsWith('/api/v1/')) { return fetch(input, options); }
+			const entry = { finished: false };
+			window.apiRequests.push(entry);
+			try {
+				const response = await fetch(input, options);
+				const json = response.json.bind(response);
+				response.json = async () => {
+					try { return await json(); }
+					finally { entry.finished = true; }
+				};
+				return response;
+			} catch (error) {
+				entry.finished = true;
+				throw error;
+			}
+		};
 		window.measurementVisible = true;
 		Object.defineProperty(document, 'visibilityState', { get: () => window.measurementVisible ? 'visible' : 'hidden' });
 		document.hasFocus = () => window.measurementVisible;
@@ -56,15 +79,20 @@ beforeEach(async () => {
 });
 afterEach(async () => { await page?.close(); assert.deepEqual(errors, []); });
 
-async function openPost() {
+async function waitForApiIdle() {
+	// 별도 브라우저 작업에서 확인하므로 JSON을 받은 앱의 후속 마이크로태스크도 끝난다.
+	await page.waitForFunction(() => window.apiRequests.every(request => request.finished));
+}
+
+async function openPost({ waitForRequests = true } = {}) {
 	await page.goto(`${server.resolvedUrls.local[0]}posts/1`);
 	await page.getByRole('heading', { name: '글 1', exact: true }).waitFor();
-	await settle();
+	if (waitForRequests) { await waitForApiIdle(); }
 }
 
 async function advance(milliseconds) {
 	await page.clock.fastForward(milliseconds);
-	await settle();
+	await waitForApiIdle();
 }
 
 async function visible(value) {
@@ -72,7 +100,7 @@ async function visible(value) {
 		window.measurementVisible = value;
 		document.dispatchEvent(new Event('visibilitychange'));
 	}, value);
-	await settle();
+	await waitForApiIdle();
 }
 
 test('anonymous foreground measurement uses CSRF, pauses in background, and resumes', async () => {
@@ -93,7 +121,12 @@ test('anonymous foreground measurement uses CSRF, pauses in background, and resu
 	assert.ok(saves().at(-1).body.activeTimeMillis < before + 17_000);
 });
 
-test('a long idle interval contributes at most one minute until the next interaction', async () => {
+for (const delay of [0, 250]) test(`a long idle interval contributes at most one minute until the next interaction (start delay ${delay}ms)`, async () => {
+	startHandler = async route => {
+		// 응답 지연을 주입해 40ms 고정 대기로 재현한 경합을 계속 검사한다.
+		if (delay) { await new Promise(resolve => setTimeout(resolve, delay)); }
+		return ok(route, { token: 'idle-page' });
+	};
 	await openPost();
 	await advance(180_000);
 	assert.equal(saves().at(-1).body.activeTimeMillis, 60_000);
@@ -118,18 +151,21 @@ test('failed transmission retries the cumulative value and navigation uses a new
 	assert.ok(saves().at(-1).body.activeTimeMillis >= 30_000);
 	await page.locator('a[href="/posts/2"]').first().click();
 	await page.getByRole('heading', { name: '글 2', exact: true }).waitFor();
-	await settle();
+	await waitForApiIdle();
 	await advance(16_000);
 	assert.equal(saves().at(-1).path, '/api/v1/blog/posts/2/active-time');
 	assert.notEqual(saves().at(-1).body.token, first.body.token);
 	assert.ok(saves().at(-1).body.activeTimeMillis < 17_000);
 });
 
-test('an old account start response is discarded after sign out', async () => {
+test('an old account start response is discarded after sign out', { timeout: 6000 }, async () => {
 	member = { id: 7, nickname: '독자', role: 'USER' };
 	let held;
-	startHandler = route => { held = route; };
-	await openPost();
+	let received;
+	const started = new Promise(resolve => { received = resolve; });
+	startHandler = route => { held = route; received(); };
+	await openPost({ waitForRequests: false });
+	await started;
 	assert.ok(held);
 	startHandler = route => ok(route);
 	await page.evaluate(async () => {
@@ -137,7 +173,7 @@ test('an old account start response is discarded after sign out', async () => {
 		clearMemberSession();
 	});
 	await ok(held, { token: 'old-account' });
-	await settle();
+	await waitForApiIdle();
 	await advance(30_000);
 	assert.equal(saves().length, 0);
 });
