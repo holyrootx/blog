@@ -74,6 +74,7 @@ public final class ApiPaths {
 	public static final class Post {
 
 		public static final String REACTION = "/api/v1/blog/posts/*/reaction";
+		public static final String ACTIVE_TIME = "/api/v1/blog/posts/*/active-time";
 
 		private Post() {
 		}

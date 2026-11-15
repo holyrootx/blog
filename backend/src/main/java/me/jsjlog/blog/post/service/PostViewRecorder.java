@@ -24,8 +24,13 @@ public class PostViewRecorder {
 	 * 실패는 여기서 삼키지 않고 부르는 쪽이 로그를 남기고 넘긴다.</p>
 	 */
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
-	public void record(Long postId, Long memberId, LocalDateTime viewedAt, DeviceType deviceType) {
-		postViewRepository.save(PostView.of(postId, memberId, viewedAt, deviceType));
+	public Long record(Long postId, Long memberId, LocalDateTime viewedAt, DeviceType deviceType) {
+		return postViewRepository.save(PostView.of(postId, memberId, viewedAt, deviceType)).getId();
+	}
+
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
+	public void updateActiveTime(Long viewId, Long postId, long millis, LocalDateTime now) {
+		postViewRepository.advanceActiveTime(viewId, postId, millis, now);
 	}
 
 	/** 30분 안의 회원 재방문은 집계 행을 추가하지 않고 마지막 열람 시각만 갱신한다. */
