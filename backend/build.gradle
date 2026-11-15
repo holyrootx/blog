@@ -78,6 +78,8 @@ tasks.register('mysqlTest', Test) {
 	classpath = sourceSets.test.runtimeClasspath
 	useJUnitPlatform()
 	maxParallelForks = 1
+	// 사용이 끝난 컨텍스트의 연결 풀을 닫아 재시작 검사에 필요한 연결을 남긴다.
+	systemProperty 'spring.test.context.cache.maxSize', '8'
 	outputs.upToDateWhen { false }
 	filter {
 		includeTestsMatching '*MenuCategoryConcurrencyTest'
