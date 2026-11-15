@@ -1,10 +1,13 @@
 import { after, afterEach, before, beforeEach, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { createServer } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import { chromium } from 'playwright';
-let server, browser, page, errors, postContent;
+let server, browser, page, errors, postContent, cacheDir;
 const paragraphs = Array(17).fill('목차 이동을 확인하기 위한 충분히 긴 본문입니다.');
 const content = ['## 첫 번째 제목', ...paragraphs, '## 두 번째 제목', ...paragraphs,
 	'## 세 번째 제목', ...paragraphs, '<details>', '<summary>## 접힌 제목</summary>', '',
@@ -19,22 +22,28 @@ const arrived = id => page.waitForFunction(target => {
 	throw error;
 });
 before(async () => {
-	server = await createServer({ root: fileURLToPath(new URL('..', import.meta.url)), configFile: false,
+	cacheDir = await mkdtemp(join(tmpdir(), 'blog-toc-test-'));
+	server = await createServer({ root: fileURLToPath(new URL('..', import.meta.url)), configFile: false, cacheDir,
 		plugins: [vue()], server: { host: '127.0.0.1', port: 0 } });
 	await server.listen();
 	browser = await chromium.launch({ headless: true, ...(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {}) });
 });
-after(async () => { await browser?.close(); await server?.close(); });
+after(async () => { await browser?.close(); await server?.close(); await rm(cacheDir, { recursive: true, force: true }); });
 beforeEach(async () => {
 	errors = [];
 	postContent = content;
 	page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'no-preference' });
 	page.setDefaultTimeout(7000); page.on('pageerror', error => errors.push(error.message));
 	await page.addInitScript(() => {
-		window.positions = []; window.scrollCalls = [];
+		window.positions = []; window.scrollCalls = []; window.tocClicks = [];
 		const original = window.scrollTo;
 		window.scrollTo = function(...args) { window.scrollCalls.push(args[0]); return original.apply(this, args); };
 		addEventListener('scroll', () => window.positions.push(scrollY));
+		addEventListener('click', event => {
+			if (event.target.closest('.post-toc')) {
+				window.tocClicks.push({ hash: event.target.closest('a')?.hash, y: scrollY });
+			}
+		}, true);
 	});
 	await page.route('**/api/v1/**', route => {
 		const path = new URL(route.request().url()).pathname;
@@ -70,8 +79,36 @@ test('upward navigation, same link reselection and keyboard activation work', as
 	await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
 	await link(1).click(); await arrived(1);
 });
-test('last of rapidly selected links wins', async () => {
-	await open(); await link(3).click(); await link(2).click(); await arrived(2); await assertAnchor(2);
+for (const delayedFonts of [false, true]) test(`last of rapidly selected links wins${delayedFonts ? ' when fonts finish during the second press' : ''}`, async () => {
+	await open();
+	await page.waitForFunction(() => document.fonts.status === 'loaded');
+	// 첫 스크롤에 목차 자체가 움직이면 down/up 대상이 달라져 클릭이 전달되지 않는다.
+	// 고정 위치에서 실제 마우스로 연속 클릭하되 본문 smooth scroll은 그대로 검사한다.
+	await page.locator('.post-aside__sticky').evaluate(element => {
+		scrollTo({ top: scrollY + element.getBoundingClientRect().top - 88, behavior: 'instant' });
+	});
+	await page.waitForFunction(() => Math.abs(document.querySelector('.post-aside__sticky').getBoundingClientRect().top - 88) < 1);
+	await resetSamples();
+	const startY = await page.evaluate(() => scrollY);
+	if (delayedFonts) {
+		await page.evaluate(() => {
+			let release;
+			Object.defineProperty(document, 'fonts', { configurable: true,
+				value: { status: 'loading', ready: new Promise(resolve => { release = resolve; }) } });
+			document.querySelectorAll('.post-toc__link')[1].addEventListener('pointerdown', () => release(), { once: true });
+		});
+	}
+	await link(3).click();
+	await page.waitForURL(url => url.hash === '#section-3');
+	await link(2).click({ delay: delayedFonts ? 100 : 0 });
+	await arrived(2); await assertAnchor(2);
+	const clicks = await page.evaluate(() => window.tocClicks);
+	assert.deepEqual(clicks.map(click => click.hash), ['#section-3', '#section-2']);
+	if (delayedFonts) {
+		const firstDestination = await page.evaluate(() => window.scrollCalls.find(call => call?.behavior === 'smooth').top);
+		assert.ok(clicks[1].y > startY && clicks[1].y < firstDestination - 10,
+			'the second click is delivered while the first smooth scroll is still moving');
+	}
 });
 test('reduced motion reaches the same heading without smooth animation', async () => {
 	await page.emulateMedia({ reducedMotion: 'reduce' }); await open(); await resetSamples();
