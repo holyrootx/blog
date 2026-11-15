@@ -44,6 +44,7 @@ const POST_COLUMNS = [
 	{ key: 'pageViews', label: '조회 기록', width: '92px', align: 'right' },
 	{ key: 'uniqueMembers', label: '고유 회원', width: '92px', align: 'right' },
 	{ key: 'anonymousViews', label: '비회원 방문', width: '100px', align: 'right' },
+	{ key: 'activeTime', label: '평균 활성 시간(추정)', width: '154px', align: 'right' },
 	{ key: 'totalViews', label: '누적 조회*', width: '96px', align: 'right' },
 	{ key: 'commentCount', label: '댓글*', width: '72px', align: 'right' },
 	{ key: 'likeCount', label: '좋아요*', width: '80px', align: 'right' },
@@ -189,6 +190,17 @@ function postBadge(post) {
 function formatCount(value) {
 	return (value ?? 0).toLocaleString('ko-KR');
 }
+
+function formatActiveTime(millis) {
+	if (millis === null || millis === undefined || !Number.isFinite(Number(millis))) {
+		return '측정값 없음';
+	}
+	if (millis > 0 && millis < 1000) {
+		return '1초 미만';
+	}
+	const seconds = Math.max(0, Math.round(Number(millis) / 1000));
+	return seconds < 60 ? `${seconds}초` : `${Math.floor(seconds / 60)}분 ${seconds % 60}초`;
+}
 </script>
 
 <template>
@@ -251,6 +263,17 @@ function formatCount(value) {
 					</div>
 				</dl>
 
+				<div class="admin-view-stats__chart-card admin-view-stats__active-time">
+					<h3>평균 화면 활성 시간(추정)</h3>
+					<p class="admin-view-stats__tile-value">{{ formatActiveTime(summary.averageActiveTimeMillis) }}</p>
+					<p class="admin-view-stats__tile-helper">표본 {{ formatCount(summary.activeTimeSamples) }}건</p>
+					<p class="admin-view-stats__hint">
+						글 화면이 보이고 창에 초점이 있는 시간입니다. 1분간 조작이 없으면 측정을 멈춥니다.
+						실제 독서 시간은 아니며, 한 기록은 최대 2시간까지 측정합니다. 측정값을 받은 기록만 평균에 포함합니다.
+						30분 안의 재열람 시간은 같은 기록에 합치고, 날짜는 그 기록의 첫 열람일 기준입니다.
+					</p>
+				</div>
+
 				<div class="admin-view-stats__charts">
 					<div class="admin-view-stats__chart-card">
 						<h3>날짜별 조회 기록</h3>
@@ -295,7 +318,7 @@ function formatCount(value) {
 				:loading="postsLoading && !postsLoaded"
 				:error-text="postsError"
 				empty-text="이 기간에 조회 기록이 있는 글이 없습니다."
-				min-width="760px"
+				min-width="920px"
 				@retry="loadPosts"
 			>
 				<template #cell-title="{ row }">
@@ -307,6 +330,10 @@ function formatCount(value) {
 				<template #cell-pageViews="{ value }">{{ formatCount(value) }}</template>
 				<template #cell-uniqueMembers="{ value }">{{ formatCount(value) }}</template>
 				<template #cell-anonymousViews="{ value }">{{ formatCount(value) }}</template>
+				<template #cell-activeTime="{ row }">
+					<div>{{ formatActiveTime(row.averageActiveTimeMillis) }}</div>
+					<small>표본 {{ formatCount(row.activeTimeSamples) }}건</small>
+				</template>
 				<template #cell-totalViews="{ value }">{{ formatCount(value) }}</template>
 				<template #cell-commentCount="{ value }">{{ formatCount(value) }}</template>
 				<template #cell-likeCount="{ value }">{{ formatCount(value) }}</template>

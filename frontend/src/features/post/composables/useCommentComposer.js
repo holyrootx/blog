@@ -1,6 +1,7 @@
 import { nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { createPostComment } from '../api/postApi';
 import { notifyError } from '../../../shared/toast/toastStore';
+import { getAuthenticationGeneration } from '../../../shared/api/blogApiClient';
 
 export function useCommentComposer({ postId, items, total, member, replyInput }) {
 	const submitting = ref(false);
@@ -13,14 +14,18 @@ export function useCommentComposer({ postId, items, total, member, replyInput })
 
 	let revision = 0;
 	let replyRevision = 0;
-	watch(postId, () => {
+	// 계정이 바뀌면 이전 요청의 성공·실패가 새 목록과 초안에 적용되면 안 된다.
+	watch([postId, () => member.value?.id ?? null], ([nextPostId], [previousPostId, previousMemberId]) => {
 		revision += 1;
 		replyRevision += 1;
 		submitting.value = false;
 		replySubmitting.value = false;
 		draft.value = '';
 		replyDraft.value = '';
-		replyTargetId.value = null;
+		// 비회원이 로그인 안내에서 고른 답글 대상은 로그인 성공 뒤에도 유지한다.
+		if (nextPostId !== previousPostId || previousMemberId !== null) {
+			replyTargetId.value = null;
+		}
 		formError.value = '';
 		replyError.value = '';
 	}, { flush: 'sync' });
@@ -55,21 +60,25 @@ export function useCommentComposer({ postId, items, total, member, replyInput })
 
 		const requestedRevision = revision;
 		const requestedPostId = postId.value;
+		const requestedAuthentication = getAuthenticationGeneration();
+		const author = { nickname: member.value?.nickname, role: member.value?.role };
 		submitting.value = true;
 		formError.value = '';
 
 		try {
 			const created = await createPostComment(requestedPostId, { content });
-			if (requestedRevision !== revision) {
+			if (requestedRevision !== revision || requestedAuthentication !== getAuthenticationGeneration()) {
 				return;
 			}
-			items.value = [toCreatedComment(created?.id, content), ...items.value];
-			total.value += 1;
+			if (!containsComment(created?.id)) {
+				items.value = [toCreatedComment(created?.id, content, author), ...items.value];
+				total.value += 1;
+			}
 			if (draft.value.trim() === content) {
 				draft.value = '';
 			}
 		} catch (error) {
-			if (requestedRevision !== revision) {
+			if (requestedRevision !== revision || requestedAuthentication !== getAuthenticationGeneration()) {
 				return;
 			}
 			formError.value = error?.message ?? '댓글을 등록하지 못했습니다.';
@@ -92,27 +101,31 @@ export function useCommentComposer({ postId, items, total, member, replyInput })
 		const requestedRevision = revision;
 		const requestedReplyRevision = replyRevision;
 		const requestedPostId = postId.value;
+		const requestedAuthentication = getAuthenticationGeneration();
+		const author = { nickname: member.value?.nickname, role: member.value?.role };
 		replySubmitting.value = true;
 		replyError.value = '';
 
 		try {
 			const created = await createPostComment(requestedPostId, { content, parentId });
-			if (requestedRevision !== revision) {
+			if (requestedRevision !== revision || requestedAuthentication !== getAuthenticationGeneration()) {
 				return;
 			}
 			const parent = items.value.find((comment) => comment.id === parentId);
 
-			if (parent) {
-				parent.replies = [...parent.replies, toCreatedComment(created?.id, content)];
+			if (!containsComment(created?.id)) {
+				if (parent) {
+					parent.replies = [...parent.replies, toCreatedComment(created?.id, content, author)];
+				}
+				total.value += 1;
 			}
-
-			total.value += 1;
 			if (requestedReplyRevision === replyRevision && replyDraft.value.trim() === content) {
 				replyDraft.value = '';
 				replyTargetId.value = null;
 			}
 		} catch (error) {
-			if (requestedRevision !== revision || requestedReplyRevision !== replyRevision) {
+			if (requestedRevision !== revision || requestedReplyRevision !== replyRevision
+					|| requestedAuthentication !== getAuthenticationGeneration()) {
 				return;
 			}
 			replyError.value = error?.message ?? '답글을 등록하지 못했습니다.';
@@ -124,13 +137,18 @@ export function useCommentComposer({ postId, items, total, member, replyInput })
 		}
 	}
 
-	function toCreatedComment(id, content) {
+	function containsComment(id) {
+		// 응답을 기다리는 동안 목록/답글 조회에 먼저 포함된 행은 다시 세지 않는다.
+		return items.value.some(comment => comment.id === id || comment.replies.some(reply => reply.id === id));
+	}
+
+	function toCreatedComment(id, content, author) {
 		return {
 			id,
-			author: member.value?.nickname ?? '',
+			author: author.nickname ?? '',
 			createdAt: '방금 전',
 			content,
-			isAuthor: member.value?.role === 'ADMIN',
+			isAuthor: author.role === 'ADMIN',
 			deleted: false,
 			likeCount: 0,
 			dislikeCount: 0,

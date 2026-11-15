@@ -309,6 +309,10 @@ class MemberSessionPolicyTest {
 		String previousId = session.getId();
 		String previousToken = csrfToken(session);
 		var request = post("/api/v1/auth/oauth/" + action).session(session)
+				.with(incoming -> {
+					incoming.setRequestedSessionId(previousId);
+					return incoming;
+				})
 				.header("X-CSRF-TOKEN", previousToken).contentType(MediaType.APPLICATION_JSON);
 		if (body != null) {
 			request.content(body);

@@ -60,6 +60,7 @@ beforeEach(async () => {
 });
 afterEach(async () => { await page?.close(); assert.deepEqual(errors, []); });
 async function beginUpload(kind) {
+	const previousUploads = uploaded.length;
 	if (kind === 'body') {
 		await page.locator('[contenteditable=true]').first().evaluate((el, base64) => {
 			const data = new DataTransfer();
@@ -74,6 +75,15 @@ async function beginUpload(kind) {
 		await page.keyboard.press('Escape');
 	}
 	await page.getByRole('status').filter({ hasText: '업로드하고 있습니다' }).waitFor();
+	await waitForUpload(previousUploads + 1);
+}
+async function waitForUpload(expectedCount) {
+	// 업로드 상태 표시는 네트워크 요청 수신보다 먼저 나타날 수 있다.
+	const deadline = Date.now() + 6000;
+	while (uploaded.length < expectedCount && Date.now() < deadline) {
+		await new Promise(resolve => setTimeout(resolve, 10));
+	}
+	assert.equal(uploaded.length, expectedCount);
 }
 async function finishUpload() {
 	assert.ok(uploaded.length);
@@ -113,6 +123,7 @@ for (const kind of ['body', 'thumbnail']) {
 		await page.getByRole('status').filter({ hasText: '업로드에 실패한 이미지' }).waitFor();
 		assert.equal(await saveButton().isDisabled(), true);
 		assert.equal(await page.getByPlaceholder('글 제목', { exact: true }).inputValue(), '실패해도 보존할 제목');
+		const previousUploads = uploaded.length;
 		if (kind === 'body') {
 			const chooser = page.waitForEvent('filechooser'); await page.getByRole('button', { name: '다시 고르기' }).click();
 			await (await chooser).setFiles(file); await page.locator('.block-editor__image-status').waitFor();
@@ -120,6 +131,7 @@ for (const kind of ['body', 'thumbnail']) {
 			await page.getByRole('button', { name: '수정하기', exact: true }).click();
 			await page.locator('input[type=file]').setInputFiles(file); await page.getByRole('button', { name: '업로드 중', exact: true }).waitFor();
 		}
+		await waitForUpload(previousUploads + 1);
 		await finishUpload(); await saveButton().click(); await page.waitForURL('**/admin/posts');
 		assert.equal(post.title, '실패해도 보존할 제목'); assert.equal(post.thumbnailImageUrl, imageUrl);
 	});
