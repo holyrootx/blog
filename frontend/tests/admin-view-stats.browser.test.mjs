@@ -55,7 +55,7 @@ beforeEach(async () => {
 		const path = url.pathname;
 		requests.push({ path, query: Object.fromEntries(url.searchParams) });
 		if (path === '/api/v1/admin/auth/me') {
-			return ok(route, { username: 'test', role: 'ADMIN' });
+			return ok(route, { username: 'test', role: 'ROLE_ADMIN' });
 		}
 		if (path.endsWith('/csrf')) {
 			return ok(route, { headerName: 'X-CSRF-TOKEN', token: 'test' });

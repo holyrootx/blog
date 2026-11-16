@@ -6,7 +6,7 @@ import { createServer } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import { chromium } from 'playwright';
 
-const fakeMember = { id: 1, nickname: '메뉴 검사 회원', role: 'USER' };
+const fakeMember = { id: 1, nickname: '메뉴 검사 회원', role: 'ROLE_USER' };
 const ok = (route, data = null) => route.fulfill({ json: { success: true, data } });
 let server, browser, page, origin, member, errors, logoutRequests, holdLogout, pendingLogout;
 const siteTrigger = () => page.getByRole('button', { name: '메뉴', exact: true });

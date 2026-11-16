@@ -6,8 +6,8 @@ import { createServer } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import { chromium } from 'playwright';
 
-const memberA = { id: 1, nickname: '검사 회원 A', role: 'USER' };
-const memberB = { id: 2, nickname: '검사 회원 B', role: 'USER' };
+const memberA = { id: 1, nickname: '검사 회원 A', role: 'ROLE_USER' };
+const memberB = { id: 2, nickname: '검사 회원 B', role: 'ROLE_USER' };
 const oldError = '이전 좋아요 요청의 오류';
 const ok = (route, data = null) => route.fulfill({ json: { success: true, data } });
 let server, browser, page, origin, member, errors, initialLiked, logoutFails;

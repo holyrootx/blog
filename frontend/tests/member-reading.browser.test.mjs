@@ -80,7 +80,7 @@ async function openPage(viewport = { width: 1280, height: 900 }) {
 
 beforeEach(async () => {
 	errors = []; requests = []; savedPosition = null;
-	member = { id: 7, nickname: '읽는너구리', role: 'USER' };
+	member = { id: 7, nickname: '읽는너구리', role: 'ROLE_USER' };
 	viewedHandler = (route, url) => ok(route, url.searchParams.get('postIds').split(',').map(Number)
 		.filter(id => id === 2).map(postId => ({ postId, lastViewedAt: '2026-10-17T12:30:00Z' })));
 	recentHandler = (route, url) => {
@@ -118,7 +118,7 @@ test('비회원에게는 표시도 요청도 없고, 로그아웃하면 표시�
 	assert.equal(await page.locator('.post-card__viewed').count(), 0);
 	await page.close();
 
-	member = { id: 7, nickname: '읽는너구리', role: 'USER' };
+	member = { id: 7, nickname: '읽는너구리', role: 'ROLE_USER' };
 	await openPage();
 	await visit('/posts');
 	await page.locator('.post-card__viewed').waitFor();
@@ -164,7 +164,7 @@ test('계정을 바꿨다가 돌아와도 전 로그인에서 지연된 카드 �
 	await page.getByText('카드 글 3').waitFor();
 	const firstMember = member;
 	viewedHandler = route => ok(route, []);
-	member = { id: 8, nickname: '다른독자', role: 'USER' };
+	member = { id: 8, nickname: '다른독자', role: 'ROLE_USER' };
 	await refreshSession();
 	const before = requestsTo(/\/viewed-posts$/).length;
 
@@ -228,7 +228,7 @@ test('같은 글에서 계정을 바꾸면 이전 회원의 이어서 읽기를 
 	await resumeBar().waitFor();
 	const before = requestsTo(/\/reading-positions\/9$/).filter(request => request.method === 'GET').length;
 
-	member = { id: 8, nickname: '다른독자', role: 'USER' };
+	member = { id: 8, nickname: '다른독자', role: 'ROLE_USER' };
 	positionHandler = route => ok(route, null);
 	await refreshSession();
 	await resumeBar().waitFor({ state: 'detached' });
@@ -250,7 +250,7 @@ test('계정 전환과 로그아웃은 이전 회원의 예약된 읽기 위치�
 	await settleFrame();
 	const before = requestsTo(/\/reading-positions\/9$/).filter(request => request.method === 'PUT').length;
 
-	member = { id: 8, nickname: '다른독자', role: 'USER' };
+	member = { id: 8, nickname: '다른독자', role: 'ROLE_USER' };
 	await refreshSession();
 	await page.evaluate(() => window.dispatchEvent(new Event('pagehide')));
 	await settleFrame();
@@ -304,7 +304,7 @@ test('비회원과 없는 글은 읽던 자리를 묻지 않는다', async () =>
 	assert.equal(requestsTo(/\/reading-positions\//).length, 0);
 	await page.close();
 
-	member = { id: 7, nickname: '읽는너구리', role: 'USER' };
+	member = { id: 7, nickname: '읽는너구리', role: 'ROLE_USER' };
 	await openPage();
 	await visit('/posts/404');
 	await page.getByText('찾는 글이 없습니다').first().waitFor().catch(() => null);

@@ -21,7 +21,7 @@ const openBell = async () => { await bell().click(); await panel().waitFor(); };
 const expectText = (selector, text) => page.waitForFunction(({ selector, text }) => document.querySelector(selector)?.textContent.includes(text), { selector, text });
 const visit = path => page.goto(`${server.resolvedUrls.local[0]}${path}`);
 const switchMember = async id => {
-	member = { id, nickname: `회원${id}`, role: 'USER' };
+	member = { id, nickname: `회원${id}`, role: 'ROLE_USER' };
 	await page.evaluate(async () => { const auth = await import('/src/features/member/data/memberAuthStore.js'); await auth.refreshMemberSession(); });
 };
 
@@ -35,7 +35,7 @@ before(async () => {
 after(async () => { await browser?.close(); await server?.close(); });
 beforeEach(async () => {
 	errors = [];
-	member = { id: 7, nickname: '테스터', role: 'USER' };
+	member = { id: 7, nickname: '테스터', role: 'ROLE_USER' };
 	unread = 47; notices = Array.from({ length: 30 }, (_, i) => notice(i + 1));
 	listHandler = route => ok(route, notices);
 	countHandler = route => ok(route, unread);

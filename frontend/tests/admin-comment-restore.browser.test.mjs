@@ -29,7 +29,7 @@ beforeEach(async () => {
 	await page.route('**/api/v1/**', route => {
 		const path = new URL(route.request().url()).pathname;
 		if (path === '/api/v1/admin/auth/me') {
-			return ok(route, { username: 'admin', role: 'ADMIN' });
+			return ok(route, { username: 'admin', role: 'ROLE_ADMIN' });
 		}
 		if (path === '/api/v1/auth/me') {
 			return ok(route, { id: 1, nickname: '운영자', role: 'ROLE_ADMIN' });

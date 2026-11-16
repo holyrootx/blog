@@ -36,10 +36,10 @@ beforeEach(async () => {
 		const path = new URL(route.request().url()).pathname;
 		if (path.endsWith('/categories')) { categoriesRequest = route; return; }
 		if (path === '/api/v1/admin/auth/me') {
-			return ok(route, { username: 'test', role: 'ADMIN' });
+			return ok(route, { username: 'test', role: 'ROLE_ADMIN' });
 		}
 		if (path === '/api/v1/admin/auth/login') {
-			return ok(route, { username: 'test', role: 'ADMIN' });
+			return ok(route, { username: 'test', role: 'ROLE_ADMIN' });
 		}
 		if (path === '/api/v1/auth/me') {
 			return ok(route, null);
