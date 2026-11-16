@@ -54,7 +54,7 @@ beforeEach(async () => {
 			if (submitFailure) {
 				return fail(route, submitFailure.status, submitFailure.code);
 			}
-			return ok(route, { id: 7, nickname: '완료한 회원', role: 'USER' });
+			return ok(route, { id: 7, nickname: '완료한 회원', role: 'ROLE_USER' });
 		}
 		return ok(route);
 	});

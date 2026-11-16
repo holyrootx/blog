@@ -34,7 +34,7 @@ beforeEach(async () => {
 		const url = new URL(route.request().url());
 		if (url.pathname.endsWith('/permanent')) { requests.push(route.request().postDataJSON()); pending = route; return; }
 		if (url.pathname === '/api/v1/admin/auth/me') {
-			return ok(route, { username: 'test', role: 'ADMIN' });
+			return ok(route, { username: 'test', role: 'ROLE_ADMIN' });
 		}
 		if (url.pathname.endsWith('/csrf')) {
 			return ok(route, { headerName: 'X-CSRF-TOKEN', token: 'test' });

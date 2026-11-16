@@ -33,7 +33,7 @@ beforeEach(async () => {
 			return ok(route, { headerName: 'X-CSRF-TOKEN', token: 'test' });
 		}
 		if (path === '/api/v1/admin/auth/me') {
-			return ok(route, { username: 'test', role: 'ADMIN' });
+			return ok(route, { username: 'test', role: 'ROLE_ADMIN' });
 		}
 		if (path.endsWith('/categories')) {
 			return ok(route, [{ id: 1, name: '테스트', sortOrder: 1 }]);
