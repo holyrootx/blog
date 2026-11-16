@@ -184,7 +184,6 @@ async function deleteSelected() {
 
 	for (const categoryId of targets) {
 		try {
-			// eslint-disable-next-line no-await-in-loop
 			await deleteAdminCategory(categoryId);
 			deleted += 1;
 		} catch (error) {

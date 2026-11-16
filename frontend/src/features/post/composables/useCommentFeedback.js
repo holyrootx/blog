@@ -1,32 +1,77 @@
 import { onBeforeUnmount, ref, watch } from 'vue';
 import { removeCommentReaction, setCommentReaction, reportComment } from '../api/postApi';
-import { notifyError, notifySuccess } from '../../../shared/toast/toastStore';
+import { dismissToast, notifyError, notifySuccess } from '../../../shared/toast/toastStore';
+import { getAuthenticationGeneration } from '../../../shared/api/blogApiClient';
 
-export function useCommentFeedback({ postId, isSignedIn, goToLogin }) {
-	const reactionPendingIds = ref(new Set());
+export function useCommentFeedback({ postId, member, isSignedIn, goToLogin }) {
+	const reactionRequests = ref(new Map());
 	const reactionError = ref('');
 	const reportTarget = ref(null);
 	const reportPending = ref(false);
 	const reportError = ref('');
 	const reportDone = ref('');
 
-	let revision = 0;
+	let active = true;
+	let requestSequence = 0;
+	let reportRequest = null;
 	let reportRevision = 0;
-	watch(postId, () => {
-		revision += 1;
-		closeReport();
-		reportPending.value = false;
-		reportDone.value = '';
-		reactionPendingIds.value = new Set();
+	let identity = readIdentity();
+	const errorToasts = new Set();
+
+	function readIdentity() {
+		return { postId: postId.value, memberId: member.value?.id ?? null, authentication: getAuthenticationGeneration() };
+	}
+
+	function clearErrorToasts() {
+		errorToasts.forEach(id => dismissToast(id));
+		errorToasts.clear();
+	}
+
+	function synchronizeIdentity() {
+		if (!active) {
+			return;
+		}
+		const next = readIdentity();
+		if (next.postId === identity.postId && next.memberId === identity.memberId
+				&& next.authentication === identity.authentication) {
+			return;
+		}
+		identity = next;
+		reactionRequests.value = new Map();
 		reactionError.value = '';
-	}, { flush: 'sync' });
-	onBeforeUnmount(() => { revision += 1; });
+		reportRequest = null;
+		reportRevision += 1;
+		reportTarget.value = null;
+		reportPending.value = false;
+		reportError.value = '';
+		reportDone.value = '';
+		clearErrorToasts();
+	}
+
+	// 같은 ID의 재확인에서도 인증 세대를 읽고, 닉네임만 바뀌면 진행을 유지한다.
+	watch([postId, member, () => member.value?.id ?? null], synchronizeIdentity, { flush: 'sync' });
+	onBeforeUnmount(() => { active = false; reportRequest = null; clearErrorToasts(); });
+
+	function isCurrent(request, token) {
+		// 인증 세대는 getter라 반응형 알림 없이 바뀔 수 있어 응답과 다음 동작에서도 확인한다.
+		synchronizeIdentity();
+		return active && request.identity === identity && request.token === token;
+	}
+
+	function showError(message) {
+		errorToasts.add(notifyError(message));
+	}
 
 	function isReactionPending(commentId) {
-		return reactionPendingIds.value.has(commentId);
+		synchronizeIdentity();
+		return reactionRequests.value.has(commentId);
 	}
 
 	function openReport(comment) {
+		synchronizeIdentity();
+		if (!active) {
+			return;
+		}
 		reportRevision += 1;
 		reportError.value = '';
 		reportDone.value = '';
@@ -34,25 +79,31 @@ export function useCommentFeedback({ postId, isSignedIn, goToLogin }) {
 	}
 
 	function closeReport() {
+		synchronizeIdentity();
+		if (!active) {
+			return;
+		}
 		reportRevision += 1;
 		reportTarget.value = null;
 		reportError.value = '';
 	}
 
 	async function submitReport({ reason, detail }) {
-		if (reportPending.value || reportTarget.value === null) {
+		synchronizeIdentity();
+		if (!active || reportPending.value || reportTarget.value === null) {
 			return;
 		}
 
 		const target = reportTarget.value;
-		const requestedRevision = revision;
+		const request = { identity, token: ++requestSequence };
 		const requestedReportRevision = reportRevision;
+		reportRequest = request.token;
 		reportPending.value = true;
 		reportError.value = '';
 
 		try {
 			await reportComment(target.id, { reason, detail });
-			if (requestedRevision !== revision) {
+			if (!isCurrent(request, reportRequest)) {
 				return;
 			}
 
@@ -68,20 +119,25 @@ export function useCommentFeedback({ postId, isSignedIn, goToLogin }) {
 			// 신고는 눌러도 화면이 거의 안 바뀐다. 접수됐다는 말을 한 번은 크게 해 준다
 			notifySuccess('신고가 접수되었습니다.');
 		} catch (error) {
-			if (requestedRevision !== revision || requestedReportRevision !== reportRevision) {
+			if (!isCurrent(request, reportRequest) || requestedReportRevision !== reportRevision) {
 				return;
 			}
 			// 이미 신고했거나 내 댓글인 경우 서버가 이유를 준다. 그대로 보여 준다
 			reportError.value = error.message ?? '신고하지 못했습니다. 잠시 뒤에 다시 시도해 주세요.';
-			notifyError(reportError.value);
+			showError(reportError.value);
 		} finally {
-			if (requestedRevision === revision) {
+			if (isCurrent(request, reportRequest)) {
+				reportRequest = null;
 				reportPending.value = false;
 			}
 		}
 	}
 
 	async function reactToComment(comment, type) {
+		synchronizeIdentity();
+		if (!active) {
+			return;
+		}
 		if (!isSignedIn.value) {
 			goToLogin();
 			return;
@@ -91,8 +147,8 @@ export function useCommentFeedback({ postId, isSignedIn, goToLogin }) {
 			return;
 		}
 
-		const requestedRevision = revision;
-		reactionPendingIds.value = new Set([...reactionPendingIds.value, comment.id]);
+		const request = { identity, token: ++requestSequence };
+		reactionRequests.value.set(comment.id, request.token);
 		reactionError.value = '';
 
 		try {
@@ -101,7 +157,7 @@ export function useCommentFeedback({ postId, isSignedIn, goToLogin }) {
 				? await removeCommentReaction(comment.id, type)
 				: await setCommentReaction(comment.id, type);
 
-			if (requestedRevision !== revision) {
+			if (!isCurrent(request, reactionRequests.value.get(comment.id))) {
 				return;
 			}
 			comment.likeCount = Number(reaction?.likeCount ?? 0);
@@ -109,17 +165,15 @@ export function useCommentFeedback({ postId, isSignedIn, goToLogin }) {
 			comment.likedByMe = Boolean(reaction?.likedByMe);
 			comment.dislikedByMe = Boolean(reaction?.dislikedByMe);
 		} catch (error) {
-			if (requestedRevision !== revision) {
+			if (!isCurrent(request, reactionRequests.value.get(comment.id))) {
 				return;
 			}
 			reactionError.value = error?.message ?? '댓글 반응을 저장하지 못했습니다.';
-			notifyError(reactionError.value);
+			showError(reactionError.value);
 		} finally {
 			// finally 에서 return 하면 앞에서 던진 예외를 삼킨다. 늦은 응답이면 정리만 건너뛴다
-			if (requestedRevision === revision) {
-				const pendingIds = new Set(reactionPendingIds.value);
-				pendingIds.delete(comment.id);
-				reactionPendingIds.value = pendingIds;
+			if (isCurrent(request, reactionRequests.value.get(comment.id))) {
+				reactionRequests.value.delete(comment.id);
 			}
 		}
 	}

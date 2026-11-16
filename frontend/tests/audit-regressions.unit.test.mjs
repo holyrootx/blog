@@ -240,7 +240,7 @@ for (const reject of [false, true]) {
 		const pending = deferred();
 		const { useCommentManagement } = await load('features/post/composables/useCommentManagement.js', ['useCommentManagement'], { updatePostComment: () => pending.promise });
 		const a = { id: 1, content: 'A' }, b = { id: 2, content: 'B' };
-		const m = useCommentManagement({ postId: ref(1), items: ref([a, b]), total: ref(2) });
+		const m = useCommentManagement({ postId: ref(1), items: ref([a, b]), total: ref(2), member: ref({ id: 7 }) });
 		m.startEdit(a); m.editDraft.value = 'A saved'; const request = m.saveEdit(a);
 		m.cancelEdit(); m.startEdit(b); m.editDraft.value = 'B unsaved';
 		reject ? pending.reject(new Error('late error')) : pending.resolve(); await request;
@@ -252,7 +252,7 @@ test('deletion response after navigation does not change next post count', async
 	const pending = deferred();
 	const { useCommentManagement } = await load('features/post/composables/useCommentManagement.js', ['useCommentManagement'], { deletePostComment: () => pending.promise });
 	const postId = ref(1), items = ref([{ id: 1, replies: [] }]), total = ref(1);
-	const m = useCommentManagement({ postId, items, total }); const request = m.confirmDelete(items.value[0]);
+	const m = useCommentManagement({ postId, items, total, member: ref({ id: 7 }) }); const request = m.confirmDelete(items.value[0]);
 	postId.value = 2; items.value = [{ id: 2, replies: [] }]; total.value = 1; pending.resolve(); await request;
 	assert.equal(items.value[0].id, 2); assert.equal(total.value, 1);
 });
@@ -260,8 +260,10 @@ test('deletion response after navigation does not change next post count', async
 for (const reopen of [false, true]) {
 	test(`report targets captured comment after close (reopen=${reopen})`, async () => {
 		const pending = deferred(); let apiId;
-		const { useCommentFeedback } = await load('features/post/composables/useCommentFeedback.js', ['useCommentFeedback'], { reportComment: id => { apiId = id; return pending.promise; } });
-		const f = useCommentFeedback({ postId: ref(1), isSignedIn: ref(true), goToLogin() {} });
+		const { useCommentFeedback } = await load('features/post/composables/useCommentFeedback.js', ['useCommentFeedback'], {
+			reportComment: id => { apiId = id; return pending.promise; }, dismissToast() {},
+		});
+		const f = useCommentFeedback({ postId: ref(1), member: ref({ id: 7, role: 'ROLE_USER' }), isSignedIn: ref(true), goToLogin() {} });
 		const a = reactive({ id: 1 }), b = reactive({ id: 2 }); f.openReport(a); const request = f.submitReport({ reason: 'SPAM', detail: '' });
 		await f.submitReport({ reason: 'SPAM', detail: '' });
 		f.closeReport(); if (reopen) { f.openReport(b); } pending.resolve(); await request;
