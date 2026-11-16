@@ -23,6 +23,7 @@ const route = useRoute();
 const router = useRouter();
 
 const PAGE_SIZE = 12;
+const FALLBACK_POST_SIZE = 4;
 
 const categories = ref([]);
 const posts = ref([]);
@@ -32,8 +33,9 @@ const totalPages = ref(0);
 const categoriesLoading = ref(true);
 const failed = ref(false);
 
-const sections = useSectionLoader(['posts']);
+const sections = useSectionLoader(['posts', 'fallback']);
 const loading = computed(() => sections.loading.posts);
+const fallbackLoading = computed(() => sections.loading.fallback);
 
 const listCondition = computed(() => readPostListQuery(route.query));
 const page = computed(() => listCondition.value.page);
@@ -97,21 +99,29 @@ function load() {
 		sort: sort.value,
 		keyword: keyword.value,
 	};
+	const cacheKey = `post-list:${JSON.stringify(condition)}`;
+	let hasRequestedFallback = false;
 
 	sections.restart();
+	sections.cancel('fallback');
 	failed.value = false;
+	fallbackPosts.value = [];
 
 	return sections.load('posts', {
-		cacheKey: `post-list:${JSON.stringify(condition)}`,
-		request: async () => {
-			const result = await getPosts(condition);
-			return { result, fallback: await fallbackFor(result, condition.keyword) };
-		},
-		apply: ({ result, fallback }) => {
+		cacheKey,
+		request: () => getPosts(condition),
+		apply: (result) => {
 			posts.value = result.items;
 			totalElements.value = result.totalElements;
 			totalPages.value = result.totalPages;
-			fallbackPosts.value = fallback;
+			if (result.items.length > 0 || !condition.keyword) {
+				sections.cancel('fallback');
+				fallbackPosts.value = [];
+			} else if (!hasRequestedFallback) {
+				// 캐시와 새 검색 응답이 모두 비어 있어도 추천 요청은 한 번만 보낸다
+				hasRequestedFallback = true;
+				loadFallback(`${cacheKey}:fallback`);
+			}
 		},
 		onError: (error, { showingCached }) => {
 			console.error(error);
@@ -134,13 +144,21 @@ function load() {
  * <p>"없습니다" 만 있는 화면은 막다른 길이다. 찾던 것이 없다는 사실은 알려야 하지만,
  * 거기서 나갈 길도 같이 줘야 뒤로가기 말고 할 일이 생긴다.</p>
  */
-async function fallbackFor(result, requestedKeyword) {
-	if (result.items.length > 0 || !requestedKeyword) {
-		return [];
-	}
-
-	// 여기서 실패해도 검색 결과 화면 자체는 이미 멀쩡하다. 덤이 빠질 뿐이다
-	return getHomePosts('latest').catch(() => []);
+function loadFallback(cacheKey) {
+	return sections.load('fallback', {
+		cacheKey,
+		request: () => getHomePosts('latest', FALLBACK_POST_SIZE),
+		apply: (found) => {
+			fallbackPosts.value = found;
+		},
+		onError: (error, { showingCached }) => {
+			console.error(error);
+			// 선택적인 추천 조회가 실패해도 이미 표시한 검색 결과와 추천 캐시는 유지한다
+			if (!showingCached) {
+				fallbackPosts.value = [];
+			}
+		},
+	});
 }
 
 function clearKeyword() {
@@ -233,9 +251,27 @@ loadCategories().then((found) => {
 			</p>
 
 			<!-- 검색이 빈손일 때만. 막다른 길 대신 읽을거리를 준다 -->
-			<section v-if="fallbackPosts.length > 0" class="post-list__fallback">
+			<section
+				v-if="fallbackLoading || fallbackPosts.length > 0"
+				class="post-list__fallback"
+				:aria-busy="fallbackLoading"
+			>
 				<h2 class="post-list__fallback-title">대신 최근 글은 어떠세요</h2>
-				<div class="post-grid">
+				<div v-if="fallbackLoading" class="post-grid" aria-hidden="true">
+					<article
+						v-for="index in FALLBACK_POST_SIZE"
+						:key="index"
+						class="post-card post-card--skeleton"
+					>
+						<div class="post-card__image ui-skeleton"></div>
+						<div class="post-card__body home-skeleton-stack">
+							<span class="ui-skeleton home-skeleton--post-category"></span>
+							<span class="ui-skeleton home-skeleton--post-title"></span>
+							<span class="ui-skeleton home-skeleton--post-meta"></span>
+						</div>
+					</article>
+				</div>
+				<div v-else class="post-grid">
 					<RouterLink
 						v-for="post in fallbackPosts"
 						:key="post.id"
