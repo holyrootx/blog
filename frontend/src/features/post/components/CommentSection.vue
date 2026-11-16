@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, toRef, watch } from 'vue';
+import { computed, onBeforeUnmount, ref, toRef, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import CommentComposer from './CommentComposer.vue';
 import CommentActions from './CommentActions.vue';
@@ -13,6 +13,7 @@ import { useCommentFeedback } from '../composables/useCommentFeedback';
 import { signOutMember, useMemberAuth } from '../../member/data/memberAuthStore';
 import { notifyError } from '../../../shared/toast/toastStore';
 import { rememberReturnPath } from '../../member/data/memberReturnPath';
+import { getAuthenticationGeneration } from '../../../shared/api/blogApiClient';
 
 const props = defineProps({
 	postId: {
@@ -32,21 +33,52 @@ const props = defineProps({
 });
 const emit = defineEmits(['reload', 'cancel-reload']);
 const mutations = ref(0);
+let mutationActive = true;
+let mutationIdentity = null;
 
 async function changeComment(action, ...args) {
+	synchronizeMutationIdentity();
+	if (!mutationActive) {
+		return;
+	}
+	const requestedIdentity = mutationIdentity;
 	// 새로고침 전에 받아 둔 목록이 방금 등록·수정·삭제한 내용을 되돌리지 않게 한다.
 	emit('cancel-reload');
 	mutations.value += 1;
 	try {
 		await action(...args);
 	} finally {
-		mutations.value -= 1;
+		synchronizeMutationIdentity();
+		if (mutationActive && requestedIdentity === mutationIdentity) {
+			mutations.value -= 1;
+		}
 	}
 }
 
 const route = useRoute();
 const router = useRouter();
 const { member, isSignedIn } = useMemberAuth();
+function readMutationIdentity() {
+	return { postId: props.postId, memberId: member.value?.id ?? null, authentication: getAuthenticationGeneration() };
+}
+
+function synchronizeMutationIdentity() {
+	if (!mutationActive) {
+		return;
+	}
+	const next = readMutationIdentity();
+	if (mutationIdentity && next.postId === mutationIdentity.postId && next.memberId === mutationIdentity.memberId
+			&& next.authentication === mutationIdentity.authentication) {
+		return;
+	}
+	mutationIdentity = next;
+	mutations.value = 0;
+}
+
+mutationIdentity = readMutationIdentity();
+// 이전 계정의 작업 수명은 새 목록의 새로고침과 현재 작업 수에 포함하지 않는다.
+watch([() => props.postId, member, () => member.value?.id ?? null], synchronizeMutationIdentity, { flush: 'sync' });
+onBeforeUnmount(() => { mutationActive = false; mutationIdentity = null; });
 const composer = ref(null);
 const replyInput = ref(null);
 const signinBox = ref(null);
@@ -87,7 +119,7 @@ const {
 	closeReport,
 	submitReport,
 	reactToComment,
-} = useCommentFeedback({ postId: toRef(props, 'postId'), isSignedIn, goToLogin });
+} = useCommentFeedback({ postId: toRef(props, 'postId'), member, isSignedIn, goToLogin });
 const {
 	editingId,
 	editDraft,
@@ -102,7 +134,7 @@ const {
 	askDelete,
 	cancelDelete,
 	confirmDelete,
-} = useCommentManagement({ postId: toRef(props, 'postId'), items, total });
+} = useCommentManagement({ postId: toRef(props, 'postId'), items, total, member });
 
 function avatarInitial(name) {
 	return Array.from(name ?? '')[0] ?? '';
