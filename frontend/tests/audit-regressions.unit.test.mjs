@@ -260,8 +260,10 @@ test('deletion response after navigation does not change next post count', async
 for (const reopen of [false, true]) {
 	test(`report targets captured comment after close (reopen=${reopen})`, async () => {
 		const pending = deferred(); let apiId;
-		const { useCommentFeedback } = await load('features/post/composables/useCommentFeedback.js', ['useCommentFeedback'], { reportComment: id => { apiId = id; return pending.promise; } });
-		const f = useCommentFeedback({ postId: ref(1), isSignedIn: ref(true), goToLogin() {} });
+		const { useCommentFeedback } = await load('features/post/composables/useCommentFeedback.js', ['useCommentFeedback'], {
+			reportComment: id => { apiId = id; return pending.promise; }, dismissToast() {},
+		});
+		const f = useCommentFeedback({ postId: ref(1), member: ref({ id: 7, role: 'ROLE_USER' }), isSignedIn: ref(true), goToLogin() {} });
 		const a = reactive({ id: 1 }), b = reactive({ id: 2 }); f.openReport(a); const request = f.submitReport({ reason: 'SPAM', detail: '' });
 		await f.submitReport({ reason: 'SPAM', detail: '' });
 		f.closeReport(); if (reopen) { f.openReport(b); } pending.resolve(); await request;
