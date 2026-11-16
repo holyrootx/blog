@@ -62,6 +62,16 @@ const pageNumbers = computed(() => {
 });
 
 let controller = null;
+let sessionGeneration = 0;
+let isSessionReady = false;
+let isActive = true;
+
+// 같은 계정으로 돌아와도 이전 로그인에서 시작한 응답은 새 화면에 적용하지 않는다.
+function captureSession() {
+	const generation = sessionGeneration;
+	const memberId = member.value?.id ?? null;
+	return () => isActive && generation === sessionGeneration && memberId === (member.value?.id ?? null);
+}
 
 // 알림으로 찾아온 글. 강조해서 어느 글인지 보이게 한다
 const targetId = ref(null);
@@ -70,6 +80,10 @@ const targetMessage = ref('');
 let skipPageWatch = false;
 
 async function load(entryId = null) {
+	if (!isActive) {
+		return;
+	}
+	const isCurrentSession = captureSession();
 	controller?.abort();
 	const current = new AbortController();
 	controller = current;
@@ -83,7 +97,7 @@ async function load(entryId = null) {
 
 	try {
 		const result = await getGuestbook({ page: page.value, entryId }, { signal: current.signal });
-		if (controller !== current) {
+		if (controller !== current || !isCurrentSession()) {
 			return;
 		}
 
@@ -103,12 +117,12 @@ async function load(entryId = null) {
 			await router.replace({ query: { ...route.query, page: String(result.totalPages) } });
 		}
 	} catch (error) {
-		if (controller !== current || error?.name === 'AbortError') {
+		if (controller !== current || !isCurrentSession() || error?.name === 'AbortError') {
 			return;
 		}
 		loadError.value = '방명록을 불러오지 못했습니다. 잠시 뒤에 다시 시도해 주세요.';
 	} finally {
-		if (controller === current) {
+		if (controller === current && isCurrentSession()) {
 			loading.value = false;
 		}
 	}
@@ -134,10 +148,19 @@ async function revealTarget(entryId, resultPage) {
 onMounted(async () => {
 	// 로그인 확인을 기다렸다 받는다. 먼저 받으면 내 비밀글이 가려진 채 한 번 그려졌다가 다시 바뀐다
 	await ensureMemberSession();
+	if (!isActive) {
+		return;
+	}
+	isSessionReady = true;
 	await load(toId(route.query.entry));
 });
 
-onBeforeUnmount(() => controller?.abort());
+onBeforeUnmount(() => {
+	isActive = false;
+	sessionGeneration += 1;
+	controller?.abort();
+	controller = null;
+});
 
 watch(page, () => {
 	if (skipPageWatch) {
@@ -157,12 +180,26 @@ watch(() => route.query.entry, (value) => {
 
 // 로그인·로그아웃·계정 교체로 사람이 바뀌면 읽을 수 있는 비밀글과 내 글 표시가 달라진다
 watch(() => member.value?.id ?? null, (next, previous) => {
-	if (!loaded.value || next === previous) {
+	if (next === previous) {
 		return;
 	}
+	sessionGeneration += 1;
+	controller?.abort();
+	controller = null;
+	entries.value = [];
+	totalElements.value = 0;
+	totalPages.value = 0;
+	maxLength.value = GUESTBOOK_MAX_LENGTH;
+	loaded.value = false;
+	loadError.value = '';
+	targetId.value = null;
+	targetMessage.value = '';
+	skipPageWatch = false;
 	resetForms();
-	load();
-});
+	if (isSessionReady) {
+		load(toId(route.query.entry));
+	}
+}, { flush: 'sync' });
 
 function queryForPage(number) {
 	return { ...route.query, page: number > 1 ? String(number) : undefined };
@@ -200,9 +237,13 @@ async function submit() {
 
 	submitting.value = true;
 	formError.value = '';
+	const isCurrent = captureSession();
 
 	try {
 		await createGuestbookEntry({ content, secret: secret.value });
+		if (!isCurrent()) {
+			return;
+		}
 		draft.value = '';
 		secret.value = false;
 		notifySuccess('방명록을 남겼습니다.');
@@ -214,9 +255,13 @@ async function submit() {
 			await router.push({ query: queryForPage(1) });
 		}
 	} catch (error) {
-		formError.value = error?.message ?? '방명록을 남기지 못했습니다. 잠시 뒤에 다시 시도해 주세요.';
+		if (isCurrent()) {
+			formError.value = error?.message ?? '방명록을 남기지 못했습니다. 잠시 뒤에 다시 시도해 주세요.';
+		}
 	} finally {
-		submitting.value = false;
+		if (isCurrent()) {
+			submitting.value = false;
+		}
 	}
 }
 
@@ -227,19 +272,26 @@ async function signOut() {
 		return;
 	}
 	signingOut.value = true;
+	const isCurrent = captureSession();
 
 	try {
 		await signOutMember();
 	} catch {
-		notifyError('로그아웃을 확인하지 못했습니다. 다시 시도해 주세요.');
+		if (isCurrent()) {
+			notifyError('로그아웃을 확인하지 못했습니다. 다시 시도해 주세요.');
+		}
 		return;
 	} finally {
-		signingOut.value = false;
+		if (isCurrent()) {
+			signingOut.value = false;
+		}
 	}
 
 	// 로그아웃한 사람 이름으로 올라갈 글이 칸에 남아 있으면 안 된다
-	draft.value = '';
-	secret.value = false;
+	if (isCurrent()) {
+		draft.value = '';
+		secret.value = false;
+	}
 }
 
 const editingId = ref(null);
@@ -271,9 +323,13 @@ async function saveEdit(entry) {
 
 	editPending.value = true;
 	editError.value = '';
+	const isCurrent = captureSession();
 
 	try {
 		await updateGuestbookEntry(entry.id, { content, secret: editSecret.value });
+		if (!isCurrent()) {
+			return;
+		}
 		// 다시 받지 않고 자리에서 바꾼다. 다시 받으면 읽던 위치가 튄다
 		if (entry.content !== content) {
 			entry.edited = true;
@@ -282,9 +338,13 @@ async function saveEdit(entry) {
 		entry.secret = editSecret.value;
 		editingId.value = null;
 	} catch (error) {
-		editError.value = error?.message ?? '고치지 못했습니다. 잠시 뒤에 다시 시도해 주세요.';
+		if (isCurrent()) {
+			editError.value = error?.message ?? '고치지 못했습니다. 잠시 뒤에 다시 시도해 주세요.';
+		}
 	} finally {
-		editPending.value = false;
+		if (isCurrent()) {
+			editPending.value = false;
+		}
 	}
 }
 
@@ -304,16 +364,24 @@ async function confirmDelete(entry) {
 	}
 	deletePending.value = true;
 	actionError.value = '';
+	const isCurrent = captureSession();
 
 	try {
 		await deleteGuestbookEntry(entry.id);
+		if (!isCurrent()) {
+			return;
+		}
 		deletingId.value = null;
 		notifySuccess('방명록 글을 지웠습니다.');
 		await load();
 	} catch (error) {
-		actionError.value = error?.message ?? '지우지 못했습니다. 잠시 뒤에 다시 시도해 주세요.';
+		if (isCurrent()) {
+			actionError.value = error?.message ?? '지우지 못했습니다. 잠시 뒤에 다시 시도해 주세요.';
+		}
 	} finally {
-		deletePending.value = false;
+		if (isCurrent()) {
+			deletePending.value = false;
+		}
 	}
 }
 
@@ -345,17 +413,25 @@ async function submitReport({ reason, detail }) {
 
 	reportPending.value = true;
 	reportError.value = '';
+	const isCurrent = captureSession();
 
 	try {
 		await reportGuestbookEntry(target.id, { reason, detail });
+		if (!isCurrent()) {
+			return;
+		}
 		target.reportedByMe = true;
 		closeReport();
 		reportDone.value = '신고를 접수했습니다. 확인 뒤 처리하겠습니다.';
 		notifySuccess('신고가 접수되었습니다.');
 	} catch (error) {
-		reportError.value = error?.message ?? '신고하지 못했습니다. 잠시 뒤에 다시 시도해 주세요.';
+		if (isCurrent()) {
+			reportError.value = error?.message ?? '신고하지 못했습니다. 잠시 뒤에 다시 시도해 주세요.';
+		}
 	} finally {
-		reportPending.value = false;
+		if (isCurrent()) {
+			reportPending.value = false;
+		}
 	}
 }
 
@@ -387,9 +463,13 @@ async function saveReply(entry) {
 
 	replyPending.value = true;
 	replyError.value = '';
+	const isCurrent = captureSession();
 
 	try {
 		await saveGuestbookReply(entry.id, content);
+		if (!isCurrent()) {
+			return;
+		}
 		const now = new Date().toISOString();
 		entry.reply = {
 			author: member.value?.nickname ?? '',
@@ -400,9 +480,13 @@ async function saveReply(entry) {
 		replyTargetId.value = null;
 		notifySuccess('답글을 남겼습니다.');
 	} catch (error) {
-		replyError.value = error?.message ?? '답글을 남기지 못했습니다. 잠시 뒤에 다시 시도해 주세요.';
+		if (isCurrent()) {
+			replyError.value = error?.message ?? '답글을 남기지 못했습니다. 잠시 뒤에 다시 시도해 주세요.';
+		}
 	} finally {
-		replyPending.value = false;
+		if (isCurrent()) {
+			replyPending.value = false;
+		}
 	}
 }
 
@@ -412,15 +496,23 @@ async function confirmDeleteReply(entry) {
 	}
 	replyPending.value = true;
 	actionError.value = '';
+	const isCurrent = captureSession();
 
 	try {
 		await deleteGuestbookReply(entry.id);
+		if (!isCurrent()) {
+			return;
+		}
 		entry.reply = null;
 		deletingReplyId.value = null;
 	} catch (error) {
-		actionError.value = error?.message ?? '답글을 지우지 못했습니다. 잠시 뒤에 다시 시도해 주세요.';
+		if (isCurrent()) {
+			actionError.value = error?.message ?? '답글을 지우지 못했습니다. 잠시 뒤에 다시 시도해 주세요.';
+		}
 	} finally {
-		replyPending.value = false;
+		if (isCurrent()) {
+			replyPending.value = false;
+		}
 	}
 }
 
@@ -429,11 +521,25 @@ function canReply(entry) {
 }
 
 function resetForms() {
+	draft.value = '';
+	secret.value = false;
+	submitting.value = false;
+	formError.value = '';
+	signingOut.value = false;
 	editingId.value = null;
+	editDraft.value = '';
+	editSecret.value = false;
+	editPending.value = false;
+	editError.value = '';
 	deletingId.value = null;
+	deletePending.value = false;
 	replyTargetId.value = null;
+	replyDraft.value = '';
+	replyPending.value = false;
+	replyError.value = '';
 	deletingReplyId.value = null;
 	closeReport();
+	reportPending.value = false;
 	reportDone.value = '';
 	actionError.value = '';
 }
