@@ -96,7 +96,162 @@ async function changeMember(next) {
 	await settled();
 }
 
+async function startLogout(key = 'Enter') {
+	await openMember();
+	await page.keyboard.press('End');
+	holdLogout = true;
+	await page.keyboard.press(key);
+	await page.waitForFunction(() => document.querySelector('.member-menu__item[aria-disabled="true"]'));
+	return pendingLogout;
+}
+
+async function completeLogout(request, { success = true, clearMember = true } = {}) {
+	const response = page.waitForResponse(value => value.request() === request.request());
+	if (success) {
+		if (clearMember) { member = null; }
+		await ok(request);
+	} else {
+		await request.fulfill({ status: 503, json: { success: false, code: 'TEST_LOGOUT_FAILURE' } });
+	}
+	await (await response).finished();
+	await settled();
+}
+
 for (const width of [1280, 390]) {
+	for (const key of ['Enter', 'Space']) {
+		test(`${width}: ${key} logout completion focuses the replacement login button`, async (context) => {
+				await openPage(width);
+				await page.evaluate(() => window.scrollTo(0, 240));
+				await openMember();
+			await page.keyboard.press('End');
+			holdLogout = true;
+			await page.keyboard.press(key);
+			await page.waitForFunction(() => document.querySelector('.member-menu__item[aria-disabled="true"]'));
+			assert.equal(await focused(memberPanel().getByRole('menuitem', { name: '로그아웃', exact: true })), true);
+				const scrollBefore = await page.evaluate(() => window.scrollY);
+			member = null; await ok(pendingLogout);
+			const signin = page.locator('.member-menu__signin');
+			await signin.waitFor(); await settled();
+			context.diagnostic(`Completed focus: ${await page.evaluate(() => document.activeElement.tagName)}, login focused=${await focused(signin)}`);
+			assert.equal(await focused(signin), true);
+			assert.equal(await memberTrigger().count(), 0);
+			assert.equal(await memberPanel().count(), 0);
+			assert.equal(logoutRequests, 1);
+				assert.equal(await page.evaluate(() => window.scrollY), scrollBefore);
+		});
+
+		test(`${width}: ${key} logout failure preserves the menu item and reports the error`, async () => {
+			await openPage(width);
+			const request = await startLogout(key);
+			await completeLogout(request, { success: false });
+			await page.getByText('로그아웃을 확인하지 못했습니다. 다시 시도해 주세요.', { exact: true }).waitFor();
+			const logout = memberPanel().getByRole('menuitem', { name: '로그아웃', exact: true });
+			assert.equal(await focused(logout), true);
+			assert.equal(await logout.getAttribute('aria-disabled'), 'false');
+			assert.equal(await memberTrigger().count(), 1);
+			assert.equal(await page.locator('.member-menu__signin').count(), 0);
+			assert.equal(logoutRequests, 1);
+		});
+	}
+
+	test(`${width}: focus chosen after menu removal wins over the queued login restoration`, async () => {
+		await openPage(width);
+		const request = await startLogout();
+		await page.evaluate(() => {
+			const observer = new MutationObserver(() => {
+				if (document.querySelector('.member-menu__signin')) {
+					observer.disconnect();
+					document.querySelector('#outside-menu-control').focus();
+				}
+			});
+			observer.observe(document.querySelector('.blog-header'), { childList: true, subtree: true });
+		});
+		await completeLogout(request);
+		await page.locator('.member-menu__signin').waitFor();
+		assert.equal(await focused(outside()), true);
+	});
+
+	for (const success of [true, false]) {
+		test(`${width}: outside focus survives pending logout ${success ? 'success' : 'failure'}`, async () => {
+			await openPage(width);
+			const request = await startLogout();
+			await outside().focus();
+			await completeLogout(request, { success });
+			if (success) { await page.locator('.member-menu__signin').waitFor(); }
+			else { await page.getByText('로그아웃을 확인하지 못했습니다. 다시 시도해 주세요.', { exact: true }).waitFor(); }
+			assert.equal(await focused(outside()), true);
+			assert.equal(logoutRequests, 1);
+		});
+
+		test(`${width}: unmount before logout ${success ? 'success' : 'failure'} leaves outside focus untouched`, async () => {
+			await openPage(width);
+			const request = await startLogout();
+			await outside().evaluate(element => document.body.append(element));
+			await page.evaluate(async () => (await import('/src/app/router/index.js')).default.push('/admin/login'));
+			await page.locator('.blog-header').waitFor({ state: 'detached' });
+			await outside().focus();
+			await completeLogout(request, { success });
+			assert.equal(await focused(outside()), true);
+			assert.equal(await page.locator('.blog-header').count(), 0);
+			assert.equal(await page.getByText('로그아웃을 확인하지 못했습니다. 다시 시도해 주세요.', { exact: true }).count(), 0);
+		});
+
+		for (const id of [1, 2]) {
+			test(`${width}: late logout ${success ? 'success' : 'failure'} cannot change newer member ${id} pending or focus`, async () => {
+				await openPage(width);
+				const old = await startLogout();
+				await page.evaluate(async () => (await import('/src/shared/api/blogApiClient.js')).advanceAuthenticationGeneration());
+				await changeMember({ ...fakeMember, id, nickname: '새 로그인 회원' });
+				const current = await startLogout();
+				await completeLogout(old, { success, clearMember: false });
+				const logout = memberPanel().getByRole('menuitem', { name: '로그아웃', exact: true });
+				assert.equal(await logout.getAttribute('aria-disabled'), 'true');
+				assert.equal(await focused(logout), true);
+				assert.equal(await page.getByText('로그아웃을 확인하지 못했습니다. 다시 시도해 주세요.', { exact: true }).count(), 0);
+				assert.equal(logoutRequests, 2);
+				await completeLogout(current);
+				await page.locator('.member-menu__signin').waitFor();
+				assert.equal(await focused(page.locator('.member-menu__signin')), true);
+			});
+		}
+	}
+
+	test(`${width}: changing route and returning cannot revive old logout focus or redirect a later route`, async () => {
+		await openPage(width);
+		const request = await startLogout();
+		await page.evaluate(async () => {
+			const router = (await import('/src/app/router/index.js')).default;
+			await router.push('/privacy?away=1');
+			await router.push('/privacy');
+			await router.push('/privacy?later=1');
+		});
+		await outside().focus();
+		await completeLogout(request);
+		await page.locator('.member-menu__signin').waitFor();
+		await settled();
+		assert.equal(new URL(page.url()).search, '?later=1');
+		assert.equal(await focused(outside()), true);
+	});
+
+	test(`${width}: an external signed-out transition without local logout does not force login focus`, async () => {
+		await openPage(width); await openMember();
+		await page.keyboard.press('End');
+		await page.evaluate(async () => (await import('/src/features/member/data/memberAuthStore.js')).clearMemberSession());
+		await page.locator('.member-menu__signin').waitFor(); await settled();
+		assert.equal(await focused(page.locator('.member-menu__signin')), false);
+		assert.equal(logoutRequests, 0);
+	});
+
+	test(`${width}: logout from settings retains the normal home redirect and replacement focus`, async () => {
+		await openPage(width);
+		await page.evaluate(async () => (await import('/src/app/router/index.js')).default.push('/settings'));
+		const request = await startLogout();
+		await completeLogout(request);
+		await page.waitForURL(origin);
+		await settled();
+		assert.equal(await focused(page.locator('.member-menu__signin')), true);
+	});
+
 	for (const kind of ['site', 'member']) {
 		test(`${width}: ${kind} Escape returns focus only to its own trigger`, async (context) => {
 			await openPage(width);
