@@ -7,8 +7,8 @@ import { getCategories } from '../api/postApi';
  * 분류를 하나 늘릴 때마다 코드를 고쳐 배포해야 하는 꼴이 되고, 그러다 보면 관리자 화면에
  * 넣은 것과 화면에 보이는 것이 어긋난다.</p>
  *
- * <p>요청은 한 번만 나간다. 헤더와 목록 화면이 같은 값을 쓰는데, 각자 부르면 한 화면을
- * 여는 데 같은 요청이 두 번 나간다.</p>
+ * <p>진행 중인 요청은 함께 기다리고 성공한 결과는 재사용한다. 헤더와 목록 화면이 같은
+ * 값을 쓰므로 같은 요청을 두 번 보내지 않는다. 실패했다면 다음 호출에서 다시 받는다.</p>
  */
 let request = null;
 
@@ -16,8 +16,11 @@ export function loadCategories() {
 	if (!request) {
 		request = getCategories()
 			.then((found) => (Array.isArray(found) ? found : []))
-		// 분류를 못 받아도 글은 읽을 수 있어야 한다. 분류 줄만 빠진다
-			.catch(() => []);
+			.catch(() => {
+				// 글 읽기는 유지하되 실패를 빈 분류로 캐시하면 다음에 메뉴를 열어도 복구되지 않는다.
+				request = null;
+				return [];
+			});
 	}
 
 	return request;
