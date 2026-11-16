@@ -60,11 +60,13 @@ defineProps({
 			<ThemeToggle />
 
 			<SiteMenu>
-				<template #trigger="{ open }">
+				<template #trigger="{ open, expanded, controls }">
 					<button
 						class="blog-header__button"
 						type="button"
 						aria-label="메뉴"
+						:aria-expanded="expanded"
+						:aria-controls="controls"
 						@click="open"
 					>메뉴</button>
 				</template>
