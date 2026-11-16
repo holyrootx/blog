@@ -148,7 +148,7 @@ export function useCommentComposer({ postId, items, total, member, replyInput })
 			author: author.nickname ?? '',
 			createdAt: '방금 전',
 			content,
-			isAuthor: author.role === 'ADMIN',
+			isAuthor: author.role === 'ROLE_ADMIN',
 			deleted: false,
 			likeCount: 0,
 			dislikeCount: 0,
