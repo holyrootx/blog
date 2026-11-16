@@ -1,5 +1,5 @@
 <script setup>
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { onBeforeUnmount, onMounted, ref, useId, watch } from 'vue';
 import { RouterLink, useRoute } from 'vue-router';
 
 import { loadCategories } from '../../post/data/categoryStore';
@@ -21,9 +21,12 @@ const route = useRoute();
 
 const open = ref(false);
 const root = ref(null);
+const trigger = ref(null);
+const dropdownId = useId();
 const categories = ref([]);
 
-function toggle() {
+function toggle(event) {
+	trigger.value = event.currentTarget;
 	open.value = !open.value;
 
 	if (!open.value) {
@@ -48,19 +51,26 @@ function closeOnOutside(event) {
 }
 
 function closeOnEscape(event) {
-	if (event.key === 'Escape') {
+	if (open.value && event.key === 'Escape' && !event.defaultPrevented) {
+		event.preventDefault();
+		event.stopPropagation();
+		close();
+		trigger.value?.focus();
+	}
+}
+
+function closeOnFocusOut(event) {
+	if (!root.value?.contains(event.relatedTarget)) {
 		close();
 	}
 }
 
 onMounted(() => {
 	document.addEventListener('click', closeOnOutside);
-	document.addEventListener('keydown', closeOnEscape);
 });
 
 onBeforeUnmount(() => {
 	document.removeEventListener('click', closeOnOutside);
-	document.removeEventListener('keydown', closeOnEscape);
 });
 
 // 화면을 옮기면 닫는다. 메뉴는 옮기려고 여는 것이라 안 닫으면 새 화면 위에 남는다
@@ -68,10 +78,10 @@ watch(() => route.fullPath, close);
 </script>
 
 <template>
-	<div ref="root" class="site-menu">
-		<slot name="trigger" :open="toggle" :expanded="open" />
+	<div ref="root" class="site-menu" @keydown="closeOnEscape" @focusout="closeOnFocusOut">
+		<slot name="trigger" :open="toggle" :expanded="open" :controls="open ? dropdownId : undefined" />
 
-		<nav v-if="open" class="site-menu__dropdown" aria-label="분류">
+		<nav v-if="open" :id="dropdownId" class="site-menu__dropdown" aria-label="분류">
 			<RouterLink class="site-menu__link" :to="{ name: 'post-list' }">전체 글</RouterLink>
 
 			<p v-if="categories.length > 0" class="site-menu__label">분류</p>

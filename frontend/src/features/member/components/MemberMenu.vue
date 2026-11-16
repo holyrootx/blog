@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, useId, watch } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 
 import { signOutMember, useMemberAuth } from '../data/memberAuthStore';
@@ -28,37 +28,112 @@ const { member, sessionResolved, isSignedIn } = useMemberAuth();
 const open = ref(false);
 const signingOut = ref(false);
 const root = ref(null);
+const trigger = ref(null);
+const dropdown = ref(null);
+const dropdownId = useId();
+const triggerId = `${dropdownId}-trigger`;
+let leavingWithTab = false;
 
 const isAdmin = computed(() => member.value?.role === 'ROLE_ADMIN');
 
 const initial = computed(() => Array.from(member.value?.nickname ?? '')[0] ?? '');
 
+function close() {
+	open.value = false;
+	leavingWithTab = false;
+}
+
+function toggle() {
+	leavingWithTab = false;
+	open.value = !open.value;
+}
+
+function menuItems() {
+	return Array.from(dropdown.value?.querySelectorAll('[role="menuitem"]') ?? []);
+}
+
+async function openFromKeyboard(event) {
+	if (event.defaultPrevented || !['Enter', ' ', 'ArrowDown', 'ArrowUp'].includes(event.key)) {
+		return;
+	}
+	event.preventDefault();
+	leavingWithTab = false;
+	open.value = true;
+	await nextTick();
+	// 열림을 기다리는 동안 바깥으로 이동한 사람의 포커스를 되돌리지 않는다.
+	if (!open.value || document.activeElement !== trigger.value) {
+		return;
+	}
+	const items = menuItems();
+	(event.key === 'ArrowUp' ? items.at(-1) : items[0])?.focus();
+}
+
+function navigateMenu(event) {
+	if (event.defaultPrevented) {
+		return;
+	}
+	if (event.key === 'Tab') {
+		// 기본 Tab 이동이 끝난 focusout에서 닫는다. 먼저 항목을 없애면 이동 기준을 잃는다.
+		leavingWithTab = true;
+		return;
+	}
+	const items = menuItems();
+	const current = items.indexOf(document.activeElement);
+	if (current < 0) {
+		return;
+	}
+	let target;
+	if (event.key === 'ArrowDown') {
+		target = items[(current + 1) % items.length];
+	} else if (event.key === 'ArrowUp') {
+		target = items[(current - 1 + items.length) % items.length];
+	} else if (event.key === 'Home') {
+		target = items[0];
+	} else if (event.key === 'End') {
+		target = items.at(-1);
+	} else if (event.key === ' ') {
+		event.preventDefault();
+		items[current].click();
+		return;
+	}
+	if (target) {
+		event.preventDefault();
+		target.focus();
+	}
+}
+
+function closeOnFocusOut(event) {
+	if (leavingWithTab || !root.value?.contains(event.relatedTarget)) {
+		close();
+	}
+}
+
 function closeOnOutside(event) {
 	if (open.value && root.value && !root.value.contains(event.target)) {
-		open.value = false;
+		close();
 	}
 }
 
 function closeOnEscape(event) {
-	if (event.key === 'Escape') {
-		open.value = false;
+	if (open.value && event.key === 'Escape' && !event.defaultPrevented) {
+		event.preventDefault();
+		event.stopPropagation();
+		close();
+		trigger.value?.focus();
 	}
 }
 
 onMounted(() => {
 	document.addEventListener('click', closeOnOutside);
-	document.addEventListener('keydown', closeOnEscape);
 });
 
 onBeforeUnmount(() => {
 	document.removeEventListener('click', closeOnOutside);
-	document.removeEventListener('keydown', closeOnEscape);
 });
 
 // 화면을 옮기면 닫는다. 열어 둔 채로 이동하면 새 화면 위에 그대로 떠 있다
-watch(() => route.fullPath, () => {
-	open.value = false;
-});
+watch(() => route.fullPath, close);
+watch(() => member.value?.id, close, { flush: 'sync' });
 
 function goToLogin() {
 	// 로그인은 제공자 화면까지 다녀오는 길이라 라우터 상태가 남지 않는다.
@@ -74,7 +149,7 @@ async function signOut() {
 	signingOut.value = true;
 	try {
 		await signOutMember();
-		open.value = false;
+		close();
 		if (route.name === 'member-settings') {
 			await router.replace({ name: 'home' });
 		}
@@ -94,13 +169,23 @@ async function signOut() {
 		@click="goToLogin"
 	>로그인</button>
 
-	<div v-else-if="isSignedIn" ref="root" class="member-menu">
+	<div
+		v-else-if="isSignedIn"
+		ref="root"
+		class="member-menu"
+		@keydown="closeOnEscape"
+		@focusout="closeOnFocusOut"
+	>
 		<button
+			:id="triggerId"
+			ref="trigger"
 			class="member-menu__trigger"
 			type="button"
 			:aria-expanded="open"
+			:aria-controls="open ? dropdownId : undefined"
 			aria-haspopup="menu"
-			@click="open = !open"
+			@click="toggle"
+			@keydown="openFromKeyboard"
 		>
 			<img
 				v-if="member.profileImageUrl"
@@ -113,22 +198,31 @@ async function signOut() {
 			<span class="member-menu__nickname">{{ member.nickname }}</span>
 		</button>
 
-		<div v-if="open" class="member-menu__dropdown" role="menu">
-			<RouterLink class="member-menu__item" role="menuitem" :to="{ name: 'member-settings', hash: '#recent-posts' }">
+		<div
+			v-if="open"
+			:id="dropdownId"
+			ref="dropdown"
+			class="member-menu__dropdown"
+			role="menu"
+			:aria-labelledby="triggerId"
+			@keydown="navigateMenu"
+		>
+			<RouterLink class="member-menu__item" role="menuitem" tabindex="-1" :to="{ name: 'member-settings', hash: '#recent-posts' }">
 				최근 본 글
 			</RouterLink>
-			<RouterLink class="member-menu__item" role="menuitem" :to="{ name: 'member-settings' }">
+			<RouterLink class="member-menu__item" role="menuitem" tabindex="-1" :to="{ name: 'member-settings' }">
 				내 설정
 			</RouterLink>
 			<RouterLink
 				v-if="isAdmin"
 				class="member-menu__item"
 				role="menuitem"
+				tabindex="-1"
 				:to="{ name: 'admin-dashboard' }"
 			>
 				관리자
 			</RouterLink>
-			<button class="member-menu__item" type="button" role="menuitem" :disabled="signingOut" @click="signOut">
+			<button class="member-menu__item" type="button" role="menuitem" tabindex="-1" :aria-disabled="signingOut" @click="signOut">
 				로그아웃
 			</button>
 		</div>
