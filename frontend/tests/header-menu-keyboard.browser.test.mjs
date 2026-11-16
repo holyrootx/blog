@@ -8,7 +8,8 @@ import { chromium } from 'playwright';
 
 const fakeMember = { id: 1, nickname: '메뉴 검사 회원', role: 'ROLE_USER' };
 const ok = (route, data = null) => route.fulfill({ json: { success: true, data } });
-let server, browser, page, origin, member, errors, logoutRequests, holdLogout, pendingLogout;
+let server, browser, page, origin, member, errors, logoutRequests, holdLogout;
+let logoutCalls, logoutWaiters, logoutRouteGate, logoutTimers;
 const siteTrigger = () => page.getByRole('button', { name: '메뉴', exact: true });
 const sitePanel = () => page.locator('.site-menu__dropdown');
 const memberTrigger = () => page.locator('.member-menu__trigger');
@@ -34,7 +35,7 @@ beforeEach(async () => {
 	errors = [];
 	logoutRequests = 0;
 	holdLogout = false;
-	pendingLogout = null;
+	logoutCalls = []; logoutWaiters = []; logoutRouteGate = null; logoutTimers = new Set();
 	page = await browser.newPage({ serviceWorkers: 'block' });
 	page.setDefaultTimeout(5000);
 	page.on('pageerror', error => errors.push(error.message));
@@ -46,7 +47,12 @@ beforeEach(async () => {
 		if (path.endsWith('/csrf')) { return ok(route, { headerName: 'X-CSRF-TOKEN', token: 'test-only-csrf' }); }
 		if (path === '/api/v1/auth/logout') {
 			logoutRequests += 1;
-			if (holdLogout) { pendingLogout = route; return; }
+			const call = { route, actor: member?.id ?? null, sequence: logoutRequests, fulfillAttempts: 0 };
+			logoutCalls.push(call);
+			const receive = logoutWaiters.shift();
+			const gate = logoutRouteGate; logoutRouteGate = null;
+			if (gate) { gate.arrived.resolve(call); await gate.release.promise; }
+			if (holdLogout) { receive?.(route); return; }
 			member = null;
 			return ok(route);
 		}
@@ -65,7 +71,7 @@ afterEach(async (context) => {
 			await mkdir(process.env.QA_SCREENSHOT_DIR, { recursive: true });
 			await page.screenshot({ path: `${process.env.QA_SCREENSHOT_DIR}/${context.name.replace(/[^a-z0-9]+/gi, '-').slice(0, 125)}.png` });
 		}
-	} finally { await page?.close(); }
+	} finally { logoutTimers.forEach(timer => clearTimeout(timer)); await page?.close(); }
 	assert.deepEqual(errors, []);
 });
 
@@ -96,16 +102,36 @@ async function changeMember(next) {
 	await settled();
 }
 
-async function startLogout(key = 'Enter') {
+function deferred() {
+	let resolve;
+	const promise = new Promise(yes => { resolve = yes; });
+	return { promise, resolve };
+}
+
+function nextLogoutRoute() {
+	return new Promise((resolve, reject) => {
+		const timer = setTimeout(() => reject(new Error('The expected logout route did not arrive')), 5000);
+		logoutTimers.add(timer);
+		logoutWaiters.push(route => { clearTimeout(timer); logoutTimers.delete(timer); resolve(route); });
+	});
+}
+
+async function startLogout(key = 'Enter', { onPending } = {}) {
+	// UI의 pending은 실제 HTTP route 도착보다 먼저 바뀔 수 있다.
+	const request = nextLogoutRoute();
 	await openMember();
 	await page.keyboard.press('End');
 	holdLogout = true;
 	await page.keyboard.press(key);
 	await page.waitForFunction(() => document.querySelector('.member-menu__item[aria-disabled="true"]'));
-	return pendingLogout;
+	onPending?.();
+	return request;
 }
 
 async function completeLogout(request, { success = true, clearMember = true } = {}) {
+	const call = logoutCalls.find(value => value.route === request);
+	assert.ok(call, 'Only an observed logout route can be completed');
+	call.fulfillAttempts += 1;
 	const response = page.waitForResponse(value => value.request() === request.request());
 	if (success) {
 		if (clearMember) { member = null; }
@@ -118,18 +144,65 @@ async function completeLogout(request, { success = true, clearMember = true } = 
 }
 
 for (const width of [1280, 390]) {
+	for (const replacement of [false, true]) {
+		test(`${width}: route delivery gates ${replacement ? 'a replacement account' : 'the first logout'} until its own HTTP route arrives`, { timeout: 15000 }, async context => {
+			await openPage(width);
+			let old = null;
+			if (replacement) {
+				await openMember(); await page.keyboard.press('End'); holdLogout = true;
+				const arrived = nextLogoutRoute(); await page.keyboard.press('Enter'); old = await arrived;
+				await page.evaluate(async () => (await import('/src/shared/api/blogApiClient.js')).advanceAuthenticationGeneration());
+				await changeMember({ ...fakeMember, id: 2, nickname: '새 요청 검사 회원' });
+			}
+			const gate = { arrived: deferred(), release: deferred() };
+			logoutRouteGate = gate;
+			context.after(() => gate.release.resolve());
+			const uiPending = deferred();
+			let returned = false, returnedRoute = null;
+			const waiting = startLogout('Enter', { onPending: uiPending.resolve }).then(route => {
+				returned = true; returnedRoute = route; return route;
+			});
+			const actual = await gate.arrived.promise;
+			await uiPending.promise;
+			// A Node turn drains the helper's return microtasks; the route gate remains explicitly closed.
+			await new Promise(resolve => setImmediate(resolve));
+			const returnedBeforeDelivery = returned;
+			gate.release.resolve();
+			const current = await waiting;
+			context.diagnostic(JSON.stringify({ actors: logoutCalls.map(call => call.actor),
+				requestCount: logoutRequests, actualSequence: actual.sequence, returnedBeforeDelivery,
+				returnedSequence: logoutCalls.find(call => call.route === returnedRoute)?.sequence ?? null,
+				returnedOldRoute: old !== null && current === old }));
+			assert.equal(returnedBeforeDelivery, false, 'UI pending cannot substitute for receiving the actual route');
+			assert.equal(current, actual.route);
+			if (old) {
+				assert.notEqual(current, old);
+				await completeLogout(old, { clearMember: false });
+				assert.equal(await memberPanel().getByRole('menuitem', { name: '로그아웃', exact: true }).getAttribute('aria-disabled'), 'true');
+			}
+			await completeLogout(current);
+			await page.locator('.member-menu__signin').waitFor();
+			assert.equal(await focused(page.locator('.member-menu__signin')), true);
+			assert.equal(logoutRequests, replacement ? 2 : 1);
+			assert.deepEqual(logoutCalls.map(call => call.fulfillAttempts), replacement ? [1, 1] : [1]);
+			context.diagnostic(JSON.stringify({ completed: logoutCalls.map(call => ({
+				actor: call.actor, sequence: call.sequence, fulfillAttempts: call.fulfillAttempts,
+			})) }));
+		});
+	}
 	for (const key of ['Enter', 'Space']) {
 		test(`${width}: ${key} logout completion focuses the replacement login button`, async (context) => {
 				await openPage(width);
 				await page.evaluate(() => window.scrollTo(0, 240));
 				await openMember();
 			await page.keyboard.press('End');
+			const request = nextLogoutRoute();
 			holdLogout = true;
 			await page.keyboard.press(key);
 			await page.waitForFunction(() => document.querySelector('.member-menu__item[aria-disabled="true"]'));
 			assert.equal(await focused(memberPanel().getByRole('menuitem', { name: '로그아웃', exact: true })), true);
 				const scrollBefore = await page.evaluate(() => window.scrollY);
-			member = null; await ok(pendingLogout);
+			await completeLogout(await request);
 			const signin = page.locator('.member-menu__signin');
 			await signin.waitFor(); await settled();
 			context.diagnostic(`Completed focus: ${await page.evaluate(() => document.activeElement.tagName)}, login focused=${await focused(signin)}`);
@@ -203,6 +276,7 @@ for (const width of [1280, 390]) {
 				await page.evaluate(async () => (await import('/src/shared/api/blogApiClient.js')).advanceAuthenticationGeneration());
 				await changeMember({ ...fakeMember, id, nickname: '새 로그인 회원' });
 				const current = await startLogout();
+				assert.notEqual(current, old);
 				await completeLogout(old, { success, clearMember: false });
 				const logout = memberPanel().getByRole('menuitem', { name: '로그아웃', exact: true });
 				assert.equal(await logout.getAttribute('aria-disabled'), 'true');
@@ -365,6 +439,7 @@ for (const width of [1280, 390]) {
 
 	test(`${width}: logout and later login reset menu state and keep duplicate logout guarded`, async (context) => {
 		await openPage(width); await openMember();
+		const request = nextLogoutRoute();
 		holdLogout = true;
 		const logout = memberPanel().getByRole('menuitem', { name: '로그아웃', exact: true });
 		await logout.click();
@@ -375,7 +450,7 @@ for (const width of [1280, 390]) {
 		await settled();
 		assert.equal(logoutRequests, 1);
 		context.diagnostic(`Enter + Space + pointer dblclick during pending logout: ${logoutRequests} HTTP request`);
-		member = null; await ok(pendingLogout);
+		await completeLogout(await request);
 		await page.locator('.member-menu__signin').waitFor();
 		assert.equal(await memberPanel().count(), 0);
 		await changeMember({ ...fakeMember });
