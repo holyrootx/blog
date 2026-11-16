@@ -27,11 +27,13 @@ jobs:
       PUBLIC_BASE_URL: ${{ vars.BLOG_PUBLIC_BASE_URL }}
       SCHEMA_REVISION: ${{ vars.BLOG_SCHEMA_REVISION }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/download-artifact@v8.0.2
         with:
           name: verified-build
           path: verified-build
+          # Stop before deployment if the verified artifact's integrity check fails.
+          digest-mismatch: error
       - name: Prepare verified SSH identity
         env:
           DEPLOY_KEY: ${{ secrets.LIGHTSAIL_SSH_KEY }}
