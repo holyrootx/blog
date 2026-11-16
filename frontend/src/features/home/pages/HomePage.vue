@@ -51,6 +51,39 @@ const home = reactive({
 const profile = computed(() => mergeDefined(EMPTY_PROFILE, blogProfile.value));
 
 const { loading, load } = useSectionLoader(['hero', 'topicSection', 'topics', 'featuredPosts', 'recentPosts']);
+const postErrors = reactive({ featuredPosts: '', recentPosts: '' });
+const postPending = reactive({ featuredPosts: false, recentPosts: false });
+const postQueries = {
+	featuredPosts: { sort: 'popular', cacheKey: 'home:popular-posts' },
+	recentPosts: { sort: 'latest', cacheKey: 'home:latest-posts' },
+};
+
+async function loadPosts(key) {
+	if (postPending[key]) {
+		return;
+	}
+	postPending[key] = true;
+	let failed = false;
+	const { sort, cacheKey } = postQueries[key];
+	try {
+		await load(key, {
+			cacheKey,
+			request: () => getHomePosts(sort),
+			apply: (posts) => {
+				home[key] = posts;
+			},
+			onError: (_error, { showingCached }) => {
+				failed = true;
+				postErrors[key] = showingCached ? 'refresh' : 'load';
+			},
+		});
+		if (!failed) {
+			postErrors[key] = '';
+		}
+	} finally {
+		postPending[key] = false;
+	}
+}
 
 onMounted(() => {
 	load('hero', {
@@ -74,20 +107,8 @@ onMounted(() => {
 			home.topics = Array.isArray(topics) ? topics : [];
 		},
 	});
-	load('featuredPosts', {
-		cacheKey: 'home:popular-posts',
-		request: () => getHomePosts('popular'),
-		apply: (posts) => {
-			home.featuredPosts = posts;
-		},
-	});
-	load('recentPosts', {
-		cacheKey: 'home:latest-posts',
-		request: () => getHomePosts('latest'),
-		apply: (posts) => {
-			home.recentPosts = posts;
-		},
-	});
+	loadPosts('featuredPosts');
+	loadPosts('recentPosts');
 });
 </script>
 
@@ -110,12 +131,18 @@ onMounted(() => {
 			sort="popular"
 			:posts="home.featuredPosts"
 			:loading="loading.featuredPosts"
+			:error="postErrors.featuredPosts"
+			:pending="postPending.featuredPosts"
+			@retry="loadPosts('featuredPosts')"
 		/>
 		<PostSection
 			title="최근 글"
 			sort="latest"
 			:posts="home.recentPosts"
 			:loading="loading.recentPosts"
+			:error="postErrors.recentPosts"
+			:pending="postPending.recentPosts"
+			@retry="loadPosts('recentPosts')"
 		/>
 	</main>
 </template>
