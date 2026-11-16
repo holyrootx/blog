@@ -13,6 +13,7 @@ const accountB = { id: 8, nickname: '검사 회원 B', role: 'ROLE_USER' };
 const logoutError = '로그아웃을 확인하지 못했습니다. 다시 시도해 주세요.';
 const ok = (route, data = null) => route.fulfill({ json: { success: true, data } });
 let server, browser, page, origin, cacheDir, member, reads, logouts, errors;
+let logoutWaiters, logoutTimers;
 const traces = [];
 const tick = () => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 const logout = () => page.locator('.comment-form').getByRole('button', { name: '로그아웃', exact: true });
@@ -29,6 +30,7 @@ before(async () => {
 after(async () => { await browser?.close(); await server?.close(); await rm(cacheDir, { recursive: true, force: true }); });
 beforeEach(async () => {
 	member = { ...accountA }; reads = []; logouts = []; errors = [];
+	logoutWaiters = []; logoutTimers = new Set();
 	page = await browser.newPage({ serviceWorkers: 'block' }); page.setDefaultTimeout(5000);
 	page.on('pageerror', error => errors.push(error.message));
 	await page.route('**/*', route => {
@@ -38,7 +40,15 @@ beforeEach(async () => {
 		if (path === '/api/v1/auth/me') { return ok(route, member); }
 		if (path.endsWith('/csrf')) { return ok(route, { headerName: 'X-CSRF-TOKEN', token: 'fake-comment-signout-csrf' }); }
 		if (path === '/api/v1/auth/me/nickname') { member = { ...member, nickname: request.postDataJSON().nickname }; return ok(route, member); }
-		if (path === '/api/v1/auth/logout') { logouts.push({ route, actor: member?.id ?? null }); return; }
+		if (path === '/api/v1/auth/logout') {
+			const entry = { route, actor: member?.id ?? null, fulfillAttempts: 0 };
+			logouts.push(entry);
+			const waiter = logoutWaiters.shift();
+			if (waiter) {
+				clearTimeout(waiter.timer); logoutTimers.delete(waiter.timer); waiter.resolve(entry);
+			}
+			return;
+		}
 		if (/\/posts\/\d+$/.test(path)) {
 			const id = Number(path.split('/').pop());
 			return ok(route, { id, title: `댓글 로그아웃 검사 ${id}`, content: '실제 부모와 인증 스토어로 검사합니다.',
@@ -61,6 +71,7 @@ beforeEach(async () => {
 	});
 });
 afterEach(async context => {
+	logoutTimers.forEach(timer => clearTimeout(timer)); logoutTimers.clear(); logoutWaiters = [];
 	const layout = await page.evaluate(() => ({ width: innerWidth, documentWidth: document.documentElement.scrollWidth }));
 	assert.equal(layout.documentWidth, layout.width, 'The viewport must not overflow horizontally');
 	if (process.env.QA_SCREENSHOT_DIR) {
@@ -111,11 +122,33 @@ async function drafts(prefix = 'B') {
 	await page.locator('#comment-101').getByRole('button', { name: '답글', exact: true }).click();
 	await page.locator('.reply-form__input').fill(`${prefix} 답글 초안`);
 }
-async function start() {
-	const request = page.waitForRequest(request => new URL(request.url()).pathname === '/api/v1/auth/logout');
-	await logout().click(); await request; return logouts.at(-1);
+function nextLogoutEntry(timeout = 5000) {
+	return new Promise((resolve, reject) => {
+		const waiter = { resolve, timer: null };
+		waiter.timer = setTimeout(() => {
+			logoutTimers.delete(waiter.timer);
+			const index = logoutWaiters.indexOf(waiter);
+			if (index >= 0) { logoutWaiters.splice(index, 1); }
+			reject(new Error('The expected logout handler record did not arrive'));
+		}, timeout);
+		logoutTimers.add(waiter.timer); logoutWaiters.push(waiter);
+	});
+}
+async function start({ key, onInput } = {}) {
+	// 요청 이벤트가 아니라 실제 handler에 전달된 자기 record를 기다린다.
+	const delivery = nextLogoutEntry();
+	const input = (async () => {
+		if (key) { await logout().focus(); await page.keyboard.press(key); }
+		else { await logout().click(); }
+		onInput?.();
+	})();
+	const [entry] = await Promise.all([delivery, input]);
+	return entry;
 }
 async function release(entry, { fails = false, clear = true } = {}) {
+	assert.ok(logouts.includes(entry), 'Only the actual handler record can be completed');
+	entry.fulfillAttempts += 1;
+	assert.equal(entry.fulfillAttempts, 1, 'Each logout route must be completed exactly once');
 	const response = page.waitForResponse(response => response.request() === entry.route.request());
 	if (fails) { await entry.route.fulfill({ status: 500, json: { success: false, code: 'TEST_LOGOUT_FAILURE' } }); }
 	else { if (clear) { member = null; } await ok(entry.route); }
@@ -143,7 +176,68 @@ async function keepDrafts(prefix = 'B') {
 	assert.equal(await page.locator('.reply-form__input').inputValue(), `${prefix} 답글 초안`);
 }
 
+function deferred() {
+	let resolve;
+	const promise = new Promise(yes => { resolve = yes; });
+	return { promise, resolve };
+}
+
+test('the handler watchdog rejects a missing record and removes expired and delivered timers', async () => {
+	await assert.rejects(nextLogoutEntry(25), /The expected logout handler record did not arrive/);
+	assert.equal(logoutWaiters.length, 0); assert.equal(logoutTimers.size, 0);
+	await open(390);
+	const delivery = nextLogoutEntry();
+	await logout().click();
+	const entry = await delivery;
+	assert.equal(entry, logouts[0]); assert.equal(entry.actor, 7);
+	assert.equal(logoutWaiters.length, 0); assert.equal(logoutTimers.size, 0);
+	await release(entry);
+	await page.getByRole('button', { name: '로그인하고 댓글 쓰기', exact: true }).waitFor(); await noError();
+	assert.equal(entry.fulfillAttempts, 1);
+});
+
 for (const width of [1280, 390]) {
+	for (const replacement of [false, true]) {
+		test(`${width}: handler delivery gates ${replacement ? 'a replacement account' : 'the first logout'} until its own record arrives`, { timeout: 15000 }, async context => {
+			await open(width);
+			let old = null;
+			if (replacement) { old = await start(); await switchMember({ ...accountB }); }
+			await drafts(replacement ? 'B' : 'A');
+			const gate = deferred(), arrived = deferred(), inputDone = deferred();
+			context.after(() => gate.resolve());
+			await page.route('**/api/v1/auth/logout', async route => {
+				arrived.resolve(route.request()); await gate.promise; await route.fallback();
+			});
+			let returned = false;
+			const waiting = start({ key: 'Enter', onInput: inputDone.resolve }).then(entry => { returned = true; return entry; });
+			const actualRequest = await arrived.promise;
+			await inputDone.promise;
+			await new Promise(resolve => setImmediate(resolve));
+			const returnedBeforeHandler = returned;
+			gate.resolve();
+			const current = await waiting;
+			context.diagnostic(JSON.stringify({ actors: logouts.map(entry => entry.actor), returnedBeforeHandler,
+				returnedOldRecord: old !== null && current === old, expectedActor: replacement ? 8 : 7 }));
+			assert.equal(returnedBeforeHandler, false, 'A request event cannot substitute for the actual handler record');
+			assert.equal(current, logouts[replacement ? 1 : 0]);
+			assert.equal(current.route.request(), actualRequest);
+			assert.equal(current.actor, replacement ? 8 : 7);
+			await keepDrafts(replacement ? 'B' : 'A');
+			if (old) {
+				assert.notEqual(current, old); assert.notEqual(current.route, old.route);
+				await release(old, { fails: true, clear: false }); await keepDrafts(); await noError();
+				assert.equal(await page.locator('#comment-101 button[aria-label="좋아요"]').first().getAttribute('aria-pressed'), 'true');
+				await logout().dblclick(); await tick(); assert.equal(logouts.length, 2);
+			}
+			await release(current);
+			await page.getByRole('button', { name: '로그인하고 댓글 쓰기', exact: true }).waitFor(); await noError();
+			assert.equal(await currentMember(), null);
+			assert.deepEqual(logouts.map(entry => entry.actor), replacement ? [7, 8] : [7]);
+			assert.deepEqual(logouts.map(entry => entry.fulfillAttempts), replacement ? [1, 1] : [1]);
+			context.diagnostic(JSON.stringify({ actors: logouts.map(entry => entry.actor), fulfillAttempts: logouts.map(entry => entry.fulfillAttempts) }));
+		});
+	}
+
 	for (const advance of [false, true]) {
 		test(`${width}: a separate anonymous refresh suppresses the previous logout failure (auth advance=${advance})`, async context => {
 			await open(width); const old = await start();
@@ -173,8 +267,7 @@ for (const width of [1280, 390]) {
 	test(`${width}: B logout starts while A is pending and A finally cannot release the new pending`, async () => {
 		await open(width); const old = await start();
 		await switchMember({ ...accountB }); await drafts();
-		await logout().click(); await tick(); assert.equal(logouts.length, 2);
-		const current = logouts[1];
+		const current = await start(); assert.equal(logouts.length, 2); assert.equal(current, logouts[1]);
 		await release(old, { fails: true, clear: false }); await keepDrafts(); await noError();
 		await logout().click(); await tick(); assert.equal(logouts.length, 2);
 		await release(current);
