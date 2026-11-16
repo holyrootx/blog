@@ -41,7 +41,7 @@ beforeEach(async () => {
 	await page.route('**/api/v1/**', async route => {
 		const path = new URL(route.request().url()).pathname;
 		if (path === '/api/v1/admin/auth/me') {
-			return ok(route, { username: 'test', role: 'ADMIN' });
+			return ok(route, { username: 'test', role: 'ROLE_ADMIN' });
 		}
 		if (path === '/api/v1/auth/me') {
 			return ok(route, null);
