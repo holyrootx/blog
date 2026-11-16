@@ -52,6 +52,18 @@ for (const cascades of [1, 2]) {
 	});
 }
 
+for (const advance of [false, true]) {
+	test(`an anonymous refresh before the old logout failure does not show an error (auth advance=${advance})`, async t => {
+		const c = await controller(t), pending = c.signOut();
+		if (advance) { c.advance(); }
+		c.member.value = null; await nextTick();
+		assert.equal(c.signingOut.value, true);
+		c.calls[0].reject(new Error('익명 확인 전에 시작한 실패')); await pending;
+		assert.equal(c.member.value, null); assert.equal(c.notices.size, 0);
+		assert.equal(c.signingOut.value, false);
+	});
+}
+
 for (const fails of [false, true]) {
 	for (const boundary of ['member', 'ABA', 'getter', 'same-id-authentication', 'post', 'unmount']) {
 		test(`${boundary}: old logout ${fails ? 'failure' : 'resolved success'} cannot touch new input, likes or toast`, async t => {

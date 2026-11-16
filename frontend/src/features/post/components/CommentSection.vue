@@ -176,7 +176,7 @@ function synchronizeSignOutIdentity() {
 	clearSignOutError();
 	if (signOutRequest?.identity === previous && previous.memberId !== null && next.memberId === null
 			&& next.postId === previous.postId) {
-		// 회원·관리자 세션의 동기 정리가 끝난 인증 세대로 자기 로그아웃의 익명 전환을 확인한다.
+		// 동기 세션 정리 뒤의 익명 상태를 기억한다. 자기 HTTP 요청의 성공을 뜻하지는 않는다.
 		signOutRequest.identity = next;
 		signOutRequest.confirmedAnonymous = true;
 		return;
@@ -230,7 +230,7 @@ async function signOut() {
 			});
 		});
 	} catch {
-		if (isCurrentSignOut(request)) {
+		if (isCurrentSignOut(request) && !request.confirmedAnonymous) {
 			signOutToast = notifyError('로그아웃을 확인하지 못했습니다. 다시 시도해 주세요.');
 		}
 	} finally {

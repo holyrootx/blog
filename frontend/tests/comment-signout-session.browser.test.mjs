@@ -144,6 +144,19 @@ async function keepDrafts(prefix = 'B') {
 }
 
 for (const width of [1280, 390]) {
+	for (const advance of [false, true]) {
+		test(`${width}: a separate anonymous refresh suppresses the previous logout failure (auth advance=${advance})`, async context => {
+			await open(width); const old = await start();
+			await switchMember(null, { advance });
+			await page.getByRole('button', { name: '로그인하고 댓글 쓰기', exact: true }).waitFor();
+			assert.deepEqual(reads.map(read => read.actor), [7, null]);
+			await noError();
+			await release(old, { fails: true, clear: false });
+			assert.equal(await currentMember(), null); await noError(); assert.equal(logouts.length, 1);
+			context.diagnostic(`real refreshMemberSession GET actors=7,null; auth advance=${advance}; old logout requests=1`);
+		});
+	}
+
 	test(`${width}: actual store stale resolve keeps B drafts and current personal reaction flags`, async context => {
 		await open(width); const old = await start();
 		await switchMember({ ...accountB }); await drafts();
