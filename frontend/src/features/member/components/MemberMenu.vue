@@ -5,6 +5,7 @@ import { RouterLink, useRoute, useRouter } from 'vue-router';
 import { signOutMember, useMemberAuth } from '../data/memberAuthStore';
 import { notifyError } from '../../../shared/toast/toastStore';
 import { rememberReturnPath } from '../data/memberReturnPath';
+import { getAuthenticationGeneration } from '../../../shared/api/blogApiClient';
 
 /**
  * 헤더의 회원 영역. 대문과 글보기가 같이 쓴다.
@@ -29,10 +30,13 @@ const open = ref(false);
 const signingOut = ref(false);
 const root = ref(null);
 const trigger = ref(null);
+const signin = ref(null);
 const dropdown = ref(null);
 const dropdownId = useId();
 const triggerId = `${dropdownId}-trigger`;
 let leavingWithTab = false;
+let active = true;
+let logoutAction = null;
 
 const isAdmin = computed(() => member.value?.role === 'ROLE_ADMIN');
 
@@ -128,12 +132,44 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+	active = false;
+	logoutAction = null;
 	document.removeEventListener('click', closeOnOutside);
 });
 
 // 화면을 옮기면 닫는다. 열어 둔 채로 이동하면 새 화면 위에 그대로 떠 있다
-watch(() => route.fullPath, close);
+watch(() => route.fullPath, () => {
+	close();
+	if (logoutAction) {
+		logoutAction.valid = false;
+	}
+}, { flush: 'sync' });
+
+function currentLogout(action) {
+	return active && logoutAction === action && action.valid && route.fullPath === action.routePath;
+}
+
 watch(() => member.value?.id, close, { flush: 'sync' });
+watch(member, async (next, previous) => {
+	const action = logoutAction;
+	// 동기 세션 정리가 모두 끝난 뒤, DOM 제거 전에 자기 초점만 기억한다.
+	const restore = action && currentLogout(action) && !next && previous?.id === action.memberId
+		&& root.value?.contains(document.activeElement);
+	const generation = getAuthenticationGeneration();
+	if (action && next && (next.id !== action.memberId || generation !== action.authentication)) {
+		logoutAction = null;
+		signingOut.value = false;
+		return;
+	}
+	if (!restore) {
+		return;
+	}
+	await nextTick();
+	if (currentLogout(action) && !isSignedIn.value && generation === getAuthenticationGeneration()
+			&& document.activeElement === document.body) {
+		signin.value?.focus({ preventScroll: true });
+	}
+});
 
 function goToLogin() {
 	// 로그인은 제공자 화면까지 다녀오는 길이라 라우터 상태가 남지 않는다.
@@ -146,17 +182,32 @@ async function signOut() {
 	if (signingOut.value) {
 		return;
 	}
+	const action = {
+		memberId: member.value?.id,
+		authentication: getAuthenticationGeneration(),
+		routePath: route.fullPath,
+		valid: true,
+	};
+	logoutAction = action;
 	signingOut.value = true;
 	try {
 		await signOutMember();
+		if (!currentLogout(action) || isSignedIn.value) {
+			return;
+		}
 		close();
 		if (route.name === 'member-settings') {
 			await router.replace({ name: 'home' });
 		}
 	} catch {
-		notifyError('로그아웃을 확인하지 못했습니다. 다시 시도해 주세요.');
+		if (currentLogout(action)) {
+			notifyError('로그아웃을 확인하지 못했습니다. 다시 시도해 주세요.');
+		}
 	} finally {
-		signingOut.value = false;
+		if (logoutAction === action) {
+			logoutAction = null;
+			signingOut.value = false;
+		}
 	}
 }
 </script>
@@ -164,6 +215,7 @@ async function signOut() {
 <template>
 	<button
 		v-if="sessionResolved && !isSignedIn"
+		ref="signin"
 		class="member-menu__signin"
 		type="button"
 		@click="goToLogin"

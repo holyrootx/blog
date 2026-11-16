@@ -50,7 +50,7 @@ beforeEach(async () => {
 			return ok(route, { headerName: 'X-CSRF-TOKEN', token: 'test' });
 		}
 		if (path === '/api/v1/admin/auth/me') {
-			return ok(route, { username: 'admin', role: 'ADMIN' });
+			return ok(route, { username: 'admin', role: 'ROLE_ADMIN' });
 		}
 		if (path.endsWith('/notifications/unread-count')) {
 			return ok(route, notices.filter(item => item.unread).length);

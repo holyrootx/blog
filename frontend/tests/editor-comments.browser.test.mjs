@@ -331,7 +331,7 @@ test('signed-out reply asks for login in place and returns to that comment', asy
 	assert.equal(await page.evaluate(() => sessionStorage.getItem('blog.member.returnPath')), '/#comment-1');
 
 	// 로그인이 확인되면 같은 자리에 답글 칸이 열린다
-	await page.evaluate(() => window.fixture.member({ id: 1, nickname: '테스트 회원', role: 'USER' }));
+	await page.evaluate(() => window.fixture.member({ id: 1, nickname: '테스트 회원', role: 'ROLE_USER' }));
 	await page.locator('#comment-1 .reply-form textarea').waitFor();
 	await count('.comment-signin--reply', 0);
 	assert.equal(requests.length, 0);
@@ -451,7 +451,7 @@ test('failed logout keeps the member and draft visible until a confirmed retry s
 	let logoutFails = true;
 	handleApi = route => {
 		if (route.request().url().endsWith('/auth/me')) {
-			return ok(route, { id: 1, nickname: '테스트 회원', role: 'USER' });
+			return ok(route, { id: 1, nickname: '테스트 회원', role: 'ROLE_USER' });
 		}
 		if (route.request().url().endsWith('/auth/logout') && logoutFails) {
 			return fail(route);

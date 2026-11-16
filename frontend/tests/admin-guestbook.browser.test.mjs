@@ -51,7 +51,7 @@ beforeEach(async () => {
 		const url = new URL(request.url()), path = url.pathname, method = request.method();
 		requests.push({ method, path, query: Object.fromEntries(url.searchParams), body: request.postDataJSON?.() ?? null });
 		if (path === '/api/v1/admin/auth/me') {
-			return ok(route, { username: 'admin', role: 'ADMIN' });
+			return ok(route, { username: 'admin', role: 'ROLE_ADMIN' });
 		}
 		if (path === '/api/v1/auth/me') {
 			return ok(route, { id: 1, nickname: '운영자', role: 'ROLE_ADMIN' });

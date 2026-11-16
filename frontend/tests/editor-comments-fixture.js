@@ -17,7 +17,7 @@ const loading = ref(false);
 const comments = ref({ total: 0, items: [], hasNext: false, maxLength: 1000 });
 const commentSection = ref(null);
 const { member } = useMemberAuth();
-member.value = { id: 1, nickname: '테스트 회원', role: 'USER' };
+member.value = { id: 1, nickname: '테스트 회원', role: 'ROLE_USER' };
 setCsrfToken({ headerName: 'X-CSRF-TOKEN', token: 'fixture-token' });
 const router = createRouter({
 	history: createMemoryHistory(),

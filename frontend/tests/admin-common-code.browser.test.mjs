@@ -42,7 +42,7 @@ beforeEach(async () => {
 		const path = url.pathname;
 		const method = request.method();
 		if (path === '/api/v1/admin/auth/me') {
-			return ok(route, { username: 'test', role: 'ADMIN' });
+			return ok(route, { username: 'test', role: 'ROLE_ADMIN' });
 		}
 		if (path.endsWith('/csrf')) {
 			return ok(route, { headerName: 'X-CSRF-TOKEN', token: 'test' });
