@@ -102,7 +102,7 @@ usePostActiveTime({
 	postId: computed(() => route.params.id),
 	ready: computed(() => readingReady.value && activityReady.value && sessionResolved.value),
 	memberId: computed(() => member.value?.id ?? null),
-	isAdmin: computed(() => member.value?.role === 'ADMIN'),
+	isAdmin: computed(() => member.value?.role === 'ROLE_ADMIN'),
 });
 
 // 카드 목록으로 돌아갔을 때 방금 연 글에도 "최근 본 글" 이 붙어 있게 한다

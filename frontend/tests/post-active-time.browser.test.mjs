@@ -103,6 +103,15 @@ async function visible(value) {
 	await waitForApiIdle();
 }
 
+async function refreshMember(nextMember, { waitForRequests = true } = {}) {
+	member = nextMember;
+	await page.evaluate(async () => {
+		const { refreshMemberSession } = await import('/src/features/member/data/memberAuthStore.js');
+		await refreshMemberSession();
+	});
+	if (waitForRequests) { await waitForApiIdle(); }
+}
+
 test('anonymous foreground measurement uses CSRF, pauses in background, and resumes', async () => {
 	await openPost();
 	assert.equal(starts().length, 1);
@@ -159,7 +168,7 @@ test('failed transmission retries the cumulative value and navigation uses a new
 });
 
 test('an old account start response is discarded after sign out', { timeout: 6000 }, async () => {
-	member = { id: 7, nickname: '독자', role: 'USER' };
+	member = { id: 7, nickname: '독자', role: 'ROLE_USER' };
 	let held;
 	let received;
 	const started = new Promise(resolve => { received = resolve; });
@@ -178,12 +187,77 @@ test('an old account start response is discarded after sign out', { timeout: 600
 	assert.equal(saves().length, 0);
 });
 
-test('administrator reading does not start background telemetry', async () => {
-	member = { id: 1, nickname: '관리자', role: 'ADMIN' };
+test('administrator reading does not start background telemetry', async (context) => {
+	member = { id: 1, nickname: '관리자', role: 'ROLE_ADMIN' };
+	await openPost();
+	await advance(60_000);
+	context.diagnostic(`role=${member.role}, measurement starts=${starts().length}, saves=${saves().length}`);
+	assert.equal(starts().length, 0);
+	assert.equal(saves().length, 0);
+});
+
+test('a ROLE_USER member still starts and sends foreground measurement', async (context) => {
+	member = { id: 7, nickname: '독자', role: 'ROLE_USER' };
+	await openPost();
+	await advance(16_000);
+	assert.equal(starts().length, 1);
+	assert.ok(saves().at(-1).body.activeTimeMillis >= 15_000);
+	assert.ok(saves().at(-1).body.activeTimeMillis < 17_000);
+	context.diagnostic(`role=${member.role}, measurement starts=${starts().length}, saves=${saves().length}`);
+});
+
+for (const initialMember of [null, { id: 7, nickname: '독자', role: 'ROLE_USER' }]) {
+	const label = initialMember ? 'same member' : 'anonymous reader';
+	test(`changing ${label} to ROLE_ADMIN stops measurement without a new start`, async (context) => {
+		member = initialMember;
+		await openPost();
+		await advance(16_000);
+		assert.equal(starts().length, 1);
+		assert.ok(saves().length > 0);
+		await refreshMember({ id: initialMember?.id ?? 1, nickname: '관리자', role: 'ROLE_ADMIN' });
+		const count = { starts: starts().length, saves: saves().length };
+		assert.equal(count.starts, 1);
+		await advance(90_000);
+		await visible(false);
+		await visible(true);
+		await page.evaluate(() => window.dispatchEvent(new Event('pointerdown')));
+		await advance(16_000);
+		assert.equal(starts().length, count.starts);
+		assert.equal(saves().length, count.saves);
+		context.diagnostic(`${label} → ROLE_ADMIN: starts=${count.starts}, saves at transition=${count.saves}; no further requests`);
+	});
+}
+
+test('changing ROLE_ADMIN to ROLE_USER resumes a new foreground measurement', async (context) => {
+	member = { id: 7, nickname: '관리자', role: 'ROLE_ADMIN' };
 	await openPost();
 	await advance(60_000);
 	assert.equal(starts().length, 0);
 	assert.equal(saves().length, 0);
+	await refreshMember({ id: 7, nickname: '독자', role: 'ROLE_USER' });
+	assert.equal(starts().length, 1);
+	await advance(16_000);
+	assert.ok(saves().at(-1).body.activeTimeMillis >= 15_000);
+	assert.ok(saves().at(-1).body.activeTimeMillis < 17_000);
+	context.diagnostic(`ROLE_ADMIN → ROLE_USER: starts=${starts().length}, saves=${saves().length}`);
+});
+
+test('an old start response after changing to ROLE_ADMIN cannot resume measurement', { timeout: 6000 }, async (context) => {
+	member = { id: 7, nickname: '독자', role: 'ROLE_USER' };
+	let held;
+	let received;
+	const started = new Promise(resolve => { received = resolve; });
+	startHandler = route => { held = route; received(); };
+	await openPost({ waitForRequests: false });
+	await started;
+	startHandler = route => ok(route, { token: 'new-page' });
+	await refreshMember({ id: 7, nickname: '관리자', role: 'ROLE_ADMIN' }, { waitForRequests: false });
+	await ok(held, { token: 'old-reader-page' });
+	await waitForApiIdle();
+	await advance(60_000);
+	assert.equal(starts().length, 1);
+	assert.equal(saves().length, 0);
+	context.diagnostic(`late ROLE_USER start after ROLE_ADMIN: total starts=${starts().length}, saves=${saves().length}`);
 });
 
 test('failed post loading has no measurement and still shows its retry button', async () => {
