@@ -134,7 +134,7 @@ const {
 	askDelete,
 	cancelDelete,
 	confirmDelete,
-} = useCommentManagement({ postId: toRef(props, 'postId'), items, total });
+} = useCommentManagement({ postId: toRef(props, 'postId'), items, total, member });
 
 function avatarInitial(name) {
 	return Array.from(name ?? '')[0] ?? '';
