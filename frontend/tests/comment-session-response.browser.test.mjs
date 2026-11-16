@@ -8,12 +8,13 @@ import vue from '@vitejs/plugin-vue';
 const { chromium } = createRequire(import.meta.url)(process.env.PLAYWRIGHT_MODULE_PATH || 'playwright');
 const ok = (route, data = null) => route.fulfill({ json: { success: true, data } });
 const failureMessage = '이전 댓글 요청의 실패';
-const originalMember = { id: 7, nickname: '작성자 A', role: 'USER' };
-const otherMember = { id: 8, nickname: '작성자 B', role: 'USER' };
+const originalMember = { id: 7, nickname: '작성자 A', profileImageUrl: null, role: 'ROLE_USER' };
+const otherMember = { id: 8, nickname: '작성자 B', profileImageUrl: null, role: 'ROLE_USER' };
 const content = '늦게 도착할 댓글';
-const rawComment = (id, nickname, text, mine = false) => ({
-	id, nickname, author: nickname, content: text, mine, createdAt: '2026-11-15T04:00:00',
+const rawComment = (id, nickname, text, fields = {}) => ({
+	id, nickname, content: text, mine: false, authorComment: false, createdAt: '2026-11-15T04:00:00',
 	deleted: false, likeCount: 0, dislikeCount: 0, likedByMe: false, dislikedByMe: false, replies: [],
+	...fields,
 });
 let server;
 let browser;
@@ -26,6 +27,7 @@ let heldCreate;
 let createCount;
 let logoutFails;
 let errors;
+let createdAuthor;
 
 before(async () => {
 	server = await createServer({
@@ -40,7 +42,10 @@ before(async () => {
 after(async () => { await browser?.close(); await server?.close(); });
 
 function comments() {
-	const row = rawComment(902, originalMember.nickname, content, member?.id === originalMember.id);
+	const row = rawComment(902, createdAuthor?.nickname, content, {
+		mine: member?.id === createdAuthor?.id,
+		authorComment: createdAuthor?.role === 'ROLE_ADMIN',
+	});
 	let items = created ? [row] : [];
 	if (reply) {
 		const parent = rawComment(901, '다른 회원', '답글 대상');
@@ -54,6 +59,7 @@ beforeEach(async () => {
 	member = { ...originalMember };
 	reply = false;
 	created = false;
+	createdAuthor = null;
 	heldCreate = null;
 	createCount = 0;
 	logoutFails = false;
@@ -84,6 +90,7 @@ beforeEach(async () => {
 		if (path === '/api/v1/blog/posts/1/comments') {
 			if (request.method() === 'POST') {
 				createCount += 1;
+				createdAuthor = { ...member };
 				created = true;
 				heldCreate = route;
 				return;
@@ -110,10 +117,10 @@ async function beginCreate(useFixture = false) {
 	await page.goto(origin + (useFixture ? 'tests/editor-comments.html' : 'posts/1'));
 	if (useFixture) {
 		await page.waitForFunction(() => typeof window.fixture?.comments === 'function');
-		await page.evaluate(async ({ member, comments }) => {
+		await page.evaluate(async member => {
 			await window.fixture.member(member);
-			await window.fixture.comments(comments);
-		}, { member, comments: comments() });
+		}, member);
+		await refreshFixtureComments();
 	} else {
 		await page.getByRole('heading', { name: '댓글 세션 검사', exact: true }).waitFor();
 		await page.locator('.comment-form__input').waitFor();
@@ -151,6 +158,12 @@ async function assertSingleCreated() {
 	assert.equal((await page.locator('.comments__count').textContent()).trim(), reply ? '2' : '1');
 	assert.equal(createCount, 1);
 }
+async function refreshFixtureComments() {
+	await page.evaluate(async () => {
+		const { getPostComments } = await import('/src/features/post/api/postApi.js');
+		await window.fixture.comments(await getPostComments(1));
+	});
+}
 
 for (const isReply of [false, true]) {
 	const label = isReply ? 'reply' : 'comment';
@@ -160,6 +173,23 @@ for (const isReply of [false, true]) {
 		await releaseCreate();
 		await assertSingleCreated();
 	});
+	for (const role of ['ROLE_ADMIN', 'ROLE_USER']) {
+		test(`${label}: ${role} has the same author badge immediately and after a server reload`, async (t) => {
+			reply = isReply;
+			member = { ...originalMember, role };
+			await beginCreate();
+			await releaseCreate();
+			await assertSingleCreated();
+			const immediate = await page.locator('#comment-902 .comment__badge').count();
+			await page.reload();
+			await page.locator('#comment-902').waitFor();
+			const reloaded = await page.locator('#comment-902 .comment__badge').count();
+			t.diagnostic(JSON.stringify({ role, reply: isReply, immediate, reloaded }));
+			assert.equal(reloaded, role === 'ROLE_ADMIN' ? 1 : 0);
+			assert.equal(immediate, reloaded, 'created rows must agree with authorComment from the server');
+			await assertSingleCreated();
+		});
+	}
 	test(`${label}: late success after logout cannot duplicate the reloaded anonymous list`, async () => {
 		reply = isReply;
 		await beginCreate();
@@ -170,18 +200,22 @@ for (const isReply of [false, true]) {
 		await assertSingleCreated();
 		assert.equal(await page.locator('.comments').getByRole('button', { name: /^(수정|삭제)$/ }).count(), 0);
 	});
-	test(`${label}: changing accounts and returning ignores the earlier session response`, async () => {
-		reply = isReply;
-		await beginCreate();
-		await changeMember({ ...otherMember });
-		await changeMember({ ...originalMember });
-		if (reply) await openReply();
-		await input().fill('새 세션의 초안');
-		await releaseCreate();
-		await assertSingleCreated();
-		assert.equal(await input().inputValue(), '새 세션의 초안');
-		assert.equal(await input().isDisabled(), false);
-	});
+	for (const role of ['ROLE_ADMIN', 'ROLE_USER']) {
+		test(`${label}: changing ${role} accounts and returning ignores the earlier session response`, async () => {
+			reply = isReply;
+			member = { ...originalMember, role };
+			await beginCreate();
+			await changeMember({ ...otherMember });
+			await changeMember({ ...originalMember, role });
+			if (reply) await openReply();
+			await input().fill('새 세션의 초안');
+			await releaseCreate();
+			await assertSingleCreated();
+			assert.equal(await page.locator('#comment-902 .comment__badge').count(), role === 'ROLE_ADMIN' ? 1 : 0);
+			assert.equal(await input().inputValue(), '새 세션의 초안');
+			assert.equal(await input().isDisabled(), false);
+		});
+	}
 	test(`${label}: an old failure after account replacement preserves the new draft and shows no old error`, async () => {
 		reply = isReply;
 		await beginCreate();
@@ -206,7 +240,7 @@ for (const isReply of [false, true]) {
 	test(`${label}: a row received through the feed while creation is pending is not inserted or counted twice`, async () => {
 		reply = isReply;
 		await beginCreate(true);
-		await page.evaluate(value => window.fixture.comments(value), comments());
+		await refreshFixtureComments();
 		await page.locator('#comment-902').waitFor();
 		await releaseCreate();
 		await assertSingleCreated();
@@ -227,13 +261,20 @@ test('a same-account authentication generation change discards the old completio
 	assert.equal(await page.locator('.comment-form').getByRole('button', { name: '등록', exact: true }).isDisabled(), false);
 });
 
-test('a nickname refresh during a request does not rewrite the captured author', async () => {
-	await beginCreate();
-	member = { ...originalMember, nickname: '바뀐 닉네임' };
-	await page.evaluate(async () => {
-		const { refreshMemberSession } = await import('/src/features/member/data/memberAuthStore.js');
-		await refreshMemberSession();
-	});
-	await releaseCreate();
-	await assertSingleCreated();
-});
+for (const isReply of [false, true]) {
+	for (const role of ['ROLE_ADMIN', 'ROLE_USER']) {
+		test(`${role} ${isReply ? 'reply' : 'comment'}: a nickname refresh does not rewrite the captured author`, async () => {
+			reply = isReply;
+			member = { ...originalMember, role };
+			await beginCreate();
+			member = { ...member, nickname: '바뀐 닉네임' };
+			await page.evaluate(async () => {
+				const { refreshMemberSession } = await import('/src/features/member/data/memberAuthStore.js');
+				await refreshMemberSession();
+			});
+			await releaseCreate();
+			await assertSingleCreated();
+			assert.equal(await page.locator('#comment-902 .comment__badge').count(), role === 'ROLE_ADMIN' ? 1 : 0);
+		});
+	}
+}
