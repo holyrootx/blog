@@ -1,12 +1,13 @@
 <script setup>
-import { onBeforeUnmount, ref } from 'vue';
+import { onBeforeUnmount, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import PostBody from './PostBody.vue';
 import { removePostReaction, setPostReaction } from '../api/postApi';
 import { useMemberAuth } from '../../member/data/memberAuthStore';
 import { rememberReturnPath } from '../../member/data/memberReturnPath';
-import { notifyError } from '../../../shared/toast/toastStore';
+import { dismissToast, notifyError } from '../../../shared/toast/toastStore';
+import { getAuthenticationGeneration } from '../../../shared/api/blogApiClient';
 
 const showInlineAds = false;
 const showTags = false;
@@ -40,11 +41,67 @@ const props = defineProps({
 
 const route = useRoute();
 const router = useRouter();
-const { isSignedIn } = useMemberAuth();
+const { member, isSignedIn } = useMemberAuth();
 const reactionPending = ref(false);
 const reactionError = ref('');
+let active = true;
+let reactionRequest = null;
+let reactionErrorToast = null;
+let reactionIdentity = readReactionIdentity();
+
+function clearReactionError() {
+	reactionError.value = '';
+	if (reactionErrorToast !== null) {
+		dismissToast(reactionErrorToast);
+		reactionErrorToast = null;
+	}
+}
+
+function readReactionIdentity() {
+	return {
+		memberId: member.value?.id ?? null,
+		authentication: getAuthenticationGeneration(),
+		postId: props.post.id,
+	};
+}
+
+function synchronizeReactionIdentity() {
+	if (!active) {
+		return;
+	}
+	const next = readReactionIdentity();
+	const accountChanged = next.memberId !== reactionIdentity.memberId
+		|| next.authentication !== reactionIdentity.authentication;
+	if (!accountChanged && next.postId === reactionIdentity.postId) {
+		return;
+	}
+	reactionIdentity = next;
+	reactionRequest = null;
+	reactionPending.value = false;
+	clearReactionError();
+
+	if (accountChanged) {
+		// 합계는 서버가 알려준 값이다. 계정 전환으로 내 표시만 비우고 수를 추정해 바꾸지 않는다.
+		emit('reaction-changed', {
+			likeCount: props.post.likeCount,
+			dislikeCount: props.post.dislikeCount,
+			likedByMe: false,
+			dislikedByMe: false,
+		});
+	}
+}
+
+// 같은 ID의 닉네임 갱신은 유지하고, A→B→A 전환은 각 변경 시점에 이전 요청을 끊는다.
+watch([member, () => props.post.id], synchronizeReactionIdentity, { flush: 'sync' });
+
+function isCurrentReaction(request) {
+	// 인증 세대는 반응형 값이 아니므로 응답 경계에서도 실제 값을 확인한다.
+	synchronizeReactionIdentity();
+	return active && reactionRequest === request;
+}
 
 async function toggleLike() {
+	synchronizeReactionIdentity();
 	if (!isSignedIn.value) {
 		rememberReturnPath(route.fullPath);
 		await router.push({ name: 'member-login' });
@@ -56,19 +113,29 @@ async function toggleLike() {
 	}
 
 	reactionPending.value = true;
-	reactionError.value = '';
+	clearReactionError();
+	const request = { ...reactionIdentity };
+	reactionRequest = request;
 
 	try {
 		const reaction = props.post.likedByMe
-			? await removePostReaction(props.post.id, 'LIKE')
-			: await setPostReaction(props.post.id, 'LIKE');
+			? await removePostReaction(request.postId, 'LIKE')
+			: await setPostReaction(request.postId, 'LIKE');
 
-		emit('reaction-changed', reaction);
+		if (isCurrentReaction(request)) {
+			emit('reaction-changed', reaction);
+		}
 	} catch (error) {
+		if (!isCurrentReaction(request)) {
+			return;
+		}
 		reactionError.value = error?.message ?? '좋아요를 저장하지 못했습니다.';
-		notifyError(reactionError.value);
+		reactionErrorToast = notifyError(reactionError.value);
 	} finally {
-		reactionPending.value = false;
+		if (isCurrentReaction(request)) {
+			reactionRequest = null;
+			reactionPending.value = false;
+		}
 	}
 }
 
@@ -102,7 +169,12 @@ async function share() {
 	}, SHARE_NOTICE_MS);
 }
 
-onBeforeUnmount(() => clearTimeout(noticeTimer));
+onBeforeUnmount(() => {
+	active = false;
+	reactionRequest = null;
+	clearReactionError();
+	clearTimeout(noticeTimer);
+});
 </script>
 
 <template>
