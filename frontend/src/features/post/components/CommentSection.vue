@@ -11,7 +11,7 @@ import { useCommentComposer } from '../composables/useCommentComposer';
 import { useCommentManagement } from '../composables/useCommentManagement';
 import { useCommentFeedback } from '../composables/useCommentFeedback';
 import { signOutMember, useMemberAuth } from '../../member/data/memberAuthStore';
-import { notifyError } from '../../../shared/toast/toastStore';
+import { dismissToast, notifyError } from '../../../shared/toast/toastStore';
 import { rememberReturnPath } from '../../member/data/memberReturnPath';
 import { getAuthenticationGeneration } from '../../../shared/api/blogApiClient';
 
@@ -141,32 +141,103 @@ function avatarInitial(name) {
 }
 
 const signingOut = ref(false);
-async function signOut() {
-	if (signingOut.value) {
+let signOutActive = true;
+let signOutRequest = null;
+let signOutToast = null;
+let signOutIdentity = readSignOutIdentity();
+
+function readSignOutIdentity() {
+	return { postId: props.postId, memberId: member.value?.id ?? null, authentication: getAuthenticationGeneration() };
+}
+
+function clearSignOutError() {
+	if (signOutToast !== null) {
+		dismissToast(signOutToast);
+		signOutToast = null;
+	}
+}
+
+function invalidateSignOut() {
+	signOutRequest = null;
+	signingOut.value = false;
+}
+
+function synchronizeSignOutIdentity() {
+	if (!signOutActive) {
 		return;
 	}
+	const next = readSignOutIdentity();
+	const previous = signOutIdentity;
+	if (next.postId === previous.postId && next.memberId === previous.memberId
+			&& next.authentication === previous.authentication) {
+		return;
+	}
+	signOutIdentity = next;
+	clearSignOutError();
+	if (signOutRequest?.identity === previous && previous.memberId !== null && next.memberId === null
+			&& next.postId === previous.postId) {
+		// 동기 세션 정리 뒤의 익명 상태를 기억한다. 자기 HTTP 요청의 성공을 뜻하지는 않는다.
+		signOutRequest.identity = next;
+		signOutRequest.confirmedAnonymous = true;
+		return;
+	}
+	invalidateSignOut();
+}
+
+// A→B→A가 같은 틱에 끝나도 이전 A의 요청은 다시 유효해지지 않는다.
+watch([() => props.postId, () => member.value?.id ?? null], ([postId, memberId]) => {
+	if (postId !== signOutIdentity.postId || (memberId !== null && memberId !== signOutIdentity.memberId)) {
+		invalidateSignOut();
+	}
+}, { flush: 'sync' });
+watch([member, () => props.postId], synchronizeSignOutIdentity);
+onBeforeUnmount(() => {
+	signOutActive = false;
+	invalidateSignOut();
+	clearSignOutError();
+});
+
+function isCurrentSignOut(request) {
+	synchronizeSignOutIdentity();
+	return signOutActive && signOutRequest === request && request.identity === signOutIdentity;
+}
+
+async function signOut() {
+	synchronizeSignOutIdentity();
+	if (!signOutActive || signingOut.value) {
+		return;
+	}
+	clearSignOutError();
+	const request = { identity: signOutIdentity, confirmedAnonymous: false };
+	signOutRequest = request;
 	signingOut.value = true;
 	try {
 		await signOutMember();
-	} catch {
-		notifyError('로그아웃을 확인하지 못했습니다. 다시 시도해 주세요.');
-		return;
-	} finally {
-		signingOut.value = false;
-	}
-	// 쓰던 내용은 지운다. 로그아웃한 사람의 이름으로 올라갈 글이 칸에 남아 있으면 안 된다
-	draft.value = '';
-	replyDraft.value = '';
-	replyTargetId.value = null;
+		if (!isCurrentSignOut(request) || !request.confirmedAnonymous || member.value !== null) {
+			return;
+		}
+		// 쓰던 내용은 실제로 로그아웃한 현재 요청에서만 지운다.
+		draft.value = '';
+		replyDraft.value = '';
+		replyTargetId.value = null;
 
-	items.value.forEach((comment) => {
-		comment.likedByMe = false;
-		comment.dislikedByMe = false;
-		comment.replies.forEach((reply) => {
-			reply.likedByMe = false;
-			reply.dislikedByMe = false;
+		items.value.forEach((comment) => {
+			comment.likedByMe = false;
+			comment.dislikedByMe = false;
+			comment.replies.forEach((reply) => {
+				reply.likedByMe = false;
+				reply.dislikedByMe = false;
+			});
 		});
-	});
+	} catch {
+		if (isCurrentSignOut(request) && !request.confirmedAnonymous) {
+			signOutToast = notifyError('로그아웃을 확인하지 못했습니다. 다시 시도해 주세요.');
+		}
+	} finally {
+		if (isCurrentSignOut(request)) {
+			invalidateSignOut();
+		}
+	}
 }
 
 function goToLogin() {
