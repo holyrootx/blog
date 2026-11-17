@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, reactive } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 
 import HomeHero from '../components/HomeHero.vue';
 import PostSection from '../components/PostSection.vue';
@@ -51,6 +51,54 @@ const home = reactive({
 const profile = computed(() => mergeDefined(EMPTY_PROFILE, blogProfile.value));
 
 const { loading, load } = useSectionLoader(['hero', 'topicSection', 'topics', 'featuredPosts', 'recentPosts']);
+const mainElement = ref(null);
+const topicErrors = reactive({ topicSection: '', topics: '' });
+const topicPending = reactive({ topicSection: false, topics: false });
+const topicQueries = {
+	topicSection: {
+		cacheKey: 'home:topic-section',
+		request: getHomeTopicSection,
+		apply: (section) => {
+			home.topicSection = mergeDefined(EMPTY_TOPIC_SECTION, section);
+		},
+	},
+	topics: {
+		cacheKey: 'home:topics',
+		request: getHomeTopics,
+		apply: (topics) => {
+			home.topics = Array.isArray(topics) ? topics : [];
+		},
+	},
+};
+
+async function loadTopic(key) {
+	if (topicPending[key]) {
+		return;
+	}
+	topicPending[key] = true;
+	let failed = false;
+	try {
+		await load(key, {
+			...topicQueries[key],
+			onError: (_error, { showingCached }) => {
+				failed = true;
+				topicErrors[key] = showingCached ? 'refresh' : 'load';
+			},
+		});
+		if (!failed) {
+			topicErrors[key] = '';
+		}
+	} finally {
+		topicPending[key] = false;
+	}
+}
+
+function focusHome() {
+	if (document.activeElement === document.body) {
+		mainElement.value?.focus({ preventScroll: true });
+	}
+}
+
 const postErrors = reactive({ featuredPosts: '', recentPosts: '' });
 const postPending = reactive({ featuredPosts: false, recentPosts: false });
 const postQueries = {
@@ -93,27 +141,15 @@ onMounted(() => {
 			home.hero = mergeDefined(EMPTY_HERO, hero);
 		},
 	});
-	load('topicSection', {
-		cacheKey: 'home:topic-section',
-		request: getHomeTopicSection,
-		apply: (section) => {
-			home.topicSection = mergeDefined(EMPTY_TOPIC_SECTION, section);
-		},
-	});
-	load('topics', {
-		cacheKey: 'home:topics',
-		request: getHomeTopics,
-		apply: (topics) => {
-			home.topics = Array.isArray(topics) ? topics : [];
-		},
-	});
+	loadTopic('topicSection');
+	loadTopic('topics');
 	loadPosts('featuredPosts');
 	loadPosts('recentPosts');
 });
 </script>
 
 <template>
-	<main class="public-shell__main">
+	<main ref="mainElement" class="public-shell__main" aria-label="블로그 홈" tabindex="-1">
 		<HomeHero
 			:hero="home.hero"
 			:profile="profile"
@@ -125,6 +161,13 @@ onMounted(() => {
 			:topics="home.topics"
 			:section-loading="loading.topicSection"
 			:topics-loading="loading.topics"
+			:section-error="topicErrors.topicSection"
+			:topics-error="topicErrors.topics"
+			:section-pending="topicPending.topicSection"
+			:topics-pending="topicPending.topics"
+			@retry-section="loadTopic('topicSection')"
+			@retry-topics="loadTopic('topics')"
+			@focus-home="focusHome"
 		/>
 		<PostSection
 			title="인기글"

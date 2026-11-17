@@ -52,6 +52,10 @@ Google, Kakao, Naver 계정으로 로그인하면 댓글과 답글을 쓰고, �
 문구나 이미지를 바꿀 때 프론트엔드를 다시 배포할 필요가 없습니다.<br/>
 화면 배치와 스타일, 버튼 이름처럼 고정된 문구는 코드에서 수정합니다.
 
+홈의 인기글·최근 글과 주제 소개·목록은 각각 불러오며, 먼저 응답한 영역부터 표시합니다.<br/>
+조회에 실패하면 실패한 영역만 다시 시도할 수 있습니다. 다시 방문할 때 캐시가 있으면 먼저 보여 주고, 갱신에 실패해도 이미 보이던 소개와 카드는 유지합니다.<br/>
+정상 조회 결과 글이 없으면 빈 상태를 표시하고, 주제가 없으면 주제 영역을 숨깁니다.
+
 ## 시스템 구조
 다음은 저장소의 애플리케이션과 Nginx 설정 예제, 배포 스크립트가 전제하는 구조입니다.<br/>
 운영 서버에 어떤 설정과 버전이 실제 적용되었는지는 배포 후 별도로 확인합니다.
@@ -90,6 +94,9 @@ Nginx가 Spring Boot로 전달하고, 백엔드가 글 제목과 공유용 메�
 회원은 소셜 계정으로, 관리자는 아이디와 비밀번호로 로그인합니다.<br/> 
 상태를 바꾸는 요청에는 CSRF 토큰도 함께 보냅니다.<br/>
 API의 최종 인증과 인가는 서버에서 검사합니다. 프론트 라우터의 관리자 가드는 화면 이동을 돕는 장치입니다.
+
+계정이나 글이 바뀐 뒤 도착한 글·댓글 반응, 댓글 수정·삭제의 이전 응답은 현재 화면에 적용하지 않도록 구분합니다.<br/>
+이 화면 보호가 이미 서버로 보낸 요청의 처리를 취소한다는 뜻은 아닙니다.
 
 ### 사용한 기술
 
@@ -160,12 +167,15 @@ blog/
 | 조회 기록·활성 읽기 시간 | [PostViewService](backend/src/main/java/me/jsjlog/blog/post/service/PostViewService.java) · [관리자 조회 API](backend/src/main/java/me/jsjlog/blog/admin/controller/AdminPostViewController.java) |
 | 관리자 글 API | [AdminPostController](backend/src/main/java/me/jsjlog/blog/admin/controller/AdminPostController.java) |
 | 홈 콘텐츠 관리 | [관리자 홈 설정](frontend/src/features/admin/pages/AdminHomeSettingsPage.vue) · [홈 API·도메인](backend/src/main/java/me/jsjlog/blog/home/) |
+| 홈 영역별 조회·실패 복구 | [홈 화면](frontend/src/features/home/pages/HomePage.vue) · [주제 소개·목록](frontend/src/features/home/components/HomeTopicSection.vue) · [게시글 영역](frontend/src/features/home/components/PostSection.vue) · [영역별 로더](frontend/src/shared/composables/useSectionLoader.js) |
+| 계정·글 변경 뒤 이전 응답 보호 | [글 반응](frontend/src/features/post/components/PostArticle.vue) · [댓글 반응·신고](frontend/src/features/post/composables/useCommentFeedback.js) · [댓글 수정·삭제](frontend/src/features/post/composables/useCommentManagement.js) |
 | 인증·권한 정책 | [SecurityConfig](backend/src/main/java/me/jsjlog/blog/common/config/SecurityConfig.java) |
 | 이미지 저장소 설정 | [UploadConfig](backend/src/main/java/me/jsjlog/blog/common/config/UploadConfig.java) |
 
 ## 로컬에서 실행하기
 
-JDK 21, Node.js 22, MySQL 8.0이 필요합니다.<br/> 
+아래 안내는 JDK 21, Node.js 22.13.0 이상의 22.x, MySQL 8.0을 기준으로 합니다.<br/>
+Node.js는 잠긴 Vite·ESLint 버전이 요구하는 최소 패치 버전도 맞춰 주세요.<br/>
 이미지 저장소는 로컬에서도 R2를 사용하므로 본인의 개발용 Cloudflare R2 계정과 버킷도 준비해야 합니다.
 R2 필수 설정이 비어 있으면 백엔드가 기동하지 않습니다.
 
@@ -311,17 +321,19 @@ GitHub Actions에서 실행하는 검사도 [Checks 워크플로우](.github/wor
 작업 브랜치, `develop`, `release`를 구분해 변경을 검토합니다.<br/>
 이 브랜치 구분만으로 별도의 개발 서버가 존재한다는 뜻은 아닙니다.
 
-작업은 기능이나 수정 사항별로 따게된 브랜치에서 시작합니다.<br/>
-구현과 테스트를 마치면 `develop`으로 PR을 보내 검토하고 병합하게 되고,<br/>
-배포할 때는 다시 `develop`에서 `release`로 PR을 열어 변경 내용을 확인합니다.<br/>
+기능이나 수정 사항별 작업 브랜치에서 시작합니다.<br/>
+구현과 테스트를 마치면 `develop`으로 PR을 열어 검토하고 병합합니다.<br/>
+배포할 변경은 `develop`에서 `release`로 PR을 열어 다시 확인합니다.<br/>
 
 
 `release`에 푸시되면 [Deploy Blog 워크플로우](.github/workflows/deploy.yml)가 Checks를 호출합니다.<br/>
+이 검사에서 실패하면 애플리케이션 파일을 교체하는 단계로 진행하지 않습니다.<br/>
 검사를 통과해 보관한 동일한 JAR와 프론트엔드 빌드 파일을 Lightsail에 배포하고, systemd로 백엔드를 다시 시작합니다.<br/>
 Nginx는 배포된 프론트엔드 파일을 제공합니다.
 
 배포 검사는 상태 API뿐 아니라 DB 기반 조회, 공개 글 메타 정보, 404, 앱 파일, HTML 캐시 정책과 배포 식별자도 확인합니다.<br/>
-파일을 교체한 뒤 검증에 실패하면 이전 앱 파일로 복구하고 다시 검사합니다.<br/> 
+파일을 교체한 뒤 검증에 실패하면 이전 앱 파일로 복구를 시도하고 다시 검사합니다.<br/>
+복구 검사도 실패하면 운영자가 남아 있는 백업과 상태를 확인해야 합니다.<br/>
 이때 DB까지 이전 상태로 돌아가는 것은 아닙니다.<br/> 
 DB 복원이 필요한 경우에는 별도 절차를 따라야 합니다.
 
