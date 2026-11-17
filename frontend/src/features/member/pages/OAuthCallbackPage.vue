@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref } from 'vue';
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import MemberNicknameForm from '../components/MemberNicknameForm.vue';
@@ -8,12 +8,14 @@ import OAuthResultNotice from '../components/OAuthResultNotice.vue';
 import { getOAuthPending } from '../api/memberAuthApi';
 import { takeReturnPath } from '../data/memberReturnPath';
 import { refreshCsrfToken } from '../../../shared/api/csrfApi';
+import { getAuthenticationGeneration } from '../../../shared/api/blogApiClient';
 import {
 	clearMemberSession,
 	completeReactivation,
 	completeRejoin,
 	completeSignUp,
 	ensureMemberSession,
+	useMemberAuth,
 } from '../data/memberAuthStore';
 
 /**
@@ -48,21 +50,101 @@ const signupNickname = ref('');
 const rejoinNickname = ref('');
 let signupNicknameInitialized = false;
 const notice = ref({ title: '', message: '', retryable: true });
+const { member } = useMemberAuth();
+const callbackPath = route.fullPath.split(/[?#]/, 1)[0];
+let active = true;
+let currentRequest = null;
+let memberRevision = 0;
+
+function isPageActive() {
+	return active && route.fullPath.split(/[?#]/, 1)[0] === callbackPath;
+}
+
+function ownsRequest(request) {
+	return isPageActive() && request !== null && currentRequest === request && route.fullPath === request.path;
+}
+
+function isCurrent(request, authentication = request?.authentication, memberId = request?.memberId, revision = request?.memberRevision) {
+	return ownsRequest(request) && authentication === getAuthenticationGeneration()
+		&& memberId === (member.value?.id ?? null) && revision === memberRevision;
+}
+
+function adoptSession(request, session, authentication = request.authentication) {
+	const memberId = session?.id ?? null;
+	// 자기 세션 응답의 회원 교체만 허용한다. B를 거쳐 같은 ID로 돌아온 응답은 되살리지 않는다.
+	const revision = request.memberRevision + (memberId === request.memberId ? 0 : 1);
+	if (!isCurrent(request, authentication, memberId, revision)) {
+		return false;
+	}
+	Object.assign(request, { authentication, memberId, memberRevision: revision });
+	return true;
+}
+
+function invalidateRequest() {
+	currentRequest = null;
+	submitting.value = false;
+	checkingPending.value = false;
+}
+
+function synchronizeRequest() {
+	if (currentRequest && !isCurrent(currentRequest)) {
+		invalidateRequest();
+	}
+}
+
+function releaseStaleRequest(request) {
+	if (!ownsRequest(request) || isCurrent(request)) {
+		return;
+	}
+	invalidateRequest();
+	if (phase.value === PHASE.LOADING) {
+		pendingError.value = '로그인 상태가 변경되었습니다. 현재 가입 정보를 다시 확인해 주세요.';
+		phase.value = PHASE.PENDING_ERROR;
+	}
+}
+
+function beginRequest() {
+	if (!isPageActive()) {
+		return null;
+	}
+	invalidateRequest();
+	currentRequest = {
+		path: route.fullPath,
+		authentication: getAuthenticationGeneration(),
+		memberId: member.value?.id ?? null,
+		memberRevision,
+	};
+	return currentRequest;
+}
+
+// 공개 인증 세대를 바꾸지 않는 세션 재조회도 회원 교체 이력을 남긴다.
+watch(() => member.value?.id ?? null, () => { memberRevision += 1; }, { flush: 'sync' });
+
+// fullPath가 돌아와도 이전 요청을 되살리지 않는다. 새 동작은 새 객체를 소유한다.
+watch(() => route.fullPath, invalidateRequest, { flush: 'sync' });
+onBeforeUnmount(() => {
+	active = false;
+	invalidateRequest();
+});
 
 onMounted(start);
 
 async function start() {
+	const request = beginRequest();
+	if (!request) {
+		return;
+	}
 	switch (route.query.result) {
 		case 'success':
-			await finishExistingLogin();
+			await finishExistingLogin(request);
 			return;
 
 		case 'signup-required':
-			await loadPending();
+			await readPending(request);
 			return;
 
 		case 'reactivation-required':
-			await loadPending();
+			await readPending(request);
 			return;
 
 		case 'account-suspended':
@@ -83,12 +165,19 @@ async function start() {
 	}
 }
 
-async function finishExistingLogin() {
+async function finishExistingLogin(request) {
 	try {
 		// 서버 세션은 이미 로그인 상태다. 앱이 뜰 때 확인한 값은 로그인 전 결과일 수 있으므로
 		// 비운 뒤 실제 회원 정보를 다시 받는다
 		clearMemberSession();
+		// 회원·관리자 정리의 동기 세대 연쇄까지 끝난 실제 값을 받는다.
+		request.authentication = getAuthenticationGeneration();
+		request.memberId = member.value?.id ?? null;
+		request.memberRevision = memberRevision;
 		const session = await ensureMemberSession();
+		if (!adoptSession(request, session)) {
+			return;
+		}
 
 		if (!session) {
 			throw new Error('로그인된 회원 정보를 확인하지 못했습니다.');
@@ -97,18 +186,37 @@ async function finishExistingLogin() {
 		// 제공자 화면을 다녀오는 동안 SPA 메모리는 초기화된다. 로그인된 세션의 토큰을
 		// 다시 받아 두어야 돌아간 화면에서 첫 댓글 등록이 403으로 막히지 않는다
 		await refreshCsrfToken();
-		await goHome();
+		if (isCurrent(request)) {
+			await goHome(request);
+		}
 	} catch (error) {
+		if (!isCurrent(request)) {
+			return;
+		}
 		clearMemberSession();
+		request.authentication = getAuthenticationGeneration();
+		request.memberId = member.value?.id ?? null;
+		request.memberRevision = memberRevision;
 		showNotice(
 			'로그인 정보를 확인하지 못했습니다',
 			error?.message ?? '소셜 로그인을 다시 진행해 주세요.',
 		);
+	} finally {
+		releaseStaleRequest(request);
 	}
 }
 
 async function loadPending() {
+	synchronizeRequest();
 	if (checkingPending.value) {
+		return false;
+	}
+	const request = beginRequest();
+	return request ? readPending(request) : false;
+}
+
+async function readPending(request) {
+	if (!isCurrent(request) || checkingPending.value) {
 		return false;
 	}
 	checkingPending.value = true;
@@ -118,8 +226,14 @@ async function loadPending() {
 		// 제공자에 다녀오는 사이 페이지가 통째로 바뀌어 로그인 화면에서 받아 둔 값은 사라졌다.
 		// 세션 쿠키는 남아 있으므로 여기서 다시 받으면 같은 세션의 토큰이 온다
 		await refreshCsrfToken();
+		if (!isCurrent(request)) {
+			return false;
+		}
 
 		const pending = await getOAuthPending();
+		if (!isCurrent(request)) {
+			return false;
+		}
 
 		suggestedNickname.value = pending.suggestedNickname;
 		// 주소의 결과는 오래됐을 수 있다. 현재 서버 상태로 가입·복구 화면을 정한다.
@@ -138,6 +252,9 @@ async function loadPending() {
 		errorMessage.value = '';
 		return true;
 	} catch (error) {
+		if (!isCurrent(request)) {
+			return false;
+		}
 		if (isSessionExpired(error)) {
 			pendingError.value = '';
 			showNotice('로그인 정보가 만료되었습니다', '소셜 로그인을 다시 진행해 주세요.');
@@ -150,7 +267,10 @@ async function loadPending() {
 		}
 		return false;
 	} finally {
-		checkingPending.value = false;
+		releaseStaleRequest(request);
+		if (ownsRequest(request)) {
+			checkingPending.value = false;
+		}
 	}
 }
 
@@ -172,7 +292,19 @@ async function submitRejoin(nickname) {
 
 /** 가입·복구는 전부 "성공하면 로그인된 채로 블로그로" 라서 처리 방식이 같다 */
 async function runSubmit(action) {
+	const needsCheck = !isCurrent(currentRequest);
+	synchronizeRequest();
 	if (submitting.value || checkingPending.value || pendingError.value) {
+		return;
+	}
+	const request = beginRequest();
+	if (!request) {
+		return;
+	}
+	if (needsCheck) {
+		if (await readPending(request) && isCurrent(request)) {
+			errorMessage.value = '가입·복구 정보를 다시 확인했습니다. 현재 화면에서 다시 선택해 주세요.';
+		}
 		return;
 	}
 
@@ -180,11 +312,21 @@ async function runSubmit(action) {
 	errorMessage.value = '';
 
 	try {
-		await action();
-		await goHome();
+		const completion = action();
+		request.authentication = getAuthenticationGeneration();
+		const session = await completion;
+		// completeAuthentication은 동기 시작 뒤 성공 applySession에서 한 번 더 세대를 바꾼다.
+		const completedAuthentication = request.authentication + 1;
+		if (!adoptSession(request, session, completedAuthentication)) {
+			return;
+		}
+		await goHome(request);
 	} catch (error) {
+		if (!isCurrent(request)) {
+			return;
+		}
 		if (error?.status === 409) {
-			if (await loadPending()) {
+			if (await readPending(request) && isCurrent(request)) {
 				errorMessage.value = '가입·복구 정보를 다시 확인했습니다. 현재 화면에서 다시 선택해 주세요.';
 			}
 		} else if (isSessionExpired(error)) {
@@ -193,7 +335,10 @@ async function runSubmit(action) {
 			errorMessage.value = error?.message ?? '처리하지 못했습니다. 다시 시도해 주세요.';
 		}
 	} finally {
-		submitting.value = false;
+		releaseStaleRequest(request);
+		if (ownsRequest(request)) {
+			submitting.value = false;
+		}
 	}
 }
 
@@ -202,14 +347,33 @@ function showNotice(title, message, retryable = true) {
 	phase.value = PHASE.NOTICE;
 }
 
-function startRejoin() {
-	errorMessage.value = '';
-	phase.value = PHASE.REJOIN;
+async function prepareChoice() {
+	const needsCheck = !isCurrent(currentRequest);
+	synchronizeRequest();
+	if (submitting.value || checkingPending.value || pendingError.value) {
+		return null;
+	}
+	const request = beginRequest();
+	if (!request || (needsCheck && !await readPending(request))) {
+		return null;
+	}
+	return isCurrent(request) ? request : null;
 }
 
-function backToChoice() {
-	errorMessage.value = '';
-	phase.value = PHASE.CHOICE;
+async function startRejoin() {
+	const request = await prepareChoice();
+	if (isCurrent(request) && phase.value === PHASE.CHOICE) {
+		errorMessage.value = '';
+		phase.value = PHASE.REJOIN;
+	}
+}
+
+async function backToChoice() {
+	const request = await prepareChoice();
+	if (isCurrent(request) && phase.value === PHASE.REJOIN) {
+		errorMessage.value = '';
+		phase.value = PHASE.CHOICE;
+	}
 }
 
 /**
@@ -218,13 +382,24 @@ function backToChoice() {
  * 뒤로 가기로 이 화면에 다시 오지 않게 replace 로 나간다 — 대기 정보는 이미 지워져서
  * 다시 들어와도 "만료되었습니다" 만 보게 된다.
  */
-function goHome() {
+function goHome(request) {
+	// 현재 사용자 클릭만 새 요청을 시작한다. 비동기 후속은 원래 요청을 명시해 검사한다.
+	if (request === undefined) {
+		request = beginRequest();
+	}
+	if (!isCurrent(request)) {
+		return;
+	}
 	const returnPath = takeReturnPath();
 
 	return returnPath ? router.replace(returnPath) : router.replace({ name: 'home' });
 }
 
 function retryLogin() {
+	const request = beginRequest();
+	if (!isCurrent(request)) {
+		return;
+	}
 	return router.replace({ name: 'member-login' });
 }
 </script>
