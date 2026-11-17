@@ -142,6 +142,20 @@ async function complete(record, { fails = false, message = oldError } = {}) {
 		await ok(record.route);
 	}
 	await (await received).finished(); await frames();
+	record.httpCompleted?.resolve();
+}
+async function completeWithdrawalAtLogin(record) {
+	const navigationStart = await page.evaluate(() => window.__settingsNavigation.length);
+	// HTTP와 프레임 완료로는 비동기 라우트 완료를 알 수 없다. 응답 전달 전에 실제 관찰을 등록한다.
+	const csrf = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/auth/csrf'
+		&& response.request().method() === 'GET');
+	const navigation = page.waitForFunction(start => location.pathname === '/login'
+		&& window.__settingsNavigation.slice(start).includes('/login'), navigationStart);
+	await Promise.all([
+		complete(record),
+		csrf.then(async response => { assert.equal(response.status(), 200); await response.finished(); }),
+		navigation.then(handle => handle.dispose()),
+	]);
 }
 async function snapshot() {
 	return page.evaluate(async () => {
@@ -239,6 +253,57 @@ for (const width of [1280, 390]) {
 		await page.waitForURL(url => url.pathname === '/login');
 		await complete(old); assert.equal((await snapshot()).path, '/login');
 	});
+	for (const releaseFirst of ['csrf', 'route']) {
+		test(`${width}: route ABA withdrawal completion waits with ${releaseFirst} released first`, async () => {
+			await open(width); const old = await startWithdraw(); await navigate('/terms');
+			await navigate('/settings'); await input().waitFor();
+			await input().fill('새 설정 화면 초안');
+			await page.evaluate(async () => {
+				const router = (await import('/src/app/router/index.js')).default;
+				window.__settingsLoginGateEntered = false;
+				const gate = new Promise(resolve => { window.__releaseSettingsLoginGate = resolve; });
+				window.__stopSettingsLoginGate = router.beforeResolve(async to => {
+					if (to.name === 'member-login') { window.__settingsLoginGateEntered = true; await gate; }
+				});
+			});
+			holdCsrf = true; old.httpCompleted = deferred();
+			let settled = false, csrf, completionError, csrfCompletions = 0, routeReleases = 0;
+			const completion = completeWithdrawalAtLogin(old).then(() => { settled = true; return null; }, error => { settled = true; return error; });
+			const finishCsrf = async () => {
+				assert.equal(csrfCompletions, 0); csrfCompletions += 1; await releaseCsrf(csrf);
+			};
+			const finishRoute = async () => {
+				assert.equal(routeReleases, 0); routeReleases += 1;
+				await page.evaluate(() => window.__releaseSettingsLoginGate());
+				await page.waitForURL(url => url.pathname === '/login');
+				await page.waitForFunction(() => window.__settingsNavigation.includes('/login'));
+			};
+			try {
+				csrf = await bounded(csrfArrived.promise); await bounded(old.httpCompleted.promise);
+				await page.waitForFunction(() => window.__settingsLoginGateEntered);
+				const held = await snapshot();
+				assert.equal(held.memberId, null); assert.equal(held.path, '/settings');
+				assert.equal(held.routeObservers.active, 0);
+				assert.equal(settled, false, 'HTTP completion and animation frames do not complete the pending navigation');
+				if (releaseFirst === 'csrf') { await finishCsrf(); }
+				else { await finishRoute(); }
+				await snapshot();
+				assert.equal(settled, false, 'The remaining real completion boundary is still held');
+			} finally {
+				if (csrf && csrfCompletions === 0) { await finishCsrf(); }
+				if (routeReleases === 0) { await finishRoute(); }
+				await page.evaluate(() => window.__stopSettingsLoginGate());
+				completionError = await completion;
+			}
+			if (completionError) { throw completionError; }
+			const state = await snapshot();
+			assert.equal(state.path, '/login'); assert.equal(state.memberId, null);
+			assert.ok(!state.navigation.includes('/')); assert.equal(state.routeObservers.active, 0);
+			assert.ok(state.alerts.every(text => !text.includes(oldError)));
+			assert.equal(old.completions, 1); assert.equal(csrfCompletions, 1); assert.equal(routeReleases, 1);
+			assert.deepEqual(requests.map(item => item.actor), [7]);
+		});
+	}
 	for (const fails of [false, true]) {
 		for (const boundary of ['ABA', 'same-id authentication', 'getter only', 'route', 'route ABA', 'unmount']) {
 			test(`${width}: nickname ${boundary} drops old ${fails ? 'error' : 'success'} feedback`, async () => {
@@ -273,7 +338,9 @@ for (const width of [1280, 390]) {
 				await open(width); const old = await startWithdraw(); await navigate('/terms');
 				if (boundary === 'route ABA') { await navigate('/settings'); await input().waitFor(); await input().fill('새 설정 화면 초안'); }
 				assert.equal((await snapshot()).routeObservers.active, 0);
-				await complete(old, { fails }); const state = await snapshot();
+				if (boundary === 'route ABA' && !fails) { await completeWithdrawalAtLogin(old); }
+				else { await complete(old, { fails }); }
+				const state = await snapshot();
 				// 같은 세션의 실제 탈퇴는 store를 정리할 수 있다. 새 설정 화면의 기존 login 이동은 유지한다.
 				const expected = boundary === 'route ABA' ? (fails ? '/settings' : '/login') : '/terms';
 				assert.equal(state.path, expected); assert.ok(!state.navigation.includes('/'));
