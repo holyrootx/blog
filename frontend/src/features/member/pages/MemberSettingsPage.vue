@@ -1,6 +1,6 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { RouterLink, useRouter } from 'vue-router';
+import { computed, effectScope, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { RouterLink, useRoute, useRouter } from 'vue-router';
 
 import { getMyComments } from '../api/memberAuthApi';
 import { getRecentPosts } from '../api/memberReadingApi';
@@ -10,7 +10,8 @@ import {
 	useMemberAuth,
 	withdraw,
 } from '../data/memberAuthStore';
-import { notifyError, notifySuccess } from '../../../shared/toast/toastStore';
+import { getAuthenticationGeneration } from '../../../shared/api/blogApiClient';
+import { dismissToast, notifyError, notifySuccess } from '../../../shared/toast/toastStore';
 import { useSectionLoader } from '../../../shared/composables/useSectionLoader';
 import { formatSeoulDateTime } from '../../../shared/time/seoulTime';
 
@@ -25,6 +26,7 @@ import { formatSeoulDateTime } from '../../../shared/time/seoulTime';
  * 손으로 더해야 새로고침해도 열리는데, 배포는 Nginx 를 건드리지 않는다.</p>
  */
 const router = useRouter();
+const route = useRoute();
 const { member, isSignedIn } = useMemberAuth();
 
 const NICKNAME_MAX_LENGTH = 50;
@@ -46,11 +48,133 @@ const recentLoaded = ref(false);
 const recentError = ref('');
 const pageLoading = ref(true);
 let disposed = false;
-onBeforeUnmount(() => { disposed = true; });
 
 const withdrawing = ref(false);
 const withdrawConfirming = ref(false);
 const withdrawError = ref('');
+
+let actionIdentity = readActionIdentity();
+let nicknameRequest = null;
+let withdrawRequest = null;
+let nicknameToast = null;
+let withdrawToast = null;
+
+function readActionIdentity() {
+	return { memberId: member.value?.id ?? null, authentication: getAuthenticationGeneration(), route: route.fullPath };
+}
+
+function sameActionIdentity(left, right) {
+	return left.memberId === right.memberId && left.authentication === right.authentication && left.route === right.route;
+}
+
+function clearNicknameError() {
+	nicknameError.value = '';
+	if (nicknameToast !== null) {
+		dismissToast(nicknameToast);
+		nicknameToast = null;
+	}
+}
+
+function clearWithdrawError() {
+	withdrawError.value = '';
+	if (withdrawToast !== null) {
+		dismissToast(withdrawToast);
+		withdrawToast = null;
+	}
+}
+
+function invalidateNickname() {
+	nicknameRequest = null;
+	savingNickname.value = false;
+	nicknameSaved.value = false;
+	clearNicknameError();
+}
+
+function stopWithdrawalObservation(request) {
+	const stop = request?.stopRoute;
+	if (stop) {
+		request.stopRoute = null;
+		stop();
+	}
+	const scope = request?.memberScope;
+	if (scope) {
+		request.memberScope = null;
+		scope.stop();
+	}
+}
+
+function invalidateWithdrawal() {
+	stopWithdrawalObservation(withdrawRequest);
+	withdrawRequest = null;
+	withdrawing.value = false;
+	withdrawConfirming.value = false;
+	clearWithdrawError();
+}
+
+function synchronizeActions() {
+	if (disposed) {
+		return;
+	}
+	const next = readActionIdentity();
+	const previous = actionIdentity;
+	if (sameActionIdentity(previous, next)) {
+		return;
+	}
+	const request = withdrawRequest;
+	const firstAnonymous = request?.identity === previous && previous.memberId !== null && next.memberId === null
+		&& next.route === request.originalRoute && next.authentication === previous.authentication + 1;
+	const anonymousContinuation = request?.identity === previous && request.observedAnonymous && next.memberId === null
+		&& (next.route === request.originalRoute || (request.loginRedirect && next.route === request.loginPath))
+		&& (next.authentication === previous.authentication || (!request.authenticationCascade && !request.loginExit
+			&& next.authentication === previous.authentication + 1));
+	actionIdentity = next;
+	if (firstAnonymous || anonymousContinuation) {
+		// 익명 전환은 관찰일 뿐 성공 증거가 아니다. 최종 이동에는 withdraw의 true도 필요하다.
+		request.authenticationCascade ||= anonymousContinuation && next.authentication !== previous.authentication;
+		request.observedAnonymous = true;
+		request.identity = next;
+		invalidateNickname();
+		clearWithdrawError();
+		return;
+	}
+	invalidateNickname();
+	invalidateWithdrawal();
+}
+
+watch([member, () => route.fullPath], synchronizeActions, { flush: 'sync' });
+
+function isCurrentNickname(request) {
+	synchronizeActions();
+	return !disposed && nicknameRequest === request && request.identity === actionIdentity;
+}
+
+function isCurrentWithdrawal(request, allowLoginExit = false) {
+	if (!disposed) {
+		synchronizeActions();
+	}
+	if (withdrawRequest !== request) {
+		return false;
+	}
+	if (!disposed) {
+		return request.identity === actionIdentity;
+	}
+	return allowLoginExit && request.loginExit && sameActionIdentity(request.exitIdentity, readActionIdentity());
+}
+
+onBeforeUnmount(() => {
+	const keepLoginExit = withdrawRequest?.loginExit
+		&& sameActionIdentity(withdrawRequest.exitIdentity, readActionIdentity());
+	disposed = true;
+	invalidateNickname();
+	if (keepLoginExit) {
+		// 자기 익명 전환으로 열린 login을 거친 요청만 결과를 기다린다. route 관찰은 settle까지 유지한다.
+		withdrawing.value = false;
+		withdrawConfirming.value = false;
+		clearWithdrawError();
+	} else {
+		invalidateWithdrawal();
+	}
+});
 
 const nicknameChanged = computed(
 	() => nickname.value.trim() !== '' && nickname.value.trim() !== (member.value?.nickname ?? ''),
@@ -129,6 +253,10 @@ watch(() => member.value?.id, () => {
 	recentLoaded.value = false;
 	recentError.value = '';
 	if (!isSignedIn.value) {
+		if (withdrawRequest?.observedAnonymous && withdrawRequest.identity === actionIdentity) {
+			withdrawRequest.loginRedirect = true;
+			withdrawRequest.loginPath = router.resolve({ name: 'member-login' }).fullPath;
+		}
 		void router.replace({ name: 'member-login' });
 		return;
 	}
@@ -150,45 +278,96 @@ function formatDate(value) {
 }
 
 async function saveNickname() {
-	if (savingNickname.value || !nicknameChanged.value) {
+	synchronizeActions();
+	if (disposed || !isSignedIn.value || savingNickname.value || !nicknameChanged.value) {
 		return;
 	}
 
 	savingNickname.value = true;
-	nicknameError.value = '';
+	clearNicknameError();
 	nicknameSaved.value = false;
+	const request = { identity: actionIdentity };
+	nicknameRequest = request;
 
 	try {
 		await changeNickname(nickname.value.trim());
+		if (!isCurrentNickname(request)) {
+			return;
+		}
 
 		nicknameSaved.value = true;
 		// 입력칸 값이 그대로라 바뀐 티가 안 난다. 화면에 안 보이는 일은 말해 줘야 한다
 		notifySuccess('닉네임을 바꿨습니다.');
 	} catch (error) {
-		nicknameError.value = error?.message ?? '닉네임을 변경하지 못했습니다.';
-		notifyError(nicknameError.value);
+		if (isCurrentNickname(request)) {
+			nicknameError.value = error?.message ?? '닉네임을 변경하지 못했습니다.';
+			nicknameToast = notifyError(nicknameError.value);
+		}
 	} finally {
-		savingNickname.value = false;
+		if (isCurrentNickname(request)) {
+			nicknameRequest = null;
+			savingNickname.value = false;
+		}
 	}
 }
 
 async function confirmWithdraw() {
-	if (withdrawing.value) {
+	synchronizeActions();
+	if (disposed || !isSignedIn.value || withdrawing.value) {
 		return;
 	}
 
 	withdrawing.value = true;
-	withdrawError.value = '';
+	clearWithdrawError();
+	const request = { identity: actionIdentity, originalRoute: route.fullPath, observedAnonymous: false,
+		loginRedirect: false, loginExit: false, authenticationCascade: false, stopRoute: null, memberScope: effectScope(true) };
+	withdrawRequest = request;
+	request.memberScope.run(() => watch(member, () => {
+		// 예상 login 출구로 unmount된 뒤에도 새 계정은 이전 출구 관찰을 즉시 끝낸다.
+		if (disposed && withdrawRequest === request
+				&& (!request.loginExit || !sameActionIdentity(request.exitIdentity, readActionIdentity()))) {
+			invalidateWithdrawal();
+		}
+	}, { flush: 'sync' }));
+	request.stopRoute = router.afterEach((to, from, failure) => {
+		if (failure || withdrawRequest !== request) {
+			return;
+		}
+		synchronizeActions();
+		if (withdrawRequest !== request) {
+			return;
+		}
+		if (!request.loginExit && request.observedAnonymous && request.loginRedirect
+				&& to.name === 'member-login' && to.fullPath === request.loginPath && member.value === null) {
+			request.loginExit = true;
+			request.exitIdentity = readActionIdentity();
+			return;
+		}
+		if (to.fullPath !== request.originalRoute || request.loginExit) {
+			invalidateWithdrawal();
+		}
+	});
 
 	try {
-		await withdraw();
+		const completed = await withdraw();
+		if (!completed || !isCurrentWithdrawal(request, true) || !request.observedAnonymous || member.value !== null) {
+			return;
+		}
 		await router.replace({ name: 'home' });
 	} catch (error) {
-		withdrawError.value = error?.message ?? '탈퇴하지 못했습니다.';
-		notifyError(withdrawError.value);
-		withdrawConfirming.value = false;
+		if (isCurrentWithdrawal(request) && !request.observedAnonymous) {
+			withdrawError.value = error?.message ?? '탈퇴하지 못했습니다.';
+			withdrawToast = notifyError(withdrawError.value);
+			withdrawConfirming.value = false;
+		}
 	} finally {
-		withdrawing.value = false;
+		stopWithdrawalObservation(request);
+		if (isCurrentWithdrawal(request)) {
+			withdrawRequest = null;
+			withdrawing.value = false;
+		} else if (disposed && withdrawRequest === request) {
+			withdrawRequest = null;
+		}
 	}
 }
 </script>

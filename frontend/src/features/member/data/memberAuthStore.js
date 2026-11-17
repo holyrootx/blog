@@ -157,16 +157,19 @@ export async function changeNickname(nickname) {
  *
  * 서버가 세션을 끊으므로 화면도 로그인 상태를 비운다. 남겨 두면 탈퇴했는데 로그인한
  * 것처럼 보이고, 다음 요청에서 401 이 나서야 알게 된다.
+ * 반환값은 현재 클라이언트 세션의 정리 완료 여부이며, 서버의 탈퇴 처리 취소 여부가 아니다.
  */
 export async function withdraw() {
 	const generation = sessionGeneration;
 	// 탈퇴 실패는 로그아웃 성공을 뜻하지 않는다. 서버가 성공한 뒤에만 상태를 비운다.
 	await withdrawMember();
 	if (generation !== sessionGeneration) {
-		return;
+		return false;
 	}
 	clearMemberSession();
+	const clearedGeneration = sessionGeneration;
 	await refreshCsrfToken().catch(() => null);
+	return clearedGeneration === sessionGeneration && member.value === null;
 }
 
 export async function signOutMember() {
