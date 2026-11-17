@@ -112,6 +112,14 @@ async function openHome(width) {
 	await waitForRecord('topics');
 }
 
+async function observeMainFocus() {
+	await page.getByRole('main', { name: '블로그 홈', exact: true }).evaluate(element => {
+		window.__homeMainFocusCalls = 0;
+		const focus = element.focus.bind(element);
+		element.focus = options => { window.__homeMainFocusCalls += 1; focus(options); };
+	});
+}
+
 async function retry(kind, key = 'Enter') {
 	const delivered = waitForRecord(kind, count(kind));
 	await retryButton(kind).focus();
@@ -151,6 +159,27 @@ async function seed(width) {
 }
 
 for (const width of [1280, 390]) {
+	for (const outside of [false, true]) {
+		test(`${width}: late empty topics after metadata retry preserves focus outside=${outside}`, async context => {
+			await openHome(width);
+			await observeMainFocus();
+			await finish(await waitForRecord('section'), null, 503);
+			await finish(await retry('section'), metadata('복구된 소개'));
+			const heading = region().getByRole('heading', { name: '복구된 소개', exact: true });
+			assert.equal(await heading.evaluate(element => document.activeElement === element), true);
+			const menu = page.getByRole('button', { name: '메뉴', exact: true });
+			if (outside) { await menu.focus(); }
+			await finish(await waitForRecord('topics'), []);
+			assert.equal(await region().count(), 0);
+			const focused = await page.evaluate(() => ({ tag: document.activeElement.tagName, name: document.activeElement.getAttribute('aria-label') }));
+			context.diagnostic(JSON.stringify({ width, outside, focused }));
+			const expected = outside ? menu : page.getByRole('main', { name: '블로그 홈', exact: true });
+			assert.equal(await expected.evaluate(element => document.activeElement === element), true);
+			assert.equal(await page.evaluate(() => window.__homeMainFocusCalls), outside ? 0 : 1);
+			await expectLayout();
+		});
+	}
+
 	test(`${width}: topics 503 stays visible after metadata succeeds and retries independently`, async context => {
 		await openHome(width);
 		await finish(await waitForRecord('section'), metadata('주제 모음'));
@@ -249,6 +278,7 @@ for (const width of [1280, 390]) {
 
 		test(`${width}: ${kind} retry to a normal empty section focuses the named main only after its own button disappears`, async () => {
 			await openHome(width);
+			await observeMainFocus();
 			await finish(await waitForRecord(kind === 'topics' ? 'section' : 'topics'), kind === 'topics' ? metadata('주제 모음') : []);
 			await finish(await waitForRecord(kind), null, 503);
 			await feedback(kind).getByRole('alert').waitFor();
@@ -257,6 +287,7 @@ for (const width of [1280, 390]) {
 			await finish(next, kind === 'topics' ? [] : {});
 			assert.equal(await region().count(), 0);
 			assert.equal(await page.getByRole('main', { name: '블로그 홈', exact: true }).evaluate(element => document.activeElement === element), true);
+			assert.equal(await page.evaluate(() => window.__homeMainFocusCalls), 1, 'Error and visibility watches must restore focus only once');
 			assert.deepEqual({ section: count('section'), topics: count('topics') }, kind === 'topics' ? { section: 1, topics: 2 } : { section: 2, topics: 1 });
 			await expectLayout();
 		});

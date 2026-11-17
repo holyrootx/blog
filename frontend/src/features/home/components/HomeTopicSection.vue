@@ -36,9 +36,12 @@ const props = defineProps({
 	},
 });
 const emit = defineEmits(['retry-section', 'retry-topics', 'focus-home']);
+const sectionElement = ref(null);
 const titleElement = ref(null);
 const sectionRetryButton = ref(null);
 const topicsRetryButton = ref(null);
+const isVisible = computed(() => Boolean(props.sectionLoading || props.topicsLoading
+	|| props.sectionError || props.topicsError || props.topics.length > 0));
 const title = computed(() => (props.section.title || '').trim() || '주제');
 const hasSectionContent = computed(() => [props.section.title, props.section.intro, props.section.noteBadge, props.section.note]
 	.some(value => value?.trim()));
@@ -83,11 +86,27 @@ watch([() => props.sectionError, () => props.topicsError], async ([sectionError,
 		emit('focus-home');
 	}
 });
+
+watch(isVisible, async (visible, previousVisible) => {
+	if (visible || !previousVisible) {
+		return;
+	}
+	const focused = document.activeElement;
+	if (!sectionElement.value?.contains(focused)) {
+		return;
+	}
+	await nextTick();
+	// 소개 복구 뒤 늦은 빈 목록이 제목을 없앨 때도 자기 영역의 초점만 보호한다.
+	if (active && !focused.isConnected && document.activeElement === document.body) {
+		emit('focus-home');
+	}
+});
 </script>
 
 <template>
 	<section
-		v-if="sectionLoading || topicsLoading || sectionError || topicsError || topics.length > 0"
+		v-if="isVisible"
+		ref="sectionElement"
 		class="home-section home-topics"
 		:aria-labelledby="sectionLoading ? undefined : 'home-topics-title'"
 		:aria-label="sectionLoading ? '주제' : undefined"
