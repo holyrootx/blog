@@ -157,6 +157,10 @@ async function completeWithdrawalAtLogin(record) {
 		navigation.then(handle => handle.dispose()),
 	]);
 }
+async function completeWithdrawalAfterBoundary(record, boundary, fails = false) {
+	if (['route ABA', 'getter only'].includes(boundary) && !fails) { await completeWithdrawalAtLogin(record); }
+	else { await complete(record, { fails }); }
+}
 async function snapshot() {
 	return page.evaluate(async () => {
 		const member = (await import('/src/features/member/data/memberAuthStore.js')).useMemberAuth().member.value;
@@ -253,10 +257,12 @@ for (const width of [1280, 390]) {
 		await page.waitForURL(url => url.pathname === '/login');
 		await complete(old); assert.equal((await snapshot()).path, '/login');
 	});
-	for (const releaseFirst of ['csrf', 'route']) {
-		test(`${width}: route ABA withdrawal completion waits with ${releaseFirst} released first`, async () => {
-			await open(width); const old = await startWithdraw(); await navigate('/terms');
-			await navigate('/settings'); await input().waitFor();
+	for (const { boundary, releaseFirst } of ['route ABA', 'getter only'].flatMap(boundary =>
+		['csrf', 'route'].map(releaseFirst => ({ boundary, releaseFirst })))) {
+		test(`${width}: ${boundary} withdrawal completion waits with ${releaseFirst} released first`, async () => {
+			await open(width); const old = await startWithdraw();
+			if (boundary === 'route ABA') { await navigate('/terms'); await navigate('/settings'); await input().waitFor(); }
+			else { await advanceGetter(); }
 			await input().fill('새 설정 화면 초안');
 			await page.evaluate(async () => {
 				const router = (await import('/src/app/router/index.js')).default;
@@ -268,7 +274,7 @@ for (const width of [1280, 390]) {
 			});
 			holdCsrf = true; old.httpCompleted = deferred();
 			let settled = false, csrf, completionError, csrfCompletions = 0, routeReleases = 0;
-			const completion = completeWithdrawalAtLogin(old).then(() => { settled = true; return null; }, error => { settled = true; return error; });
+			const completion = completeWithdrawalAfterBoundary(old, boundary).then(() => { settled = true; return null; }, error => { settled = true; return error; });
 			const finishCsrf = async () => {
 				assert.equal(csrfCompletions, 0); csrfCompletions += 1; await releaseCsrf(csrf);
 			};
@@ -338,8 +344,7 @@ for (const width of [1280, 390]) {
 				await open(width); const old = await startWithdraw(); await navigate('/terms');
 				if (boundary === 'route ABA') { await navigate('/settings'); await input().waitFor(); await input().fill('새 설정 화면 초안'); }
 				assert.equal((await snapshot()).routeObservers.active, 0);
-				if (boundary === 'route ABA' && !fails) { await completeWithdrawalAtLogin(old); }
-				else { await complete(old, { fails }); }
+				await completeWithdrawalAfterBoundary(old, boundary, fails);
 				const state = await snapshot();
 				// 같은 세션의 실제 탈퇴는 store를 정리할 수 있다. 새 설정 화면의 기존 login 이동은 유지한다.
 				const expected = boundary === 'route ABA' ? (fails ? '/settings' : '/login') : '/terms';
@@ -389,7 +394,7 @@ for (const width of [1280, 390]) {
 				if (boundary === 'ABA') { await switchAccount(accountB); await switchAccount(accountA); }
 				if (boundary === 'same-id authentication') { await switchAccount({ ...accountA, nickname: '다시 인증한 A' }); }
 				if (boundary === 'getter only') { await advanceGetter(); }
-				await input().fill('현재 설정의 초안'); await complete(old, { fails }); const state = await snapshot();
+				await input().fill('현재 설정의 초안'); await completeWithdrawalAfterBoundary(old, boundary, fails); const state = await snapshot();
 				const expected = boundary === 'getter only' && !fails ? '/login' : '/settings';
 				assert.equal(state.path, expected); assert.ok(!state.navigation.includes('/'));
 				if (expected === '/settings') { assert.equal(state.draft, '현재 설정의 초안'); }
