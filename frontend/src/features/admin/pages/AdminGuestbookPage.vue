@@ -211,7 +211,12 @@ function formatDateTime(value) {
 		>
 			<template #cell-nickname="{ row }">
 				<span class="admin-guestbook__writer">
-					<strong>{{ row.nickname }}</strong>
+					<button
+						class="admin-guestbook__detail-button"
+						type="button"
+						:aria-label="`${row.nickname} 님의 방명록 글 상세 열기`"
+						@click.stop="openDetail(row)"
+					>{{ row.nickname }}</button>
 					<small>{{ row.writtenByAdmin ? '관리자' : '회원' }}</small>
 				</span>
 			</template>
@@ -271,6 +276,26 @@ function formatDateTime(value) {
 .admin-guestbook__writer small {
 	color: var(--admin-meta);
 	font-size: 11.5px;
+}
+
+.admin-guestbook__detail-button {
+	align-self: flex-start;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	font-weight: 700;
+	text-align: start;
+	text-decoration: underline;
+	text-underline-offset: 2px;
+	overflow-wrap: anywhere;
+	cursor: pointer;
+}
+
+.admin-guestbook__detail-button:focus-visible {
+	outline: 2px solid var(--admin-accent);
+	outline-offset: 2px;
 }
 
 .admin-guestbook__content {
