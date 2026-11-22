@@ -8,6 +8,8 @@ import vue from '@vitejs/plugin-vue';
 const { chromium } = createRequire(import.meta.url)(process.env.PLAYWRIGHT_MODULE_PATH || 'playwright');
 const ok = (route, data = null) => route.fulfill({ json: { success: true, data } });
 const failureMessage = '이전 댓글 요청의 실패';
+const createPath = '/api/v1/blog/posts/1/comments';
+const isCreateRequest = request => request.method() === 'POST' && new URL(request.url()).pathname === createPath;
 const originalMember = { id: 7, nickname: '작성자 A', profileImageUrl: null, role: 'ROLE_USER' };
 const otherMember = { id: 8, nickname: '작성자 B', profileImageUrl: null, role: 'ROLE_USER' };
 const content = '늦게 도착할 댓글';
@@ -23,7 +25,8 @@ let origin;
 let member;
 let reply;
 let created;
-let heldCreate;
+let createDelivery;
+let createDeliveryGate;
 let createCount;
 let logoutFails;
 let errors;
@@ -60,7 +63,8 @@ beforeEach(async () => {
 	reply = false;
 	created = false;
 	createdAuthor = null;
-	heldCreate = null;
+	createDelivery = null;
+	createDeliveryGate = null;
 	createCount = 0;
 	logoutFails = false;
 	errors = [];
@@ -87,12 +91,19 @@ beforeEach(async () => {
 			id: 1, title: '댓글 세션 검사', excerpt: '검사 자료', content: '댓글 응답 순서를 검사합니다.',
 			categoryId: 1, categoryName: '검사', publishedAt: '2026-11-14T09:00:00', views: 1,
 		});
-		if (path === '/api/v1/blog/posts/1/comments') {
-			if (request.method() === 'POST') {
+		if (path === createPath) {
+			if (isCreateRequest(request)) {
+				const delivery = createDelivery;
+				assert.ok(delivery, 'register the route waiter before submitting');
+				createDelivery = null;
 				createCount += 1;
 				createdAuthor = { ...member };
 				created = true;
-				heldCreate = route;
+				if (createDeliveryGate) {
+					createDeliveryGate.entered.resolve(request);
+					await createDeliveryGate.release.promise;
+				}
+				delivery.resolve({ route, request, responses: 0 });
 				return;
 			}
 			return ok(route, comments());
@@ -127,22 +138,35 @@ async function beginCreate(useFixture = false) {
 	}
 	if (reply) await openReply();
 	await input().fill(content);
-	const request = page.waitForRequest(request => request.method() === 'POST' && request.url().endsWith('/posts/1/comments'));
+	assert.equal(createDelivery, null);
+	const delivery = Promise.withResolvers();
+	createDelivery = delivery;
+	const request = page.waitForRequest(isCreateRequest);
 	await page.locator(reply ? '.reply-form' : '.comment-form').getByRole('button', { name: reply ? '답글 등록' : '등록', exact: true }).click();
-	await request;
-	assert.ok(heldCreate);
+	createDeliveryGate?.clicked.resolve();
+	const [sent, creation] = await Promise.all([request, delivery.promise]);
+	assert.equal(creation.request, sent);
+	assert.equal(creation.route.request(), sent);
+	return creation;
 }
-async function releaseCreate(fails = false) {
-	const response = page.waitForResponse(response => response.request().method() === 'POST' && response.url().endsWith('/posts/1/comments'));
+async function releaseCreate(creation, fails = false) {
+	const { route, request } = creation;
+	assert.equal(route.request(), request);
+	assert.equal(creation.responses, 0);
+	const response = page.waitForResponse(response => response.request() === request);
+	creation.responses += 1;
 	if (fails) {
-		await heldCreate.fulfill({ status: 500, json: { success: false, message: failureMessage } });
+		await route.fulfill({ status: 500, json: { success: false, message: failureMessage } });
 	} else {
-		await ok(heldCreate, { id: 902 });
+		await ok(route, { id: 902 });
 	}
-	heldCreate = null;
-	await response;
+	const received = await response;
+	assert.equal(received.status(), fails ? 500 : 200);
+	await received.finished();
+	assert.equal(createCount, 1);
 	await tick();
 }
+
 async function changeMember(next) {
 	member = next;
 	await page.evaluate(async () => {
@@ -167,18 +191,49 @@ async function refreshFixtureComments() {
 
 for (const isReply of [false, true]) {
 	const label = isReply ? 'reply' : 'comment';
+
+	test(`${label}: a POST request event cannot stand in for its route handler`, { timeout: 10000 }, async (context) => {
+		reply = isReply;
+		const gate = { entered: Promise.withResolvers(), clicked: Promise.withResolvers(), release: Promise.withResolvers() };
+		createDeliveryGate = gate;
+		const requestEvent = page.waitForRequest(isCreateRequest);
+		let settled = false;
+		const starting = beginCreate().then(value => { settled = true; return { value }; }, error => { settled = true; return { error }; });
+		let returnedWhileHeld;
+		let request;
+		try {
+			const [sent, entered] = await Promise.all([requestEvent, gate.entered.promise, gate.clicked.promise]);
+			request = sent;
+			assert.equal(entered, request);
+			assert.deepEqual(request.postDataJSON(), { content, parentId: isReply ? 901 : null });
+			// Drain the caller's microtasks after the click exits while delivery is still held.
+			await new Promise(resolve => setImmediate(resolve));
+			returnedWhileHeld = settled;
+			context.diagnostic(JSON.stringify({ reply: isReply, requestCount: createCount, returnedWhileHeld }));
+		} finally {
+			gate.release.resolve();
+		}
+		const result = await starting;
+		if ('error' in result) throw result.error;
+		assert.equal(returnedWhileHeld, false);
+		assert.equal(result.value.request, request);
+		assert.equal(result.value.route.request(), request);
+		await releaseCreate(result.value);
+		assert.equal(result.value.responses, 1);
+		await assertSingleCreated();
+	});
 	test(`${label}: normal completion inserts one row with the submitting author`, async () => {
 		reply = isReply;
-		await beginCreate();
-		await releaseCreate();
+		const creation = await beginCreate();
+		await releaseCreate(creation);
 		await assertSingleCreated();
 	});
 	for (const role of ['ROLE_ADMIN', 'ROLE_USER']) {
 		test(`${label}: ${role} has the same author badge immediately and after a server reload`, async (t) => {
 			reply = isReply;
 			member = { ...originalMember, role };
-			await beginCreate();
-			await releaseCreate();
+			const creation = await beginCreate();
+			await releaseCreate(creation);
 			await assertSingleCreated();
 			const immediate = await page.locator('#comment-902 .comment__badge').count();
 			await page.reload();
@@ -192,11 +247,11 @@ for (const isReply of [false, true]) {
 	}
 	test(`${label}: late success after logout cannot duplicate the reloaded anonymous list`, async () => {
 		reply = isReply;
-		await beginCreate();
+		const creation = await beginCreate();
 		await page.locator('.comment-form').getByRole('button', { name: '로그아웃', exact: true }).click();
 		await page.getByRole('button', { name: '로그인하고 댓글 쓰기', exact: true }).waitFor();
 		await page.locator('#comment-902').waitFor();
-		await releaseCreate();
+		await releaseCreate(creation);
 		await assertSingleCreated();
 		assert.equal(await page.locator('.comments').getByRole('button', { name: /^(수정|삭제)$/ }).count(), 0);
 	});
@@ -204,12 +259,12 @@ for (const isReply of [false, true]) {
 		test(`${label}: changing ${role} accounts and returning ignores the earlier session response`, async () => {
 			reply = isReply;
 			member = { ...originalMember, role };
-			await beginCreate();
+			const creation = await beginCreate();
 			await changeMember({ ...otherMember });
 			await changeMember({ ...originalMember, role });
 			if (reply) await openReply();
 			await input().fill('새 세션의 초안');
-			await releaseCreate();
+			await releaseCreate(creation);
 			await assertSingleCreated();
 			assert.equal(await page.locator('#comment-902 .comment__badge').count(), role === 'ROLE_ADMIN' ? 1 : 0);
 			assert.equal(await input().inputValue(), '새 세션의 초안');
@@ -218,11 +273,11 @@ for (const isReply of [false, true]) {
 	}
 	test(`${label}: an old failure after account replacement preserves the new draft and shows no old error`, async () => {
 		reply = isReply;
-		await beginCreate();
+		const creation = await beginCreate();
 		await changeMember({ ...otherMember });
 		if (reply) await openReply();
 		await input().fill('B의 초안');
-		await releaseCreate(true);
+		await releaseCreate(creation, true);
 		assert.equal(await input().inputValue(), 'B의 초안');
 		assert.equal(await page.getByText(failureMessage, { exact: true }).count(), 0);
 		assert.equal(await page.locator('.comments').getByRole('button', { name: /^(수정|삭제)$/ }).count(), 0);
@@ -230,31 +285,31 @@ for (const isReply of [false, true]) {
 	test(`${label}: failed logout retains the draft and lets the pending creation finish`, async () => {
 		reply = isReply;
 		logoutFails = true;
-		await beginCreate();
+		const creation = await beginCreate();
 		await page.locator('.comment-form').getByRole('button', { name: '로그아웃', exact: true }).click();
 		await page.getByText('로그아웃을 확인하지 못했습니다. 다시 시도해 주세요.', { exact: true }).waitFor();
 		assert.equal(await input().inputValue(), content);
-		await releaseCreate();
+		await releaseCreate(creation);
 		await assertSingleCreated();
 	});
 	test(`${label}: a row received through the feed while creation is pending is not inserted or counted twice`, async () => {
 		reply = isReply;
-		await beginCreate(true);
+		const creation = await beginCreate(true);
 		await refreshFixtureComments();
 		await page.locator('#comment-902').waitFor();
-		await releaseCreate();
+		await releaseCreate(creation);
 		await assertSingleCreated();
 	});
 }
 
 test('a same-account authentication generation change discards the old completion', async () => {
-	await beginCreate();
+	const creation = await beginCreate();
 	await page.evaluate(async () => {
 		const { advanceAuthenticationGeneration } = await import('/src/shared/api/blogApiClient.js');
 		advanceAuthenticationGeneration();
 	});
 	await input().fill('새 인증의 초안');
-	await releaseCreate();
+	await releaseCreate(creation);
 	assert.equal(await page.locator('#comment-902').count(), 0);
 	assert.equal((await page.locator('.comments__count').textContent()).trim(), '0');
 	assert.equal(await input().inputValue(), '새 인증의 초안');
@@ -266,13 +321,13 @@ for (const isReply of [false, true]) {
 		test(`${role} ${isReply ? 'reply' : 'comment'}: a nickname refresh does not rewrite the captured author`, async () => {
 			reply = isReply;
 			member = { ...originalMember, role };
-			await beginCreate();
+			const creation = await beginCreate();
 			member = { ...member, nickname: '바뀐 닉네임' };
 			await page.evaluate(async () => {
 				const { refreshMemberSession } = await import('/src/features/member/data/memberAuthStore.js');
 				await refreshMemberSession();
 			});
-			await releaseCreate();
+			await releaseCreate(creation);
 			await assertSingleCreated();
 			assert.equal(await page.locator('#comment-902 .comment__badge').count(), role === 'ROLE_ADMIN' ? 1 : 0);
 		});

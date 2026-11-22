@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import { getAdminComments } from '../api/adminApi';
@@ -85,19 +85,19 @@ onMounted(async () => {
 		delete query.reply;
 		await router.replace({ query });
 	}
-
-	// 신고 알림에서 눌러 들어온 경우다. 목록만 열어 주면 어느 댓글이었는지 다시 찾아야
-	// 하고, 신고 건수와 사유는 이 창을 열어야 보인다. 상세는 번호로 불러오므로
-	// 지금 페이지 목록에 없어도 열린다
-	const requestedReportId = toId(route.query.report);
-	if (requestedReportId !== null) {
-		openDetail(requestedReportId);
-
-		const query = { ...route.query };
-		delete query.report;
-		await router.replace({ query });
-	}
 });
+
+// 상세는 목록 응답과 별개다. 쿼리를 받은 이동에서 즉시 소비해 다음 이동보다 먼저 정리한다.
+watch(() => route.name === 'admin-comments' ? route.query.report : null, (target) => {
+	const id = typeof target === 'string' && /^\d+$/.test(target) ? Number(target) : null;
+	if (!Number.isSafeInteger(id) || id <= 0) {
+		return;
+	}
+	openDetail(id);
+	const query = { ...route.query };
+	delete query.report;
+	void router.replace({ query, hash: route.hash });
+}, { immediate: true, flush: 'sync' });
 
 function loadComments(searchCondition) {
 	return requestComments({

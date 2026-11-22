@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import { getAdminGuestbook } from '../api/adminApi';
@@ -13,6 +13,7 @@ import AdminSearchPanel from '../components/AdminSearchPanel.vue';
 import AdminSegmented from '../components/AdminSegmented.vue';
 import AdminTextInput from '../components/AdminTextInput.vue';
 import { useAdminListRequest } from '../composables/useAdminListRequest';
+import { topModalPanel } from '../../../shared/components/modalStack';
 import { notifySuccess } from '../../../shared/toast/toastStore';
 
 /**
@@ -46,6 +47,9 @@ const totalPages = ref(0);
 const page = ref(1);
 const pageSize = ref(20);
 const detailId = ref(null);
+const pageElement = ref(null);
+const searchButton = ref(null);
+let detailOpening = null;
 
 const { loading, loadError, load: requestEntries } = useAdminListRequest({
 	request: getAdminGuestbook,
@@ -69,19 +73,21 @@ const statusOptions = computed(() => [
 	{ value: 'DELETED', label: `지움 ${formatCount(statusCounts.value.deleted)}` },
 ]);
 
-onMounted(async () => {
-	await loadEntries(applied.value);
-
-	// 알림에서 눌러 들어온 경우다. 목록만 열면 어느 글이었는지 다시 찾아야 한다.
-	// 상세는 번호로 불러오므로 지금 쪽에 없어도 열린다
-	const requestedId = toId(route.query.entry);
-	if (requestedId !== null) {
-		detailId.value = requestedId;
-		const query = { ...route.query };
-		delete query.entry;
-		await router.replace({ query });
-	}
+onMounted(() => {
+	loadEntries(applied.value);
 });
+
+// 상세는 목록 응답과 별개다. 쿼리를 받은 이동에서 즉시 소비해 다음 이동보다 먼저 정리한다.
+watch(() => route.name === 'admin-guestbook' ? route.query.entry : null, (target) => {
+	const id = typeof target === 'string' && /^\d+$/.test(target) ? Number(target) : null;
+	if (!Number.isSafeInteger(id) || id <= 0) {
+		return;
+	}
+	openDetail(id);
+	const query = { ...route.query };
+	delete query.entry;
+	void router.replace({ query, hash: route.hash });
+}, { immediate: true, flush: 'sync' });
 
 function loadEntries(searchCondition) {
 	return requestEntries({
@@ -116,8 +122,36 @@ function changePageSize(nextSize) {
 	return reload();
 }
 
-function openDetail(row) {
-	detailId.value = row.id;
+function openDetail(id, trigger = null) {
+	detailOpening = { id, trigger };
+	detailId.value = id;
+}
+
+async function closeDetail() {
+	const opening = detailOpening;
+	const path = route.fullPath;
+	detailId.value = null;
+	if (!opening?.trigger) {
+		detailOpening = null;
+		return;
+	}
+
+	await nextTick();
+	// BaseModal의 원래 초점 복원을 먼저 기다린다.
+	await nextTick();
+	if (detailOpening !== opening) {
+		return;
+	}
+	detailOpening = null;
+	if (opening.trigger.isConnected || route.fullPath !== path || !pageElement.value?.isConnected
+		|| document.activeElement !== document.body || topModalPanel()) {
+		return;
+	}
+
+	const replacement = loading.value ? null : pageElement.value.querySelector(
+		`[data-guestbook-detail-id="${CSS.escape(String(opening.id))}"]`,
+	);
+	(replacement ?? searchButton.value)?.focus({ preventScroll: true });
 }
 
 async function onChanged(message) {
@@ -137,11 +171,6 @@ function stateLabel(row) {
 		return '가림';
 	}
 	return '공개';
-}
-
-function toId(value) {
-	const id = Number(value);
-	return Number.isInteger(id) && id > 0 ? id : null;
 }
 
 function formatCount(value) {
@@ -169,7 +198,7 @@ function formatDateTime(value) {
 </script>
 
 <template>
-	<div class="admin-guestbook-page">
+	<div ref="pageElement" class="admin-guestbook-page">
 		<AdminPageHeader title="방명록 관리" group="콘텐츠">
 			<template #meta>
 				전체 {{ formatCount(statusCounts.all) }}개 · 신고 대기 {{ formatCount(statusCounts.reported) }}개
@@ -195,7 +224,7 @@ function formatDateTime(value) {
 			</template>
 			<template #right>
 				<button class="admin-button" type="button" @click="reset">초기화</button>
-				<button class="admin-button admin-button--solid" type="button" @click="search">조회</button>
+				<button ref="searchButton" class="admin-button admin-button--solid" type="button" @click="search">조회</button>
 			</template>
 		</AdminGridToolbar>
 
@@ -206,7 +235,7 @@ function formatDateTime(value) {
 			:error-text="loadError"
 			empty-text="조건에 맞는 방명록 글이 없습니다."
 			row-clickable
-			@row-click="openDetail"
+			@row-click="openDetail($event.id)"
 			@retry="reload"
 		>
 			<template #cell-nickname="{ row }">
@@ -214,8 +243,9 @@ function formatDateTime(value) {
 					<button
 						class="admin-guestbook__detail-button"
 						type="button"
+						:data-guestbook-detail-id="row.id"
 						:aria-label="`${row.nickname} 님의 방명록 글 상세 열기`"
-						@click.stop="openDetail(row)"
+						@click.stop="openDetail(row.id, $event.currentTarget)"
 					>{{ row.nickname }}</button>
 					<small>{{ row.writtenByAdmin ? '관리자' : '회원' }}</small>
 				</span>
@@ -260,7 +290,7 @@ function formatDateTime(value) {
 
 		<AdminGuestbookDetailModal
 			:entry-id="detailId"
-			@close="detailId = null"
+			@close="closeDetail"
 			@changed="onChanged"
 		/>
 	</div>
