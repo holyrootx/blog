@@ -61,6 +61,10 @@ const hint = computed(() => {
 		return `${MIN_LENGTH}글자 이상 입력해 주세요.`;
 	}
 
+	if (endsWithIncompleteHangul(keyword.value.trim())) {
+		return '글자 입력을 마치면 추천 글을 찾습니다.';
+	}
+
 	return '';
 });
 
@@ -91,40 +95,21 @@ function cancelPending() {
 	inflight = null;
 }
 
+/** 마지막 글자를 완성할 때 input이 오지 않는 브라우저에서도 compositionend로 입력을 읽는다. */
 function onInput(event) {
+	const previous = keyword.value.trim();
 	keyword.value = event.target.value;
-	activeIndex.value = -1;
-
-	schedule();
-}
-
-/**
- * 조합이 끝났을 때도 한 번 더 부른다.
- *
- * {@code input} 이 조합 중에도 오기는 하지만, 마지막 글자가 완성되는 순간에는
- * 브라우저에 따라 {@code input} 이 오지 않는 경우가 있다. 그때 "스프리" 에서 멈춘다.
- */
-function onCompositionEnd(event) {
-	keyword.value = event.target.value;
-
-	schedule();
-}
-
-function schedule() {
-	clearTimeout(timer);
-
 	const typed = keyword.value.trim();
-
-	if (typed.length < MIN_LENGTH) {
-		// 앞선 요청의 답이 뒤늦게 와서 빈 칸에 결과가 남는 일을 막는다
-		cancelPending();
-		suggestions.value = [];
-		loading.value = false;
+	if (typed === previous) {
 		return;
 	}
 
-	// 낱자로 끝나면 아직 치는 중이다. 이전 결과를 그대로 두고 기다린다
-	if (endsWithIncompleteHangul(typed)) {
+	// 다음 요청을 기다리는 동안에도 이전 결과는 현재 검색어의 선택지가 될 수 없다.
+	cancelPending();
+	suggestions.value = [];
+	activeIndex.value = -1;
+	loading.value = false;
+	if (!canSearch.value || endsWithIncompleteHangul(typed)) {
 		return;
 	}
 
@@ -133,11 +118,9 @@ function schedule() {
 }
 
 async function load(typed) {
-	// 앞 요청을 끊지 않으면 늦게 온 답이 최신 결과를 덮어써서 한 글자 전으로 되돌아간다
-	inflight?.abort();
-	inflight = new AbortController();
-
-	const controller = inflight;
+	timer = null;
+	const controller = new AbortController();
+	inflight = controller;
 
 	try {
 		const found = await getPostSuggestions(typed, { signal: controller.signal });
@@ -150,7 +133,7 @@ async function load(typed) {
 		suggestions.value = found;
 		activeIndex.value = -1;
 	} catch (error) {
-		if (error.name === 'AbortError') {
+		if (controller !== inflight || error.name === 'AbortError') {
 			return;
 		}
 
@@ -159,6 +142,7 @@ async function load(typed) {
 		suggestions.value = [];
 	} finally {
 		if (controller === inflight) {
+			inflight = null;
 			loading.value = false;
 		}
 	}
@@ -248,7 +232,7 @@ onBeforeUnmount(cancelPending);
 			aria-expanded="true"
 			aria-controls="search-results"
 			@input="onInput"
-			@compositionend="onCompositionEnd"
+			@compositionend="onInput"
 			@keydown="onKeydown"
 		/>
 
