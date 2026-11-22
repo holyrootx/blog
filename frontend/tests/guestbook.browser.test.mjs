@@ -252,3 +252,63 @@ test('a hide notification leads the writer to their own hidden entry', async () 
 		.getByText('운영자가 가린 글입니다. 나에게만 보입니다.').waitFor();
 	assert.equal(requests.find(item => item.path === '/api/v1/blog/guestbook').query.entry, '5');
 });
+
+for (const width of [1280, 390]) {
+	for (const scenario of ['first page', 'notification target', 'second page']) {
+		test(`${width}px guestbook retry restores the ${scenario} after a list failure`, async () => {
+			await page.setViewportSize({ width, height: 900 });
+			const target = scenario === 'notification target';
+			const fromList = scenario === 'second page';
+			const failedCall = fromList ? 2 : 1;
+			let calls = 0;
+			listHandler = (route, url) => {
+				calls += 1;
+				const requestedEntry = url.searchParams.get('entry');
+				const requestedPage = Number(url.searchParams.get('page'));
+				if (requestedEntry !== null && !/^\d+$/.test(requestedEntry)) {
+					return fail(route, 400, 'INVALID_INPUT', '글 번호가 올바르지 않습니다.');
+				}
+				if (calls === failedCall) {
+					return fail(route, 503, 'TEST_UNAVAILABLE', '방명록 조회가 잠시 실패했습니다.');
+				}
+				const resultPage = requestedEntry === '77' ? 1 : requestedPage;
+				return ok(route, pageOf([entry(resultPage === 1 ? 77 : 1)], {
+					page: resultPage, totalElements: 11, totalPages: 2,
+				}));
+			};
+
+			await visit(target ? 'guestbook?entry=77' : 'guestbook');
+			if (fromList) {
+				await entryItem(1).waitFor();
+				await page.locator('.comment-form__input').fill('재시도 중에도 남아야 할 초안');
+				await page.getByRole('navigation', { name: '방명록 페이지' }).getByRole('link', { name: '2', exact: true }).click();
+				await page.waitForURL('**/guestbook?page=2');
+			}
+			const retry = page.getByRole('button', { name: '다시 시도', exact: true });
+			await retry.waitFor();
+			if (fromList) {
+				assert.equal(await entryItem(1).isVisible(), true);
+			}
+			const response = page.waitForResponse((value) => new URL(value.url()).pathname === '/api/v1/blog/guestbook'
+				&& value.request().method() === 'GET');
+			await retry.click();
+			const retried = await response;
+			await retried.finished();
+			const retriedQuery = new URL(retried.url()).searchParams;
+			assert.equal(retriedQuery.get('entry'), target ? '77' : null);
+			assert.equal(retriedQuery.get('page'), fromList ? '1' : '0');
+			assert.equal(retried.status(), 200);
+			await retry.waitFor({ state: 'detached' });
+			await entryItem(target || fromList ? 77 : 1).waitFor();
+			if (target) {
+				await page.waitForURL('**/guestbook?page=2#guestbook-77');
+				await page.locator('#guestbook-77.guestbook-entry--target').waitFor();
+			} else if (fromList) {
+				assert.equal(await page.locator('.comment-form__input').inputValue(), '재시도 중에도 남아야 할 초안');
+				assert.equal((new URL(page.url())).search, '?page=2');
+				assert.equal(await entryItem(1).count(), 0);
+			}
+			assert.equal(calls, failedCall + 1);
+		});
+	}
+}
