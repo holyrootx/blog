@@ -125,6 +125,27 @@ test('reports are read in the detail and can be dismissed or hidden', async () =
 	assert.deepEqual(lastRequest('PUT', /\/guestbook\/2\/visibility$/).body, { hidden: true });
 });
 
+for (const key of ['Enter', 'Space']) {
+	test(`opens the guestbook detail with ${key} and returns focus on Escape`, async () => {
+		await page.goto(`${server.resolvedUrls.local[0]}admin/guestbook`);
+		const name = '손님3 님의 방명록 글 상세 열기';
+		const trigger = page.getByRole('button', { name, exact: true });
+		await trigger.waitFor();
+
+		await page.getByRole('button', { name: '조회', exact: true }).focus();
+		await page.keyboard.press('Tab');
+		assert.equal(await trigger.evaluate(element => element === document.activeElement), true);
+		await page.keyboard.press(key);
+		await dialog().getByText('운영자님께만 드리는 말').waitFor();
+		assert.equal(requests.filter(item => item.method === 'GET' && item.path === '/api/v1/admin/blog/guestbook/3').length, 1);
+
+		await page.keyboard.press('Escape');
+		await dialog().waitFor({ state: 'detached' });
+		await page.waitForFunction(label => document.activeElement?.getAttribute('aria-label') === label, name);
+		assert.equal(await trigger.evaluate(element => element === document.activeElement), true);
+	});
+}
+
 test('the operator replies from the detail', async () => {
 	await page.goto(`${server.resolvedUrls.local[0]}admin/guestbook`);
 	await page.getByRole('row').filter({ hasText: '운영자님께만 드리는 말' }).click();
