@@ -133,14 +133,37 @@ async function loadPosts(key) {
 	}
 }
 
+const heroError = ref('');
+const heroPending = ref(false);
+
+async function loadHero() {
+	if (heroPending.value) {
+		return;
+	}
+	heroPending.value = true;
+	let failed = false;
+	try {
+		await load('hero', {
+			cacheKey: 'home:hero',
+			request: getHomePageHero,
+			apply: (hero) => {
+				home.hero = mergeDefined(EMPTY_HERO, hero);
+			},
+			onError: (_error, { showingCached }) => {
+				failed = true;
+				heroError.value = showingCached ? 'refresh' : 'load';
+			},
+		});
+		if (!failed) {
+			heroError.value = '';
+		}
+	} finally {
+		heroPending.value = false;
+	}
+}
+
 onMounted(() => {
-	load('hero', {
-		cacheKey: 'home:hero',
-		request: getHomePageHero,
-		apply: (hero) => {
-			home.hero = mergeDefined(EMPTY_HERO, hero);
-		},
-	});
+	loadHero();
 	loadTopic('topicSection');
 	loadTopic('topics');
 	loadPosts('featuredPosts');
@@ -155,6 +178,10 @@ onMounted(() => {
 			:profile="profile"
 			:hero-loading="loading.hero"
 			:profile-loading="blogProfileLoading"
+			:error="heroError"
+			:pending="heroPending"
+			@retry="loadHero"
+			@focus-home="focusHome"
 		/>
 		<HomeTopicSection
 			:section="home.topicSection"
