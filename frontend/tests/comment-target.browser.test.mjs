@@ -25,6 +25,56 @@ const arrived = id => page.waitForFunction(target => {
 	return rect && rect.top >= 75 && rect.top < innerHeight - 40;
 }, id);
 
+
+// Observe only the previous post/comment's context GET. Other requests use native fetch unchanged.
+const observePreviousContext = detachTransportSignal => page.addInitScript((detachSignal) => {
+	const fetchFromBrowser = window.fetch.bind(window);
+	window.fetch = async (input, init) => {
+		if (typeof input !== 'string' || (init?.method ?? 'GET') !== 'GET'
+			|| new URL(input, location.origin).href !== `${location.origin}/api/v1/blog/posts/1/comments/111/context`) {
+			return fetchFromBrowser(input, init);
+		}
+
+		const { signal, ...withoutSignal } = init ?? {};
+		const observation = {
+			applicationSignal: signal instanceof AbortSignal,
+			transportSignal: detachSignal ? false : signal instanceof AbortSignal,
+			aborted: signal?.aborted ?? false,
+			fetchError: null,
+			body: null,
+		};
+		window.previousCommentContext = observation;
+		signal?.addEventListener('abort', () => { observation.aborted = true; }, { once: true });
+
+		let response;
+		try {
+			response = await fetchFromBrowser(input, detachSignal ? withoutSignal : init);
+		} catch (error) {
+			observation.fetchError = error.name;
+			throw error;
+		}
+
+		const readJson = response.json.bind(response);
+		response.json = async () => {
+			const body = await readJson();
+			// Publish after returning the parsed body to the client and its promise continuations.
+			requestAnimationFrame(() => {
+				observation.body = { status: response.status, target: body.data?.targetCommentId, parent: body.data?.item?.id };
+			});
+			return body;
+		};
+		return response;
+	};
+}, detachTransportSignal);
+
+const previousContextAt = async field => {
+	const result = await page.waitForFunction(key => {
+		const observation = window.previousCommentContext;
+		return observation?.[key] ? observation : false;
+	}, field);
+	return result.jsonValue();
+};
+
 before(async () => {
 	server = await createServer({ root: fileURLToPath(new URL('..', import.meta.url)), configFile: false,
 		plugins: [vue()], server: { host: '127.0.0.1', port: 0 } });
@@ -84,22 +134,27 @@ test('an off-page parent and eleventh reply arrive after more than two seconds; 
 	assert.equal(await page.locator('.comments__count').textContent(), '50');
 });
 
-test('a late context for the previous hash cannot replace the next target; changing hash removes context-only content', async () => {
-	const requested = deferred(); let held;
+test('changing the hash aborts the previous context and removes context-only content', async (context) => {
+	await observePreviousContext(false);
+	const requested = deferred();
 	handleContext = (route, id) => {
-		if (id === 111) { held = route; requested.resolve(); return; }
+		if (id === 111) { requested.resolve(); return; }
 		return ok(route, { targetCommentId: id, item: comment(id) });
 	};
 	await open('#comment-111');
 	await requested.promise;
 	await navigate(2);
 	await arrived(2);
-	await ok(held, { targetCommentId: 111, item: thread(1) }).catch(() => {});
-	await page.waitForTimeout(100);
+	const previous = await previousContextAt('fetchError');
+	assert.deepEqual(previous, { applicationSignal: true, transportSignal: true, aborted: true, fetchError: 'AbortError', body: null });
+	assert.equal(new URL(page.url()).hash, '#comment-2');
+	assert.equal(await page.locator('#comment-2').count(), 1);
 	assert.equal(await page.locator('#comment-111').count(), 0);
 	await navigate(3);
 	await arrived(3);
 	assert.equal(await page.locator('#comment-2').count(), 0);
+	assert.deepEqual(contextRequests, [111, 2, 3]);
+	context.diagnostic(JSON.stringify(previous));
 });
 
 test('missing comments are explained and network failures offer a working retry', async () => {
@@ -116,7 +171,8 @@ test('missing comments are explained and network failures offer a working retry'
 	assert.equal(await page.locator('#comment-111').count(), 0);
 });
 
-test('a context response from the previous post cannot insert its comment into the new post', async () => {
+test('a delivered context response from the previous post cannot insert its comment into the new post', async (context) => {
+	await observePreviousContext(true);
 	const requested = deferred(); let held;
 	handleContext = (route, id) => {
 		if (id === 111) { held = route; requested.resolve(); return; }
@@ -129,12 +185,16 @@ test('a context response from the previous post cannot insert its comment into t
 		await router.push({ name: 'post-detail', params: { id: 2 }, hash: '#comment-222' });
 	});
 	await arrived(222);
-	await ok(held, { targetCommentId: 111, item: thread(1) }).catch(() => {});
-	await page.waitForTimeout(100);
+	await ok(held, { targetCommentId: 111, item: thread(1) });
+	const previous = await previousContextAt('body');
+	assert.deepEqual(previous, { applicationSignal: true, transportSignal: false, aborted: true, fetchError: null,
+		body: { status: 200, target: 111, parent: 1 } });
 	assert.match(page.url(), /\/posts\/2#comment-222$/);
 	assert.equal(await page.locator('#comment-111').count(), 0);
 	assert.equal(await page.locator('#comment-1').count(), 0);
 	assert.equal(await page.locator('#comment-222').count(), 1);
+	assert.deepEqual(contextRequests, [111, 222]);
+	context.diagnostic(JSON.stringify(previous));
 });
 
 test('context waits for the initial page and overlapping normal pages never duplicate a parent', async () => {
