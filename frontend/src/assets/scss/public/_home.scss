@@ -171,6 +171,10 @@
 	line-height: 1.9;
 }
 
+.home-hero__feedback {
+	margin: 16px 0 0;
+}
+
 .home-hero__profile {
 	display: grid;
 	grid-template-columns: 96px minmax(0, 1fr);
@@ -293,6 +297,7 @@
 	opacity: 0.55;
 }
 
+.home-hero__headline:focus-visible,
 .home-section__title:focus-visible {
 	outline: 2px solid var(--accent);
 	outline-offset: 4px;
