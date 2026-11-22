@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import { getAdminGuestbook } from '../api/adminApi';
@@ -69,19 +69,21 @@ const statusOptions = computed(() => [
 	{ value: 'DELETED', label: `지움 ${formatCount(statusCounts.value.deleted)}` },
 ]);
 
-onMounted(async () => {
-	await loadEntries(applied.value);
-
-	// 알림에서 눌러 들어온 경우다. 목록만 열면 어느 글이었는지 다시 찾아야 한다.
-	// 상세는 번호로 불러오므로 지금 쪽에 없어도 열린다
-	const requestedId = toId(route.query.entry);
-	if (requestedId !== null) {
-		detailId.value = requestedId;
-		const query = { ...route.query };
-		delete query.entry;
-		await router.replace({ query });
-	}
+onMounted(() => {
+	loadEntries(applied.value);
 });
+
+// 상세는 목록 응답과 별개다. 쿼리를 받은 이동에서 즉시 소비해 다음 이동보다 먼저 정리한다.
+watch(() => route.name === 'admin-guestbook' ? route.query.entry : null, (target) => {
+	const id = typeof target === 'string' && /^\d+$/.test(target) ? Number(target) : null;
+	if (!Number.isSafeInteger(id) || id <= 0) {
+		return;
+	}
+	detailId.value = id;
+	const query = { ...route.query };
+	delete query.entry;
+	void router.replace({ query, hash: route.hash });
+}, { immediate: true, flush: 'sync' });
 
 function loadEntries(searchCondition) {
 	return requestEntries({
@@ -137,11 +139,6 @@ function stateLabel(row) {
 		return '가림';
 	}
 	return '공개';
-}
-
-function toId(value) {
-	const id = Number(value);
-	return Number.isInteger(id) && id > 0 ? id : null;
 }
 
 function formatCount(value) {
