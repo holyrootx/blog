@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import { getAdminGuestbook } from '../api/adminApi';
@@ -13,6 +13,7 @@ import AdminSearchPanel from '../components/AdminSearchPanel.vue';
 import AdminSegmented from '../components/AdminSegmented.vue';
 import AdminTextInput from '../components/AdminTextInput.vue';
 import { useAdminListRequest } from '../composables/useAdminListRequest';
+import { topModalPanel } from '../../../shared/components/modalStack';
 import { notifySuccess } from '../../../shared/toast/toastStore';
 
 /**
@@ -46,6 +47,9 @@ const totalPages = ref(0);
 const page = ref(1);
 const pageSize = ref(20);
 const detailId = ref(null);
+const pageElement = ref(null);
+const searchButton = ref(null);
+let detailOpening = null;
 
 const { loading, loadError, load: requestEntries } = useAdminListRequest({
 	request: getAdminGuestbook,
@@ -79,7 +83,7 @@ watch(() => route.name === 'admin-guestbook' ? route.query.entry : null, (target
 	if (!Number.isSafeInteger(id) || id <= 0) {
 		return;
 	}
-	detailId.value = id;
+	openDetail(id);
 	const query = { ...route.query };
 	delete query.entry;
 	void router.replace({ query, hash: route.hash });
@@ -118,8 +122,36 @@ function changePageSize(nextSize) {
 	return reload();
 }
 
-function openDetail(row) {
-	detailId.value = row.id;
+function openDetail(id, trigger = null) {
+	detailOpening = { id, trigger };
+	detailId.value = id;
+}
+
+async function closeDetail() {
+	const opening = detailOpening;
+	const path = route.fullPath;
+	detailId.value = null;
+	if (!opening?.trigger) {
+		detailOpening = null;
+		return;
+	}
+
+	await nextTick();
+	// BaseModal의 원래 초점 복원을 먼저 기다린다.
+	await nextTick();
+	if (detailOpening !== opening) {
+		return;
+	}
+	detailOpening = null;
+	if (opening.trigger.isConnected || route.fullPath !== path || !pageElement.value?.isConnected
+		|| document.activeElement !== document.body || topModalPanel()) {
+		return;
+	}
+
+	const replacement = loading.value ? null : pageElement.value.querySelector(
+		`[data-guestbook-detail-id="${CSS.escape(String(opening.id))}"]`,
+	);
+	(replacement ?? searchButton.value)?.focus({ preventScroll: true });
 }
 
 async function onChanged(message) {
@@ -166,7 +198,7 @@ function formatDateTime(value) {
 </script>
 
 <template>
-	<div class="admin-guestbook-page">
+	<div ref="pageElement" class="admin-guestbook-page">
 		<AdminPageHeader title="방명록 관리" group="콘텐츠">
 			<template #meta>
 				전체 {{ formatCount(statusCounts.all) }}개 · 신고 대기 {{ formatCount(statusCounts.reported) }}개
@@ -192,7 +224,7 @@ function formatDateTime(value) {
 			</template>
 			<template #right>
 				<button class="admin-button" type="button" @click="reset">초기화</button>
-				<button class="admin-button admin-button--solid" type="button" @click="search">조회</button>
+				<button ref="searchButton" class="admin-button admin-button--solid" type="button" @click="search">조회</button>
 			</template>
 		</AdminGridToolbar>
 
@@ -203,7 +235,7 @@ function formatDateTime(value) {
 			:error-text="loadError"
 			empty-text="조건에 맞는 방명록 글이 없습니다."
 			row-clickable
-			@row-click="openDetail"
+			@row-click="openDetail($event.id)"
 			@retry="reload"
 		>
 			<template #cell-nickname="{ row }">
@@ -211,8 +243,9 @@ function formatDateTime(value) {
 					<button
 						class="admin-guestbook__detail-button"
 						type="button"
+						:data-guestbook-detail-id="row.id"
 						:aria-label="`${row.nickname} 님의 방명록 글 상세 열기`"
-						@click.stop="openDetail(row)"
+						@click.stop="openDetail(row.id, $event.currentTarget)"
 					>{{ row.nickname }}</button>
 					<small>{{ row.writtenByAdmin ? '관리자' : '회원' }}</small>
 				</span>
@@ -257,7 +290,7 @@ function formatDateTime(value) {
 
 		<AdminGuestbookDetailModal
 			:entry-id="detailId"
-			@close="detailId = null"
+			@close="closeDetail"
 			@changed="onChanged"
 		/>
 	</div>
