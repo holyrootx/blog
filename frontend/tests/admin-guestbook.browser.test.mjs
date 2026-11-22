@@ -146,6 +146,76 @@ for (const key of ['Enter', 'Space']) {
 	});
 }
 
+for (const [scenario, expectedFocus] of [
+	['same-entry', 'replacement'],
+	['entry-removed', '조회'],
+	['list-pending', '조회'],
+	['external-focus', '초기화'],
+]) {
+	test(`reply refresh focus: ${scenario}`, { timeout: 16_000 }, async (context) => {
+		await page.goto(`${server.resolvedUrls.local[0]}admin/guestbook`);
+		const trigger = page.getByRole('button', { name: '손님3 님의 방명록 글 상세 열기', exact: true });
+		const original = await trigger.elementHandle();
+		await trigger.focus();
+		await page.keyboard.press('Enter');
+		await dialog().getByLabel(/답글 달기/).fill('새 답글입니다');
+
+		const listRequest = Promise.withResolvers();
+		await page.route('**/api/v1/admin/blog/guestbook?*', route => listRequest.resolve(route));
+		await dialog().getByRole('button', { name: '답글 저장' }).click();
+		const refreshRoute = await listRequest.promise;
+		assert.equal(refreshRoute.request().method(), 'GET');
+		assert.deepEqual(lastRequest('PUT', /\/guestbook\/3\/reply$/).body, { content: '새 답글입니다' });
+		await page.waitForFunction(element => !element.isConnected, original);
+
+		const refreshed = scenario === 'entry-removed' ? rows.filter(item => item.id !== 3) : rows;
+		const releaseList = () => ok(refreshRoute, {
+			items: refreshed, statusCounts: { all: refreshed.length, reported: 1, hidden: 0, deleted: 0 },
+			page: 0, size: 20, totalElements: refreshed.length, totalPages: 1,
+		});
+		if (scenario !== 'list-pending') {
+			await releaseList();
+			await page.getByRole('button', { name: '손님2 님의 방명록 글 상세 열기', exact: true }).waitFor();
+			assert.equal(await trigger.count(), scenario === 'entry-removed' ? 0 : 1);
+		}
+		const footerClose = await dialog().getByRole('button', { name: '닫기', exact: true }).last().elementHandle();
+		await page.waitForFunction(element => !element.disabled, footerClose);
+		if (scenario === 'external-focus') {
+			const dialogElement = await dialog().elementHandle();
+			const reset = await page.getByRole('button', { name: '초기화', exact: true }).elementHandle();
+			await page.evaluate(({ dialogElement, reset }) => {
+				const observer = new MutationObserver(() => {
+					if (dialogElement.isConnected) return;
+					observer.disconnect();
+					reset.focus();
+				});
+				observer.observe(document.body, { childList: true, subtree: true });
+			}, { dialogElement, reset });
+		}
+
+		await page.keyboard.press('Escape');
+		await dialog().waitFor({ state: 'detached' });
+		const focus = await page.evaluate(async () => {
+			await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+			const element = document.activeElement;
+			return { tag: element.tagName, label: element.getAttribute('aria-label'), text: element.textContent.trim() };
+		});
+		context.diagnostic(`focused ${focus.tag}: ${focus.label || (focus.tag === 'BUTTON' ? focus.text : '')}`);
+		assert.equal(focus.tag, 'BUTTON');
+		if (expectedFocus === 'replacement') {
+			assert.equal(await trigger.evaluate(element => element === document.activeElement), true);
+		} else {
+			assert.equal(focus.text, expectedFocus);
+		}
+		if (scenario === 'list-pending') {
+			await releaseList();
+			await trigger.waitFor();
+			assert.equal(await page.getByRole('button', { name: '조회', exact: true })
+				.evaluate(element => element === document.activeElement), true);
+		}
+	});
+}
+
 test('the operator replies from the detail', async () => {
 	await page.goto(`${server.resolvedUrls.local[0]}admin/guestbook`);
 	await page.getByRole('row').filter({ hasText: '운영자님께만 드리는 말' }).click();

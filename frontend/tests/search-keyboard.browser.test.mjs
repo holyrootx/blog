@@ -165,3 +165,162 @@ test('Enter and arrows with a short query keep search open without suggestions',
 	assert.equal(await field().inputValue(), '스');
 	assert.deepEqual(await navigation(), { path: '/', visits: [] });
 });
+
+function gate(label) {
+	let deliver;
+	const result = new Promise(resolve => { deliver = resolve; });
+	return {
+		deliver,
+		async wait() {
+			let timer;
+			try {
+				return await Promise.race([result, new Promise((_, reject) => {
+					timer = setTimeout(() => reject(new Error(`${label} did not arrive`)), 5000);
+				})]);
+			} finally {
+				clearTimeout(timer);
+			}
+		},
+	};
+}
+
+async function holdSuggestions(width, count) {
+	await page.setViewportSize({ width, height: 900 });
+	await page.locator('#search-trigger').click();
+	await page.mouse.move(0, 0);
+	const records = Array.from({ length: count }, (_, index) => ({
+		handler: gate(`suggestion handler ${index}`), parsed: gate(`suggestion body ${index}`),
+	}));
+	const keywords = [];
+	await page.exposeFunction('suggestionBodyParsed', index => records[index]?.parsed.deliver());
+	await page.evaluate(() => {
+		const fetch = window.fetch.bind(window);
+		const completion = new MessageChannel();
+		completion.port1.onmessage = event => window.suggestionBodyParsed(event.data);
+		let sequence = 0;
+		window.fetch = async (input, init) => {
+			if (new URL(input, location.origin).pathname !== '/api/v1/blog/posts/suggest') {
+				return fetch(input, init);
+			}
+			// Keep the real HTTP response deliverable even if this transport ignores abort.
+			const index = sequence++;
+			const response = await fetch(input, { ...init, signal: undefined });
+			const json = response.json.bind(response);
+			response.json = async () => {
+				const body = await json();
+				// This task runs after the app's response and Vue microtasks.
+				completion.port2.postMessage(index);
+				return body;
+			};
+			return response;
+		};
+	});
+	await page.route('**/api/v1/blog/posts/suggest?*', (route) => {
+		const index = keywords.length;
+		keywords.push(new URL(route.request().url()).searchParams.get('q'));
+		if (!records[index]) {
+			return route.abort();
+		}
+		records[index].handler.deliver(route);
+	});
+	const clockStart = new Date('2026-11-22T12:00:00Z');
+	await page.clock.install({ time: clockStart });
+	await page.clock.pauseAt(new Date(clockStart.getTime() + 1000));
+	return {
+		keywords,
+		async receive(index) {
+			await page.clock.runFor(250);
+			return records[index].handler.wait();
+		},
+		async release(index, route, status, data = []) {
+			const completed = page.waitForResponse(response => response.request() === route.request());
+			await route.fulfill({ status, json: status === 200 ? { success: true, data }
+				: { success: false, code: 'TEST_UNAVAILABLE', message: '가짜 추천 조회 오류' } });
+			await (await completed).finished();
+			await records[index].parsed.wait();
+		},
+	};
+}
+
+const suggestion = (id, title) => ({ id, title, categoryName: '개발' });
+const skeleton = () => dialog().locator('.search-results--skeleton');
+
+for (const width of [1280, 390]) {
+	for (const status of [200, 503]) {
+		test(`${width}px changing search ignores old HTTP${status} before debounce and Enter uses current input`, async () => {
+			const harness = await holdSuggestions(width, 1);
+			await field().fill('스프링');
+			const old = await harness.receive(0);
+			await field().fill('뷰라우터');
+			await harness.release(0, old, status, [suggestion(991, '이전 스프링 추천')]);
+			assert.deepEqual(harness.keywords, ['스프링']);
+			assert.equal(await options().count(), 0);
+			assert.equal(await skeleton().count(), 1);
+			await field().press('ArrowDown');
+			assert.equal(await selected(), -1);
+			await field().press('Enter');
+			await page.clock.resume();
+			await settled();
+			const path = `/posts?${new URLSearchParams({ q: '뷰라우터' })}`;
+			assert.deepEqual(await navigation(), { path, visits: [path] });
+			assert.deepEqual(harness.keywords, ['스프링']);
+		});
+	}
+
+	test(`${width}px changing search A to B to A drops the original A and selects the new one by keyboard`, async () => {
+		const harness = await holdSuggestions(width, 2);
+		await field().fill('스프링');
+		const old = await harness.receive(0);
+		await field().fill('뷰라우터');
+		await field().fill('스프링');
+		await harness.release(0, old, 200, [suggestion(991, '앞선 스프링 추천')]);
+		assert.deepEqual(harness.keywords, ['스프링']);
+		assert.equal(await options().count(), 0);
+		assert.equal(await skeleton().count(), 1);
+		const next = await harness.receive(1);
+		await harness.release(1, next, 200, [suggestion(993, '현재 스프링 추천')]);
+		assert.deepEqual(harness.keywords, ['스프링', '스프링']);
+		assert.equal(await options().count(), 1);
+		assert.equal(await options().getByRole('button', { name: /현재 스프링 추천/ }).count(), 1);
+		await field().press('ArrowDown');
+		await field().press('Enter');
+		await page.clock.resume();
+		await settled();
+		assert.deepEqual(await navigation(), { path: '/posts/993', visits: ['/posts/993'] });
+	});
+
+	test(`${width}px changing search preserves a clickable new result after a late failure`, async () => {
+		const harness = await holdSuggestions(width, 2);
+		await field().fill('스프링');
+		const old = await harness.receive(0);
+		await field().fill('뷰라우터');
+		const next = await harness.receive(1);
+		await harness.release(1, next, 200, [suggestion(994, '현재 뷰라우터 추천')]);
+		await harness.release(0, old, 503);
+		assert.deepEqual(harness.keywords, ['스프링', '뷰라우터']);
+		const result = options().getByRole('button', { name: /현재 뷰라우터 추천/ });
+		assert.equal(await result.count(), 1);
+		await page.clock.resume();
+		await result.click();
+		await settled();
+		assert.deepEqual(await navigation(), { path: '/posts/994', visits: ['/posts/994'] });
+	});
+
+	test(`${width}px changing search defers incomplete Hangul and loads a compositionend-only value`, async () => {
+		const harness = await holdSuggestions(width, 1);
+		await field().fill('뷰ㄹ');
+		await page.clock.runFor(500);
+		assert.deepEqual(harness.keywords, []);
+		assert.equal(await options().count(), 0);
+		assert.equal(await skeleton().count(), 0);
+		assert.equal(await dialog().getByText('맞는 글이 없습니다.', { exact: true }).count(), 0);
+		await field().evaluate((element) => {
+			element.value = '뷰라우터';
+			element.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true, data: '터' }));
+		});
+		const next = await harness.receive(0);
+		await harness.release(0, next, 200, [suggestion(994, '현재 뷰라우터 추천')]);
+		assert.deepEqual(harness.keywords, ['뷰라우터']);
+		assert.equal(await options().getByRole('button', { name: /현재 뷰라우터 추천/ }).count(), 1);
+	});
+}
