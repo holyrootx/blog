@@ -128,6 +128,10 @@ async function load(entryId = null) {
 	}
 }
 
+function retryLoad() {
+	return load(toId(route.query.entry));
+}
+
 /**
  * 알림으로 찾아온 글을 보인다. 오래된 글은 뒤쪽에 있어서 몇 쪽인지는 서버가 골라 준다.
  * 지웠거나 가려져 못 찾으면 그렇다고 말한다 — 첫 쪽만 보이면 왜 없는지 알 수 없다.
@@ -592,7 +596,7 @@ function resetForms() {
 
 			<div v-if="!loaded && loadError" class="comments__feedback guestbook__feedback">
 				<p class="comment-reaction__error" role="alert">{{ loadError }}</p>
-				<button type="button" class="ui-button" :disabled="loading" @click="load">다시 시도</button>
+				<button type="button" class="ui-button" :disabled="loading" @click="retryLoad">다시 시도</button>
 			</div>
 
 			<div v-else-if="!loaded" class="guestbook__skeleton" aria-hidden="true">
@@ -609,7 +613,7 @@ function resetForms() {
 			<template v-else>
 				<div v-if="loadError" class="comments__feedback guestbook__feedback">
 					<p class="comment-reaction__error" role="alert">{{ loadError }}</p>
-					<button type="button" class="ui-button" :disabled="loading" @click="load">다시 시도</button>
+					<button type="button" class="ui-button" :disabled="loading" @click="retryLoad">다시 시도</button>
 				</div>
 
 				<p v-if="entries.length === 0 && !loadError" class="guestbook__empty">
