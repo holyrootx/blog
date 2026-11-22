@@ -52,9 +52,10 @@ Google, Kakao, Naver 계정으로 로그인하면 댓글과 답글을 쓰고, �
 문구나 이미지를 바꿀 때 프론트엔드를 다시 배포할 필요가 없습니다.<br/>
 화면 배치와 스타일, 버튼 이름처럼 고정된 문구는 코드에서 수정합니다.
 
-홈의 인기글·최근 글과 주제 소개·목록은 각각 불러오며, 먼저 응답한 영역부터 표시합니다.<br/>
-조회에 실패하면 실패한 영역만 다시 시도할 수 있습니다. 다시 방문할 때 캐시가 있으면 먼저 보여 주고, 갱신에 실패해도 이미 보이던 소개와 카드는 유지합니다.<br/>
-정상 조회 결과 글이 없으면 빈 상태를 표시하고, 주제가 없으면 주제 영역을 숨깁니다.
+홈의 상단 소개·주제 소개·주제 목록·인기글·최근 글은 각각 불러오며, 먼저 응답한 영역부터 표시합니다.<br/>
+조회에 실패하면 해당 영역만 다시 시도할 수 있습니다. 홈으로 돌아왔을 때 이전에 받은 결과가 있으면 먼저 보여 주고, 갱신에 실패해도 이미 보이던 내용은 유지합니다.<br/>
+인기글과 최근 글은 조회에 성공했지만 글이 없으면 빈 상태를 표시합니다. 주제 조회가 모두 끝나고 오류와 표시할 주제가 없으면 주제 영역을 숨깁니다.<br/>
+홈과 헤더는 같은 프로필 정보를 사용합니다. 프로필 갱신에 실패하면 이전에 받은 결과를 유지합니다.
 
 ## 시스템 구조
 다음은 저장소의 애플리케이션과 Nginx 설정 예제, 배포 스크립트가 전제하는 구조입니다.<br/>
@@ -167,7 +168,7 @@ blog/
 | 조회 기록·활성 읽기 시간 | [PostViewService](backend/src/main/java/me/jsjlog/blog/post/service/PostViewService.java) · [관리자 조회 API](backend/src/main/java/me/jsjlog/blog/admin/controller/AdminPostViewController.java) |
 | 관리자 글 API | [AdminPostController](backend/src/main/java/me/jsjlog/blog/admin/controller/AdminPostController.java) |
 | 홈 콘텐츠 관리 | [관리자 홈 설정](frontend/src/features/admin/pages/AdminHomeSettingsPage.vue) · [홈 API·도메인](backend/src/main/java/me/jsjlog/blog/home/) |
-| 홈 영역별 조회·실패 복구 | [홈 화면](frontend/src/features/home/pages/HomePage.vue) · [주제 소개·목록](frontend/src/features/home/components/HomeTopicSection.vue) · [게시글 영역](frontend/src/features/home/components/PostSection.vue) · [영역별 로더](frontend/src/shared/composables/useSectionLoader.js) |
+| 홈 영역별 조회·실패 복구 | [홈 화면](frontend/src/features/home/pages/HomePage.vue) · [상단 소개](frontend/src/features/home/components/HomeHero.vue) · [주제 소개·목록](frontend/src/features/home/components/HomeTopicSection.vue) · [게시글 영역](frontend/src/features/home/components/PostSection.vue) · [영역별 로더](frontend/src/shared/composables/useSectionLoader.js) |
 | 계정·글 변경 뒤 이전 응답 보호 | [글 반응](frontend/src/features/post/components/PostArticle.vue) · [댓글 반응·신고](frontend/src/features/post/composables/useCommentFeedback.js) · [댓글 수정·삭제](frontend/src/features/post/composables/useCommentManagement.js) |
 | 인증·권한 정책 | [SecurityConfig](backend/src/main/java/me/jsjlog/blog/common/config/SecurityConfig.java) |
 | 이미지 저장소 설정 | [UploadConfig](backend/src/main/java/me/jsjlog/blog/common/config/UploadConfig.java) |
